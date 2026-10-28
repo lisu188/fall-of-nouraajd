@@ -8,11 +8,17 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
+if not __package__:
+    sys.path.insert(0, str(ROOT))
+
+from tests.cpp_bindings import registrationTokens
+
 # Ordered native cases on main e3d3c90, before adding diagnostic wrappers.
 BASELINE_CASES = {
     "handler": (36, "133d76b3db645f21a09e2b55fc738f481318a97c42532b80bb67edba5354a89d"),
@@ -80,10 +86,61 @@ ADDITIONAL_CASES = {
         "testUnverifiedOrRejectedLoadsNeverDispatchResume",
         "testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime",
         "testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
+        "testScriptWaitForeignObjectFailureRoundTripsSynchronously",
         "testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
         "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
         "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
         "testSyncScriptWaitReleasesTheFinalGameOwner",
+        "testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives",
+        "testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles",
+        "testSevenSunsWarningOldMapCleanupPreservesActorAdoptedByAnotherLiveMap",
+        "testSevenSunsWarningDefaultMapSnapshotOmitsTheEmptyRetirementCollection",
+        "testSevenSunsWarningReflectedOwnerTamperingQuarantinesAndStillCleansCycles",
+        "testSevenSunsWarningSwallowedNestedBeginCannotAcknowledgeRetirement",
+        "testSevenSunsWarningOtherUnsafeQuarantineCannotBecomeSuccess",
+        "testSevenSunsWarningCapacityPreflightNeverPublishesAnUnreadableOwnResult",
+        "testSevenSunsWarningRejectsOverflowingJsonAuthorityInsteadOfAliasingLowBits",
+        "testSevenSunsWarningUiFlowDispatchOwnsTokensAndRejectsOversizedSourceEdges",
+        "testSevenSunsWarningJournalMembershipLossCannotBecomeAcceptedRetirement",
+        "testSevenSunsWarningSharedNamesIgnoreAsciiCaseAndRejectAmbiguousAliases",
+        "testSevenSunsWarningEveryReachableDefaultGlobalPathUsesNativeCursor",
+        "testSevenSunsWarningRetiresSameLivingActorAndPublishesOneJournal",
+        "testSevenSunsWarningCommittedChoiceSurvivesCancellationAndRemainsSaveable",
+        "testSevenSunsWarningRefusesWrongSourceAndMapAwayBackBeforeCommit",
+        "testSevenSunsWarningRejectsWrongRevisionAndSourceConditionalEdge",
+        "testSevenSunsWarningReplayRequiresExactRetainedOwnerAndCreatesNothing",
+        "testSevenSunsWarningClassifiesPendingAndOrphanStateBeforeMissingPlayer",
+        "testSevenSunsWarningPostRemovalFailureQuarantinesAndPreservesPrimaryError",
+        "testSevenSunsWarningJournalFactoryFailureCannotAcknowledgeEscape",
+        "testSevenSunsWarningRetainedActorEffectAliasesRoundTrip",
+        "testSevenSunsWarningSessionDoesNotKeepClosedGameAlive",
+        "testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes",
+        "testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority",
+        "testSevenSunsStockExhaustive8000FiniteOutcomesAndInputBounds",
+        "testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions",
+        "testSevenSunsStockPreparedRejectsControllerActionAndInitialMetadataChanges",
+        "testSevenSunsStockSettledValidationAllowsActualMutableHealthInventoryAndEquipment",
+        "testSevenSunsStockMatchingActorAndClockForgeryCannotPassFiniteReplay",
+        "testSevenSunsStockFailedUnpublishedSelfEffectExpiresWithMapWhileGameLives",
+        "testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption",
+        "testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce",
+        "testSevenSunsStockForgedDedicatedDefeatCannotFallBackToGenericXp",
+        "testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges",
+        "testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned",
+        "testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit",
+        "testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes",
+        "testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision",
+        "testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement",
+        "testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation",
+        "testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners",
+        "testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock",
+        "testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority",
+        "testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner",
+        "testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval",
+        "testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges",
+        "testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives",
+        "testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt",
+        "testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
@@ -114,6 +171,248 @@ ADDITIONAL_CASES = {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testScriptFlowFailureMessageUsesANoinlineSynchronousCatchWithoutChangingRethrows(self):
+        header = (ROOT / "src/core/CAsync.h").read_text(encoding="utf-8")
+        signature = re.search(r"inline\s+std::string\s+activeExceptionMessage\(\)\s*\{", header)
+        self.assertIsNotNone(signature, "The synchronous exception-message helper is missing")
+        helper = header[signature.end() :].split("\n}\n", 1)[0]
+        self.assertEqual("try{throw;}catch(conststd::exception&error){returnerror.what();}", registrationTokens(helper))
+        prefix = header[: signature.start()]
+        self.assertRegex(
+            prefix,
+            r"#if defined\(_MSC_VER\)\s+__declspec\(noinline\)\s+"
+            r"#elif defined\(__GNUC__\)\s+__attribute__\(\(noinline\)\)\s+#endif\s*$",
+        )
+        self.assertIn("namespace game_async {", prefix)
+        gui = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        body = gui.split("vstd::task<void> CGuiHandler::runScriptFlowAsync(", 1)[1].split(
+            "bool CGuiHandler::waitMilliseconds(", 1
+        )[0]
+        catch = body.split("} catch (const vstd::task_cancelled &)", 1)[1].split("checkActive();", 1)[0]
+        self.assertEqual(
+            "{throw;}catch(constvstd::scheduler_rejected&){throw;}catch(conststd::exception&){"
+            "if(ownedSevenSuns)throw;failure=game_async::activeExceptionMessage();}",
+            registrationTokens(catch),
+        )
+        self.assertNotIn(".what()", body)
+        self.assertIn("request = failure ? flow->fail(*failure) : flow->next(answer);", body)
+
+    def testDialogActionFailureUsesTheSameSynchronousMessageWithoutChangingDisposition(self):
+        source = (ROOT / "src/gui/panel/CGameDialogPanel.cpp").read_text(encoding="utf-8")
+        body = source.split("vstd::task<void> CGameDialogPanel::selectOptionAsync(", 1)[1].split(
+            "bool CGameDialogPanel::event(", 1
+        )[0]
+        catch = body.split("} catch (const vstd::task_cancelled &)", 1)[1].split("}(this->ptr<CGameDialogPanel>()", 1)[
+            0
+        ]
+        self.assertEqual(
+            "{throw;}catch(constvstd::scheduler_rejected&){throw;}catch(conststd::exception&){"
+            'vstd::logger::error("Dialog action failed:",game_async::activeExceptionMessage());}',
+            registrationTokens(catch),
+        )
+        self.assertNotIn(".what()", body)
+
+    def testScriptWaitForeignTokenSynchronousControlPrecedesTheUnchangedCoroutineVariants(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        name = "testScriptWaitForeignObjectFailureRoundTripsSynchronously"
+        self.assertTrue("void " + name + "() {" in handler, "The synchronous foreign-token control is missing")
+        body = handler.split("void " + name + "() {", 1)[1].split("\n}\n", 1)[0]
+        tokens = registrationTokens(body)
+        self.assertNotIn("co_await", tokens)
+        self.assertNotIn("spawnTask", tokens)
+        for token in (
+            "state->setGame(foreign);",
+            "waitCallbackFlow(game,scope,pybind11::make_tuple(nativeFlowObject(state)))",
+            "autorequest=flow->next();",
+            'request->at("operation").get<std::string>()=="waitMilliseconds"',
+            'flow->takeObjectArgument(request->at("args").at(0).at("__nativeObject").get<std::string>())',
+            "catch(conststd::invalid_argument&error){rejected=true;failure=error.what();}",
+            'failure=="A UI flow object must belong to its game session."',
+            "autocompleted=flow->fail(failure);",
+            '!completed&&events.size()==3&&events[0].cast<std::string>()=="entered"',
+            'events[1].cast<std::string>()==failure&&events[2].cast<std::string>()=="closed"',
+            "state->getGame()==foreign&&!state->isRunning()",
+        ):
+            self.assertIn(token, tokens)
+        self.assertLess(tokens.index("flow->next()"), tokens.index("flow->takeObjectArgument("))
+        self.assertLess(tokens.index("flow->takeObjectArgument("), tokens.index("flow->fail(failure)"))
+        main = handler.split("int main() {", 1)[1]
+        self.assertLess(main.index('run("' + name + '"'), main.index('run("testScriptWaitFlowCompletes'))
+        self.assertEqual(1, main.count('run("' + name + '"'))
+        self.assertIn(name, ADDITIONAL_CASES["handler"])
+
+    def testScriptAndModuleEntrypointsReachConfiguredFixtureValidation(self):
+        script = Path(__file__).resolve()
+        with tempfile.TemporaryDirectory(prefix="native-profile-entrypoint-") as directory:
+            unrelated = Path(directory)
+            environment = dict(os.environ)
+            environment.pop("PYTHONPATH", None)
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            environment["GAME_NATIVE_TEST_PROFILE_FIXTURE"] = str(unrelated / "missing-native-fixture")
+            for mode in ("script", "isolatedScript", "module"):
+                with self.subTest(mode=mode):
+                    command = [sys.executable]
+                    if mode == "isolatedScript":
+                        command.append("-I")
+                    command.append("-B")
+                    command += ["-m", "tests.test_native_test_profile"] if mode == "module" else [str(script)]
+                    command += ["NativeTestProfileRuntimeTest", "-v"]
+                    result = subprocess.run(
+                        command,
+                        cwd=ROOT if mode == "module" else unrelated,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    output = result.stdout + result.stderr
+                    self.assertNotEqual(0, result.returncode, output)
+                    self.assertIn("Configured native profiling fixture is unavailable:", output)
+                    self.assertNotIn("ModuleNotFoundError", output)
+                    self.assertIn("Ran 0 tests", output)
+
+    def testScriptEntrypointDoesNotMaskAMissingBindingHelper(self):
+        with tempfile.TemporaryDirectory(prefix="native-profile-missing-helper-") as directory:
+            root = Path(directory)
+            tests = root / "tests"
+            tests.mkdir()
+            script = tests / "test_native_test_profile.py"
+            script.write_bytes(Path(__file__).read_bytes())
+            (tests / "__init__.py").write_text("", encoding="utf-8")
+            environment = dict(os.environ)
+            environment.pop("PYTHONPATH", None)
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            result = subprocess.run(
+                [sys.executable, "-I", "-B", str(script), "--help"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("ModuleNotFoundError: No module named 'tests.cpp_bindings'", result.stderr)
+
+    def testWindowsHandlerCrashDiagnosticsAreBoundedGuardedAndPreserveFailure(self):
+        helper = (ROOT / "tests/unit/native_crash_diagnostics.h").read_text()
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
+        self.assertRegex(handler, r'#if defined\(_WIN32\)\s+#include "native_crash_diagnostics.h"\s+#endif')
+        main = handler.split("int main() {", 1)[1]
+        self.assertRegex(
+            main,
+            r"^\s*#if defined\(_WIN32\)\s+native_test_diagnostics::installWindowsHandlerCrashDiagnostics\(\);\s+#endif",
+        )
+        self.assertLess(main.index("installWindowsHandlerCrashDiagnostics"), main.index("pybind11::scoped_interpreter"))
+        body = handler.split("void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {", 1)[1].split(
+            "\n}\n", 1
+        )[0]
+        marker = "[handler-test] BODY testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases"
+        self.assertEqual(1, handler.count(marker))
+        self.assertLess(body.index(marker), body.index("auto now"))
+        callback = helper.split("inline LONG CALLBACK logWindowsHandlerCrash(", 1)[1].split(
+            "inline void installWindowsHandlerCrashDiagnostics", 1
+        )[0]
+        for token in (
+            "case EXCEPTION_ACCESS_VIOLATION:",
+            "InterlockedCompareExchange(&reported, 1, 0)",
+            "constexpr ULONG MAX_HANDLER_CRASH_FRAMES = 32;",
+            "void *frames[MAX_HANDLER_CRASH_FRAMES]{};",
+            "CaptureStackBackTrace(0, MAX_HANDLER_CRASH_FRAMES, frames, nullptr)",
+            "index < count && index < MAX_HANDLER_CRASH_FRAMES",
+            "return EXCEPTION_CONTINUE_SEARCH;",
+        ):
+            self.assertIn(token, callback)
+        self.assertNotIn("EXCEPTION_CONTINUE_EXECUTION", callback)
+        self.assertNotIn("reported = 0;", callback.split("InterlockedCompareExchange", 1)[1])
+        self.assertNotIn("throw", callback)
+        frame = helper.split("inline void writeHandlerCrashFrame(", 1)[1].split(
+            "inline LONG CALLBACK logWindowsHandlerCrash", 1
+        )[0]
+        for token in (
+            "GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT",
+            '"[handler-crash]',
+            "rva=0x%llx",
+            "char line[512]{};",
+            "WriteFile(GetStdHandle(STD_ERROR_HANDLE)",
+        ):
+            self.assertIn(token, frame)
+        installer = helper.split("inline void installWindowsHandlerCrashDiagnostics() {", 1)[1].split("\n}", 1)[0]
+        self.assertIn("SEM_NOGPFAULTERRORBOX", installer)
+        self.assertIn("AddVectoredExceptionHandler(1, logWindowsHandlerCrash)", installer)
+        for forbidden in ("DbgHelp", "StackWalk", "SymInitialize", "LoadLibrary", "system("):
+            self.assertNotIn(forbidden, helper)
+
+    def testScriptWaitCrashPhasesAreFlushedBoundedAndPreserveOriginalTestTokens(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
+        body = handler.split("void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {", 1)[1].split(
+            "\n}\n", 1
+        )[0]
+        marker = "[handler-test] BODY testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments"
+        self.assertEqual(1, body.count(marker))
+        self.assertLess(body.index(marker), body.index("ScriptFlowNativeObjectTypes types"))
+        phases = re.findall(r"SCRIPT_WAIT variant=%d phase=([a-z-]+)\\n", body)
+        self.assertEqual(["begin", "arguments-ready", "spawned", "settled", "cleared"], phases)
+        self.assertEqual(9, body.count("std::fflush(stderr)"))
+        self.assertIn("for(intvariant=0;variant<9;++variant)", registrationTokens(body))
+        for before, after in (
+            ("ScriptFlowNativeObjectTypes types", "setup=native-types-ready"),
+            ("setup=native-types-ready", "auto game = makeWindowlessFightGame()"),
+            ("auto game = makeWindowlessFightGame()", "setup=game-ready"),
+            ("setup=game-ready", "auto foreign = makeWindowlessFightGame()"),
+            ("auto foreign = makeWindowlessFightGame()", "setup=foreign-ready"),
+            ("setup=foreign-ready", "for (int variant"),
+            ("phase=begin", "auto state ="),
+            ("phase=arguments-ready", "pybind11::dict scope"),
+            ("waitCallbackFlow(game, scope", "phase=spawned"),
+            ("phase=spawned", "expect_true(pumpHandlerUntil"),
+            ("pending.get()", "phase=settled"),
+            ("phase=settled", 'auto events = scope["events"]'),
+            ("scope.clear()", "phase=cleared"),
+        ):
+            self.assertLess(body.index(before), body.index(after))
+        stripped = re.sub(
+            r'\s*std::fputs\("\[handler-test\] (?:BODY testScriptWaitFlow|SCRIPT_WAIT)[^"]*",\s*stderr\);\s*std::fflush\(stderr\);',
+            "",
+            body,
+        )
+        stripped = re.sub(
+            r'\s*std::fprintf\(stderr,\s*"\[handler-test\] SCRIPT_WAIT[^"]*",\s*variant\);\s*std::fflush\(stderr\);',
+            "",
+            stripped,
+        )
+        self.assertEqual(
+            "3b0fd05aa43fd6734a77e448cad599357f343418a4eb28ea6cc896805adbc656",
+            hashlib.sha256(registrationTokens(stripped).encode()).hexdigest(),
+        )
+
+    def testWindowsHandlerAvDetailsGuardBothParametersAndKeepBoundedWrites(self):
+        helper = (ROOT / "tests/unit/native_crash_diagnostics.h").read_text()
+        callback = helper.split("inline LONG CALLBACK logWindowsHandlerCrash(", 1)[1].split(
+            "inline void installWindowsHandlerCrashDiagnostics", 1
+        )[0]
+        tokens = registrationTokens(callback)
+        self.assertIn("if(code==EXCEPTION_ACCESS_VIOLATION&&exception->ExceptionRecord->NumberParameters>=2)", tokens)
+        self.assertIn("ExceptionInformation[0]", tokens)
+        self.assertIn("ExceptionInformation[1]", tokens)
+        self.assertLess(tokens.index("NumberParameters>=2"), tokens.index("ExceptionInformation[0]"))
+        self.assertLess(tokens.index("NumberParameters>=2"), tokens.index("ExceptionInformation[1]"))
+        for token in (
+            'access==EXCEPTION_READ_FAULT?"read"',
+            'access==EXCEPTION_WRITE_FAULT?"write"',
+            'access==EXCEPTION_EXECUTE_FAULT?"execute"',
+            ':"unknown"',
+            "charline[192]{};",
+            "std::snprintf(",
+            '"[handler-crash] av-access=%s fault-address=0x%llx\\n"',
+            "length<sizeof(line)?length:sizeof(line)-1",
+            "WriteFile(GetStdHandle(STD_ERROR_HANDLE)",
+            "constexprULONGMAX_HANDLER_CRASH_FRAMES=32;",
+        ):
+            self.assertIn(token, tokens)
+        self.assertEqual(4, callback.count("return EXCEPTION_CONTINUE_SEARCH;"))
+        for forbidden in ("EXCEPTION_CONTINUE_EXECUTION", "EXCEPTION_EXECUTE_HANDLER", "malloc(", "new ", "throw "):
+            self.assertNotIn(forbidden, callback)
+
     def testPresentationBrowserObserverCountsBoundInstancesInsteadOfSubtypePrototypes(self):
         handler = (ROOT / "tests/unit/test_handler.cpp").read_text()
         self.assertIn("class ObservedDefeatBrowserPanel : public CGameCampaignBrowserPanel", handler)
@@ -589,6 +888,230 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertEqual(3, race_case.count('nativeTestProfile().run("CGameLoader::startGameWithPlayer",'))
         self.assertTrue('nativeTestProfile().run("CGameLoader::startRandomGameWithPlayer",' in race_case)
         self.assertEqual(1, race_case.count("CGameLoader::startRandomGameWithPlayer(random_game"))
+
+    def sevenSunsWarningSource(self):
+        path = ROOT / "src/handler/CSevenSunsDialogue.cpp"
+        self.assertTrue(path.is_file(), "Finite owned Seven Suns warning dialogue is absent")
+        return path.read_text(encoding="utf-8")
+
+    def testSevenSunsWarningOwnsExactlyTheTwelveReachableSourceEdges(self):
+        source = self.sevenSunsWarningSource()
+        graph = source.split("constexpr std::array<Edge, 12> Edges{{", 1)[1].split("}};", 1)[0]
+        rows = re.findall(
+            r"\{(\d+),\s*(\d+),\s*(\d+),\s*(true|false),\s*(true|false),\s*(true|false),\s*(true|false)\}", graph
+        )
+        edges = {int(row[0]): (int(row[1]), int(row[2]), *(value == "true" for value in row[3:])) for row in rows}
+        self.assertEqual(12, len(rows))
+        self.assertEqual({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16}, set(edges))
+        self.assertEqual((0, 1, False, True, True, False), edges[1])
+        self.assertEqual((1, 8, True, False, False, False), edges[5])
+        self.assertEqual({9, 15, 16}, {edge for edge, row in edges.items() if row[-1]})
+        paths = []
+
+        def visit(state, asked, path):
+            for edge, row in edges.items():
+                origin, target, needs_asked, set_asked, _checked, escape = row
+                if origin != state or needs_asked and not asked:
+                    continue
+                if escape:
+                    paths.append(path + [edge])
+                else:
+                    visit(target, asked or set_asked, path + [edge])
+
+        visit(0, False, [])
+        self.assertEqual(9, len(paths))
+        self.assertTrue(all(len(path) == 3 for path in paths))
+
+    def testSevenSunsWarningKeepsAuthorityWeakAcrossUiAndChecksPublicEpoch(self):
+        source = self.sevenSunsWarningSource()
+        state = source.split("struct CSevenSunsDialogue::State {", 1)[1].split("std::mutex CSevenSunsDialogue", 1)[0]
+        self.assertIn("std::weak_ptr<CGame> game;", state)
+        self.assertNotIn("std::shared_ptr<CGame> game;", state)
+        for token in (
+            "getMapBindingEpoch() == epoch",
+            "getAssignedPlayer() == player",
+            'getObjectByName("player") == player',
+            "isTransitionGenerationCurrent(generation)",
+            '"AR0601#actor2"',
+            '"DOPPSM"',
+        ):
+            self.assertIn(token, state)
+        self.assertNotIn("UnsafeOperationLease", state)
+
+    def testSevenSunsWarningSceneRetirementIsPrivateAndSkipsDestroyAndEffectCleanup(self):
+        source = self.sevenSunsWarningSource()
+        header = (ROOT / "src/core/CSceneManager.h").read_text(encoding="utf-8")
+        primitive = (
+            (ROOT / "src/core/CSceneManager.cpp")
+            .read_text(encoding="utf-8")
+            .split("void CSceneManager::retireObjectWithoutEvents(", 1)[1]
+        )
+        self.assertIn("friend class CSevenSunsDialogue;", header)
+        self.assertGreater(
+            header.index("void retireObjectWithoutEvents("),
+            header.index("  private:", header.index("class CSceneManager :")),
+        )
+        self.assertIn("map->removeObjectWithoutEvents(object)", primitive)
+        self.assertIn("object->owningMap.expired()", primitive)
+        for forbidden in (
+            "releaseEffectReferences(",
+            "removeObjectAsync(",
+            "onDestroy",
+            "defeatedCreature(",
+            "co_await",
+        ):
+            self.assertNotIn(forbidden, primitive)
+        self.assertNotIn("releaseEffectReferences(", source)
+
+    def testSevenSunsWarningCommitsEachEdgeUnderOnlyABoundedLease(self):
+        source = self.sevenSunsWarningSource()
+        method = source.split("json CSevenSunsDialogue::advance(", 1)[1].split("json CSevenSunsDialogue::close()", 1)[0]
+        self.assertLess(method.index("tryBeginUnsafeOperation()"), method.index('["status"] = "pending"'))
+        self.assertLess(method.index("retained.write(state->actor, check)"), method.index("retireObjectWithoutEvents("))
+        self.assertLess(method.index('row["status"] = selected->escape'), method.index("lease->finish()"))
+        self.assertIn("lease->quarantine();", method)
+        self.assertIn("state->poisoned = true;", method)
+        self.assertNotIn("co_await", method)
+        close = source.split("json CSevenSunsDialogue::close()", 1)[1]
+        self.assertNotIn("writeRow(", close)
+        self.assertNotIn("tryBeginUnsafeOperation", close)
+
+    def testSevenSunsWarningFirstChoiceRecordsSourceOrderAndCurrentCityBookkeeping(self):
+        source = self.sevenSunsWarningSource()
+        method = source.split("json CSevenSunsDialogue::advance(", 1)[1]
+        self.assertLess(
+            method.index('writeGlobal("AskedForTour", 1, check)'),
+            method.index('writeGlobal("CheckedSevenSuns", 2, check)'),
+        )
+        self.assertIn("if (state->firstChoice)", method)
+        for token in (
+            "plugin_cityTalked",
+            "plugin_cityTalkCount",
+            "plugin_cityHistoryFrozen",
+            "plugin_cityHistory",
+            "plugin_cityStartingProfile",
+        ):
+            self.assertIn(token, source)
+        begin = source.split("CSevenSunsDialogue::begin(", 1)[1].split("void CSevenSunsDialogue::requireCurrent", 1)[0]
+        self.assertNotIn("recordFirstChoice(", begin)
+        self.assertLess(begin.index("validateState(value->row)"), begin.index("value->check()"))
+
+    def testSevenSunsWarningUsesSharedCaseInsensitiveNamesAndClassicScope(self):
+        source = self.sevenSunsWarningSource()
+        self.assertIn('GlobalsKey = "plugin_citySourceGlobals"', source)
+        self.assertIn('sourceGlobals.at("GLOBAL")', source)
+        self.assertIn("canonicalName(key) == wanted", source)
+        self.assertIn("Ambiguous case aliases", source)
+        self.assertIn('state->global("AskedForTour") == 1', source)
+        self.assertIn("globals.write(std::move(encoded), checkCurrent)", source)
+        self.assertNotIn("asked == 0 || asked == 1", source)
+        self.assertNotIn("checked == 0 || checked == 2", source)
+        self.assertIn('row["globals"] = globalSnapshot()', source)
+
+    def testSevenSunsWarningJournalCallsPropagateRatherThanUseWrapperFallback(self):
+        source = self.sevenSunsWarningSource()
+        self.assertIn('QuestId = "citySevenSunsWarningLead"', source)
+        self.assertIn("CPythonOverrides::find_override", source)
+        self.assertIn("pybind11::get_override", source)
+        self.assertIn("callback(false);", source)
+        self.assertIn("callback().cast<std::string>()", source)
+        self.assertIn("captureJournalStrict(journal)", source)
+        self.assertIn('journalTextStrict(journal, "getObjective")', source)
+        self.assertNotIn("journal->captureJournal(false)", source)
+        self.assertIn("quest == journal && quest->getGame() == game", source)
+        self.assertGreaterEqual(source.count("requireJournal();"), 5)
+        for forbidden in ("addGold(", "addExp(", "giveItem(", "createObject<CCreature>", "createObject<CItem>"):
+            self.assertNotIn(forbidden, source)
+
+    def testSevenSunsWarningRejectsIntegerAliasesAndPriorAdmissionQuarantine(self):
+        source = self.sevenSunsWarningSource()
+        self.assertIn("std::from_chars", source)
+        self.assertIn("parsed.ec == std::errc{}", source)
+        self.assertNotIn(".get<int>()", source)
+        self.assertIn("lease->isSaveAdmissionHealthy()", source)
+        begin = source.split("CSevenSunsDialogue::begin(", 1)[1].split("void CSevenSunsDialogue::requireCurrent", 1)[0]
+        self.assertLess(begin.index("found->second->poisoned = true"), begin.index("validateState(value->row)"))
+        gui = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        self.assertIn("CSevenSunsDialogue::readInteger(arguments.at(0))", gui)
+        context = (ROOT / "src/core/CGameContext.cpp").read_text(encoding="utf-8")
+        health = context.split("bool CGameContext::UnsafeOperationLease::isSaveAdmissionHealthy() const", 1)[1].split(
+            "void CGameContext::UnsafeOperationLease::release", 1
+        )[0]
+        for token in ("!state->quarantined", "!local->quarantined", "SaveAdmissionLocks", "isCurrent()"):
+            self.assertIn(token, health)
+
+    def testSevenSunsWarningSceneOwnershipSurvivesReloadAndCleansOnlyUnownedActors(self):
+        source = self.sevenSunsWarningSource()
+        header = (ROOT / "src/core/CMap.h").read_text(encoding="utf-8")
+        scene = (ROOT / "src/core/CSceneManager.cpp").read_text(encoding="utf-8")
+        map_source = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        serializer = (ROOT / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        self.assertRegex(header, r"getSceneRetiredObjects,\s*setSceneRetiredObjects")
+        self.assertIn("sceneRetiredLifetimeOwners", header)
+        primitive = scene.split("void CSceneManager::retireObjectWithoutEvents(", 1)[1]
+        self.assertLess(
+            primitive.index("sceneRetiredLifetimeOwners.insert(object)"),
+            primitive.index("removeObjectWithoutEvents(object)"),
+        )
+        self.assertIn("hasSceneLifetimeOwner(owner, map, actor, true)", source)
+        cleanup = map_source.split("CMap::~CMap()", 1)[1].split("CMap::getBounds()", 1)[0]
+        self.assertIn("sceneRetiredLifetimeOwners", cleanup)
+        self.assertIn("!object->owningMap.expired()", cleanup)
+        self.assertIn("entry.second == object", cleanup)
+        self.assertNotIn('"DOPPSM"', cleanup)
+        setter = map_source.split("void CMap::setSceneRetiredObjects(", 1)[1]
+        self.assertIn("sceneRetiredLifetimeOwners.insert(object)", setter)
+        self.assertIn('property->name() == "sceneRetiredObjects"', serializer)
+        self.assertIn("std::any_cast<const Retired &>(value).empty()", serializer)
+
+    def testSevenSunsWarningPrivateUiFlowOperationsHaveOnlyReadOnlyCapabilityBinding(self):
+        self.sevenSunsWarningSource()
+        gui = (ROOT / "src/handler/CGuiHandler.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8")
+        bindings = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        for operation in ("beginSevenSunsWarning", "advanceSevenSunsWarning", "endSevenSunsWarning"):
+            self.assertIn('operation == "' + operation + '"', gui)
+            self.assertNotIn('.def("' + operation + '"', bindings)
+        self.assertIn("supportsSevenSunsWarning() const { return true; }", header)
+        self.assertIn('.def("supportsSevenSunsWarning"', bindings)
+        self.assertIn("sevenSuns->requireCurrent();", gui)
+        self.assertIn("if (ownedSevenSuns)\n                    throw;", gui)
+
+    def testSevenSunsWarningNativeCasesAndFixedWorkGuardAreRegistered(self):
+        self.sevenSunsWarningSource()
+        cases = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        names = re.findall(r"void (testSevenSunsWarning\w+)\(\)", cases)
+        self.assertGreaterEqual(len(names), 10)
+        for name in names:
+            self.assertEqual(1, cases.count('nativeTestProfile().run("' + name + '"'))
+            self.assertIn(name, ADDITIONAL_CASES["handler"])
+        perf = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        self.assertIn("pass < 128", perf)
+        self.assertIn("fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1", perf)
+        self.assertEqual(1, perf.count("testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();"))
+
+    def testSevenSunsMerchantIncludedNativeCasesHaveOnceOnlyProfileRegistration(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        stock = (ROOT / "tests/unit/seven_suns_merchant_stock_cases.h").read_text(encoding="utf-8")
+        self.assertEqual(1, handler.count('#include "seven_suns_merchant_stock_cases.h"'))
+        merchant_names = re.findall(r"^void (testSevenSunsMerchant\w+)\(\)", handler, re.MULTILINE)
+        stock_names = re.findall(r"^void (testSevenSunsStock\w+)\(\)", stock, re.MULTILINE)
+        self.assertEqual(17, len(merchant_names))
+        self.assertEqual(9, len(stock_names))
+        defined = merchant_names + stock_names
+        self.assertEqual(26, len(set(defined)))
+        main = handler[handler.rindex("int main() {") :]
+        calls = re.findall(r'nativeTestProfile\(\)\.run\(\s*"(test\w+)",\s*(test\w+)\);', main)
+        selected = [(name, callback) for name, callback in calls if name in defined]
+        self.assertEqual(26, len(selected))
+        self.assertTrue(all(name == callback for name, callback in selected))
+        ordered = tuple(name for name, _callback in selected)
+        self.assertEqual(ordered, ADDITIONAL_CASES["handler"][-26:])
+        for name in defined:
+            self.assertEqual(1, ordered.count(name), name)
+        self.assertEqual("testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority", ordered[0])
+        self.assertTrue(all(name.startswith("testSevenSunsStock") for name in ordered[1:10]))
+        self.assertTrue(all(name.startswith("testSevenSunsMerchant") for name in ordered[10:]))
 
 
 class NativeTestProfileRuntimeTest(unittest.TestCase):

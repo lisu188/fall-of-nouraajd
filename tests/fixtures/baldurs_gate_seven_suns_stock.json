@@ -1,0 +1,4142 @@
+{
+  "schema": "baldurs-gate-seven-suns-stock.v1",
+  "sourceEdition": "Patched original BG1 target; installed BGEE base archives are supporting evidence",
+  "originalParity": false,
+  "itemAbilitiesEstablished": false,
+  "nativeDiceRule": "oneNativeD20PerSelectedRow",
+  "sourceDiceRuleEstablished": false,
+  "nativeChargeRule": "First three base-ability maximum-charge fields; creation/default semantics remain an explicit adaptation",
+  "rows": {
+    "RNDTRE05": {
+      "table": "RNDTREAS",
+      "ordinal": 5,
+      "columns": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "cells": [
+        "RNDMAG02",
+        "RNDMAG01",
+        "MISC43",
+        "AMUL11",
+        "AMUL12",
+        "AMUL13",
+        "AMUL10",
+        "MISC29",
+        "MISC21",
+        "073",
+        "MISC24",
+        "RNDSCR03",
+        "MISC34",
+        "MISC38",
+        "RNDSCR03",
+        "MISC40",
+        "MISC42",
+        "RNDMAG01",
+        "RNDMAG02"
+      ]
+    },
+    "RNDMAG01": {
+      "table": "RNDMAGIC",
+      "ordinal": 1,
+      "columns": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "cells": [
+        "AROW07",
+        "BOLT05",
+        "BULL03*3",
+        "POTN31",
+        "RNDSCR02",
+        "RNDSCR01",
+        "SCRL06",
+        "SCRL04",
+        "POTN08",
+        "POTN43",
+        "POTN44",
+        "POTN37",
+        "POTN19",
+        "POTN28",
+        "BULL02*5",
+        "AROW02*5",
+        "BOLT02*5",
+        "AROW11*3",
+        "BOLT06*3"
+      ]
+    },
+    "RNDMAG02": {
+      "table": "RNDMAGIC",
+      "ordinal": 2,
+      "columns": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "cells": [
+        "POTN09",
+        "POTN05",
+        "POTN03",
+        "SCRL08",
+        "SCRL09",
+        "RNDSCR03",
+        "SCRL16",
+        "POTN17",
+        "POTN08",
+        "POTN10",
+        "AROW04",
+        "AROW09",
+        "BOLT04",
+        "BOLT03",
+        "AROW06",
+        "AROW08",
+        "WAND03*10",
+        "WAND05*10",
+        "WAND06*10"
+      ]
+    },
+    "RNDSCR03": {
+      "table": "RNDSCROL",
+      "ordinal": 3,
+      "columns": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "cells": [
+        "SCRL1D",
+        "SCRL1E",
+        "SCRL1F",
+        "SCRL1G",
+        "SCRL1H",
+        "SCRL1I",
+        "SCRL1J",
+        "SCRL1K",
+        "SCRL1L",
+        "SCRL1M",
+        "SCRL1N",
+        "SCRL1O",
+        "SCRL1P",
+        "SCRL1Q",
+        "SCRL1S",
+        "SCRL1S",
+        "SCRL1T",
+        "SCRL1E",
+        "SCRL1M",
+        "SCRL1I"
+      ]
+    },
+    "RNDSCR01": {
+      "table": "RNDSCROL",
+      "ordinal": 1,
+      "columns": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "cells": [
+        "SCRL84",
+        "SCRL70",
+        "SCRL70",
+        "SCRL66",
+        "SCRL66",
+        "SCRL67",
+        "SCRL68",
+        "SCRL69",
+        "SCRL71",
+        "SCRL72",
+        "SCRL73",
+        "SCRL75",
+        "SCRL76",
+        "SCRL77",
+        "SCRL78",
+        "SCRL79",
+        "SCRL80",
+        "SCRL81",
+        "SCRL82",
+        "SCRL83"
+      ]
+    },
+    "RNDSCR02": {
+      "table": "RNDSCROL",
+      "ordinal": 2,
+      "columns": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "cells": [
+        "SCRL85",
+        "SCRL85",
+        "SCRL86",
+        "SCRL86",
+        "SCRL87",
+        "SCRL87",
+        "SCRL89",
+        "SCRL90",
+        "SCRL91",
+        "SCRL92",
+        "SCRL93",
+        "SCRL94",
+        "SCRL95",
+        "SCRL96",
+        "SCRL97",
+        "SCRL98",
+        "SCRL99",
+        "SCRL1B",
+        "SCRL1C",
+        "SCRL2I"
+      ]
+    }
+  },
+  "items": {
+    "AMUL10": {
+      "resourceId": "citySevenSunsTreasureAmul10",
+      "label": "Gold Necklace",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "52a652710bb9dee0785da36bd637a5025da8d785163b09fc6b83b8b8a5d79fb2",
+      "effectiveSha256": "52a652710bb9dee0785da36bd637a5025da8d785163b09fc6b83b8b8a5d79fb2",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 1,
+      "stackSize": 1,
+      "price": 60,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 4412,
+          "size": 114,
+          "locator": 26214415
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "52a652710bb9dee0785da36bd637a5025da8d785163b09fc6b83b8b8a5d79fb2"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AMUL11": {
+      "resourceId": "citySevenSunsTreasureAmul11",
+      "label": "Pearl Necklace",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "942ce21ee5d5355eaf009ddc3adae4e1fe4de52db12ee77c326e97b7f87960c4",
+      "effectiveSha256": "942ce21ee5d5355eaf009ddc3adae4e1fe4de52db12ee77c326e97b7f87960c4",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 1,
+      "stackSize": 1,
+      "price": 1000,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 4528,
+          "size": 114,
+          "locator": 26214416
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "942ce21ee5d5355eaf009ddc3adae4e1fe4de52db12ee77c326e97b7f87960c4"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AMUL12": {
+      "resourceId": "citySevenSunsTreasureAmul12",
+      "label": "Laeral's Tear Necklace",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "8abeba58dedd6cbd8da2a258732ffcf05a6e59bf49c15bc374dc923fc91317c0",
+      "effectiveSha256": "8abeba58dedd6cbd8da2a258732ffcf05a6e59bf49c15bc374dc923fc91317c0",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 1,
+      "stackSize": 1,
+      "price": 6000,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 4644,
+          "size": 114,
+          "locator": 26214417
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "8abeba58dedd6cbd8da2a258732ffcf05a6e59bf49c15bc374dc923fc91317c0"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AMUL13": {
+      "resourceId": "citySevenSunsTreasureAmul13",
+      "label": "Bloodstone Amulet",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "6f19628523a8ae0ae63b752b30e3ae3e5f449f307cb0de1b45f1442be21a6137",
+      "effectiveSha256": "6f19628523a8ae0ae63b752b30e3ae3e5f449f307cb0de1b45f1442be21a6137",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 1,
+      "stackSize": 1,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 4760,
+          "size": 114,
+          "locator": 26214418
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "6f19628523a8ae0ae63b752b30e3ae3e5f449f307cb0de1b45f1442be21a6137"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW02": {
+      "resourceId": "citySevenSunsTreasureArow02",
+      "label": "Arrow +1",
+      "animation": "images/items/scroll",
+      "baseSha256": "dc3557060d5c70b8a61490a44373065fd6af270a58d9fffd942d4d9c66218d58",
+      "effectiveSha256": "0bc53320bfe999f75943e8de4fc1e6a469b74b9f5a594d6a05807e895a2a1ceb",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 10,
+      "lore": 20,
+      "enchantment": 1,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 13268,
+          "size": 218,
+          "locator": 26214435
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "dc3557060d5c70b8a61490a44373065fd6af270a58d9fffd942d4d9c66218d58"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW04": {
+      "resourceId": "citySevenSunsTreasureArow04",
+      "label": "Acid Arrow +1",
+      "animation": "images/items/scroll",
+      "baseSha256": "35ed68250a03290ac4101c225e7c0a61514cd5509845e44c1ce848e35c9055a4",
+      "effectiveSha256": "e84bae6c0d29fa2835ff3aca6ad499975d9d05740114fddb793c31385e10ddbc",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 50,
+      "lore": 25,
+      "enchantment": 1,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        1
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 13852,
+          "size": 266,
+          "locator": 26214437
+        },
+        "fingerprint": {
+          "bytes": 266,
+          "sha256": "35ed68250a03290ac4101c225e7c0a61514cd5509845e44c1ce848e35c9055a4"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW06": {
+      "resourceId": "citySevenSunsTreasureArow06",
+      "label": "Arrow of Detonation",
+      "animation": "images/items/scroll",
+      "baseSha256": "e230dc63b67aedc347c223e223e908a60de9cd0a3824476119c1a07924aa1326",
+      "effectiveSha256": "441fbc6822e031058a82488218048a5ae49eb1a63eaa2b80d9c75a76f9df7c51",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 300,
+      "lore": 45,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        1
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 14532,
+          "size": 266,
+          "locator": 26214439
+        },
+        "fingerprint": {
+          "bytes": 266,
+          "sha256": "e230dc63b67aedc347c223e223e908a60de9cd0a3824476119c1a07924aa1326"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW07": {
+      "resourceId": "citySevenSunsTreasureArow07",
+      "label": "Arrow of Dispelling",
+      "animation": "images/items/scroll",
+      "baseSha256": "4f6f45c2299e324b6ca3e064d43a6c8112dba785a9d092ac2746332c1ad2442a",
+      "effectiveSha256": "665179540e98ba87ec19febf58467e814a9bccb2d177e1ac3e6853291c45e904",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 300,
+      "lore": 20,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        10
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 14800,
+          "size": 698,
+          "locator": 26214440
+        },
+        "fingerprint": {
+          "bytes": 698,
+          "sha256": "4f6f45c2299e324b6ca3e064d43a6c8112dba785a9d092ac2746332c1ad2442a"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW08": {
+      "resourceId": "citySevenSunsTreasureArow08",
+      "label": "Arrow of Fire +2",
+      "animation": "images/items/scroll",
+      "baseSha256": "12968a6eef1ea1ad9e34459d7a92a4775d54aad34707f8078995d66d926e6c2b",
+      "effectiveSha256": "cbbf3f3266ee607b6f827def69ef006409dc3b0411f03ecde12336e990f0c0ce",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 25,
+      "lore": 25,
+      "enchantment": 2,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        1
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 15500,
+          "size": 266,
+          "locator": 26214441
+        },
+        "fingerprint": {
+          "bytes": 266,
+          "sha256": "12968a6eef1ea1ad9e34459d7a92a4775d54aad34707f8078995d66d926e6c2b"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW09": {
+      "resourceId": "citySevenSunsTreasureArow09",
+      "label": "Arrow of Ice",
+      "animation": "images/items/scroll",
+      "baseSha256": "f9ba8a17583894c2ca98d25ff4f906d31f8881bf4f8dac61fb84caacb1aaad91",
+      "effectiveSha256": "6e42e48c0180b6bc95960e149a86664f5aadfa48a986270f095b5fd3136326f6",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 30,
+      "lore": 25,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        1
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 15768,
+          "size": 266,
+          "locator": 26214442
+        },
+        "fingerprint": {
+          "bytes": 266,
+          "sha256": "f9ba8a17583894c2ca98d25ff4f906d31f8881bf4f8dac61fb84caacb1aaad91"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "AROW11": {
+      "resourceId": "citySevenSunsTreasureArow11",
+      "label": "Arrow +2",
+      "animation": "images/items/scroll",
+      "baseSha256": "87dc44f1fa968d7386d044914b86115009983be95eda1dfee9a8614fd22e568f",
+      "effectiveSha256": "b511450f7812db5785f9c407fb69e854879261bd89283bd797dd5caf5c660669",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 5,
+      "stackSize": 80,
+      "price": 18,
+      "lore": 40,
+      "enchantment": 2,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 16304,
+          "size": 218,
+          "locator": 26214444
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "87dc44f1fa968d7386d044914b86115009983be95eda1dfee9a8614fd22e568f"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BOLT02": {
+      "resourceId": "citySevenSunsTreasureBolt02",
+      "label": "Bolt +1",
+      "animation": "images/items/scroll",
+      "baseSha256": "c49521afe01da6d4f71d92999a6232cae53a779431135eae37375276b1f3a90c",
+      "effectiveSha256": "03817aac0d6400612e2cb990aceaa6b30e03a8879341c0063b056e1dd694b0f5",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 31,
+      "stackSize": 80,
+      "price": 10,
+      "lore": 20,
+      "enchantment": 1,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 44620,
+          "size": 218,
+          "locator": 26214529
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "c49521afe01da6d4f71d92999a6232cae53a779431135eae37375276b1f3a90c"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BOLT03": {
+      "resourceId": "citySevenSunsTreasureBolt03",
+      "label": "Bolt of Lightning",
+      "animation": "images/items/scroll",
+      "baseSha256": "a831e198b676e3d30c6294a9ee9f847b0b694f5cf1180ca03fe48d5d5cf1b4fd",
+      "effectiveSha256": "d644180ffeeb2a641d9cf9f220f10f822c0d7f2540595f1f9b6fa8e85e352727",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 31,
+      "stackSize": 80,
+      "price": 30,
+      "lore": 35,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        2
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 44840,
+          "size": 314,
+          "locator": 26214530
+        },
+        "fingerprint": {
+          "bytes": 314,
+          "sha256": "a831e198b676e3d30c6294a9ee9f847b0b694f5cf1180ca03fe48d5d5cf1b4fd"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BOLT04": {
+      "resourceId": "citySevenSunsTreasureBolt04",
+      "label": "Bolt of Biting",
+      "animation": "images/items/scroll",
+      "baseSha256": "8396a0207d40f681d7f250e37d23264bdb5f1c801129bc0dee446d6a1da197a6",
+      "effectiveSha256": "09bf3bf8a88627fdca3bbcf03ff510529854d28c16712499253b21213f7e75e3",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 31,
+      "stackSize": 80,
+      "price": 75,
+      "lore": 25,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        4
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 45156,
+          "size": 410,
+          "locator": 26214531
+        },
+        "fingerprint": {
+          "bytes": 410,
+          "sha256": "8396a0207d40f681d7f250e37d23264bdb5f1c801129bc0dee446d6a1da197a6"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BOLT05": {
+      "resourceId": "citySevenSunsTreasureBolt05",
+      "label": "Polymorphing bolt",
+      "animation": "images/items/scroll",
+      "baseSha256": "5de41b770a3b79b116ca189ddfe575e2455ae53c018e96ddcc52c7454629b2dd",
+      "effectiveSha256": "5719b4f147b34b55b78c468113e5139881626d88fface1aaf314cd3423339364",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 31,
+      "stackSize": 80,
+      "price": 400,
+      "lore": 40,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        6
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 45568,
+          "size": 506,
+          "locator": 26214532
+        },
+        "fingerprint": {
+          "bytes": 506,
+          "sha256": "5de41b770a3b79b116ca189ddfe575e2455ae53c018e96ddcc52c7454629b2dd"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BOLT06": {
+      "resourceId": "citySevenSunsTreasureBolt06",
+      "label": "Bolt +2",
+      "animation": "images/items/scroll",
+      "baseSha256": "8b514dbf0a50d920f65e13a4f5633006b738780a6c051030e7aacbe382754f15",
+      "effectiveSha256": "c2c879143619e1e7cae921b9be88a2ed606641b9db091033be9dc2344f355e5c",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 31,
+      "stackSize": 80,
+      "price": 15,
+      "lore": 50,
+      "enchantment": 2,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 46076,
+          "size": 218,
+          "locator": 26214533
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "8b514dbf0a50d920f65e13a4f5633006b738780a6c051030e7aacbe382754f15"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BULL02": {
+      "resourceId": "citySevenSunsTreasureBull02",
+      "label": "Bullet +1",
+      "animation": "images/items/scroll",
+      "baseSha256": "b17ad32340629910f672918cc25b0ae14d260341a22f328e409216096c844c0d",
+      "effectiveSha256": "9ca9320f65088df581a1cdcf08ce27d36f961d9100fbc659f8481a15ee42ae03",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 14,
+      "stackSize": 80,
+      "price": 8,
+      "lore": 10,
+      "enchantment": 1,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 70024,
+          "size": 218,
+          "locator": 26214666
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "b17ad32340629910f672918cc25b0ae14d260341a22f328e409216096c844c0d"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "BULL03": {
+      "resourceId": "citySevenSunsTreasureBull03",
+      "label": "Bullet +2",
+      "animation": "images/items/scroll",
+      "baseSha256": "63217ccd601d3240548409cd7bd65b58e1f4fae4b14afe13e3a50e4e5c7284f2",
+      "effectiveSha256": "76780a16c4a503e5e5f2843df798293029e36b0d531919e5a3ea1841324df03d",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 14,
+      "stackSize": 80,
+      "price": 15,
+      "lore": 18,
+      "enchantment": 2,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 1,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 70244,
+          "size": 218,
+          "locator": 26214667
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "63217ccd601d3240548409cd7bd65b58e1f4fae4b14afe13e3a50e4e5c7284f2"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC21": {
+      "resourceId": "citySevenSunsTreasureMisc21",
+      "label": "Skydrop Gem",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "fc8fb17c91ab8c8b1eef19573309dd3b3b7795a3c548545f245bae143e5cffd3",
+      "effectiveSha256": "fc8fb17c91ab8c8b1eef19573309dd3b3b7795a3c548545f245bae143e5cffd3",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 40,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 179616,
+          "size": 114,
+          "locator": 26214932
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "fc8fb17c91ab8c8b1eef19573309dd3b3b7795a3c548545f245bae143e5cffd3"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC24": {
+      "resourceId": "citySevenSunsTreasureMisc24",
+      "label": "Tchazar Gem",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "5a988ea23cc2200f86fef820eca92a4fe885acaa81cadbc4818b37c3d0bfb0f2",
+      "effectiveSha256": "5a988ea23cc2200f86fef820eca92a4fe885acaa81cadbc4818b37c3d0bfb0f2",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 35,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 179964,
+          "size": 114,
+          "locator": 26214935
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "5a988ea23cc2200f86fef820eca92a4fe885acaa81cadbc4818b37c3d0bfb0f2"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC29": {
+      "resourceId": "citySevenSunsTreasureMisc29",
+      "label": "Ziose Gem",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "fb6c3ec56fb8cf041411c5c71748a8f225936b2b62abefa66a4779d42dd41ddb",
+      "effectiveSha256": "fb6c3ec56fb8cf041411c5c71748a8f225936b2b62abefa66a4779d42dd41ddb",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 60,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 180544,
+          "size": 114,
+          "locator": 26214940
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "fb6c3ec56fb8cf041411c5c71748a8f225936b2b62abefa66a4779d42dd41ddb"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC34": {
+      "resourceId": "citySevenSunsTreasureMisc34",
+      "label": "Garnet Gem",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "e77f42c51a73cb301f88187abffea8c8d49bf93b547ddbc62a8e4eb166f50bc9",
+      "effectiveSha256": "e77f42c51a73cb301f88187abffea8c8d49bf93b547ddbc62a8e4eb166f50bc9",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 175,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 183468,
+          "size": 114,
+          "locator": 26214961
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "e77f42c51a73cb301f88187abffea8c8d49bf93b547ddbc62a8e4eb166f50bc9"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC38": {
+      "resourceId": "citySevenSunsTreasureMisc38",
+      "label": "Black Opal",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "39bd0fea76b58b696ad8fd7934810abe685874691e024215392d64515b95e8bd",
+      "effectiveSha256": "39bd0fea76b58b696ad8fd7934810abe685874691e024215392d64515b95e8bd",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 183932,
+          "size": 114,
+          "locator": 26214965
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "39bd0fea76b58b696ad8fd7934810abe685874691e024215392d64515b95e8bd"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC40": {
+      "resourceId": "citySevenSunsTreasureMisc40",
+      "label": "Moonbar Gem",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "ccff3c754f9f445687e101a25760939ba669e10e74e91dd57a6d2057ed5d4fad",
+      "effectiveSha256": "ccff3c754f9f445687e101a25760939ba669e10e74e91dd57a6d2057ed5d4fad",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 375,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 184164,
+          "size": 114,
+          "locator": 26214967
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "ccff3c754f9f445687e101a25760939ba669e10e74e91dd57a6d2057ed5d4fad"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC42": {
+      "resourceId": "citySevenSunsTreasureMisc42",
+      "label": "Diamond",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "a83bf2cf12d680b656b851abfe63eb1c8ed1537c1d9018ef6ce34dd003945a43",
+      "effectiveSha256": "a83bf2cf12d680b656b851abfe63eb1c8ed1537c1d9018ef6ce34dd003945a43",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 1000,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 184396,
+          "size": 114,
+          "locator": 26214969
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "a83bf2cf12d680b656b851abfe63eb1c8ed1537c1d9018ef6ce34dd003945a43"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "MISC43": {
+      "resourceId": "citySevenSunsTreasureMisc43",
+      "label": "Emerald",
+      "animation": "images/items/quest/preciousAmulet",
+      "baseSha256": "543486cb7750f7a45a010321472ff917eacfd901aa5baecc0271e152214691bd",
+      "effectiveSha256": "543486cb7750f7a45a010321472ff917eacfd901aa5baecc0271e152214691bd",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 34,
+      "stackSize": 20,
+      "price": 1500,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 0,
+      "abilityEffectCounts": [],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 184512,
+          "size": 114,
+          "locator": 26214970
+        },
+        "fingerprint": {
+          "bytes": 114,
+          "sha256": "543486cb7750f7a45a010321472ff917eacfd901aa5baecc0271e152214691bd"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN03": {
+      "resourceId": "citySevenSunsTreasurePotn03",
+      "label": "Potion of Hill Giant Strength",
+      "animation": "images/items/potions/life",
+      "baseSha256": "ee062b79d15e1f4e8d8e5d1a008e0d9b8b150dfb07ffaef05eae951f1f9b2621",
+      "effectiveSha256": "996ef883fa3cc3cbeb05176c34bf4d4650059d706eb36b3c4b21114a3ef68cb1",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        8
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 219088,
+          "size": 554,
+          "locator": 26215080
+        },
+        "fingerprint": {
+          "bytes": 554,
+          "sha256": "ee062b79d15e1f4e8d8e5d1a008e0d9b8b150dfb07ffaef05eae951f1f9b2621"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN05": {
+      "resourceId": "citySevenSunsTreasurePotn05",
+      "label": "Potion of Fire Giant Strength",
+      "animation": "images/items/potions/life",
+      "baseSha256": "80d69c38c4fc248359a23ab7ab3185f5a3054bd2e10c4f4661cbbbcc2c77bee7",
+      "effectiveSha256": "e4e3c8c54530fb07d243e42b5f08a997091f74535e1a12ebdd64fa5e6f90c93d",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 1000,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        8
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 220200,
+          "size": 554,
+          "locator": 26215082
+        },
+        "fingerprint": {
+          "bytes": 554,
+          "sha256": "80d69c38c4fc248359a23ab7ab3185f5a3054bd2e10c4f4661cbbbcc2c77bee7"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN08": {
+      "resourceId": "citySevenSunsTreasurePotn08",
+      "label": "Potion of Healing",
+      "animation": "images/items/potions/life",
+      "baseSha256": "94a82db21e6338f46531fc2d106b9bc57b09142fba55521daf6c016102637ae1",
+      "effectiveSha256": "94a82db21e6338f46531fc2d106b9bc57b09142fba55521daf6c016102637ae1",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 75,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        4
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 221868,
+          "size": 362,
+          "locator": 26215085
+        },
+        "fingerprint": {
+          "bytes": 362,
+          "sha256": "94a82db21e6338f46531fc2d106b9bc57b09142fba55521daf6c016102637ae1"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN09": {
+      "resourceId": "citySevenSunsTreasurePotn09",
+      "label": "Potion of Heroism",
+      "animation": "images/items/potions/life",
+      "baseSha256": "dbc412c8d0a9a6c2f89507085b4cebaa17d0430975bbafafde04f469178f86d5",
+      "effectiveSha256": "d2c2ea884735bff90c61d505f5f3c2bb9644b221e7533fe032bbc9ed1a5425b3",
+      "baseEffectiveBytesMatch": false,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 800,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        9
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 222232,
+          "size": 602,
+          "locator": 26215086
+        },
+        "fingerprint": {
+          "bytes": 602,
+          "sha256": "dbc412c8d0a9a6c2f89507085b4cebaa17d0430975bbafafde04f469178f86d5"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN10": {
+      "resourceId": "citySevenSunsTreasurePotn10",
+      "label": "Potion of Invisibility",
+      "animation": "images/items/potions/life",
+      "baseSha256": "c4bbd1a9f95f093e63b4f9c7c96cd5a4d53ad8124f58a156084fade23964f10c",
+      "effectiveSha256": "c4bbd1a9f95f093e63b4f9c7c96cd5a4d53ad8124f58a156084fade23964f10c",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 250,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        5
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 222836,
+          "size": 410,
+          "locator": 26215087
+        },
+        "fingerprint": {
+          "bytes": 410,
+          "sha256": "c4bbd1a9f95f093e63b4f9c7c96cd5a4d53ad8124f58a156084fade23964f10c"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN17": {
+      "resourceId": "citySevenSunsTreasurePotn17",
+      "label": "Elixir of Health",
+      "animation": "images/items/potions/life",
+      "baseSha256": "d10f700a66140576c0b89f3cdad3c91334066ac9c93bc1b8d7f71a78c17e891f",
+      "effectiveSha256": "d10f700a66140576c0b89f3cdad3c91334066ac9c93bc1b8d7f71a78c17e891f",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 250,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        14
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 226488,
+          "size": 842,
+          "locator": 26215094
+        },
+        "fingerprint": {
+          "bytes": 842,
+          "sha256": "d10f700a66140576c0b89f3cdad3c91334066ac9c93bc1b8d7f71a78c17e891f"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN19": {
+      "resourceId": "citySevenSunsTreasurePotn19",
+      "label": "Potion of Agility",
+      "animation": "images/items/potions/life",
+      "baseSha256": "08b037069c71b1b4109bb22f2b6e6a79dc0122bfed0d25cfd1d6fe3ada363d42",
+      "effectiveSha256": "08b037069c71b1b4109bb22f2b6e6a79dc0122bfed0d25cfd1d6fe3ada363d42",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        6
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 227936,
+          "size": 458,
+          "locator": 26215096
+        },
+        "fingerprint": {
+          "bytes": 458,
+          "sha256": "08b037069c71b1b4109bb22f2b6e6a79dc0122bfed0d25cfd1d6fe3ada363d42"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN28": {
+      "resourceId": "citySevenSunsTreasurePotn28",
+      "label": "Potion of Fortitude",
+      "animation": "images/items/potions/life",
+      "baseSha256": "89992358653b39a86b2303dd7958e257c21a5a5132f6965ef86552bef6919abb",
+      "effectiveSha256": "89992358653b39a86b2303dd7958e257c21a5a5132f6965ef86552bef6919abb",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 500,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        6
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 233708,
+          "size": 458,
+          "locator": 26215105
+        },
+        "fingerprint": {
+          "bytes": 458,
+          "sha256": "89992358653b39a86b2303dd7958e257c21a5a5132f6965ef86552bef6919abb"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN31": {
+      "resourceId": "citySevenSunsTreasurePotn31",
+      "label": "Potion of Insulation",
+      "animation": "images/items/potions/life",
+      "baseSha256": "e6309d1b07a2eba017772e154bf9c480eb2cd9abc1244185ce1a110ae9d650d2",
+      "effectiveSha256": "e6309d1b07a2eba017772e154bf9c480eb2cd9abc1244185ce1a110ae9d650d2",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 170,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        8
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 235088,
+          "size": 554,
+          "locator": 26215108
+        },
+        "fingerprint": {
+          "bytes": 554,
+          "sha256": "e6309d1b07a2eba017772e154bf9c480eb2cd9abc1244185ce1a110ae9d650d2"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN37": {
+      "resourceId": "citySevenSunsTreasurePotn37",
+      "label": "Potion of Mind Focusing",
+      "animation": "images/items/potions/life",
+      "baseSha256": "40b4f315845cf16111761772c3975ffa80d0da49fde8337efc781f43d7550bfe",
+      "effectiveSha256": "40b4f315845cf16111761772c3975ffa80d0da49fde8337efc781f43d7550bfe",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 500,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        8
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 240104,
+          "size": 554,
+          "locator": 26215114
+        },
+        "fingerprint": {
+          "bytes": 554,
+          "sha256": "40b4f315845cf16111761772c3975ffa80d0da49fde8337efc781f43d7550bfe"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN43": {
+      "resourceId": "citySevenSunsTreasurePotn43",
+      "label": "Potion of Insight",
+      "animation": "images/items/potions/life",
+      "baseSha256": "70a9f65592f46c6e49b42cb191d6bbb97f7a34acf5c2f8b42c4efc3b7ab98e25",
+      "effectiveSha256": "70a9f65592f46c6e49b42cb191d6bbb97f7a34acf5c2f8b42c4efc3b7ab98e25",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        7
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 243776,
+          "size": 506,
+          "locator": 26215120
+        },
+        "fingerprint": {
+          "bytes": 506,
+          "sha256": "70a9f65592f46c6e49b42cb191d6bbb97f7a34acf5c2f8b42c4efc3b7ab98e25"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "POTN44": {
+      "resourceId": "citySevenSunsTreasurePotn44",
+      "label": "Potion of Strength",
+      "animation": "images/items/potions/life",
+      "baseSha256": "9551ec5884f6ae8eddd2f0652381826e5f3450831d8a5c4f33492db52d8cd802",
+      "effectiveSha256": "9551ec5884f6ae8eddd2f0652381826e5f3450831d8a5c4f33492db52d8cd802",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 9,
+      "stackSize": 24,
+      "price": 350,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        7
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 244284,
+          "size": 506,
+          "locator": 26215121
+        },
+        "fingerprint": {
+          "bytes": 506,
+          "sha256": "9551ec5884f6ae8eddd2f0652381826e5f3450831d8a5c4f33492db52d8cd802"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL04": {
+      "resourceId": "citySevenSunsTreasureScrl04",
+      "label": "Protection From Cold",
+      "animation": "images/items/scroll",
+      "baseSha256": "3d49042de0bb305e8253f927cd79353cad3bbbe4539653d50a7ad2ae196a15f8",
+      "effectiveSha256": "3d49042de0bb305e8253f927cd79353cad3bbbe4539653d50a7ad2ae196a15f8",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 750,
+      "lore": 85,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        6
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 296956,
+          "size": 458,
+          "locator": 26215223
+        },
+        "fingerprint": {
+          "bytes": 458,
+          "sha256": "3d49042de0bb305e8253f927cd79353cad3bbbe4539653d50a7ad2ae196a15f8"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL06": {
+      "resourceId": "citySevenSunsTreasureScrl06",
+      "label": "Protection From Fire",
+      "animation": "images/items/scroll",
+      "baseSha256": "8b58876d74f71c460f5a5452f4d2589e582819568995577c88267e589555e0d7",
+      "effectiveSha256": "8b58876d74f71c460f5a5452f4d2589e582819568995577c88267e589555e0d7",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 750,
+      "lore": 85,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        6
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 297876,
+          "size": 458,
+          "locator": 26215225
+        },
+        "fingerprint": {
+          "bytes": 458,
+          "sha256": "8b58876d74f71c460f5a5452f4d2589e582819568995577c88267e589555e0d7"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL08": {
+      "resourceId": "citySevenSunsTreasureScrl08",
+      "label": "Protection From Poison",
+      "animation": "images/items/scroll",
+      "baseSha256": "33c69b24a285bd6337929874a01165fb1f453bdfb2ffa15eeaf2dbf2a09b151b",
+      "effectiveSha256": "33c69b24a285bd6337929874a01165fb1f453bdfb2ffa15eeaf2dbf2a09b151b",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 750,
+      "lore": 85,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        14
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 301148,
+          "size": 842,
+          "locator": 26215227
+        },
+        "fingerprint": {
+          "bytes": 842,
+          "sha256": "33c69b24a285bd6337929874a01165fb1f453bdfb2ffa15eeaf2dbf2a09b151b"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL09": {
+      "resourceId": "citySevenSunsTreasureScrl09",
+      "label": "Protection From Undead",
+      "animation": "images/items/scroll",
+      "baseSha256": "57fa6ee2bdc8af954b8f136133cb17ca97f9bad5ac9e73c06983d62a43511b46",
+      "effectiveSha256": "57fa6ee2bdc8af954b8f136133cb17ca97f9bad5ac9e73c06983d62a43511b46",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 750,
+      "lore": 85,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        8
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 301992,
+          "size": 554,
+          "locator": 26215228
+        },
+        "fingerprint": {
+          "bytes": 554,
+          "sha256": "57fa6ee2bdc8af954b8f136133cb17ca97f9bad5ac9e73c06983d62a43511b46"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL16": {
+      "resourceId": "citySevenSunsTreasureScrl16",
+      "label": "Cursed Scroll of Petrification",
+      "animation": "images/items/scroll",
+      "baseSha256": "a0b5973b4eada5c1fb12653c50f4e987bbc800468a72d7898a8063d6c14d70ff",
+      "effectiveSha256": "a0b5973b4eada5c1fb12653c50f4e987bbc800468a72d7898a8063d6c14d70ff",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 0,
+      "lore": 85,
+      "enchantment": 0,
+      "charges": [
+        1,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        7
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 306076,
+          "size": 506,
+          "locator": 26215235
+        },
+        "fingerprint": {
+          "bytes": 506,
+          "sha256": "a0b5973b4eada5c1fb12653c50f4e987bbc800468a72d7898a8063d6c14d70ff"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1B": {
+      "resourceId": "citySevenSunsTreasureScrl1b",
+      "label": "Agannazar's Scorcher",
+      "animation": "images/items/scroll",
+      "baseSha256": "788b87beecac1cb7c5962bd99e59a3534fb52fa79572911bb11fc51c5087dab4",
+      "effectiveSha256": "788b87beecac1cb7c5962bd99e59a3534fb52fa79572911bb11fc51c5087dab4",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 308128,
+          "size": 322,
+          "locator": 26215238
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "788b87beecac1cb7c5962bd99e59a3534fb52fa79572911bb11fc51c5087dab4"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1C": {
+      "resourceId": "citySevenSunsTreasureScrl1c",
+      "label": "Ghoul Touch",
+      "animation": "images/items/scroll",
+      "baseSha256": "157069f214b86c5320dbda50bc1cc2b6660957fa5ac43a696698b82eb03b2393",
+      "effectiveSha256": "157069f214b86c5320dbda50bc1cc2b6660957fa5ac43a696698b82eb03b2393",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 308452,
+          "size": 322,
+          "locator": 26215239
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "157069f214b86c5320dbda50bc1cc2b6660957fa5ac43a696698b82eb03b2393"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1D": {
+      "resourceId": "citySevenSunsTreasureScrl1d",
+      "label": "Clairvoyance",
+      "animation": "images/items/scroll",
+      "baseSha256": "4d50d1bc6bc9fb383da87a4d1ad1c979abe0043295b439ba24ee5fadc77b06c0",
+      "effectiveSha256": "4d50d1bc6bc9fb383da87a4d1ad1c979abe0043295b439ba24ee5fadc77b06c0",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 308776,
+          "size": 322,
+          "locator": 26215240
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "4d50d1bc6bc9fb383da87a4d1ad1c979abe0043295b439ba24ee5fadc77b06c0"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1E": {
+      "resourceId": "citySevenSunsTreasureScrl1e",
+      "label": "Dispel Magic",
+      "animation": "images/items/scroll",
+      "baseSha256": "7943d8f590ca44766fddf13cad1b80a3955783072ee6e511f5e4f01b46cc0ea2",
+      "effectiveSha256": "7943d8f590ca44766fddf13cad1b80a3955783072ee6e511f5e4f01b46cc0ea2",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 309100,
+          "size": 322,
+          "locator": 26215241
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "7943d8f590ca44766fddf13cad1b80a3955783072ee6e511f5e4f01b46cc0ea2"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1F": {
+      "resourceId": "citySevenSunsTreasureScrl1f",
+      "label": "Flame Arrow",
+      "animation": "images/items/scroll",
+      "baseSha256": "e1022a0f3347b7770cf6d3903b8cb1a34ee04f74c981d7e8c57336bc826b1bf6",
+      "effectiveSha256": "e1022a0f3347b7770cf6d3903b8cb1a34ee04f74c981d7e8c57336bc826b1bf6",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 309424,
+          "size": 322,
+          "locator": 26215242
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "e1022a0f3347b7770cf6d3903b8cb1a34ee04f74c981d7e8c57336bc826b1bf6"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1G": {
+      "resourceId": "citySevenSunsTreasureScrl1g",
+      "label": "Fireball",
+      "animation": "images/items/scroll",
+      "baseSha256": "94f44a9de09bae2486dfc55340a46c9a02188253630695b1e6ffea2acf326b44",
+      "effectiveSha256": "94f44a9de09bae2486dfc55340a46c9a02188253630695b1e6ffea2acf326b44",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 900,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 309748,
+          "size": 322,
+          "locator": 26215243
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "94f44a9de09bae2486dfc55340a46c9a02188253630695b1e6ffea2acf326b44"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1H": {
+      "resourceId": "citySevenSunsTreasureScrl1h",
+      "label": "Haste",
+      "animation": "images/items/scroll",
+      "baseSha256": "06271d55f92f6d8108b500be70bbb91913f59e6a9a95e57c64ef38e2507a382d",
+      "effectiveSha256": "06271d55f92f6d8108b500be70bbb91913f59e6a9a95e57c64ef38e2507a382d",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 900,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 310072,
+          "size": 322,
+          "locator": 26215244
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "06271d55f92f6d8108b500be70bbb91913f59e6a9a95e57c64ef38e2507a382d"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1I": {
+      "resourceId": "citySevenSunsTreasureScrl1i",
+      "label": "Hold Person",
+      "animation": "images/items/scroll",
+      "baseSha256": "8cf00a7d7d2195a083d8619e68a1f845b33e15a4681cab65380c3ccc6f53db29",
+      "effectiveSha256": "8cf00a7d7d2195a083d8619e68a1f845b33e15a4681cab65380c3ccc6f53db29",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 310396,
+          "size": 322,
+          "locator": 26215245
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "8cf00a7d7d2195a083d8619e68a1f845b33e15a4681cab65380c3ccc6f53db29"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1J": {
+      "resourceId": "citySevenSunsTreasureScrl1j",
+      "label": "Invisibility around the bearer",
+      "animation": "images/items/scroll",
+      "baseSha256": "5ae85ad19bf64605c79746b464bb5a0f2e414f5ac6a127e3f44edbfe75b9ca16",
+      "effectiveSha256": "5ae85ad19bf64605c79746b464bb5a0f2e414f5ac6a127e3f44edbfe75b9ca16",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 310720,
+          "size": 322,
+          "locator": 26215246
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "5ae85ad19bf64605c79746b464bb5a0f2e414f5ac6a127e3f44edbfe75b9ca16"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1K": {
+      "resourceId": "citySevenSunsTreasureScrl1k",
+      "label": "Lightning Bolt",
+      "animation": "images/items/scroll",
+      "baseSha256": "6e3d820a3b3a20441422d14be994b589d86844169ac6760db44ce07f6dea03fd",
+      "effectiveSha256": "6e3d820a3b3a20441422d14be994b589d86844169ac6760db44ce07f6dea03fd",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 900,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 311044,
+          "size": 322,
+          "locator": 26215247
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "6e3d820a3b3a20441422d14be994b589d86844169ac6760db44ce07f6dea03fd"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1L": {
+      "resourceId": "citySevenSunsTreasureScrl1l",
+      "label": "Monster Summoning I",
+      "animation": "images/items/scroll",
+      "baseSha256": "82cee8b0ca180a1c0fd738ec883532f2bf4748b0156c68f9a371d90ed1977849",
+      "effectiveSha256": "82cee8b0ca180a1c0fd738ec883532f2bf4748b0156c68f9a371d90ed1977849",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 311368,
+          "size": 322,
+          "locator": 26215248
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "82cee8b0ca180a1c0fd738ec883532f2bf4748b0156c68f9a371d90ed1977849"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1M": {
+      "resourceId": "citySevenSunsTreasureScrl1m",
+      "label": "Non-Detection",
+      "animation": "images/items/scroll",
+      "baseSha256": "47e33b0c9ddbd6e796cdf19105ed0b372d0682d95971e0638084801d43bc3065",
+      "effectiveSha256": "47e33b0c9ddbd6e796cdf19105ed0b372d0682d95971e0638084801d43bc3065",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 311692,
+          "size": 322,
+          "locator": 26215249
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "47e33b0c9ddbd6e796cdf19105ed0b372d0682d95971e0638084801d43bc3065"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1N": {
+      "resourceId": "citySevenSunsTreasureScrl1n",
+      "label": "Protection From Normal Missiles",
+      "animation": "images/items/scroll",
+      "baseSha256": "42895367d0aef723ecf852489e101d9992a651b9e0618e49d7a29d2d063708b6",
+      "effectiveSha256": "42895367d0aef723ecf852489e101d9992a651b9e0618e49d7a29d2d063708b6",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 900,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 312016,
+          "size": 322,
+          "locator": 26215250
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "42895367d0aef723ecf852489e101d9992a651b9e0618e49d7a29d2d063708b6"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1O": {
+      "resourceId": "citySevenSunsTreasureScrl1o",
+      "label": "Slow",
+      "animation": "images/items/scroll",
+      "baseSha256": "02708b6c744efb232f74ea9b88a3a7ebeb19346a3e85ed4835aeeb1088a48953",
+      "effectiveSha256": "02708b6c744efb232f74ea9b88a3a7ebeb19346a3e85ed4835aeeb1088a48953",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 312340,
+          "size": 322,
+          "locator": 26215251
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "02708b6c744efb232f74ea9b88a3a7ebeb19346a3e85ed4835aeeb1088a48953"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1P": {
+      "resourceId": "citySevenSunsTreasureScrl1p",
+      "label": "Skull Trap",
+      "animation": "images/items/scroll",
+      "baseSha256": "6f33e5dae523374b32246721d09ad5489420098314df8415b3a58f28293c4cc9",
+      "effectiveSha256": "6f33e5dae523374b32246721d09ad5489420098314df8415b3a58f28293c4cc9",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 312664,
+          "size": 322,
+          "locator": 26215252
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "6f33e5dae523374b32246721d09ad5489420098314df8415b3a58f28293c4cc9"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1Q": {
+      "resourceId": "citySevenSunsTreasureScrl1q",
+      "label": "Vampiric Touch",
+      "animation": "images/items/scroll",
+      "baseSha256": "3c3c868eb2a66b321379f77be4894e0077d4395ee3f44f6e78017c1fe8107861",
+      "effectiveSha256": "3c3c868eb2a66b321379f77be4894e0077d4395ee3f44f6e78017c1fe8107861",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 312988,
+          "size": 322,
+          "locator": 26215253
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "3c3c868eb2a66b321379f77be4894e0077d4395ee3f44f6e78017c1fe8107861"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1S": {
+      "resourceId": "citySevenSunsTreasureScrl1s",
+      "label": "Dire Charm",
+      "animation": "images/items/scroll",
+      "baseSha256": "a2970902b48bad5890c99579352de37a8dffae8d79f5b3bd103f5d16edc6391a",
+      "effectiveSha256": "a2970902b48bad5890c99579352de37a8dffae8d79f5b3bd103f5d16edc6391a",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 313636,
+          "size": 322,
+          "locator": 26215255
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "a2970902b48bad5890c99579352de37a8dffae8d79f5b3bd103f5d16edc6391a"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL1T": {
+      "resourceId": "citySevenSunsTreasureScrl1t",
+      "label": "Ghost Armor",
+      "animation": "images/items/scroll",
+      "baseSha256": "01e144e62b850209e91e04e34a50638fb030d0f5824a3d41fa9115bb54434780",
+      "effectiveSha256": "01e144e62b850209e91e04e34a50638fb030d0f5824a3d41fa9115bb54434780",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 300,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 313960,
+          "size": 322,
+          "locator": 26215256
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "01e144e62b850209e91e04e34a50638fb030d0f5824a3d41fa9115bb54434780"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL2I": {
+      "resourceId": "citySevenSunsTreasureScrl2i",
+      "label": "Library note",
+      "animation": "images/items/scroll",
+      "baseSha256": "b44430b32135bd3f1aa42f80152dcd0c2a6ee9b81e506bd373b27aef67a0c8e3",
+      "effectiveSha256": "b44430b32135bd3f1aa42f80152dcd0c2a6ee9b81e506bd373b27aef67a0c8e3",
+      "baseEffectiveBytesMatch": true,
+      "flags": 44,
+      "itemType": 11,
+      "stackSize": 1,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        0,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        0
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 318496,
+          "size": 170,
+          "locator": 26215270
+        },
+        "fingerprint": {
+          "bytes": 170,
+          "sha256": "b44430b32135bd3f1aa42f80152dcd0c2a6ee9b81e506bd373b27aef67a0c8e3"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL66": {
+      "resourceId": "citySevenSunsTreasureScrl66",
+      "label": "Grease",
+      "animation": "images/items/scroll",
+      "baseSha256": "87989fdde3f3d764e906137cf928d1e17b8ec85d71787ee2866343315e5c62e4",
+      "effectiveSha256": "87989fdde3f3d764e906137cf928d1e17b8ec85d71787ee2866343315e5c62e4",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 330596,
+          "size": 322,
+          "locator": 26215329
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "87989fdde3f3d764e906137cf928d1e17b8ec85d71787ee2866343315e5c62e4"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL67": {
+      "resourceId": "citySevenSunsTreasureScrl67",
+      "label": "Armor",
+      "animation": "images/items/scroll",
+      "baseSha256": "41a384cc09c3820b0bfdb0ebcc1c97fa9cc99db2fb511b92e480dcfea8a3b6bc",
+      "effectiveSha256": "41a384cc09c3820b0bfdb0ebcc1c97fa9cc99db2fb511b92e480dcfea8a3b6bc",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 330920,
+          "size": 322,
+          "locator": 26215330
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "41a384cc09c3820b0bfdb0ebcc1c97fa9cc99db2fb511b92e480dcfea8a3b6bc"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL68": {
+      "resourceId": "citySevenSunsTreasureScrl68",
+      "label": "Burning Hands",
+      "animation": "images/items/scroll",
+      "baseSha256": "ecd619619aa5bc4591d2f9d4cf440c4c6224329c3c99cf2cd2e3ce4c8c5cbe5d",
+      "effectiveSha256": "ecd619619aa5bc4591d2f9d4cf440c4c6224329c3c99cf2cd2e3ce4c8c5cbe5d",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 331244,
+          "size": 322,
+          "locator": 26215331
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "ecd619619aa5bc4591d2f9d4cf440c4c6224329c3c99cf2cd2e3ce4c8c5cbe5d"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL69": {
+      "resourceId": "citySevenSunsTreasureScrl69",
+      "label": "Charm Person",
+      "animation": "images/items/scroll",
+      "baseSha256": "aca95ec1cc4fd25fa6e0f3c60be19f8758b8ba2b15c4b6de1893915fd715bbd5",
+      "effectiveSha256": "aca95ec1cc4fd25fa6e0f3c60be19f8758b8ba2b15c4b6de1893915fd715bbd5",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 331568,
+          "size": 322,
+          "locator": 26215332
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "aca95ec1cc4fd25fa6e0f3c60be19f8758b8ba2b15c4b6de1893915fd715bbd5"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL70": {
+      "resourceId": "citySevenSunsTreasureScrl70",
+      "label": "Color Spray",
+      "animation": "images/items/scroll",
+      "baseSha256": "da3b415e3a701839f9579d1086120e2bbd7725663abd86bd586ad37c4d14eb5e",
+      "effectiveSha256": "da3b415e3a701839f9579d1086120e2bbd7725663abd86bd586ad37c4d14eb5e",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 339020,
+          "size": 322,
+          "locator": 26215355
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "da3b415e3a701839f9579d1086120e2bbd7725663abd86bd586ad37c4d14eb5e"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL71": {
+      "resourceId": "citySevenSunsTreasureScrl71",
+      "label": "Blindness",
+      "animation": "images/items/scroll",
+      "baseSha256": "31468cc5057bc4e1fac7d991723c857a8d1466cbacb5ef121f8a7a109ce5b61a",
+      "effectiveSha256": "31468cc5057bc4e1fac7d991723c857a8d1466cbacb5ef121f8a7a109ce5b61a",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 339344,
+          "size": 322,
+          "locator": 26215356
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "31468cc5057bc4e1fac7d991723c857a8d1466cbacb5ef121f8a7a109ce5b61a"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL72": {
+      "resourceId": "citySevenSunsTreasureScrl72",
+      "label": "Friends",
+      "animation": "images/items/scroll",
+      "baseSha256": "e726b5e15c90bb13c28e749eb8295b9557499bc410c0eb6ed5e1c59f2b667353",
+      "effectiveSha256": "e726b5e15c90bb13c28e749eb8295b9557499bc410c0eb6ed5e1c59f2b667353",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 339668,
+          "size": 322,
+          "locator": 26215357
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "e726b5e15c90bb13c28e749eb8295b9557499bc410c0eb6ed5e1c59f2b667353"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL73": {
+      "resourceId": "citySevenSunsTreasureScrl73",
+      "label": "Protection From Petrification",
+      "animation": "images/items/scroll",
+      "baseSha256": "2597c36049d57a34d671a0aed5490783cd74fd935a39fd77b88b1a158fe49db9",
+      "effectiveSha256": "2597c36049d57a34d671a0aed5490783cd74fd935a39fd77b88b1a158fe49db9",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 339992,
+          "size": 322,
+          "locator": 26215358
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "2597c36049d57a34d671a0aed5490783cd74fd935a39fd77b88b1a158fe49db9"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL75": {
+      "resourceId": "citySevenSunsTreasureScrl75",
+      "label": "Identify",
+      "animation": "images/items/scroll",
+      "baseSha256": "fda8ee961303fc33697cde117f4f84f8c761f0e90ddae183a0c7091c4874ec19",
+      "effectiveSha256": "fda8ee961303fc33697cde117f4f84f8c761f0e90ddae183a0c7091c4874ec19",
+      "baseEffectiveBytesMatch": true,
+      "flags": 76,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 340316,
+          "size": 322,
+          "locator": 26215359
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "fda8ee961303fc33697cde117f4f84f8c761f0e90ddae183a0c7091c4874ec19"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL76": {
+      "resourceId": "citySevenSunsTreasureScrl76",
+      "label": "Infravision",
+      "animation": "images/items/scroll",
+      "baseSha256": "f0c33cb78825fc71b87153c89f8a0542abcd750ecad8adf030c1842c78d03009",
+      "effectiveSha256": "f0c33cb78825fc71b87153c89f8a0542abcd750ecad8adf030c1842c78d03009",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 340640,
+          "size": 322,
+          "locator": 26215360
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "f0c33cb78825fc71b87153c89f8a0542abcd750ecad8adf030c1842c78d03009"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL77": {
+      "resourceId": "citySevenSunsTreasureScrl77",
+      "label": "Magic Missile",
+      "animation": "images/items/scroll",
+      "baseSha256": "328c5195688bab4711e44e92ca4ee1842944dbb07b59f60db98d21a357191eda",
+      "effectiveSha256": "328c5195688bab4711e44e92ca4ee1842944dbb07b59f60db98d21a357191eda",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 340964,
+          "size": 322,
+          "locator": 26215361
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "328c5195688bab4711e44e92ca4ee1842944dbb07b59f60db98d21a357191eda"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL78": {
+      "resourceId": "citySevenSunsTreasureScrl78",
+      "label": "Protection From Evil",
+      "animation": "images/items/scroll",
+      "baseSha256": "7519a6eeee25fee9696b6fd3364639c95ad33a56bae3be4585ba7ec04aca83d9",
+      "effectiveSha256": "7519a6eeee25fee9696b6fd3364639c95ad33a56bae3be4585ba7ec04aca83d9",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 341288,
+          "size": 322,
+          "locator": 26215362
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "7519a6eeee25fee9696b6fd3364639c95ad33a56bae3be4585ba7ec04aca83d9"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL79": {
+      "resourceId": "citySevenSunsTreasureScrl79",
+      "label": "Shield",
+      "animation": "images/items/scroll",
+      "baseSha256": "252eaaa2abb3f936c0e31bc9d09d42e46f00771541abe7dd5a9e8a8cd66d33da",
+      "effectiveSha256": "252eaaa2abb3f936c0e31bc9d09d42e46f00771541abe7dd5a9e8a8cd66d33da",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 341612,
+          "size": 322,
+          "locator": 26215363
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "252eaaa2abb3f936c0e31bc9d09d42e46f00771541abe7dd5a9e8a8cd66d33da"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL80": {
+      "resourceId": "citySevenSunsTreasureScrl80",
+      "label": "Shocking Grasp",
+      "animation": "images/items/scroll",
+      "baseSha256": "6acf79081733c495f274d1493049118d86a59ba9f5610859fc6189b9ebf84687",
+      "effectiveSha256": "6acf79081733c495f274d1493049118d86a59ba9f5610859fc6189b9ebf84687",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 342908,
+          "size": 322,
+          "locator": 26215367
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "6acf79081733c495f274d1493049118d86a59ba9f5610859fc6189b9ebf84687"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL81": {
+      "resourceId": "citySevenSunsTreasureScrl81",
+      "label": "Sleep",
+      "animation": "images/items/scroll",
+      "baseSha256": "647cf0492702cfffde559f7659f4eb912e427674008e96c3cd9ac3fe1d0c6d55",
+      "effectiveSha256": "647cf0492702cfffde559f7659f4eb912e427674008e96c3cd9ac3fe1d0c6d55",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 343232,
+          "size": 322,
+          "locator": 26215368
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "647cf0492702cfffde559f7659f4eb912e427674008e96c3cd9ac3fe1d0c6d55"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL82": {
+      "resourceId": "citySevenSunsTreasureScrl82",
+      "label": "Chill Touch",
+      "animation": "images/items/scroll",
+      "baseSha256": "08705b0288b815038858ef7935b8a821ce6a48baf799a913438dca8a083724fb",
+      "effectiveSha256": "08705b0288b815038858ef7935b8a821ce6a48baf799a913438dca8a083724fb",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 343556,
+          "size": 322,
+          "locator": 26215369
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "08705b0288b815038858ef7935b8a821ce6a48baf799a913438dca8a083724fb"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL83": {
+      "resourceId": "citySevenSunsTreasureScrl83",
+      "label": "Chromatic Orb",
+      "animation": "images/items/scroll",
+      "baseSha256": "8a7d857382be2614c740dd5f41a9b3cf70e0a214fb29c6295eb5d4ac6ced44c4",
+      "effectiveSha256": "8a7d857382be2614c740dd5f41a9b3cf70e0a214fb29c6295eb5d4ac6ced44c4",
+      "baseEffectiveBytesMatch": true,
+      "flags": 76,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 343880,
+          "size": 322,
+          "locator": 26215370
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "8a7d857382be2614c740dd5f41a9b3cf70e0a214fb29c6295eb5d4ac6ced44c4"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL84": {
+      "resourceId": "citySevenSunsTreasureScrl84",
+      "label": "Larloch's Minor Drain",
+      "animation": "images/items/scroll",
+      "baseSha256": "fea203079c5d380b4ae7603f98b41efa674db9b075e35ff5e4d3ef745acac4c9",
+      "effectiveSha256": "fea203079c5d380b4ae7603f98b41efa674db9b075e35ff5e4d3ef745acac4c9",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 100,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 344204,
+          "size": 322,
+          "locator": 26215371
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "fea203079c5d380b4ae7603f98b41efa674db9b075e35ff5e4d3ef745acac4c9"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL85": {
+      "resourceId": "citySevenSunsTreasureScrl85",
+      "label": "Blur",
+      "animation": "images/items/scroll",
+      "baseSha256": "c8cabc9964d02d563a95e9718ccfa0694148083aa7b830a17450135a4adf16ea",
+      "effectiveSha256": "c8cabc9964d02d563a95e9718ccfa0694148083aa7b830a17450135a4adf16ea",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 344528,
+          "size": 322,
+          "locator": 26215372
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "c8cabc9964d02d563a95e9718ccfa0694148083aa7b830a17450135a4adf16ea"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL86": {
+      "resourceId": "citySevenSunsTreasureScrl86",
+      "label": "Detect Evil",
+      "animation": "images/items/scroll",
+      "baseSha256": "4db64a8770ae7c3170454fbd3d54d05b5e38d3091362680ddca00bcad47213fd",
+      "effectiveSha256": "4db64a8770ae7c3170454fbd3d54d05b5e38d3091362680ddca00bcad47213fd",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 344852,
+          "size": 322,
+          "locator": 26215373
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "4db64a8770ae7c3170454fbd3d54d05b5e38d3091362680ddca00bcad47213fd"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL87": {
+      "resourceId": "citySevenSunsTreasureScrl87",
+      "label": "Detect Invisibility",
+      "animation": "images/items/scroll",
+      "baseSha256": "10cd0c17d79d324f5f3fbcb3543983d5344fd450e6706546c5c88133c026ecf8",
+      "effectiveSha256": "10cd0c17d79d324f5f3fbcb3543983d5344fd450e6706546c5c88133c026ecf8",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 345176,
+          "size": 322,
+          "locator": 26215374
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "10cd0c17d79d324f5f3fbcb3543983d5344fd450e6706546c5c88133c026ecf8"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL89": {
+      "resourceId": "citySevenSunsTreasureScrl89",
+      "label": "Horror",
+      "animation": "images/items/scroll",
+      "baseSha256": "55162e7d41dbfbdcf75010f8f137ca97d0fc383b402e5163ea13981d5a8ff3e6",
+      "effectiveSha256": "55162e7d41dbfbdcf75010f8f137ca97d0fc383b402e5163ea13981d5a8ff3e6",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 345500,
+          "size": 322,
+          "locator": 26215375
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "55162e7d41dbfbdcf75010f8f137ca97d0fc383b402e5163ea13981d5a8ff3e6"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL90": {
+      "resourceId": "citySevenSunsTreasureScrl90",
+      "label": "Invisibility",
+      "animation": "images/items/scroll",
+      "baseSha256": "99cd993d1190e47ba92db85f28ffefc45d9be3d504a990eeb419957a53f3a939",
+      "effectiveSha256": "99cd993d1190e47ba92db85f28ffefc45d9be3d504a990eeb419957a53f3a939",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 346148,
+          "size": 322,
+          "locator": 26215377
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "99cd993d1190e47ba92db85f28ffefc45d9be3d504a990eeb419957a53f3a939"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL91": {
+      "resourceId": "citySevenSunsTreasureScrl91",
+      "label": "Knock",
+      "animation": "images/items/scroll",
+      "baseSha256": "699225c634281aef80f4d564d8bb70f6879443620cf6f9f651f812e7956efdeb",
+      "effectiveSha256": "699225c634281aef80f4d564d8bb70f6879443620cf6f9f651f812e7956efdeb",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 346472,
+          "size": 322,
+          "locator": 26215378
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "699225c634281aef80f4d564d8bb70f6879443620cf6f9f651f812e7956efdeb"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL92": {
+      "resourceId": "citySevenSunsTreasureScrl92",
+      "label": "Know Alignment",
+      "animation": "images/items/scroll",
+      "baseSha256": "bc56b5a253bf26d1ee9b31f045e4b273bd87e56cac1007d8444094c399e84a91",
+      "effectiveSha256": "bc56b5a253bf26d1ee9b31f045e4b273bd87e56cac1007d8444094c399e84a91",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 346796,
+          "size": 322,
+          "locator": 26215379
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "bc56b5a253bf26d1ee9b31f045e4b273bd87e56cac1007d8444094c399e84a91"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL93": {
+      "resourceId": "citySevenSunsTreasureScrl93",
+      "label": "Luck",
+      "animation": "images/items/scroll",
+      "baseSha256": "0ebebaca4a9f83bf71d751d746948112d7517abecbb996237e15f60e252cc580",
+      "effectiveSha256": "0ebebaca4a9f83bf71d751d746948112d7517abecbb996237e15f60e252cc580",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 347120,
+          "size": 322,
+          "locator": 26215380
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "0ebebaca4a9f83bf71d751d746948112d7517abecbb996237e15f60e252cc580"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL94": {
+      "resourceId": "citySevenSunsTreasureScrl94",
+      "label": "Resist Fear",
+      "animation": "images/items/scroll",
+      "baseSha256": "961d651aa99f592dd67c58a06cc73fa5deba6833715b8cd37a71312c81db8d93",
+      "effectiveSha256": "961d651aa99f592dd67c58a06cc73fa5deba6833715b8cd37a71312c81db8d93",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 347444,
+          "size": 322,
+          "locator": 26215381
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "961d651aa99f592dd67c58a06cc73fa5deba6833715b8cd37a71312c81db8d93"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL95": {
+      "resourceId": "citySevenSunsTreasureScrl95",
+      "label": "Melf's Acid Arrow",
+      "animation": "images/items/scroll",
+      "baseSha256": "3882457af6e1bf233274aa760d3765fe0cb3bf03f7ef8a7e825acfac22e5a625",
+      "effectiveSha256": "3882457af6e1bf233274aa760d3765fe0cb3bf03f7ef8a7e825acfac22e5a625",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 347768,
+          "size": 322,
+          "locator": 26215382
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "3882457af6e1bf233274aa760d3765fe0cb3bf03f7ef8a7e825acfac22e5a625"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL96": {
+      "resourceId": "citySevenSunsTreasureScrl96",
+      "label": "Mirror Image",
+      "animation": "images/items/scroll",
+      "baseSha256": "9b9d396e7ef3dd78911a9ab9474bf58545835aaaf16e6886607595492c66600d",
+      "effectiveSha256": "9b9d396e7ef3dd78911a9ab9474bf58545835aaaf16e6886607595492c66600d",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 348092,
+          "size": 322,
+          "locator": 26215383
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "9b9d396e7ef3dd78911a9ab9474bf58545835aaaf16e6886607595492c66600d"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL97": {
+      "resourceId": "citySevenSunsTreasureScrl97",
+      "label": "Stinking Cloud",
+      "animation": "images/items/scroll",
+      "baseSha256": "3eb1460eaada83f3247bae40893a0ed91593e079221514cdd6b6ae0002147065",
+      "effectiveSha256": "3eb1460eaada83f3247bae40893a0ed91593e079221514cdd6b6ae0002147065",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 348416,
+          "size": 322,
+          "locator": 26215384
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "3eb1460eaada83f3247bae40893a0ed91593e079221514cdd6b6ae0002147065"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL98": {
+      "resourceId": "citySevenSunsTreasureScrl98",
+      "label": "Strength",
+      "animation": "images/items/scroll",
+      "baseSha256": "fadbb181d6b1667e9933f0c40022a373598d946c2de92ef885974a0e4cd7df57",
+      "effectiveSha256": "fadbb181d6b1667e9933f0c40022a373598d946c2de92ef885974a0e4cd7df57",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 348740,
+          "size": 322,
+          "locator": 26215385
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "fadbb181d6b1667e9933f0c40022a373598d946c2de92ef885974a0e4cd7df57"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "SCRL99": {
+      "resourceId": "citySevenSunsTreasureScrl99",
+      "label": "Web",
+      "animation": "images/items/scroll",
+      "baseSha256": "99c919a682d6b1615cfbd25652ca0c25e32c4ea9897d0856e4c29237d6d89a62",
+      "effectiveSha256": "99c919a682d6b1615cfbd25652ca0c25e32c4ea9897d0856e4c29237d6d89a62",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 11,
+      "stackSize": 50,
+      "price": 200,
+      "lore": 0,
+      "enchantment": 0,
+      "charges": [
+        1,
+        1,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 349064,
+          "size": 322,
+          "locator": 26215386
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "99c919a682d6b1615cfbd25652ca0c25e32c4ea9897d0856e4c29237d6d89a62"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "WAND03": {
+      "resourceId": "citySevenSunsTreasureWand03",
+      "label": "Wand of Magic Missiles",
+      "animation": "images/items/scroll",
+      "baseSha256": "9bc89b105045895326354b2d48b0bdbaac75d67f38aa34bdffe2e028015a41ee",
+      "effectiveSha256": "9bc89b105045895326354b2d48b0bdbaac75d67f38aa34bdffe2e028015a41ee",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 35,
+      "stackSize": 1,
+      "price": 5000,
+      "lore": 60,
+      "enchantment": 0,
+      "charges": [
+        100,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        4
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 496092,
+          "size": 362,
+          "locator": 26215651
+        },
+        "fingerprint": {
+          "bytes": 362,
+          "sha256": "9bc89b105045895326354b2d48b0bdbaac75d67f38aa34bdffe2e028015a41ee"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "WAND05": {
+      "resourceId": "citySevenSunsTreasureWand05",
+      "label": "Wand of Fire",
+      "animation": "images/items/scroll",
+      "baseSha256": "ca31ba311ad651b52f9782e080c6df0bca07def6dc8c4e5fb8f79219c9a0f3a6",
+      "effectiveSha256": "ca31ba311ad651b52f9782e080c6df0bca07def6dc8c4e5fb8f79219c9a0f3a6",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 35,
+      "stackSize": 1,
+      "price": 22000,
+      "lore": 50,
+      "enchantment": 0,
+      "charges": [
+        50,
+        50,
+        0
+      ],
+      "abilityCount": 2,
+      "abilityEffectCounts": [
+        1,
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 496916,
+          "size": 322,
+          "locator": 26215653
+        },
+        "fingerprint": {
+          "bytes": 322,
+          "sha256": "ca31ba311ad651b52f9782e080c6df0bca07def6dc8c4e5fb8f79219c9a0f3a6"
+        },
+        "format": "ITM V1"
+      }
+    },
+    "WAND06": {
+      "resourceId": "citySevenSunsTreasureWand06",
+      "label": "Wand of Frost",
+      "animation": "images/items/scroll",
+      "baseSha256": "888fca497edd3f2153155230d407ddebbfb4dbda815df4a8cc4447a42e6331e4",
+      "effectiveSha256": "888fca497edd3f2153155230d407ddebbfb4dbda815df4a8cc4447a42e6331e4",
+      "baseEffectiveBytesMatch": true,
+      "flags": 108,
+      "itemType": 35,
+      "stackSize": 1,
+      "price": 15000,
+      "lore": 60,
+      "enchantment": 0,
+      "charges": [
+        100,
+        0,
+        0
+      ],
+      "abilityCount": 1,
+      "abilityEffectCounts": [
+        1
+      ],
+      "equippedEffectCount": 0,
+      "abilitiesPending": true,
+      "headerEvidence": {
+        "origin": {
+          "source": "key_biff",
+          "path": "data\\ITEMS.BIF",
+          "offset": 497240,
+          "size": 218,
+          "locator": 26215654
+        },
+        "fingerprint": {
+          "bytes": 218,
+          "sha256": "888fca497edd3f2153155230d407ddebbfb4dbda815df4a8cc4447a42e6331e4"
+        },
+        "format": "ITM V1"
+      }
+    }
+  },
+  "weapon": {
+    "sourceCode": "S1-12",
+    "resourceId": "citySevenSunsDoppssWeapon",
+    "baseSha256": "44c02f993700e11ec0994567ad9edb9ad4c1737eab6761dbe6767887f6cc343a",
+    "effectiveSha256": "29045d90fb11e54d672cafed2d4550606a0672355d93b211e9df8a0be7cc0f1f",
+    "bonus": {
+      "dmgMin": 1,
+      "dmgMax": 12,
+      "hit": 0
+    },
+    "rawFlags": 96,
+    "undroppable": true,
+    "equippedNativeSlot": "0",
+    "classModEffectiveEffectExcluded": "opcode326/CIFGAIN",
+    "enchantment": 1
+  },
+  "sourceCreature": {
+    "resref": "DOPPSS",
+    "sha256": "3a94bcb25ad1dccf2f0b78dcafe1529e57802a69b566bf8aa566e7c74c8ceee1",
+    "hp": 28,
+    "killXp": 420,
+    "gold": 0,
+    "allegiance": 255
+  },
+  "inputFingerprints": {
+    "itemHeaders": "639d77f27b026237e271b56dc8b6fec561ee8365e0b12de21d2309710e18d3e0",
+    "scrollFrontier": "d409e1732500017cc3026ffc0688c64da46c112cbf79f91b21679883fd151ae0",
+    "priorClosure": "638ff1ad4c788852e7b106a57ea253ba9747d79542cc9cdd08c2144d7906b218",
+    "rootTable": "98dfa0a21e31b3fb0d25d75665baa5044b3eda26d984abe6b75dd366cbf99d6e"
+  },
+  "acceptanceGaps": [
+    "Unmodded patched original-BG1 table/resource identity is not authenticated.",
+    "Source docs do not establish classic nested D20 versus2D10 weighting; all retained columns stay visible.",
+    "Default-charge materialization is a documented native conversion, not an original-engine observation.",
+    "Spell, potion, ammunition, enchantment and wand abilities remain pending separately from actual stock ownership.",
+    "Seventeen effective item overrides are excluded; base archives are not proof of original unmodded identity."
+  ]
+}

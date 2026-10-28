@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
-
 CITY_JSON_PREFIX = "city-json:"
 
 
@@ -283,6 +282,143 @@ def load(self, context):
             and (not selector.get("label") or record.get("label", "").casefold() == selector["label"].casefold())
         )
 
+    seven_suns_death_lineages = {
+        "cityAr0601Actor1": ("AR0601#actor1", "AR0601", "DOPMER"),
+        "cityAr0601Actor3": ("AR0601#actor3", "AR0601", "DOPMER"),
+        "cityAr0602Actor1": ("AR0602#actor1", "AR0602", "DOPMER"),
+        "cityAr0602Actor2": ("AR0602#actor2", "AR0602", "DOPMER"),
+        "cityAr0603Actor2": ("AR0603#actor2", "AR0603", "DOPPSS"),
+    }
+
+    def sevenSunsDeathIdentity(actor):
+        if not isinstance(actor, CCreature):
+            return None
+        identity = seven_suns_death_lineages.get(actor.getName())
+        if (
+            not identity
+            or actor.getStringProperty("sourceActor") != identity[0]
+            or actor.getStringProperty("sourceArea") != identity[1]
+        ):
+            return None
+        creature = actor.getStringProperty("sourceCreature")
+        original = (
+            creature == identity[2]
+            and actor.getTypeId() == actor.getName()
+            and actor.getStringProperty("sourceDialogue") == ("DOPMER" if creature == "DOPMER" else "")
+        )
+        replacement = (
+            identity[2] == "DOPMER" and creature == "DOPPSS" and actor.getTypeId() == "citySevenSunsRevealedDoppss"
+        )
+        return identity if original or replacement else None
+
+    def bindSevenSunsDeathOwner(owner, actor):
+        identity = sevenSunsDeathIdentity(actor)
+        if (
+            not identity
+            or actor.getGame() is not owner.getGame()
+            or world(owner).getObjectByName("cityClock") is not owner
+            or world(owner).getObjectByName(actor.getName()) is not actor
+        ):
+            return
+        key = "plugin_citySevenSunsOriginal_" + actor.getName()
+        if getattr(owner, key, None) is not None:
+            return
+        old = getattr(owner, "plugin_citySevenSunsMerchantOld_" + actor.getName(), None)
+        new = getattr(owner, "plugin_citySevenSunsMerchantNew_" + actor.getName(), None)
+        original = old if new is actor else actor
+        if (old is not None or new is not None) and (new is not actor or old is None):
+            return
+        if sevenSunsDeathIdentity(original) == identity and original.getStringProperty("sourceCreature") == identity[2]:
+            owner.setObjectProperty(key, original)
+
+    def sevenSunsDeathData(obj, key, default):
+        try:
+            return read(obj, key, default)
+        except (ValueError, TypeError):
+            return None
+
+    def sevenSunsDeathRole(owner, actor):
+        identity = sevenSunsDeathIdentity(actor)
+        if not identity or actor.isAlive() or actor.getGame() is not owner.getGame():
+            return None
+        game_map, name = world(owner), actor.getName()
+        if game_map.getObjectByName("cityClock") is not owner or game_map.getObjectByName(name) is not None:
+            return None
+        original = getattr(owner, "plugin_citySevenSunsOriginal_" + name, None)
+        old = getattr(owner, "plugin_citySevenSunsMerchantOld_" + name, None)
+        new = getattr(owner, "plugin_citySevenSunsMerchantNew_" + name, None)
+        if old is actor:
+            return None
+        if old is None and new is None:
+            return (
+                "original" if original is actor and actor.getStringProperty("sourceCreature") == identity[2] else None
+            )
+        receipt = sevenSunsDeathData(game_map, "plugin_citySevenSunsMerchantState", {})
+        rows = receipt.get("actors", {}) if isinstance(receipt, dict) else {}
+        row = rows.get(name, {}) if isinstance(rows, dict) else {}
+        if (
+            old is original
+            and old is not None
+            and new is actor
+            and actor.getStringProperty("sourceCreature") == "DOPPSS"
+            and actor.getTypeId() == "citySevenSunsRevealedDoppss"
+            and old is not actor
+            and sevenSunsDeathIdentity(old) == identity
+            and old.getStringProperty("sourceCreature") == "DOPMER"
+            and isinstance(row, dict)
+            and row.get("status") == "replaced"
+        ):
+            return "replacement"
+        return None
+
+    def sevenSunsDeathRecord(actor, role):
+        return {
+            "sourceActor": actor.getStringProperty("sourceActor"),
+            "area": actor.getStringProperty("sourceArea"),
+            "creature": actor.getStringProperty("sourceCreature"),
+            "role": role,
+        }
+
+    def recordSevenSunsDeath(owner, actor):
+        role = sevenSunsDeathRole(owner, actor)
+        if not role:
+            return
+        document = sevenSunsDeathData(world(owner), "plugin_citySevenSunsDeaths", {"version": 1, "lineages": {}})
+        if (
+            not isinstance(document, dict)
+            or set(document) != {"version", "lineages"}
+            or type(document.get("version")) is not int
+            or document["version"] != 1
+            or not isinstance(document["lineages"], dict)
+            or not set(document["lineages"]).issubset(seven_suns_death_lineages)
+        ):
+            return
+        document["lineages"][actor.getName()] = sevenSunsDeathRecord(actor, role)
+        write(world(owner), "plugin_citySevenSunsDeaths", document)
+
+    def sevenSunsDeathCount(owner):
+        document = sevenSunsDeathData(world(owner), "plugin_citySevenSunsDeaths", {})
+        if (
+            not isinstance(document, dict)
+            or set(document) != {"version", "lineages"}
+            or type(document.get("version")) is not int
+            or document["version"] != 1
+            or not isinstance(document["lineages"], dict)
+            or not set(document["lineages"]).issubset(seven_suns_death_lineages)
+        ):
+            return 0
+        result = 0
+        for name, row in document["lineages"].items():
+            if name not in seven_suns_death_lineages:
+                continue
+            cause = getattr(owner, "plugin_cityCorpse_" + name, None)
+            if cause is None:
+                continue
+            role = sevenSunsDeathRole(owner, cause)
+            if role and row == sevenSunsDeathRecord(cause, role):
+                result += 1
+        return result
+
     def actorRecord(actor):
         return {
             "label": actor.getStringProperty("label"),
@@ -422,8 +558,27 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+
     def custody(obj):
         return world(obj).getObjectByName("cityCustody")
+
+    @register(context)
+    @mapQuest("baldursGate")
+    class BaldursGateSevenSunsWarningLeadQuest(CQuest):
+        def isCompleted(self):
+            return False
+
+        def getObjective(self):
+            return "A merchant fled after warning that shapechangers had infiltrated the Seven Suns."
+
+        def getReward(self):
+            return "This journal lead grants no gold, experience, or possessions."
+
+        def getHint(self):
+            return "Follow up at the Seven Suns and with Scar."
+
+        def onComplete(self):
+            pass
 
     @register(context)
     @mapQuest("baldursGate")
@@ -1593,7 +1748,6 @@ def load(self, context):
                 staged["name"] = value
             self.requireCustodyStage(binding, actor)
 
-
     @register(context)
     @mapQuest("baldursGate")
     class BaldursGateQuest(CQuest):
@@ -1876,11 +2030,299 @@ def load(self, context):
                 )
             return True
 
+        def isSevenSunsMerchantActor(self, actor):
+            lineages = {
+                "cityAr0601Actor1": ("AR0601#actor1", "AR0601"),
+                "cityAr0601Actor3": ("AR0601#actor3", "AR0601"),
+                "cityAr0602Actor1": ("AR0602#actor1", "AR0602"),
+                "cityAr0602Actor2": ("AR0602#actor2", "AR0602"),
+            }
+            if not isinstance(actor, CCreature) or actor.getName() not in lineages:
+                return False
+            source_actor, area = lineages[actor.getName()]
+            return (
+                actor.getStringProperty("sourceActor") == source_actor
+                and actor.getStringProperty("sourceArea") == area
+                and actor.getStringProperty("sourceCreature") == "DOPMER"
+                and actor.getStringProperty("sourceDialogue") == "DOPMER"
+            )
+
+        def validSevenSunsMerchantView(self, view, lineage):
+            if (
+                type(view) is not dict
+                or type(view.get("capabilityVersion")) is not int
+                or view["capabilityVersion"] != 1
+                or view.get("dialogue") != "DOPMER"
+                or view.get("lineage") != lineage
+                or type(view.get("revision")) is not int
+                or not 0 <= view["revision"] <= 999999
+                or view.get("attackRevealSupported") is not False
+                or type(view.get("sourceTalkCount")) is not int
+                or view["sourceTalkCount"] < 0
+                or type(view.get("choices")) is not list
+            ):
+                return False
+            status = view.get("status")
+            if status == "refused":
+                return (
+                    view.get("reason")
+                    in (
+                        "noAuditedEntry",
+                        "legacyCountUnknown",
+                        "conversionUnavailable",
+                        "activeCombat",
+                        "admissionClosed",
+                        "revisionLimit",
+                    )
+                    and type(view.get("state")) is int
+                    and view["state"] == -1
+                    and not view["choices"]
+                    and view.get("automaticEdge") is None
+                )
+            if type(view.get("state")) is not int or view["state"] not in range(14):
+                return False
+            if not 1 <= view["sourceTalkCount"] <= 3:
+                return False
+            if status == "closed":
+                return (
+                    not view["choices"]
+                    and view.get("automaticEdge") is None
+                    and type(view.get("revealRequested")) is bool
+                )
+            choices = {0: [0, 1, 2], 2: [4, 5, 6], 5: [9, 10, 11], 7: [13, 14, 15], 10: [18, 19, 20]}
+            automatic = {1: 3, 3: 7, 4: 8, 6: 12, 8: 16, 9: 17, 11: 21, 12: 22, 13: 23}
+            if status != "ready":
+                return False
+            if view["state"] in choices:
+                return (
+                    all(type(edge) is int for edge in view["choices"])
+                    and view["choices"] == choices[view["state"]]
+                    and view.get("automaticEdge") is None
+                )
+            return (
+                not view["choices"]
+                and type(view.get("automaticEdge")) is int
+                and view["automaticEdge"] == automatic.get(view["state"])
+            )
+
+        @resumableHook
+        def conversationSevenSunsMerchant(self):
+            if not self.canInteract() or not self.isSevenSunsMerchantActor(self.actor()):
+                return False
+            handler = self.getGame().getGuiHandler()
+            capability = getattr(handler, "supportsSevenSunsMerchants", None)
+            if not callable(capability) or capability() is not True:
+                return False
+            lineage = self.actor().getName()
+            bodies = {
+                0: "Welcome to the Seven Suns. I recognize your face; tell me who you are.",
+                1: "Joke as you please. Your invented conqueror does not frighten us.",
+                2: "And these companions of yours—how well do they know you?",
+                3: "Then let us both enjoy the silence. Leave us to our work.",
+                4: "That disappoints me.",
+                5: "A solitary traveler... You are exactly the sort I have been craving.",
+                6: "Brothers, our meal has arrived. Let us begin.",
+                7: "You again? Tell us why you insist on troubling us.",
+                8: "Our customers can afford our prices. Take your questions elsewhere.",
+                9: "Your remarks will be your end. Brothers, these visitors may discover us. Deal with them now.",
+                10: "Would you give up everything to learn what we really are?",
+                11: "We trade in stolen faces and identities. We are doppelgangers, and you have offered us new skins.",
+                12: "I have revealed too much. Brothers, these witnesses must become our next meal.",
+                13: "A false face is life itself to us. This skin once belonged to someone else. We are doppelgangers; surrender yours.",
+            }
+            replies = {
+                0: "Call me Foolio Displasius. I have come to ruin your company!",
+                1: "I lead this party. Why do you need our names?",
+                2: "My identity is private. We can dispense with introductions.",
+                4: "We are adventurers who have grown close through our journeys.",
+                5: "We scarcely know one another. Traveling together is convenient.",
+                6: "I will not discuss my private life with a merchant.",
+                9: "Keep your ailments to yourself. I have heard enough.",
+                10: "Someone who loves me would notice if I disappeared with you.",
+                11: "Why would someone as wealthy as you take an interest in me?",
+                13: "If this is a shop, why are you so unwilling to sell us anything?",
+                14: "A merchant lecturing me about shame? Your hypocrisy is impressive.",
+                15: "Your voice does not offend me. Give us better answers.",
+                18: "You are impostors. I accept the risk—show us your real faces.",
+                19: "What truth? I only wanted directions out of here.",
+                20: "Truth matters little to me. I enjoy a convincing fiction too.",
+            }
+            successors = {
+                0: 1,
+                1: 2,
+                2: 3,
+                4: 4,
+                5: 5,
+                6: 3,
+                9: 3,
+                10: 4,
+                11: 6,
+                13: 8,
+                14: 9,
+                15: 9,
+                18: 11,
+                19: 12,
+                20: 13,
+            }
+            nonreveal_endings, reveal_endings = (3, 7, 8, 16), (12, 17, 21, 22, 23)
+            previous_edge, previous_state, previous_revision, source_count = None, None, None, None
+            view = yield uiRequest("gui.beginSevenSunsMerchant", clock(self), self.actor())
+            for _ in range(5):
+                if not self.validSevenSunsMerchantView(view, lineage):
+                    return False
+                if previous_revision is not None and (
+                    view["revision"] != previous_revision + 1 or view["sourceTalkCount"] != source_count
+                ):
+                    return False
+                status = view["status"]
+                if status == "refused":
+                    return False
+                if status == "closed":
+                    return (
+                        previous_state == view["state"]
+                        and previous_edge in (*nonreveal_endings, *reveal_endings)
+                        and view["revealRequested"] == (previous_edge in reveal_endings)
+                    )
+                if previous_edge is None:
+                    if view["state"] != {1: 0, 2: 7, 3: 10}[view["sourceTalkCount"]]:
+                        return False
+                    source_count = view["sourceTalkCount"]
+                elif previous_edge not in successors or view["state"] != successors[previous_edge]:
+                    return False
+                state, revision = view["state"], view["revision"]
+                yield uiRequest("gui.showCampaignScreen", "Seven Suns", bodies[state], "Continue")
+                edge = view.get("automaticEdge")
+                if edge is None:
+                    choices = [{"id": str(index), "label": replies[index]} for index in view["choices"]]
+                    choice = yield uiRequest(
+                        "gui.showChoice", "Your reply", json.dumps(choices), "Answer", "Continue later"
+                    )
+                    if type(choice) is not str or choice not in [row["id"] for row in choices]:
+                        yield uiRequest("gui.endSevenSunsMerchant")
+                        return False
+                    edge = int(choice)
+                previous_edge, previous_state, previous_revision = edge, state, revision
+                view = yield uiRequest("gui.advanceSevenSunsMerchant", revision, edge)
+            yield uiRequest("gui.endSevenSunsMerchant")
+            return False
+
+        def isSevenSunsWarningActor(self, actor):
+            return bool(
+                isinstance(actor, CCreature)
+                and actor.getName() == "cityAr0601Actor2"
+                and actor.getStringProperty("sourceActor") == "AR0601#actor2"
+                and actor.getStringProperty("sourceArea") == "AR0601"
+                and actor.getStringProperty("sourceCreature") == "DOPPSM"
+                and actor.getStringProperty("sourceDialogue") == "DOPPSM"
+            )
+
+        def validSevenSunsWarningView(self, view):
+            if (
+                type(view) is not dict
+                or type(view.get("capabilityVersion")) is not int
+                or view["capabilityVersion"] != 1
+                or type(view.get("revision")) is not int
+                or view["revision"] < 0
+                or type(view.get("state")) is not int
+            ):
+                return False
+            if view.get("status") == "retired":
+                return view.get("journal") == {"strref": 26986, "rawFlags": 92}
+            if view.get("status") != "ready":
+                return False
+            state = view["state"]
+            choices = view.get("choices")
+            automatic = view.get("automaticEdge")
+            if type(choices) is not list or any(type(edge) is not int for edge in choices):
+                return False
+            expected = {0: [[0, 1, 2]], 1: [[3, 4, 6], [3, 4, 5, 6]], 2: [[7, 8]]}
+            if state in expected:
+                return choices in expected[state] and automatic is None
+            terminal = {3: 9, 7: 15, 8: 16}
+            return state in terminal and not choices and type(automatic) is int and automatic == terminal[state]
+
+        @resumableHook
+        def conversationSevenSunsWarning(self):
+            if not self.canInteract() or not self.isSevenSunsWarningActor(self.actor()):
+                return False
+            handler = self.getGame().getGuiHandler()
+            capability = getattr(handler, "supportsSevenSunsWarning", None)
+            if not callable(capability) or not capability():
+                return False
+            lines = {
+                0: "The merchant pauses and asks what you need.",
+                1: "He cannot help with that request and asks you to leave.",
+                2: "He is pressed for time and asks you to stop questioning him.",
+                3: "He confides that merchants here have changed their faces. He believes shapechangers have "
+                "infiltrated the Seven Suns and urges you to leave. He means to escape himself.",
+                7: "Jhasso has not been seen since the trouble began. The merchant has witnessed people change "
+                "their appearance; he fears shapechangers control the Seven Suns and plans to flee.",
+                8: "As you turn away, he warns that people here have altered their faces. He believes the Seven "
+                "Suns has been infiltrated and urges you to get clear.",
+            }
+            replies = {
+                0: "Challenge the trading house's recent decisions.",
+                1: "Request a look around the building.",
+                2: "Ask to meet the head of the Seven Suns.",
+                3: "Insist on seeing Jhasso before leaving.",
+                4: "Insist that the merchant show you around.",
+                5: "Accept that the tour is refused and leave.",
+                6: "Look for somebody else who will talk.",
+                7: "Keep pressing for answers.",
+                8: "End the conversation and leave.",
+            }
+            view = yield uiRequest("gui.beginSevenSunsWarning", clock(self), self.actor())
+            successors = {0: 2, 1: 1, 2: 1, 3: 7, 4: 3, 5: 8, 6: 8, 7: 3, 8: 8}
+            previous_revision, previous_edge = None, None
+            for _step in range(4):
+                if not self.validSevenSunsWarningView(view):
+                    return False
+                if previous_revision is not None and view["revision"] != previous_revision + 1:
+                    return False
+                if view["status"] == "retired":
+                    return previous_edge in (9, 15, 16)
+                state, revision = view["state"], view["revision"]
+                if (
+                    _step == 3
+                    or previous_edge in (9, 15, 16)
+                    or (previous_edge is None and state != 0)
+                    or (previous_edge in successors and state != successors[previous_edge])
+                ):
+                    return False
+                yield uiRequest("gui.showCampaignScreen", "Seven Suns merchant", lines[state], "Continue")
+                edge = view["automaticEdge"]
+                if edge is None:
+                    choices = [{"id": str(index), "label": replies[index]} for index in view["choices"]]
+                    choice = yield uiRequest(
+                        "gui.showChoice", "Your reply", json.dumps(choices), "Answer", "Continue later"
+                    )
+                    if type(choice) is not str or choice not in [row["id"] for row in choices]:
+                        yield uiRequest("gui.endSevenSunsWarning")
+                        return False
+                    edge = int(choice)
+                previous_revision = revision
+                previous_edge = edge
+                view = yield uiRequest("gui.advanceSevenSunsWarning", revision, edge)
+            yield uiRequest("gui.endSevenSunsWarning")
+            return False
+
         @resumableHook
         def talk(self):
             if not self.canInteract(resume_custody=True):
                 return
             actor = self.actor()
+            if (
+                actor.getName() == "cityAr0601Actor2"
+                or actor.getStringProperty("sourceCreature") == "DOPPSM"
+                or actor.getStringProperty("sourceDialogue") == "DOPPSM"
+            ):
+                return (yield from self.conversationSevenSunsWarningFlow())
+            if (
+                actor.getName() in ("cityAr0601Actor1", "cityAr0601Actor3", "cityAr0602Actor1", "cityAr0602Actor2")
+                or actor.getStringProperty("sourceCreature") == "DOPMER"
+                or actor.getStringProperty("sourceDialogue") == "DOPMER"
+            ):
+                return (yield from self.conversationSevenSunsMerchantFlow())
             coordinator = custody(self)
             if coordinator and actor.getStringProperty("sourceDialogue") in coordinator.data().get("dialogues", {}):
                 yield from coordinator.conversationFlow(actor)
@@ -5488,12 +5930,17 @@ def load(self, context):
             if actor.isAlive():
                 return
             owner, game_map = clock(actor), world(actor)
+            if actor.getName() in seven_suns_death_lineages and actor is getattr(
+                owner, "plugin_citySevenSunsMerchantOld_" + actor.getName(), None
+            ):
+                return
             if not claim_once(game_map, "plugin_cityDeath_" + actor.getName()):
                 return
             records = read(game_map, "plugin_cityDeaths", {})
             records[actor.getName()] = actorRecord(actor)
             write(game_map, "plugin_cityDeaths", records)
             owner.setObjectProperty("plugin_cityCorpse_" + actor.getName(), actor)
+            recordSevenSunsDeath(owner, actor)
             plot_execution = actor.getBoolProperty("plugin_cityPlotExecution")
             if not plot_execution:
                 game_map.setBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"), True)
@@ -5523,6 +5970,17 @@ def load(self, context):
 
     @register(context)
     class BaldursGateClock(CBuilding):
+        def sevenSunsDeathCount(self):
+            return sevenSunsDeathCount(self)
+
+        @resumableHook
+        def settleSevenSunsMerchants(self):
+            handler = self.getGame().getGuiHandler()
+            capability = getattr(handler, "supportsSevenSunsMerchants", None)
+            if callable(capability) and capability() is True:
+                return (yield uiRequest("gui.settleSevenSunsMerchants", self))
+            return None
+
         @resumableHook
         def observeRegions(self):
             definition_text = self.getStringProperty("regionDefinitions")
@@ -5593,6 +6051,7 @@ def load(self, context):
         def initializeActor(self, actor):
             if not isinstance(actor, CCreature) or actor.isPlayer():
                 return
+            bindSevenSunsDeathOwner(self, actor)
             initializeInventory(actor)
             if not actor.getBoolProperty("plugin_cityHooksInstalled"):
                 if actor.getStringProperty("sourceCreature") in ("VAIL", "RANCE", "CAILAN", "FAIZAH", "ACHEN"):
@@ -5819,6 +6278,7 @@ def load(self, context):
             coordinator = custody(self)
             if coordinator:
                 coordinator.updatePatrols()
+            yield from self.settleSevenSunsMerchantsFlow()
             yield from self.observeRegionsFlow()
             if not was_fatal and game_map.getBoolProperty("plugin_cityFlag_poisonFatal"):
                 yield uiRequest(

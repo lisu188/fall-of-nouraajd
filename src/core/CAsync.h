@@ -18,8 +18,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "core/CGlobal.h"
+#include <exception>
+#include <string>
 
 namespace game_async {
+// LLVM186728 hypothesis: keep a named catch outside coroutine frames; not a proved cause of our crash.
+// Call only from an active std::exception handler.
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__)
+__attribute__((noinline))
+#endif
+inline std::string
+activeExceptionMessage() {
+    try {
+        throw;
+    } catch (const std::exception &error) {
+        return error.what();
+    }
+}
+
 enum class WaitMode { PostedWork, Frames };
 struct FramePumpBudget {
     std::size_t maxReadyPasses = 1024;

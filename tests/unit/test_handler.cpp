@@ -32,6 +32,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CSceneManager.h"
+#include "seven_suns_warning_fixture.h"
+#include "seven_suns_merchant_fixture.h"
+#include "handler/CSevenSunsMerchantStock.h"
+#include "handler/CSevenSunsMerchantStockData.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
@@ -60,6 +64,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTile.h"
 #include "test_harness.h"
 #include "native_test_profile.h"
+#if defined(_WIN32)
+#include "native_crash_diagnostics.h"
+#endif
 
 #include <SDL.h>
 #include <pybind11/embed.h>
@@ -6743,6 +6750,8 @@ void testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime() {
 }
 
 void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {
+    std::fputs("[handler-test] BODY testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases\n", stderr);
+    std::fflush(stderr);
     auto now = std::make_shared<CWaitState::Clock::time_point>();
     auto state = std::make_shared<CWaitState>([now] { return *now; });
     for (int invalid : {-1, 60001}) {
@@ -6788,11 +6797,62 @@ void testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases() {
     expect_true(zero && state->complete(*zero), "a zero-duration wait must complete without adding time");
 }
 
-void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
+void testScriptWaitForeignObjectFailureRoundTripsSynchronously() {
+    std::fputs("[handler-test] BODY testScriptWaitForeignObjectFailureRoundTripsSynchronously\n", stderr);
+    std::fflush(stderr);
     ScriptFlowNativeObjectTypes types;
     auto game = makeWindowlessFightGame();
     auto foreign = makeWindowlessFightGame();
+    auto state = std::make_shared<CWaitState>();
+    state->setGame(foreign);
+    pybind11::dict scope;
+    auto flow = waitCallbackFlow(game, scope, pybind11::make_tuple(nativeFlowObject(state)));
+    auto request = flow->next();
+    expect_true(request && request->at("operation").get<std::string>() == "waitMilliseconds" &&
+                    request->at("args").size() == 1,
+                "the synchronous control must reach the actual foreign wait token request");
+    bool rejected = false;
+    std::string failure;
+    if (request) {
+        try {
+            flow->takeObjectArgument(request->at("args").at(0).at("__nativeObject").get<std::string>());
+        } catch (const std::invalid_argument &error) {
+            rejected = true;
+            failure = error.what();
+        }
+    }
+    expect_true(rejected && failure == "A UI flow object must belong to its game session.",
+                "the synchronous native token boundary must reject the exact foreign object identity");
+    if (rejected) {
+        auto completed = flow->fail(failure);
+        auto events = scope["events"].cast<pybind11::list>();
+        expect_true(
+            !completed && events.size() == 3 && events[0].cast<std::string>() == "entered" &&
+                events[1].cast<std::string>() == failure && events[2].cast<std::string>() == "closed" &&
+                state->getGame() == foreign && !state->isRunning(),
+            "a synchronous token rejection must deliver the exact error, close once, and never run the foreign wait");
+    }
+    flow.reset();
+    scope.clear();
+    game->getContext()->shutdown();
+    foreign->getContext()->shutdown();
+}
+
+void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
+    std::fputs("[handler-test] BODY testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments\n", stderr);
+    std::fflush(stderr);
+    ScriptFlowNativeObjectTypes types;
+    std::fputs("[handler-test] SCRIPT_WAIT setup=native-types-ready\n", stderr);
+    std::fflush(stderr);
+    auto game = makeWindowlessFightGame();
+    std::fputs("[handler-test] SCRIPT_WAIT setup=game-ready\n", stderr);
+    std::fflush(stderr);
+    auto foreign = makeWindowlessFightGame();
+    std::fputs("[handler-test] SCRIPT_WAIT setup=foreign-ready\n", stderr);
+    std::fflush(stderr);
     for (int variant = 0; variant < 9; ++variant) {
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=begin\n", variant);
+        std::fflush(stderr);
         auto state = std::make_shared<CWaitState>();
         state->setGame(variant == 1 ? foreign : game);
         auto arguments = pybind11::make_tuple(nativeFlowObject(state));
@@ -6822,9 +6882,13 @@ void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
                 }
             });
         }
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=arguments-ready\n", variant);
+        std::fflush(stderr);
         pybind11::dict scope;
         auto pending = game->getContext()->spawnTask(
             game->getGuiHandler()->runScriptFlowAsync(waitCallbackFlow(game, scope, std::move(arguments))));
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=spawned\n", variant);
+        std::fflush(stderr);
         expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "a native wait flow must settle");
         bool cancelled = false;
         if (pending.finished()) {
@@ -6834,6 +6898,8 @@ void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
                 cancelled = true;
             }
         }
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=settled\n", variant);
+        std::fflush(stderr);
         auto events = scope["events"].cast<pybind11::list>();
         const auto validEvents =
             variant >= 6
@@ -6844,6 +6910,8 @@ void testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments() {
         expect_true(validEvents && !state->isRunning(),
                     "only a same-session wait-state token may complete the native UI wait operation");
         scope.clear();
+        std::fprintf(stderr, "[handler-test] SCRIPT_WAIT variant=%d phase=cleared\n", variant);
+        std::fflush(stderr);
     }
     game->getContext()->shutdown();
     foreign->getContext()->shutdown();
@@ -7617,7 +7685,1354 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
     std::printf("verified-load-resume rejected-or-disabled-paths=7 dispatches=%d expected=0\n", rejected_dispatches);
 }
 
+void testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives() {
+    std::shared_ptr<CGame> livingGame;
+    std::weak_ptr<CMap> dyingMap;
+    std::weak_ptr<CCreature> actor;
+    std::weak_ptr<CEffect> effect;
+    {
+        SevenSunsWarningFixture fixture;
+        livingGame = fixture.game;
+        dyingMap = fixture.map;
+        actor = fixture.warning;
+        effect = fixture.effect;
+        auto session = fixture.begin();
+        SevenSunsWarningFixture::finish(*session);
+        session->close();
+        session.reset();
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(livingGame);
+        livingGame->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(livingGame->getContext()->isActive() && dyingMap.expired() && actor.expired() && effect.expired(),
+                "dropping the retired scene map must break its native actor/effect cycle while the game still lives");
+}
+
+void testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles() {
+    json snapshot;
+    std::shared_ptr<CGame> originalGame;
+    {
+        SevenSunsWarningFixture fixture;
+        originalGame = fixture.game;
+        auto session = fixture.begin();
+        SevenSunsWarningFixture::finish(*session);
+        session->close();
+        session.reset();
+        auto saved = CSerialization::serializeExpected(fixture.map, "unit-seven-suns-whole-map");
+        expect_true(saved.has_value(), "the whole map with its retired scene owner must serialize");
+        if (!saved)
+            return;
+        snapshot = *saved;
+        expect_true(snapshot.at("properties").contains("sceneRetiredObjects"),
+                    "an active retired lifetime owner must be present in the native map snapshot");
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(originalGame);
+        originalGame->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    auto restoredGame = std::make_shared<CGame>();
+    auto objects = restoredGame->getObjectHandler();
+    objects->registerType("CMap", [] { return std::make_shared<CMap>(); });
+    objects->registerType("CPlayer", [] { return std::make_shared<CPlayer>(); });
+    objects->registerType("CBuilding", [] { return std::make_shared<CBuilding>(); });
+    objects->registerType("CCreature", [] { return std::make_shared<CCreature>(); });
+    objects->registerType("CItem", [] { return std::make_shared<CItem>(); });
+    objects->registerType("CWeapon", [] { return std::make_shared<CWeapon>(); });
+    objects->registerType("CEffect", [] { return std::make_shared<CEffect>(); });
+    objects->registerType("CStats", [] { return std::make_shared<CStats>(); });
+    objects->registerType("CQuest", [] { return std::make_shared<CQuest>(); });
+    objects->registerType("CTrigger", [] { return std::make_shared<CTrigger>(); });
+    objects->registerType("CController", [] { return std::make_shared<CController>(); });
+    objects->registerType("CMonsterFightController", [] { return std::make_shared<CMonsterFightController>(); });
+    objects->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
+    objects->registerType("CPlayerFightController", [] { return std::make_shared<CPlayerFightController>(); });
+    std::weak_ptr<CCreature> actor;
+    std::weak_ptr<CEffect> effect;
+    std::weak_ptr<CMap> dyingMap;
+    {
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(
+            restoredGame, snapshot, "unit-seven-suns-restored-whole-map");
+        expect_true(decoded.has_value(), "the whole map must restore the ordinary retired collection");
+        if (!decoded)
+            return;
+        auto map = std::dynamic_pointer_cast<CMap>(*decoded);
+        expect_true(map != nullptr, "the restored scene snapshot must remain a map");
+        if (!map)
+            return;
+        restoredGame->setMap(map);
+        auto clock = map->getObjectByName("cityClock");
+        auto retained =
+            std::dynamic_pointer_cast<CCreature>(clock->getObjectProperty(SevenSunsWarningFixture::ActorKey));
+        expect_true(retained && retained->getEffects().size() == 1 && !map->getObjectByName("cityAr0601Actor2"),
+                    "the restored retired actor must stay alive and absent from the map registry");
+        if (!retained || retained->getEffects().size() != 1)
+            return;
+        auto retainedEffect = *retained->getEffects().begin();
+        expect_true(retainedEffect->getCaster() == retained && retainedEffect->getVictim() == retained,
+                    "whole-map aliases must resolve to the single retired actor owned by the restored collection");
+        actor = retained;
+        effect = retainedEffect;
+        dyingMap = map;
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(restoredGame);
+        restoredGame->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(originalGame->getContext()->isActive() && restoredGame->getContext()->isActive() &&
+                    dyingMap.expired() && actor.expired() && effect.expired(),
+                "restored map destruction must release retired cycles without shutdown or explicit effect cleanup");
+}
+
+void testSevenSunsWarningOldMapCleanupPreservesActorAdoptedByAnotherLiveMap() {
+    std::shared_ptr<CGame> livingGame;
+    std::shared_ptr<CMap> destination;
+    std::weak_ptr<CCreature> actor;
+    std::weak_ptr<CEffect> effect;
+    {
+        SevenSunsWarningFixture fixture;
+        livingGame = fixture.game;
+        auto session = fixture.begin();
+        SevenSunsWarningFixture::finish(*session);
+        session->close();
+        session.reset();
+        destination = std::make_shared<CMap>();
+        destination->setGame(livingGame);
+        livingGame->setMap(destination);
+        destination->addObject(fixture.warning);
+        actor = fixture.warning;
+        effect = fixture.effect;
+    }
+    vstd::event_loop<>::instance()->runReady();
+    auto adopted = actor.lock();
+    expect_true(adopted && adopted->getEffects().size() == 1 && !effect.expired() &&
+                    destination->getObjectByName("cityAr0601Actor2") == adopted,
+                "old scene cleanup must not erase an actor's effects after another live map adopts it");
+    adopted.reset();
+    auto next = std::make_shared<CMap>();
+    next->setGame(livingGame);
+    livingGame->setMap(next);
+    destination.reset();
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(actor.expired() && effect.expired() && livingGame->getContext()->isActive(),
+                "the actual destination owner must release the actor/effect cycle when that map dies");
+}
+
+void testSevenSunsWarningDefaultMapSnapshotOmitsTheEmptyRetirementCollection() {
+    SevenSunsWarningFixture fixture;
+    const auto saved = CSerialization::serializeExpected(fixture.map, "unit-default-scene-retirement");
+    expect_true(saved && !saved->at("properties").contains("sceneRetiredObjects") &&
+                    fixture.warning->getEffects().size() == 1,
+                "ordinary maps keep their default snapshot shape until a private scene retirement owns an actor");
+}
+
+void testSevenSunsWarningReflectedOwnerTamperingQuarantinesAndStillCleansCycles() {
+    std::shared_ptr<CGame> livingGame;
+    std::weak_ptr<CCreature> actor;
+    std::weak_ptr<CEffect> effect;
+    {
+        SevenSunsWarningFixture fixture;
+        livingGame = fixture.game;
+        actor = fixture.warning;
+        effect = fixture.effect;
+        fixture.duringJournalFactory = [&] {
+            fixture.map->setProperty<std::set<std::shared_ptr<CMapObject>>>("sceneRetiredObjects", {});
+        };
+        auto session = fixture.begin();
+        SevenSunsWarningFixture::step(*session, 0);
+        SevenSunsWarningFixture::step(*session, 7);
+        bool rejected = false;
+        try {
+            SevenSunsWarningFixture::step(*session, 9);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.destroyCalls == 0,
+                    "removing the reflected retired owner during an admitted callback cannot commit source success");
+        session.reset();
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(livingGame);
+        livingGame->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(livingGame->getContext()->isActive() && actor.expired() && effect.expired(),
+                "the private monotonic lifetime anchor must clean cycles even after reflected-owner tampering");
+}
+
+void testSevenSunsWarningSwallowedNestedBeginCannotAcknowledgeRetirement() {
+    SevenSunsWarningFixture fixture;
+    fixture.duringJournalFactory = [&] {
+        try {
+            auto nested = fixture.begin();
+        } catch (const std::exception &) {
+        }
+    };
+    auto session = fixture.begin();
+    SevenSunsWarningFixture::step(*session, 0);
+    SevenSunsWarningFixture::step(*session, 7);
+    bool rejected = false;
+    try {
+        SevenSunsWarningFixture::step(*session, 9);
+    } catch (const std::exception &) {
+        rejected = true;
+    }
+    expect_true(rejected && fixture.state().at("status").get<std::string>() == "pending" &&
+                    !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.destroyCalls == 0 &&
+                    fixture.clock->getObjectProperty(SevenSunsWarningFixture::ActorKey) == fixture.warning,
+                "swallowing nested begin rejection must poison the admitted outer warning owner");
+}
+
+void testSevenSunsWarningOtherUnsafeQuarantineCannotBecomeSuccess() {
+    SevenSunsWarningFixture fixture;
+    fixture.duringJournalFactory = [&] {
+        auto other = fixture.map->tryBeginUnsafeOperation();
+        expect_true(other.has_value(), "the fixture must reach the existing nonexclusive native admission seam");
+        if (other)
+            other->quarantine();
+    };
+    auto session = fixture.begin();
+    SevenSunsWarningFixture::step(*session, 0);
+    SevenSunsWarningFixture::step(*session, 7);
+    bool rejected = false;
+    try {
+        SevenSunsWarningFixture::step(*session, 9);
+    } catch (const std::exception &) {
+        rejected = true;
+    }
+    expect_true(rejected && fixture.state().at("status").get<std::string>() == "pending" &&
+                    !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.destroyCalls == 0,
+                "current pointer/generation alone cannot acknowledge an already quarantined native admission");
+}
+
+void testSevenSunsWarningCapacityPreflightNeverPublishesAnUnreadableOwnResult() {
+    for (int mode = 0; mode < 3; ++mode) {
+        SevenSunsWarningFixture fixture;
+        json source = json::object();
+        if (mode == 0) {
+            source["GLOBAL"] = json::object();
+            for (int index = 0; index < 1024; ++index)
+                source["GLOBAL"]["Other" + std::to_string(index)] = index;
+        } else if (mode == 1) {
+            for (int index = 0; index < 256; ++index)
+                source["AREA" + std::to_string(index)] = json::object();
+        } else {
+            json talks = json::object();
+            for (int index = 0; index < 2048; ++index)
+                talks["Other" + std::to_string(index)] = json::object();
+            fixture.map->setStringProperty("plugin_cityTalked", "city-json:" + talks.dump());
+        }
+        fixture.map->setStringProperty("plugin_citySourceGlobals", "city-json:" + source.dump());
+        auto session = fixture.begin();
+        const auto globalsBefore = fixture.map->getStringProperty("plugin_citySourceGlobals");
+        bool rejected = false;
+        try {
+            SevenSunsWarningFixture::step(*session, 0);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && fixture.map->getStringProperty("plugin_citySourceGlobals") == globalsBefore &&
+                        fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey).empty() &&
+                        fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                        fixture.map->tryBeginSaveSnapshot().has_value() && fixture.questFactories == 0,
+                    "a valid-at-capacity store must refuse before effects rather than commit an unreadable next state");
+        session->close();
+    }
+}
+
+void testSevenSunsWarningRejectsOverflowingJsonAuthorityInsteadOfAliasingLowBits() {
+    for (const auto *value : {"4294967297", "-4294967295", "18446744073709551615"}) {
+        SevenSunsWarningFixture fixture;
+        fixture.map->setStringProperty("plugin_citySourceGlobals",
+                                       std::string("city-json:{\"GLOBAL\":{\"AskedForTour\":") + value + "}}");
+        bool rejected = false;
+        try {
+            auto session = fixture.begin();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                        fixture.questFactories == 0 && !fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "out-of-range JSON integers cannot alias source AskedForTour=1 through a narrowing cast");
+    }
+}
+
+void testSevenSunsWarningUiFlowDispatchOwnsTokensAndRejectsOversizedSourceEdges() {
+    ScriptFlowNativeObjectTypes types;
+    for (int variant = 0; variant < 3; ++variant) {
+        SevenSunsWarningFixture fixture;
+        pybind11::dict scope;
+        scope["clock"] = nativeFlowObject(fixture.clock);
+        scope["actor"] = nativeFlowObject(fixture.warning);
+        scope["variant"] = variant;
+        pybind11::exec(R"(
+events = []
+def nativeWarning():
+    try:
+        arguments = (clock, actor) if variant != 1 else (clock,)
+        view = yield {'operation': 'gui.beginSevenSunsWarning', 'args': arguments, 'kwargs': {}}
+        for edge in (0, 7, 9):
+            supplied = edge + (4294967296 if variant == 2 else 0)
+            view = yield {'operation': 'gui.advanceSevenSunsWarning', 'args': (view['revision'], supplied), 'kwargs': {}}
+        events.append(view['status'])
+        yield {'operation': 'gui.endSevenSunsWarning', 'args': (), 'kwargs': {}}
+    finally:
+        events.append('closed')
+)",
+                       scope);
+        auto flow = fixture.game->getScriptHandler()->createCallbackFlow(
+            scope["nativeWarning"].cast<pybind11::function>(), fixture.game);
+        auto pending =
+            fixture.game->getContext()->spawnTask(fixture.game->getGuiHandler()->runScriptFlowAsync(std::move(flow)));
+        expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "finite native warning flow must settle");
+        bool rejected = false;
+        if (pending.finished()) {
+            try {
+                pending.get();
+            } catch (const std::exception &) {
+                rejected = true;
+            }
+        }
+        const auto events = scope["events"].cast<pybind11::list>();
+        expect_true(events.size() == (variant == 0 ? 2 : 1) &&
+                        events[events.size() - 1].cast<std::string>() == "closed",
+                    "both completed and rejected owned native UI flows must close their Python generator");
+        if (variant == 0) {
+            expect_true(!rejected && !fixture.map->getObjectByName("cityAr0601Actor2") && fixture.questFactories == 1 &&
+                            fixture.state().at("status").get<std::string>() == "retired",
+                        "actual UI-flow tokens must drive the owned source cursor and exact native retirement");
+        } else {
+            expect_true(rejected && fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                            fixture.questFactories == 0 &&
+                            fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey).empty(),
+                        "missing native tokens and oversized JSON edge authority must fail before source effects");
+        }
+        scope.clear();
+        fixture.game->getContext()->shutdown();
+    }
+}
+
+void testSevenSunsWarningJournalMembershipLossCannotBecomeAcceptedRetirement() {
+    SevenSunsWarningFixture fixture;
+    int journalChecks = 0;
+    auto session = fixture.begin([&] {
+        if (fixture.questFactories == 1 && fixture.journal() && ++journalChecks == 3)
+            fixture.player->setQuests({});
+    });
+    SevenSunsWarningFixture::step(*session, 0);
+    SevenSunsWarningFixture::step(*session, 7);
+    bool rejected = false;
+    try {
+        SevenSunsWarningFixture::step(*session, 9);
+    } catch (const std::exception &) {
+        rejected = true;
+    }
+    expect_true(rejected && !fixture.journal() && fixture.state().at("status").get<std::string>() == "pending" &&
+                    !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.destroyCalls == 0 &&
+                    fixture.clock->getObjectProperty(SevenSunsWarningFixture::ActorKey) == fixture.warning,
+                "a journal invalidated at a real continuation boundary cannot publish accepted retirement");
+}
+
+void testSevenSunsWarningSharedNamesIgnoreAsciiCaseAndRejectAmbiguousAliases() {
+    {
+        SevenSunsWarningFixture fixture;
+        fixture.map->setStringProperty("plugin_citySourceGlobals",
+                                       "city-json:{\"GLOBAL\":{\"aSkEdFoRtOuR\":1,\"cHeCkEdSeVeNsUnS\":73,\"Other\":9},"
+                                       "\"global\":{\"AskedForTour\":2}}");
+        auto session = fixture.begin();
+        SevenSunsWarningFixture::finish(*session, {2, 5, 16});
+        const auto encoded = fixture.map->getStringProperty("plugin_citySourceGlobals");
+        const auto globals = json::parse(std::string_view(encoded).substr(std::string_view("city-json:").size()));
+        expect_true(globals.at("GLOBAL").at("aSkEdFoRtOuR").get<int>() == 1 &&
+                        globals.at("GLOBAL").at("cHeCkEdSeVeNsUnS").get<int>() == 2 &&
+                        !globals.at("GLOBAL").contains("AskedForTour") &&
+                        !globals.at("GLOBAL").contains("CheckedSevenSuns") &&
+                        globals.at("GLOBAL").at("Other").get<int>() == 9 &&
+                        globals.at("global").at("AskedForTour").get<int>() == 2,
+                    "classic variable names ignore ASCII case while source scope GLOBAL stays case-sensitive");
+        session->close();
+    }
+    {
+        SevenSunsWarningFixture fixture;
+        fixture.map->setStringProperty("plugin_citySourceGlobals",
+                                       "city-json:{\"GLOBAL\":{\"AskedForTour\":1,\"ASKEDFORTOUR\":2}}");
+        bool rejected = false;
+        try {
+            auto session = fixture.begin();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.questFactories == 0 &&
+                        fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning,
+                    "ambiguous case aliases fail closed before any source effect, without picking a winner");
+    }
+}
+
+void testSevenSunsWarningEveryReachableDefaultGlobalPathUsesNativeCursor() {
+    constexpr std::array<std::array<int, 3>, 9> paths{{
+        {0, 7, 9},
+        {0, 8, 16},
+        {1, 3, 15},
+        {1, 4, 9},
+        {1, 5, 16},
+        {1, 6, 16},
+        {2, 3, 15},
+        {2, 4, 9},
+        {2, 6, 16},
+    }};
+    std::set<int> observedEdges;
+    for (const auto &path : paths) {
+        SevenSunsWarningFixture fixture;
+        auto session = fixture.begin();
+        expect_true(session != nullptr, "each source path must start against the exact admitted actor");
+        if (!session)
+            continue;
+        json result;
+        for (const int edge : path) {
+            result = SevenSunsWarningFixture::step(*session, edge);
+            observedEdges.insert(edge);
+            expect_true(fixture.map->tryBeginSaveSnapshot().has_value(),
+                        "every completed native edge is a stable save boundary, including nonterminal choices");
+        }
+        expect_true(result.at("status").get<std::string>() == "retired" && fixture.questFactories == 1 &&
+                        fixture.destroyCalls == 0 && fixture.stockAndEffectIntact(),
+                    "all nine AskedForTour=0 entry paths reach one exact non-victory native escape");
+        session->close();
+    }
+    expect_true(observedEdges == std::set<int>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16}),
+                "the native path matrix must exercise all12 reachable edges and no external-entry source edge");
+}
+
+void testSevenSunsWarningRetiresSameLivingActorAndPublishesOneJournal() {
+    for (const auto &path : {std::array{0, 7, 9}, std::array{1, 3, 15}, std::array{2, 6, 16}}) {
+        SevenSunsWarningFixture fixture;
+        const auto objectCount = fixture.map->getObjects().size();
+        const auto effectOwners = fixture.game->getContext()->getEffectOwnerCount();
+        const auto experience = fixture.player->getExp();
+        const auto gold = fixture.player->getGold();
+        auto session = fixture.begin();
+        expect_true(session != nullptr, "accepted exact source warning actor must create a native session");
+        if (!session)
+            continue;
+        json result;
+        for (const int edge : path)
+            result = SevenSunsWarningFixture::step(*session, edge);
+        auto note = fixture.journal();
+        expect_true(result.at("status").get<std::string>() == "retired" &&
+                        !fixture.map->getObjectByName("cityAr0601Actor2") &&
+                        fixture.clock->getObjectProperty(SevenSunsWarningFixture::ActorKey) == fixture.warning &&
+                        fixture.state().at("status").get<std::string>() == "retired" &&
+                        fixture.state().at("lastEdge").get<int>() == path.back() && fixture.stockAndEffectIntact(),
+                    "each reachable escape must retain the same living actor and its actual possessions/effect");
+        expect_true(note && !note->getObjective().empty() && !note->getReward().empty() && !note->getHint().empty() &&
+                        fixture.player->getQuests().size() == 1 && fixture.player->getCompletedQuests().empty() &&
+                        fixture.questFactories == 1 && fixture.actorFactories == 0 && fixture.itemFactories == 0 &&
+                        fixture.destroyCalls == 0 && fixture.player->getExp() == experience &&
+                        fixture.player->getGold() == gold && fixture.map->getObjects().size() + 1 == objectCount &&
+                        fixture.game->getContext()->getEffectOwnerCount() == effectOwners &&
+                        fixture.protectedActorsIntact(),
+                    "retirement creates one readable journal lead and no actor/item, destroy, victory or reward");
+        for (const auto *area : {"AR0601", "AR0602", "AR0603"})
+            expect_true(!fixture.map->getBoolProperty(std::string("plugin_cityCombatObserved_") + area),
+                        "EscapeArea must not grant a floor-clear combat observation");
+        expect_true(fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "a completely committed escape releases bounded native mutation admission");
+        session->close();
+    }
+}
+
+void testSevenSunsWarningCommittedChoiceSurvivesCancellationAndRemainsSaveable() {
+    for (const int edge : {0, 1, 2}) {
+        SevenSunsWarningFixture fixture;
+        auto session = fixture.begin();
+        expect_true(session != nullptr, "source warning session must start");
+        if (!session)
+            continue;
+        SevenSunsWarningFixture::step(*session, edge);
+        const auto committed = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+        const auto state = fixture.state();
+        expect_true(state.at("status").get<std::string>() == "active" &&
+                        state.at("globals").at("CheckedSevenSuns").get<int>() == 2 &&
+                        state.at("globals").at("AskedForTour").get<int>() == (edge == 1 ? 1 : 0) &&
+                        fixture.map->getBoolProperty("plugin_cityHistoryFrozen") &&
+                        fixture.warning->getNumericProperty("plugin_cityTalkCount") == 1 &&
+                        fixture.map->getStringProperty("plugin_cityTalked").find("cityAr0601Actor2") !=
+                            std::string::npos &&
+                        fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "instant source globals/talk/history commit before later UI, without a cross-UI save lease");
+        session->close();
+        session.reset();
+        expect_true(fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == committed &&
+                        fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                        fixture.questFactories == 0 && fixture.destroyCalls == 0 && fixture.stockAndEffectIntact() &&
+                        fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "later cancellation must retain the earlier source choice, actor and saveable stable cursor");
+    }
+}
+
+void testSevenSunsWarningRefusesWrongSourceAndMapAwayBackBeforeCommit() {
+    for (int mode = 0; mode < 4; ++mode) {
+        SevenSunsWarningFixture fixture;
+        auto session = fixture.begin();
+        expect_true(session != nullptr, "source warning session must start before stale-boundary injection");
+        if (!session)
+            continue;
+        if (mode == 0) {
+            auto foreign = std::make_shared<CMap>();
+            foreign->setGame(fixture.game);
+            fixture.game->setMap(foreign);
+            fixture.game->setMap(fixture.map);
+        } else if (mode == 1) {
+            fixture.warning->setStringProperty("sourceCreature", "DOPMER");
+        } else if (mode == 2) {
+            fixture.warning->setStringProperty("sourceActor", "AR0601#actor1");
+        } else {
+            fixture.warning->setStringProperty("sourceDialogue", "DOPMER");
+        }
+        const auto prior = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+        bool rejected = false;
+        try {
+            SevenSunsWarningFixture::step(*session, 0);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == prior &&
+                        fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                        fixture.questFactories == 0 && fixture.destroyCalls == 0 &&
+                        fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "known stale/wrong source must refuse before mutation; public away-and-back is not equality");
+        session->close();
+    }
+}
+
+void testSevenSunsWarningRejectsWrongRevisionAndSourceConditionalEdge() {
+    SevenSunsWarningFixture fixture;
+    auto session = fixture.begin();
+    expect_true(session != nullptr, "source warning session must start");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::step(*session, 2);
+    const auto prior = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    for (int mode = 0; mode < 3; ++mode) {
+        bool rejected = false;
+        try {
+            const auto revision = session->view().at("revision").get<int>();
+            session->advance(mode == 0 ? revision - 1 : revision, mode == 2 ? 14 : 5);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == prior &&
+                        fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                        fixture.questFactories == 0 && fixture.map->tryBeginSaveSnapshot().has_value(),
+                    "old revision, AskedForTour=0 edge5 and unreachable Enemy edge14 cannot commit effects");
+    }
+    session->close();
+}
+
+void testSevenSunsWarningReplayRequiresExactRetainedOwnerAndCreatesNothing() {
+    SevenSunsWarningFixture fixture;
+    auto session = fixture.begin();
+    expect_true(session != nullptr, "source warning session must start");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::finish(*session);
+    session->close();
+    session.reset();
+    const auto receipt = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    const auto note = fixture.journal();
+    for (int pass = 0; pass < 8; ++pass) {
+        auto replay = fixture.begin();
+        expect_true(replay && replay->view().at("status").get<std::string>() == "retired",
+                    "the exact retained retired actor must acknowledge completed source work without replay");
+        if (replay)
+            replay->close();
+    }
+    expect_true(fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == receipt &&
+                    fixture.journal() == note && fixture.questFactories == 1 && fixture.actorFactories == 0 &&
+                    fixture.itemFactories == 0 && fixture.destroyCalls == 0 && fixture.stockAndEffectIntact(),
+                "replay cannot construct stock/actors/journals or change the settled source receipt");
+}
+
+void testSevenSunsWarningClassifiesPendingAndOrphanStateBeforeMissingPlayer() {
+    for (int mode = 0; mode < 3; ++mode) {
+        SevenSunsWarningFixture fixture;
+        if (mode == 0) {
+            fixture.map->setStringProperty(SevenSunsWarningFixture::StateKey,
+                                           "city-json:{\"version\":1,\"status\":\"pending\",\"revision\":1,"
+                                           "\"globals\":{\"AskedForTour\":0,\"CheckedSevenSuns\":2},\"lastEdge\":0,"
+                                           "\"cursor\":2,\"journal\":null}");
+        } else if (mode == 1) {
+            fixture.map->setStringProperty(SevenSunsWarningFixture::StateKey, "city-json:{broken");
+        } else {
+            fixture.clock->setObjectProperty(SevenSunsWarningFixture::ActorKey, fixture.warning);
+        }
+        fixture.map->detachPlayer();
+        bool rejected = false;
+        try {
+            auto session = fixture.begin();
+            if (session)
+                session->close();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.questFactories == 0 &&
+                        fixture.destroyCalls == 0 &&
+                        fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning,
+                    "pending, malformed or orphan ownership must quarantine before clean missing-player refusal");
+    }
+}
+
+void testSevenSunsWarningPostRemovalFailureQuarantinesAndPreservesPrimaryError() {
+    SevenSunsWarningFixture fixture;
+    bool saveBlockedDuringRetirement = false;
+    auto session = fixture.begin([&] {
+        if (!fixture.map->getObjectByName("cityAr0601Actor2")) {
+            saveBlockedDuringRetirement = !fixture.map->tryBeginSaveSnapshot().has_value();
+            throw std::runtime_error("Seven Suns native post-removal guard failure");
+        }
+    });
+    expect_true(session != nullptr, "source warning session must start");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::step(*session, 0);
+    SevenSunsWarningFixture::step(*session, 7);
+    bool primary = false;
+    try {
+        SevenSunsWarningFixture::step(*session, 9);
+    } catch (const std::exception &error) {
+        primary = std::string(error.what()) == "Seven Suns native post-removal guard failure";
+    }
+    expect_true(primary && saveBlockedDuringRetirement && !fixture.map->getObjectByName("cityAr0601Actor2") &&
+                    fixture.clock->getObjectProperty(SevenSunsWarningFixture::ActorKey) == fixture.warning &&
+                    fixture.state().at("status").get<std::string>() == "pending" &&
+                    !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.destroyCalls == 0 &&
+                    fixture.stockAndEffectIntact(),
+                "a real post-removal guard error must retain the live owner/pending receipt and quarantine save");
+    // This injects a post-removal guard exception, not a navigation allocator or deferred signal-slot failure.
+}
+
+void testSevenSunsWarningJournalFactoryFailureCannotAcknowledgeEscape() {
+    SevenSunsWarningFixture fixture;
+    fixture.duringJournalFactory = [] { throw std::runtime_error("Seven Suns native journal constructor failure"); };
+    auto session = fixture.begin();
+    expect_true(session != nullptr, "source warning session must start");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::step(*session, 0);
+    SevenSunsWarningFixture::step(*session, 7);
+    bool primary = false;
+    try {
+        SevenSunsWarningFixture::step(*session, 9);
+    } catch (const std::exception &error) {
+        primary = std::string(error.what()) == "Seven Suns native journal constructor failure";
+    }
+    expect_true(primary && fixture.questFactories == 1 && !fixture.journal() &&
+                    fixture.state().at("status").get<std::string>() == "pending" &&
+                    !fixture.map->tryBeginSaveSnapshot().has_value() && fixture.destroyCalls == 0 &&
+                    fixture.stockAndEffectIntact(),
+                "an admitted journal failure preserves the original error and cannot become accepted/saveable");
+}
+
+void testSevenSunsWarningRetainedActorEffectAliasesRoundTrip() {
+    SevenSunsWarningFixture fixture;
+    auto session = fixture.begin();
+    expect_true(session != nullptr, "source warning session must start");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::finish(*session);
+    session->close();
+    session.reset();
+    auto admission = fixture.map->tryBeginSaveSnapshot();
+    expect_true(admission.has_value(), "the settled retained owner must be snapshot-admissible");
+    if (!admission)
+        return;
+    const auto snapshot = CSerialization::serializeExpected(fixture.clock, "unit-seven-suns-retired-owner");
+    expect_true(snapshot.has_value(), "the retained living actor must serialize through the actual native codec");
+    if (!snapshot)
+        return;
+    auto restoredGame = std::make_shared<CGame>();
+    auto objects = restoredGame->getObjectHandler();
+    objects->registerType("CBuilding", [] { return std::make_shared<CBuilding>(); });
+    objects->registerType("CCreature", [] { return std::make_shared<CCreature>(); });
+    objects->registerType("CItem", [] { return std::make_shared<CItem>(); });
+    objects->registerType("CWeapon", [] { return std::make_shared<CWeapon>(); });
+    objects->registerType("CEffect", [] { return std::make_shared<CEffect>(); });
+    objects->registerType("CStats", [] { return std::make_shared<CStats>(); });
+    objects->registerType("CController", [] { return std::make_shared<CController>(); });
+    objects->registerType("CMonsterFightController", [] { return std::make_shared<CMonsterFightController>(); });
+    const auto restored = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(
+        restoredGame, *snapshot, "unit-seven-suns-retired-owner");
+    expect_true(restored.has_value(), "native retained actor/effect graph must deserialize with typed aliases");
+    if (restored) {
+        auto actor =
+            std::dynamic_pointer_cast<CCreature>((*restored)->getObjectProperty(SevenSunsWarningFixture::ActorKey));
+        expect_true(actor && actor != fixture.warning && actor->isAlive() && actor->getItems().size() == 1 &&
+                        actor->getEquipped().size() == 1 && actor->getEffects().size() == 1,
+                    "roundtrip must restore one living retained actor with its actual carried/equipped/effect state");
+        if (actor && actor->getEffects().size() == 1) {
+            const auto effect = *actor->getEffects().begin();
+            expect_true(effect->getCaster() == actor && effect->getVictim() == actor,
+                        "effect aliases must resolve to the exact restored retained actor, not a duplicate");
+        }
+    }
+    // This is a native in-memory actor-graph roundtrip; whole-map save/load and UI journal proof remain separate.
+}
+
+void testSevenSunsWarningSessionDoesNotKeepClosedGameAlive() {
+    SevenSunsWarningFixture fixture;
+    auto session = fixture.begin();
+    expect_true(session != nullptr, "source warning session must capture its non-owning game binding");
+    if (!session)
+        return;
+    const auto prior = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    const std::weak_ptr<CGame> weakGame = fixture.game;
+    fixture.game.reset();
+    expect_true(weakGame.expired(), "an idle cross-UI warning capability must not keep the game/session graph alive");
+    bool rejected = false;
+    try {
+        session->requireCurrent();
+    } catch (const std::exception &) {
+        rejected = true;
+    }
+    session.reset();
+    expect_true(rejected && fixture.questFactories == 0 && fixture.actorFactories == 0 && fixture.itemFactories == 0 &&
+                    fixture.destroyCalls == 0 &&
+                    fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == prior,
+                "an expired game refuses the captured capability and teardown performs no source effects");
+    // Context shutdown may legitimately release effect references; that is separate from warning retirement.
+}
+
+void testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes() {
+    const auto shared = [](const SevenSunsWarningFixture &fixture) {
+        const auto encoded = fixture.map->getStringProperty("plugin_citySourceGlobals");
+        constexpr std::string_view prefix = "city-json:";
+        return json::parse(encoded.starts_with(prefix) ? std::string_view(encoded).substr(prefix.size())
+                                                       : std::string_view(encoded));
+    };
+    for (const int asked : {1, 2, -1}) {
+        SevenSunsWarningFixture fixture;
+        fixture.map->setStringProperty(
+            "plugin_citySourceGlobals",
+            "city-json:" +
+                json{{"GLOBAL", {{"AskedForTour", asked}, {"CheckedSevenSuns", 73}, {"OtherSourceGlobal", 9}}},
+                     {"AR0601", {{"KeepLocal", 17}}}}
+                    .dump());
+        expect_true(fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey).empty(),
+                    "shared-global regression starts without a warning-specific receipt");
+        auto session = fixture.begin();
+        expect_true(session != nullptr,
+                    "preexisting integer source globals are admitted without a warning-specific value clamp");
+        if (!session)
+            continue;
+        SevenSunsWarningFixture::step(*session, 2);
+        if (asked == 1) {
+            SevenSunsWarningFixture::step(*session, 5);
+            const auto answer = SevenSunsWarningFixture::step(*session, 16);
+            expect_true(answer.at("status").get<std::string>() == "retired" && fixture.questFactories == 1,
+                        "preexisting shared AskedForTour=1 enables the actual source edge5 escape route");
+        } else {
+            bool offered = false;
+            for (const auto &edge : session->view().at("choices"))
+                offered = offered || edge.get<int>() == 5;
+            const auto prior = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+            bool rejected = false;
+            try {
+                SevenSunsWarningFixture::step(*session, 5);
+            } catch (const std::exception &) {
+                rejected = true;
+            }
+            expect_true(!offered && rejected && fixture.questFactories == 0 &&
+                            fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == prior &&
+                            fixture.map->getObjectByName("cityAr0601Actor2") == fixture.warning &&
+                            fixture.map->tryBeginSaveSnapshot().has_value(),
+                        "AskedForTour=2 or negative remains a valid integer but cannot satisfy equality-to-one");
+        }
+        const auto globals = shared(fixture);
+        expect_true(globals.at("GLOBAL").at("AskedForTour").get<int>() == asked &&
+                        globals.at("GLOBAL").at("CheckedSevenSuns").get<int>() == 2 &&
+                        globals.at("GLOBAL").at("OtherSourceGlobal").get<int>() == 9 &&
+                        globals.at("AR0601").at("KeepLocal").get<int>() == 17 &&
+                        fixture.state().at("globals").at("AskedForTour").get<int>() == asked &&
+                        fixture.state().at("globals").at("CheckedSevenSuns").get<int>() == 2,
+                    "source writes preserve unrelated globals/scopes and the warning row only audits actual values");
+        session->close();
+    }
+}
+
+void testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority() {
+    for (const std::string raw : {"4294967297", "18446744073709551615", "-2147483649"}) {
+        SevenSunsMerchantFixture f;
+        f.map->setStringProperty("plugin_citySourceGlobals", "city-json:{\"GLOBAL\":{\"Laola\":" + raw + "}}");
+        bool rejected = false;
+        try {
+            auto flow = f.beginMerchant();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(
+            rejected && f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == 0 &&
+                f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey).empty() && f.actorFactories == 0 &&
+                !f.map->tryBeginSaveSnapshot().has_value(),
+            "raw uint64/signed32 overflow cannot alias a source integer through CJson dump before admitted effects");
+    }
+    for (const std::string raw : {"-2147483648", "2147483647"}) {
+        SevenSunsMerchantFixture f;
+        f.map->setStringProperty("plugin_citySourceGlobals", "city-json:{\"GLOBAL\":{\"Laola\":" + raw + "}}");
+        auto flow = f.beginMerchant();
+        SevenSunsMerchantFixture::step(*flow, 0);
+        auto globals = json::parse(f.map->getStringProperty("plugin_citySourceGlobals").substr(10));
+        expect_true(globals.at("GLOBAL").at("Laola").dump() == raw && f.map->tryBeginSaveSnapshot().has_value(),
+                    "valid signed32 endpoints remain exact source integers and survive unrelated first-choice writes");
+    }
+}
+
+#include "seven_suns_merchant_stock_cases.h"
+
+void testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges() {
+    struct Path {
+        int prior;
+        std::vector<int> edges;
+        bool reveal;
+    };
+    const std::array<Path, 13> paths{{
+        {0, {0, 3}, false},
+        {0, {1, 4, 8}, false},
+        {0, {1, 5, 9, 7}, false},
+        {0, {1, 5, 10, 8}, false},
+        {0, {1, 5, 11, 12}, true},
+        {0, {1, 6, 7}, false},
+        {0, {2, 7}, false},
+        {1, {13, 16}, false},
+        {1, {14, 17}, true},
+        {1, {15, 17}, true},
+        {2, {18, 21}, true},
+        {2, {19, 22}, true},
+        {2, {20, 23}, true},
+    }};
+    std::set<int> covered;
+    for (const auto &path : paths) {
+        SevenSunsMerchantFixture f;
+        f.earlierConversations(path.prior);
+        auto flow = f.beginMerchant();
+        expect_true(flow->view().at("status").get<std::string>() == "ready", "supported native DOPMER flow starts");
+        auto answer = SevenSunsMerchantFixture::finish(*flow, path.edges);
+        for (int edge : path.edges)
+            covered.insert(edge);
+        expect_true(
+            answer.at("status").get<std::string>() == "closed" &&
+                answer.at("revealRequested").get<bool>() == path.reveal &&
+                f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == path.prior + 1 &&
+                f.merchantRow().at("edges").size() == path.edges.size() &&
+                f.merchantRow().at("lastEdge").get<int>() == path.edges.back() &&
+                f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) == f.protectedActors[0] &&
+                f.actorFactories == 0 && f.merchantDestroyed == 0 && f.player->getQuests().empty() &&
+                f.map->tryBeginSaveSnapshot().has_value(),
+            "all source paths close with exact prefix/count/global effects and no immediate replacement or journal");
+        auto globals = json::parse(std::string_view(f.map->getStringProperty("plugin_citySourceGlobals")).substr(10));
+        if (path.reveal)
+            expect_true(globals.at("GLOBAL").at("Doppleganger").get<int>() == 1 &&
+                            globals.at("GLOBAL").at("Laola").get<int>() == 1,
+                        "reveal source globals commit before coordinator turn");
+    }
+    expect_true(covered.size() == 24 && *covered.begin() == 0 && *covered.rbegin() == 23,
+                "native source path inventory covers every one of the24 audited DOPMER edges");
+}
+
+void testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned() {
+    SevenSunsMerchantFixture f;
+    for (int count = 1; count <= 3; ++count) {
+        auto flow = f.beginMerchant();
+        auto view = flow->view();
+        expect_true(
+            view.at("sourceTalkCount").get<int>() == count &&
+                view.at("state").get<int>() == (count == 1   ? 0
+                                                : count == 2 ? 7
+                                                             : 10) &&
+                f.protectedActors[0]->getNumericProperty("plugin_cityTalkCount") == 0 &&
+                f.map->getStringProperty("plugin_citySourceGlobals").empty() &&
+                f.map->tryBeginSaveSnapshot().has_value(),
+            "native source count commits at admitted initiation, independently of a selected reply and generic talk");
+        const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        flow->close();
+        flow.reset();
+        expect_true(f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt,
+                    "cancel never rewinds an admitted source initiation");
+    }
+    auto fourth = f.beginMerchant();
+    expect_true(fourth->view().at("status").get<std::string>() == "refused" &&
+                    fourth->view().at("reason").get<std::string>() == "noAuditedEntry" &&
+                    fourth->view().at("lineage").get<std::string>() == SevenSunsMerchantFixture::Names[0] &&
+                    f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == 3,
+                "source countthree has no audited fourth entry and is not silently saturated");
+    SevenSunsMerchantFixture legacy;
+    legacy.protectedActors[0]->setNumericProperty("plugin_cityTalkCount", 8);
+    auto rejected = legacy.beginMerchant();
+    expect_true(rejected->view().at("reason").get<std::string>() == "legacyCountUnknown" &&
+                    legacy.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey).empty() &&
+                    legacy.map->tryBeginSaveSnapshot().has_value(),
+                "generic legacy count cannot manufacture source authority");
+}
+
+void testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit() {
+    SevenSunsMerchantFixture f;
+    const auto expectUnsettled = [&](std::size_t start) {
+        for (std::size_t i = start; i < SevenSunsMerchantFixture::Names.size(); ++i) {
+            const auto key = std::string("plugin_citySevenSunsMerchantNew_") + SevenSunsMerchantFixture::Names[i];
+            expect_true(!f.clock->hasProperty(key), "an unsettled lineage has no replacement property");
+            expect_true(!f.replacement(i), "an absent replacement property returns a null fixture observation");
+            expect_true(!f.clock->hasProperty(key), "observing an absent replacement must not create its property");
+        }
+    };
+    expectUnsettled(0);
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    expectUnsettled(0);
+    const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
+    const int gold = f.player->getGold(), xp = f.player->getExp();
+    f.map->setTurn(17);
+    auto first = f.settle();
+    expect_true(first.at("checked").get<int>() == 4 && first.at("replaced").get<int>() == 2 && f.replacement(0) &&
+                    f.replacement(1) && !f.replacement(2) && !f.replacement(3) &&
+                    f.map->getObjectByName(SevenSunsMerchantFixture::Names[2]) == f.protectedActors[2],
+                "shared reveal settles exactly the two eligible active-floor actors and leaves the other floor intact");
+    expectUnsettled(2);
+    for (std::size_t i = 0; i < 2; ++i) {
+        auto replacement = f.replacement(i);
+        expect_true(replacement != f.protectedActors[i] &&
+                        replacement->getName() == SevenSunsMerchantFixture::Names[i] &&
+                        replacement->getStringProperty("sourceCreature") == "DOPPSS" &&
+                        replacement->getStringProperty("sourceActor") == SevenSunsMerchantFixture::Sources[i] &&
+                        replacement->getStringProperty("sourceArea") == "AR0601" &&
+                        replacement->getStringProperty("simulationRegion") == "AR0601" && !replacement->isNpc() &&
+                        replacement->getTypeId() == "citySevenSunsRevealedDoppss" && replacement->getHp() == 28 &&
+                        replacement->getStats()->getDmgMin() == 1 && replacement->getStats()->getDmgMax() == 12 &&
+                        replacement->getStats()->getHit() == 75 && replacement->getWeapon() &&
+                        replacement->getWeapon()->getBoolProperty("plugin_cityUndroppable") &&
+                        f.oldOwnershipIntact(i) && f.merchantRow(i).at("settledTurn").get<int>() == 17,
+                    "distinct native replacement retains lineage and actual weapon/body conversion without "
+                    "transferring old stock");
+    }
+    expect_true(f.map->getObjects().size() == objects && f.map->getEventHandler()->getTriggers().size() == triggers &&
+                    f.merchantDestroyed == 0 && f.newDestroyed == 0 && f.player->getGold() == gold &&
+                    f.player->getExp() == xp && f.map->getObjectByName("cityAr0601Actor2") == f.warning &&
+                    f.map->getObjectByName("cityAr0603Actor1") == f.protectedActors[4] &&
+                    f.map->getObjectByName("cityAr0603Actor2") == f.protectedActors[5] &&
+                    !f.map->getBoolProperty("plugin_cityCombatObserved_AR0601"),
+                "quiet replacement gives no old death/loot/XP/combat observation and preserves DOPPSM/Jhasso/basement "
+                "controls");
+    f.focus(2);
+    f.map->setTurn(18);
+    auto second = f.settle();
+    expect_true(second.at("checked").get<int>() == 4 && second.at("replaced").get<int>() == 2 && f.replacement(2) &&
+                    f.replacement(3) && f.merchantRow(2).at("settledTurn").get<int>() == 18,
+                "later real active-floor scheduling can independently reveal the remaining two source lineages");
+}
+
+void testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes() {
+    SevenSunsMerchantFixture f;
+    f.map->setStringProperty("plugin_citySourceGlobals",
+                             "city-json:{\"GLOBAL\":{\"cHeCkEdSeVeNsUnS\":1,\"dOpPlEgAnGeR\":0,\"Laola\":73,\"Other\":"
+                             "9},\"global\":{\"Keep\":17}}");
+    std::vector<std::pair<int, int>> revealWrites;
+    std::pair<int, int> previous{0, 73};
+    auto observe = [&] {
+        auto text = f.map->getStringProperty("plugin_citySourceGlobals");
+        auto snapshot = json::parse(std::string_view(text).substr(10)).at("GLOBAL");
+        std::pair<int, int> current{snapshot.at("dOpPlEgAnGeR").get<int>(), snapshot.at("Laola").get<int>()};
+        if (current != previous) {
+            revealWrites.push_back(current);
+            previous = current;
+        }
+    };
+    auto flow = f.beginMerchant(0, observe);
+    SevenSunsMerchantFixture::step(*flow, 1);
+    auto intermediate = json::parse(std::string_view(f.map->getStringProperty("plugin_citySourceGlobals")).substr(10));
+    expect_true(intermediate.at("GLOBAL").at("cHeCkEdSeVeNsUnS").get<int>() == 2 &&
+                    intermediate.at("GLOBAL").at("dOpPlEgAnGeR").get<int>() == 0 &&
+                    intermediate.at("GLOBAL").at("Laola").get<int>() == 73 &&
+                    f.map->getBoolProperty("plugin_cityHistoryFrozen"),
+                "first source choice sets Checked2 without inventing the later reveal and freezes history natively");
+    SevenSunsMerchantFixture::finish(*flow, {5, 11, 12});
+    flow.reset();
+    auto final = json::parse(std::string_view(f.map->getStringProperty("plugin_citySourceGlobals")).substr(10));
+    expect_true(final.at("GLOBAL").at("dOpPlEgAnGeR").get<int>() == 1 &&
+                    final.at("GLOBAL").at("Laola").get<int>() == 1 && !final.at("GLOBAL").contains("Doppleganger") &&
+                    final.at("GLOBAL").at("Other").get<int>() == 9 && final.at("global").at("Keep").get<int>() == 17,
+                "classic name casing and literal GLOBAL scope remain distinct");
+    expect_true(revealWrites == std::vector<std::pair<int, int>>{{1, 73}, {1, 1}},
+                "native continuation witnesses Doppleganger1 before the separate Laola1 write");
+}
+
+void testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision() {
+    for (int mode = 0; mode < 6; ++mode) {
+        SevenSunsMerchantFixture f;
+        auto flow = f.beginMerchant();
+        const auto before = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        if (mode == 0) {
+            auto other = std::make_shared<CMap>();
+            other->setGame(f.game);
+            f.game->setMap(other);
+            f.game->setMap(f.map);
+        }
+        if (mode == 1) {
+            f.map->setActiveSimulationRegion("AR0602");
+            f.map->setActiveSimulationRegion("AR0601");
+        }
+        if (mode == 2)
+            f.protectedActors[0]->setStringProperty("sourceActor", "AR0601#actor3");
+        if (mode == 3)
+            f.player->setGame(std::make_shared<CGame>());
+        if (mode == 4)
+            f.clock->setGame(std::make_shared<CGame>());
+        bool rejected = false;
+        try {
+            flow->advance(flow->view().at("revision").get<int>() + (mode == 5), 0);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(
+            rejected && f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == before &&
+                f.map->getStringProperty("plugin_citySourceGlobals").empty() && f.actorFactories == 0,
+            "map/area away-back, source/player/clock replacement and wrong revision refuse before source effects");
+        flow->close();
+    }
+}
+
+void testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement() {
+    for (int mode = 0; mode < 5; ++mode) {
+        SevenSunsMerchantFixture f;
+        auto flow = f.beginMerchant();
+        SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+        flow.reset();
+        std::shared_ptr<CGame> foreign = std::make_shared<CGame>();
+        f.duringActionFactory = [&] {
+            if (mode == 0)
+                f.protectedActors[0]->setNumericProperty("sourceAllegiance", 255);
+            if (mode == 1)
+                f.map->setGame(foreign);
+            if (mode == 2)
+                f.player->setGame(foreign);
+            if (mode == 3)
+                f.clock->setGame(foreign);
+            if (mode == 4) {
+                try {
+                    auto nested = f.beginMerchant();
+                } catch (const std::exception &) {
+                }
+            }
+        };
+        bool rejected = false;
+        try {
+            f.settle();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected && f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) == f.protectedActors[0] &&
+                        f.merchantDestroyed == 0 && f.oldOwnershipIntact() &&
+                        !f.map->tryBeginSaveSnapshot().has_value() &&
+                        f.merchantRow().at("status").get<std::string>() == "pending",
+                    "admitted callback source/owner/reentry failure retains old owner, pending receipt and quarantine");
+    }
+}
+
+void testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    auto snapshot = f.map->tryBeginSaveSnapshot();
+    auto answer = f.settle();
+    expect_true(snapshot && answer.at("status").get<std::string>() == "retry" &&
+                    answer.at("replaced").get<int>() == 0 &&
+                    f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+                    f.actorFactories == 0 && f.merchantDestroyed == 0,
+                "closed save admission retries without mutation or constructors");
+    snapshot.reset();
+    f.protectedActors[1]->setNumericProperty("plugin_cityTalkCount", 5);
+    auto later = f.settle();
+    expect_true(later.at("status").get<std::string>() == "retry" && later.at("replaced").get<int>() == 1 &&
+                    !f.replacement(1) &&
+                    f.map->getObjectByName(SevenSunsMerchantFixture::Names[1]) == f.protectedActors[1],
+                "unknown legacy source count is not silently reset by background replacement");
+}
+
+void testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    bool rejected = false;
+    try {
+        CSevenSunsMerchantDialogue::settle(f.game, f.clock, [&] {
+            if (!f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]))
+                throw std::runtime_error("merchant post-detach continuation failed");
+        });
+    } catch (const std::runtime_error &error) {
+        rejected = std::string(error.what()) == "merchant post-detach continuation failed";
+    }
+    expect_true(
+        rejected && !f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) &&
+            f.clock->getObjectProperty("plugin_citySevenSunsMerchantOld_cityAr0601Actor1") == f.protectedActors[0] &&
+            f.replacement() && f.replacement() != f.protectedActors[0] && f.oldOwnershipIntact() &&
+            f.merchantDestroyed == 0 && !f.map->tryBeginSaveSnapshot().has_value() &&
+            f.merchantRow().at("status").get<std::string>() == "pending",
+        "post-removal signal/navigation/continuation failure preserves both references, original error and quarantine");
+}
+
+void testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    f.settle();
+    auto actor = f.replacement();
+    expect_true(actor != nullptr, "first coordinator turn creates a real new actor");
+    if (!actor)
+        return;
+    actor->setHp(1);
+    actor->setGold(actor->getGold() + 11);
+    for (const auto &item : actor->getItems()) {
+        actor->removeItem(item);
+        f.player->addItem(item);
+        break;
+    }
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    const auto factories = f.actorFactories, items = f.itemFactories;
+    auto replay = f.settle();
+    expect_true(replay.at("replaced").get<int>() == 0 && f.replacement() == actor && actor->getHp() == 1 &&
+                    f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+                    f.actorFactories == factories && f.itemFactories == items,
+                "settled replay validates ownership/certificate without restoring legitimate HP/gold/items");
+    actor->setHp(0);
+    f.map->removeObject(actor);
+    auto dead = f.settle();
+    expect_true(
+        dead.at("replaced").get<int>() == 0 && f.replacement() == actor && f.newDestroyed == 1 &&
+            f.merchantDestroyed == 0 && f.oldOwnershipIntact() && actor->getWeapon() &&
+            actor->getWeapon()->getBoolProperty("plugin_cityUndroppable") && f.actorFactories == factories &&
+            f.itemFactories == items,
+        "same-name existing death hook observes actual new death; retired old merchant is never killed or reseeded");
+}
+
+void testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    expect_true(!flow->view().at("attackRevealSupported").get<bool>(),
+                "attack-attempt/offensive-spell support remains explicit pending");
+    flow->close();
+    flow.reset();
+    f.protectedActors[0]->setHp(1);
+    auto turn = f.settle();
+    expect_true(turn.at("replaced").get<int>() == 0 && !f.replacement() &&
+                    f.map->getStringProperty("plugin_citySourceGlobals").empty(),
+                "a damage/HP change alone cannot fabricate the source AttackedBy action or replacement predicate");
+}
+
+void testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    std::weak_ptr<CGame> game = f.game;
+    f.game.reset();
+    expect_true(game.expired(), "merchant UI suspension retains only a weak game owner");
+    bool refused = false;
+    try {
+        SevenSunsMerchantFixture::step(*flow, 0);
+    } catch (const std::exception &) {
+        refused = true;
+    }
+    expect_true(refused, "dropped game owner cannot accept a later source edge");
+    flow->close();
+}
+
+void testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval() {
+    SevenSunsMerchantFixture f;
+    auto flow = f.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    auto control = std::make_shared<ReentrantEncounterController>();
+    int calls = 0;
+    bool observed = false;
+    control->reenter = [&] {
+        if (++calls != 1)
+            return;
+        const auto before = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        auto result = f.settle();
+        observed = result.at("status").get<std::string>() == "retry" && !f.replacement() &&
+                   f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) == f.protectedActors[0] &&
+                   f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == before;
+    };
+    f.player->setFightController(control);
+    f.protectedActors[0]->setFightController(std::make_shared<NoProgressFightController>());
+    CFightHandler::fightManyResult(f.player, {f.protectedActors[0]});
+    expect_true(observed && calls > 0,
+                "actual native encounter ownership prevents source quiet removal before any field writes");
+}
+
+void testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges() {
+    ScriptFlowNativeObjectTypes types;
+    for (int variant = 0; variant < 3; ++variant) {
+        SevenSunsMerchantFixture f;
+        pybind11::dict scope;
+        scope["clock"] = nativeFlowObject(f.clock);
+        scope["actor"] = nativeFlowObject(f.protectedActors[0]);
+        scope["variant"] = variant;
+        pybind11::exec(R"(
+events=[]
+def merchant():
+    try:
+        args=(clock,actor) if variant!=1 else (clock,)
+        view=yield {'operation':'gui.beginSevenSunsMerchant','args':args,'kwargs':{}}
+        for edge in (0,3):
+            selected=edge+(4294967296 if variant==2 else 0)
+            view=yield {'operation':'gui.advanceSevenSunsMerchant','args':(view['revision'],selected),'kwargs':{}}
+        events.append(view['status'])
+    finally:
+        events.append('closed')
+)",
+                       scope);
+        auto flow =
+            f.game->getScriptHandler()->createCallbackFlow(scope["merchant"].cast<pybind11::function>(), f.game);
+        auto pending = f.game->getContext()->spawnTask(f.game->getGuiHandler()->runScriptFlowAsync(std::move(flow)));
+        expect_true(pumpHandlerUntil([&] { return pending.finished(); }), "finite merchant native UI flow settles");
+        bool rejected = false;
+        try {
+            pending.get();
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        const auto events = scope["events"].cast<pybind11::list>();
+        expect_true(events.size() == (variant == 0 ? 2 : 1) &&
+                        events[events.size() - 1].cast<std::string>() == "closed" && rejected == (variant != 0) &&
+                        f.actorFactories == 0 && f.merchantDestroyed == 0,
+                    "real native-token flow drives only bounded source edges and closes on invalid arity/overflow");
+        scope.clear();
+        f.game->getContext()->shutdown();
+    }
+}
+
+void testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives() {
+    std::shared_ptr<CGame> livingGame;
+    std::weak_ptr<CMap> oldMap;
+    std::weak_ptr<CCreature> oldActor;
+    std::weak_ptr<CEffect> oldEffect;
+    {
+        SevenSunsMerchantFixture f;
+        livingGame = f.game;
+        oldMap = f.map;
+        oldActor = f.protectedActors[0];
+        oldEffect = f.oldEffects[0];
+        auto flow = f.beginMerchant();
+        SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+        flow.reset();
+        f.settle();
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(livingGame);
+        livingGame->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(livingGame->getContext()->isActive() && oldMap.expired() && oldActor.expired() && oldEffect.expired(),
+                "retired old merchant/effect aliases expire through map-owned teardown without explicit cleanup or "
+                "game shutdown");
+}
+
+void testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt() {
+    SevenSunsMerchantFixture original;
+    auto flow = original.beginMerchant();
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    original.settle();
+    auto snapshot = CSerialization::serializeExpected(original.map, "unit-merchant-whole-map");
+    expect_true(snapshot.has_value(),
+                "whole city-scene graph includes ordinary replacement refs and retired lifetime collection");
+    if (!snapshot)
+        return;
+    SevenSunsMerchantFixture restored;
+    auto objects = restored.game->getObjectHandler();
+    objects->registerType("CMap", [] { return std::make_shared<CMap>(); });
+    objects->registerType("CPlayer", [] { return std::make_shared<CPlayer>(); });
+    objects->registerType("CBuilding", [] { return std::make_shared<CBuilding>(); });
+    objects->registerType("CEffect", [] { return std::make_shared<CEffect>(); });
+    objects->registerType("CTrigger", [] { return std::make_shared<CTrigger>(); });
+    objects->registerType("CController", [] { return std::make_shared<CController>(); });
+    std::weak_ptr<CMap> dyingMap;
+    std::weak_ptr<CCreature> dyingActor;
+    std::weak_ptr<CEffect> dyingEffect;
+    {
+        auto decoded = CSerialization::deserializeExpected<std::shared_ptr<CGameObject>>(restored.game, *snapshot,
+                                                                                         "unit-merchant-restored-map");
+        expect_true(decoded.has_value(), "actual native map codec restores fixed source stock and all old/new aliases");
+        if (!decoded)
+            return;
+        auto map = std::dynamic_pointer_cast<CMap>(*decoded);
+        expect_true(map != nullptr, "the whole-map codec must return an actual map");
+        if (!map)
+            return;
+        auto registeredPlayer = std::dynamic_pointer_cast<CPlayer>(map->getObjectByName("player"));
+        expect_true(registeredPlayer && !map->getAssignedPlayer() && map->getActiveSimulationRegion() == "AR0601",
+                    "raw map decoding restores the registered player and source floor before cache rehydration");
+        std::string playerRestoreError;
+        const bool playerRestored = map->restorePlayerAfterLoad(playerRestoreError);
+        expect_true(playerRestored && playerRestoreError.empty() && map->getAssignedPlayer() == registeredPlayer &&
+                        map->getObjectByName("player") == registeredPlayer && registeredPlayer &&
+                        registeredPlayer->getGame() == restored.game,
+                    "the production post-codec restore must assign the same registered player before settlement");
+        if (!playerRestored)
+            return;
+        restored.game->setMap(map);
+        auto clock = map->getObjectByName("cityClock");
+        auto old = std::dynamic_pointer_cast<CCreature>(
+            clock->getObjectProperty("plugin_citySevenSunsMerchantOld_cityAr0601Actor1"));
+        auto current = std::dynamic_pointer_cast<CCreature>(
+            clock->getObjectProperty("plugin_citySevenSunsMerchantNew_cityAr0601Actor1"));
+        expect_true(old && current && old != current && map->getObjectByName("cityAr0601Actor1") == current &&
+                        old->isAlive() && old->getEffects().size() == 1 &&
+                        (*old->getEffects().begin())->getCaster() == old &&
+                        (*old->getEffects().begin())->getVictim() == old && current->getWeapon() &&
+                        current->getStringProperty("sourceActor") == "AR0601#actor1",
+                    "codec roundtrip retains distinct old and new owners, old self-effect aliases and actual new "
+                    "equipped weapon");
+        const auto receipt = map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+        auto replay = CSevenSunsMerchantDialogue::settle(restored.game, clock, {});
+        expect_true(replay.at("replaced").get<int>() == 0 &&
+                        map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+                        map->tryBeginSaveSnapshot().has_value(),
+                    "restored certified replacement receipt never rerolls or reseeds");
+        dyingMap = map;
+        dyingActor = old;
+        if (old && !old->getEffects().empty())
+            dyingEffect = *old->getEffects().begin();
+        auto destination = std::make_shared<CMap>();
+        destination->setGame(restored.game);
+        restored.game->setMap(destination);
+    }
+    vstd::event_loop<>::instance()->runReady();
+    expect_true(restored.game->getContext()->isActive() && dyingMap.expired() && dyingActor.expired() &&
+                    dyingEffect.expired(),
+                "restored whole-map retirement cleanup breaks old actor/effect cycles while its game remains live");
+}
+
+void testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput() {
+    SevenSunsMerchantFixture f;
+    auto first = f.beginMerchant();
+    first->close();
+    first.reset();
+    auto doc = f.merchantDocument();
+    doc["actors"][SevenSunsMerchantFixture::Names[0]]["revision"] = 999999;
+    f.map->setStringProperty(SevenSunsMerchantFixture::MerchantStateKey, "city-json:" + doc.dump());
+    const auto before = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    auto refused = f.beginMerchant();
+    expect_true(refused->view().at("reason").get<std::string>() == "revisionLimit" &&
+                    f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == before &&
+                    f.protectedActors[0]->getNumericProperty("plugin_cityDopmerTalkCount") == 1 &&
+                    f.map->tryBeginSaveSnapshot().has_value(),
+                "admitted revision cap never creates its own next unreadable receipt");
+}
+
 int main() {
+#if defined(_WIN32)
+    native_test_diagnostics::installWindowsHandlerCrashDiagnostics();
+#endif
     pybind11::scoped_interpreter guard{};
     pybind11::module_::import("sys").attr("path").attr("insert")(0, GAME_HANDLER_TEST_PYTHON_ROOT);
     pybind11::module_::import("ui");
@@ -7823,6 +9238,8 @@ int main() {
                             testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime);
     nativeTestProfile().run("testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
                             testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases);
+    nativeTestProfile().run("testScriptWaitForeignObjectFailureRoundTripsSynchronously",
+                            testScriptWaitForeignObjectFailureRoundTripsSynchronously);
     nativeTestProfile().run("testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments",
                             testScriptWaitFlowCompletesAndRejectsInvalidObjectArguments);
     nativeTestProfile().run("testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
@@ -7830,5 +9247,105 @@ int main() {
     nativeTestProfile().run("testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
                             testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime);
     nativeTestProfile().run("testSyncScriptWaitReleasesTheFinalGameOwner", testSyncScriptWaitReleasesTheFinalGameOwner);
+    nativeTestProfile().run("testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives",
+                            testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives);
+    nativeTestProfile().run("testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles",
+                            testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles);
+    nativeTestProfile().run("testSevenSunsWarningOldMapCleanupPreservesActorAdoptedByAnotherLiveMap",
+                            testSevenSunsWarningOldMapCleanupPreservesActorAdoptedByAnotherLiveMap);
+    nativeTestProfile().run("testSevenSunsWarningDefaultMapSnapshotOmitsTheEmptyRetirementCollection",
+                            testSevenSunsWarningDefaultMapSnapshotOmitsTheEmptyRetirementCollection);
+    nativeTestProfile().run("testSevenSunsWarningReflectedOwnerTamperingQuarantinesAndStillCleansCycles",
+                            testSevenSunsWarningReflectedOwnerTamperingQuarantinesAndStillCleansCycles);
+    nativeTestProfile().run("testSevenSunsWarningSwallowedNestedBeginCannotAcknowledgeRetirement",
+                            testSevenSunsWarningSwallowedNestedBeginCannotAcknowledgeRetirement);
+    nativeTestProfile().run("testSevenSunsWarningOtherUnsafeQuarantineCannotBecomeSuccess",
+                            testSevenSunsWarningOtherUnsafeQuarantineCannotBecomeSuccess);
+    nativeTestProfile().run("testSevenSunsWarningCapacityPreflightNeverPublishesAnUnreadableOwnResult",
+                            testSevenSunsWarningCapacityPreflightNeverPublishesAnUnreadableOwnResult);
+    nativeTestProfile().run("testSevenSunsWarningRejectsOverflowingJsonAuthorityInsteadOfAliasingLowBits",
+                            testSevenSunsWarningRejectsOverflowingJsonAuthorityInsteadOfAliasingLowBits);
+    nativeTestProfile().run("testSevenSunsWarningUiFlowDispatchOwnsTokensAndRejectsOversizedSourceEdges",
+                            testSevenSunsWarningUiFlowDispatchOwnsTokensAndRejectsOversizedSourceEdges);
+    nativeTestProfile().run("testSevenSunsWarningJournalMembershipLossCannotBecomeAcceptedRetirement",
+                            testSevenSunsWarningJournalMembershipLossCannotBecomeAcceptedRetirement);
+    nativeTestProfile().run("testSevenSunsWarningSharedNamesIgnoreAsciiCaseAndRejectAmbiguousAliases",
+                            testSevenSunsWarningSharedNamesIgnoreAsciiCaseAndRejectAmbiguousAliases);
+    nativeTestProfile().run("testSevenSunsWarningEveryReachableDefaultGlobalPathUsesNativeCursor",
+                            testSevenSunsWarningEveryReachableDefaultGlobalPathUsesNativeCursor);
+    nativeTestProfile().run("testSevenSunsWarningRetiresSameLivingActorAndPublishesOneJournal",
+                            testSevenSunsWarningRetiresSameLivingActorAndPublishesOneJournal);
+    nativeTestProfile().run("testSevenSunsWarningCommittedChoiceSurvivesCancellationAndRemainsSaveable",
+                            testSevenSunsWarningCommittedChoiceSurvivesCancellationAndRemainsSaveable);
+    nativeTestProfile().run("testSevenSunsWarningRefusesWrongSourceAndMapAwayBackBeforeCommit",
+                            testSevenSunsWarningRefusesWrongSourceAndMapAwayBackBeforeCommit);
+    nativeTestProfile().run("testSevenSunsWarningRejectsWrongRevisionAndSourceConditionalEdge",
+                            testSevenSunsWarningRejectsWrongRevisionAndSourceConditionalEdge);
+    nativeTestProfile().run("testSevenSunsWarningReplayRequiresExactRetainedOwnerAndCreatesNothing",
+                            testSevenSunsWarningReplayRequiresExactRetainedOwnerAndCreatesNothing);
+    nativeTestProfile().run("testSevenSunsWarningClassifiesPendingAndOrphanStateBeforeMissingPlayer",
+                            testSevenSunsWarningClassifiesPendingAndOrphanStateBeforeMissingPlayer);
+    nativeTestProfile().run("testSevenSunsWarningPostRemovalFailureQuarantinesAndPreservesPrimaryError",
+                            testSevenSunsWarningPostRemovalFailureQuarantinesAndPreservesPrimaryError);
+    nativeTestProfile().run("testSevenSunsWarningJournalFactoryFailureCannotAcknowledgeEscape",
+                            testSevenSunsWarningJournalFactoryFailureCannotAcknowledgeEscape);
+    nativeTestProfile().run("testSevenSunsWarningRetainedActorEffectAliasesRoundTrip",
+                            testSevenSunsWarningRetainedActorEffectAliasesRoundTrip);
+    nativeTestProfile().run("testSevenSunsWarningSessionDoesNotKeepClosedGameAlive",
+                            testSevenSunsWarningSessionDoesNotKeepClosedGameAlive);
+    nativeTestProfile().run("testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes",
+                            testSevenSunsWarningUsesSharedSourceGlobalsWithoutClampingOrDroppingScopes);
+    nativeTestProfile().run("testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority",
+                            testSevenSunsMerchantRejectsUnsignedDumpAliasingBeforeSourceAuthority);
+    nativeTestProfile().run("testSevenSunsStockExhaustive8000FiniteOutcomesAndInputBounds",
+                            testSevenSunsStockExhaustive8000FiniteOutcomesAndInputBounds);
+    nativeTestProfile().run("testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions",
+                            testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions);
+    nativeTestProfile().run("testSevenSunsStockPreparedRejectsControllerActionAndInitialMetadataChanges",
+                            testSevenSunsStockPreparedRejectsControllerActionAndInitialMetadataChanges);
+    nativeTestProfile().run("testSevenSunsStockSettledValidationAllowsActualMutableHealthInventoryAndEquipment",
+                            testSevenSunsStockSettledValidationAllowsActualMutableHealthInventoryAndEquipment);
+    nativeTestProfile().run("testSevenSunsStockMatchingActorAndClockForgeryCannotPassFiniteReplay",
+                            testSevenSunsStockMatchingActorAndClockForgeryCannotPassFiniteReplay);
+    nativeTestProfile().run("testSevenSunsStockFailedUnpublishedSelfEffectExpiresWithMapWhileGameLives",
+                            testSevenSunsStockFailedUnpublishedSelfEffectExpiresWithMapWhileGameLives);
+    nativeTestProfile().run("testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption",
+                            testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption);
+    nativeTestProfile().run("testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce",
+                            testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce);
+    nativeTestProfile().run("testSevenSunsStockForgedDedicatedDefeatCannotFallBackToGenericXp",
+                            testSevenSunsStockForgedDedicatedDefeatCannotFallBackToGenericXp);
+    nativeTestProfile().run("testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges",
+                            testSevenSunsMerchantAllThirteenPathsCoverTwentyFourNativeEdges);
+    nativeTestProfile().run("testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned",
+                            testSevenSunsMerchantInitiationCancelReopenAndLegacyRefusalAreOwned);
+    nativeTestProfile().run("testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit",
+                            testSevenSunsMerchantCoordinatorReplacesOnlyTheActiveSourceFloorWithoutCredit);
+    nativeTestProfile().run("testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes",
+                            testSevenSunsMerchantSharedGlobalsKeepSourceOrderCaseAndOtherScopes);
+    nativeTestProfile().run("testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision",
+                            testSevenSunsMerchantRejectsStaleEpochRegionActorPlayerAndRevision);
+    nativeTestProfile().run("testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement",
+                            testSevenSunsMerchantFactoryReentryOrOwnerMutationCannotAcknowledgeReplacement);
+    nativeTestProfile().run("testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation",
+                            testSevenSunsMerchantAdmissionAndLegacyEligibilityRetryWithoutMutation);
+    nativeTestProfile().run("testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners",
+                            testSevenSunsMerchantFailureAfterDetachQuarantinesBothRetainedOwners);
+    nativeTestProfile().run("testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock",
+                            testSevenSunsMerchantRepeatedSettlementNeverReseedsChangedOrDefeatedStock);
+    nativeTestProfile().run("testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority",
+                            testSevenSunsMerchantMissingAttackWitnessNeverUsesDamageAsRevealAuthority);
+    nativeTestProfile().run("testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner",
+                            testSevenSunsMerchantIdleFlowDoesNotRetainGameOwner);
+    nativeTestProfile().run("testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval",
+                            testSevenSunsMerchantCombatParticipantClaimRetriesBeforeQuietRemoval);
+    nativeTestProfile().run("testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges",
+                            testSevenSunsMerchantNativeUiFlowOwnsCursorClosesAndRejectsOversizedEdges);
+    nativeTestProfile().run("testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives",
+                            testSevenSunsMerchantRetiredOldEffectCycleEndsWithMapWhileGameLives);
+    nativeTestProfile().run("testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt",
+                            testSevenSunsMerchantWholeMapCodecPreservesOldNewAliasesAndOnceOwnedReceipt);
+    nativeTestProfile().run("testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput",
+                            testSevenSunsMerchantRevisionLimitRefusesWithoutUnreadableOwnOutput);
     return finish_tests();
 }

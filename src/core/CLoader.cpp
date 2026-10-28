@@ -932,7 +932,13 @@ std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std:
     }
     diagnostics.mark("journal.end");
     diagnostics.mark("graph.begin");
-    auto snapshot = CSerialization::serializeExpected(map, map->getMapName());
+    auto snapshot = [&] {
+        CSerializationProgress progress("write");
+        auto result = CSerialization::serializeExpected(map, map->getMapName());
+        if (result)
+            progress.finished();
+        return result;
+    }();
     if (!snapshot) {
         diagnostics.mark("graph.error", 0, false);
         return std::unexpected(snapshot.error().message);
@@ -1082,7 +1088,9 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
             const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
             CScopedObjectConfig scopedSaveConfig(handler, saveConfigKey, saveDocument.snapshot);
             CSerialization::StrictScope strict(saveConfigKey);
+            CSerializationProgress progress("read");
             map = handler->createObject<CMap>(game, saveConfigKey, strict);
+            progress.finished();
         }
         if (!isCurrent() || !ownsScene()) {
             superseded = true;

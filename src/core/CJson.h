@@ -63,6 +63,7 @@ class json {
     bool is_boolean() const;
     bool is_number() const;
     bool is_number_integer() const;
+    bool is_number_unsigned() const;
     bool empty() const;
     std::size_t size() const;
     std::size_t count(const std::string &key) const;

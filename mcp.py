@@ -85,6 +85,7 @@ MCP_ALLOWED_EXPORTS = {
     "randint",
 }
 MCP_ALLOWED_HANDLE_METHODS = {
+    "BaldursGateClock": {"sevenSunsDeathCount"},
     "CGameObject": {
         "addTag",
         "getBoolProperty",
@@ -111,6 +112,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getParent",
         "keyboardEvent",
     },
+    "CGameQuestPanel": {"getText"},
     "CGameCampaignPanel": {
         "getBody",
         "getTitle",
@@ -126,6 +128,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getGui",
         "getGuiHandler",
         "getMap",
+        "getMapBindingEpoch",
         "getObjectHandler",
         "getRngHandler",
         "getSceneManager",

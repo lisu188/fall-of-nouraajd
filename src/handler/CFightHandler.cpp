@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
 #include "handler/CRngHandler.h"
+#include "handler/CSevenSunsMerchantDialogue.h"
 
 struct CCombatOwnership {
     CCombatOwnership() = default;
@@ -125,6 +126,10 @@ class CCombatParticipantGuard {
     std::shared_ptr<CCombatOwnership> identity;
     bool admitted = false;
 };
+
+bool CFightHandler::hasActiveCombatClaim(const std::shared_ptr<CCreature> &actor) {
+    return CCombatParticipantGuard::isOwned(actor);
+}
 
 template <typename Callback> class DefeatScopeExit {
   public:
@@ -1425,9 +1430,16 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     requireDefeatCurrent();
     vstd::logger::debug(winnerDescription, a->getName(), "defeated", loserDescription);
     requireDefeatCurrent();
-    const auto rewardScale = b->getScale();
+    const bool sevenSunsReplacement =
+        CSevenSunsMerchantDialogue::isSettledReplacement(expectedGame.lock(), encounterMap, b, requireDefeatCurrent);
     requireDefeatCurrent();
-    a->addExpScaled(rewardScale);
+    if (sevenSunsReplacement) {
+        a->addExp(420);
+    } else {
+        const auto rewardScale = b->getScale();
+        requireDefeatCurrent();
+        a->addExpScaled(rewardScale);
+    }
     requireDefeatCurrent();
     const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");
     requireDefeatCurrent();
