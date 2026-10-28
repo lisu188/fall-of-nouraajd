@@ -238,8 +238,226 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             )
         )
 
+        progress = [
+            (line, json.loads(line))
+            for line in errors.splitlines()
+            if line.startswith('{"diagnostic":"serialization-progress"')
+        ]
+        self.assertTrue(progress, "The enabled second save must expose real traversal progress")
+        self.assertLessEqual(len(progress), 32)
+        self.assertLessEqual(sum(len(line.encode()) + 1 for line, _row in progress), 32 * 512)
+        rows = [row for _line, row in progress]
+        self.assertEqual({"write"}, {row["direction"] for row in rows})
+        self.assertEqual(1, len({row["session"] for row in rows}))
+        self.assertEqual(("begin", "end"), (rows[0]["stage"], rows[-1]["stage"]))
+        self.assertTrue(rows[-1]["finished"])
+        self.assertTrue(all(row["unwinding"] is False for row in rows))
+        self.assertGreater(rows[-1]["objects"], 0)
+        self.assertGreater(rows[-1]["properties"], 0)
+        self.assertGreater(rows[-1]["arrayEntries"], 0)
+        counters = ("objects", "properties", "arrayEntries", "mapEntries", "graphNodes", "initializations")
+        self.assertEqual(rows[-1]["visits"], sum(rows[-1][key] for key in counters))
+        for key in ("elapsedMicroseconds", "visits", *counters):
+            values = [row[key] for row in rows]
+            self.assertTrue(all(type(value) is int and value >= 0 for value in values), key)
+            self.assertEqual(sorted(values), values, key)
+
 
 class CityNativeLoadingSourceTest(unittest.TestCase):
+    def testSerializationProgressCountsExistingVisitsWithoutNewGraphWork(self):
+        from pathlib import Path
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        header = (root / "src/core/CSerialization.h").read_text(encoding="utf-8")
+        self.assertTrue("void CSerializationProgress::begin(" in source)
+        helper = source[
+            source.index("void CSerializationProgress::begin(") : source.index(
+                "class CSerializationWriteContext::State"
+            )
+        ]
+        self.assertEqual(1, helper.count('std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS")'))
+        self.assertTrue("if (activeSerializationProgress)" in helper)
+        self.assertEqual(2, helper.count("session = activeSerializationProgress;"))
+        self.assertTrue("if (!enabled)" in helper)
+        disabled_guard = helper.index("if (!enabled)")
+        admission = helper.index("activeSerializationProgress = this;")
+        self.assertLess(disabled_guard, admission)
+        self.assertIn("session = nullptr;", helper[disabled_guard:admission])
+        self.assertIn("return;", helper[disabled_guard:admission])
+        self.assertIn("#include <algorithm>", source)
+        self.assertTrue("activeSerializationProgress = nullptr;" in helper)
+        self.assertNotRegex(helper, "(?:meta|getType|getProperty|getTiles|getTile|dump)\\s*\\(")
+        self.assertNotRegex(helper, "\\b(?:for|while)\\s*\\(")
+        self.assertTrue("if (!session || !session->enabled)" in helper)
+        self.assertTrue("if (session == this)" in helper)
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::Object);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::Property);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::ArrayEntry);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::MapEntry);"))
+        self.assertEqual(1, source.count("context.visit(CSerializationVisit::GraphNode);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::Initialization);"))
+        self.assertRegex(source, "pending\\.pop_back\\(\\);\\s*context\\.visit\\(CSerializationVisit::GraphNode\\);")
+        self.assertEqual(2, header.count("const CSerializationProgressCounters &progressCounters() const noexcept"))
+        self.assertEqual(2, source.count("progress.join();"))
+        join = helper[
+            helper.index("void CSerializationProgress::join()") : helper.index("void CSerializationProgress::end()")
+        ]
+        self.assertNotIn("getenv", join)
+        self.assertNotIn("mark(", join)
+        self.assertNotIn("activeSerializationProgress =", join)
+        loader = (root / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        self.assertEqual(1, loader.count('CSerializationProgress progress("write");'))
+        self.assertEqual(1, loader.count('CSerializationProgress progress("read");'))
+        self.assertRegex(
+            loader, r'CSerializationProgress progress\("write"\);\s*auto result = CSerialization::serializeExpected'
+        )
+        self.assertRegex(
+            loader,
+            r'CSerialization::StrictScope strict\(saveConfigKey\);\s*CSerializationProgress progress\("read"\);\s*map = handler->createObject<CMap>',
+        )
+        self.assertEqual(2, source.count("progress.end();"))
+        self.assertEqual(2, source.count("progress.finished();"))
+
+    def testSerializationProgressHasFixedRecordBytesAndDeterministicNativeBudget(self):
+        from pathlib import Path
+        import json
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        self.assertTrue("serializationProgressRecordLimit = 32;" in source)
+        self.assertTrue("serializationProgressRecordBytes = 512;" in source)
+        self.assertTrue("owner.counts.records + 1 < serializationProgressRecordLimit" in source)
+        self.assertTrue("owner.nextVisit * 4" in source)
+        self.assertTrue("void CSerializationProgress::mark(" in source)
+        mark = source[
+            source.index("void CSerializationProgress::mark(") : source.index("class CSerializationWriteContext::State")
+        ]
+        format_begin = mark.index('"{\\"diagnostic')
+        format_end = mark.index("direction, static_cast", format_begin)
+        packet = "".join(
+            (ast.literal_eval(value) for value in re.findall('"(?:[^"\\\\]|\\\\.)*"', mark[format_begin:format_end]))
+        )
+        fields = re.findall("%llu|%lld|%s", packet)
+        arguments = iter(
+            (
+                "write",
+                str(2**64 - 1),
+                "progress",
+                str(2**63 - 1),
+                *[str(2**64 - 1)] * 7,
+                "initialization",
+                "false",
+                "false",
+            )
+        )
+        record = re.sub("%llu|%lld|%s", lambda _match: next(arguments), packet)
+        self.assertEqual(14, len(fields))
+        self.assertLess(len(record.encode()), 512)
+        self.assertEqual("serialization-progress", json.loads(record)["diagnostic"])
+        self.assertTrue("std::min(static_cast<std::size_t>(length), sizeof(record) - 1)" in mark)
+        self.assertNotIn("json", mark)
+        native = (root / "tests/unit/test_serialization_performance.cpp").read_text(encoding="utf-8")
+        self.assertTrue("void testSerializationProgressRecordBudget()" in native)
+        self.assertEqual(1, native.count("    testSerializationProgressRecordBudget();"))
+        self.assertTrue("constexpr std::size_t visits = 65536;" in native)
+        thresholds = []
+        threshold = 1
+        while threshold <= 65536:
+            thresholds.append(threshold)
+            threshold *= 4
+        self.assertEqual(11, 2 + len(thresholds))
+        self.assertTrue("counts.records == 11" in native)
+        self.assertTrue("counts.bytes <= counts.records * 512" in native)
+        self.assertTrue("progress.counters().visits == 0" in native)
+        self.assertIn("constexpr int independentRoots = 512;", native)
+        self.assertIn("unadmitted-construction-root", native)
+        self.assertIn("context.progressCounters().records == 0", native)
+        self.assertIn(
+            "unadmitted-tile-shaped-operation", (root / "tests/unit/test_core.cpp").read_text(encoding="utf-8")
+        )
+        core = (root / "tests/unit/test_core.cpp").read_text(encoding="utf-8")
+        self.assertTrue("written.visits == 4" in core)
+        self.assertTrue("read.visits == 4" in core)
+        self.assertTrue("encoded->dump() == unchanged->dump()" in core)
+        self.assertTrue("error.getError().code == CSerializationErrorCode::MissingCodec" in core)
+        self.assertTrue("failed.progressCounters().records == 2" in core)
+        self.assertRegex(
+            core,
+            r'try \{\s*CSerializationProgress error_admission\("write"\);\s*CSerializationOperation scope\(failed\);',
+        )
+        self.assertNotIn("error_admission.end();", core)
+
+    def testOnlyObservedMcpSaveAndReloadChildrenOptIntoSerializationProgress(self):
+        from pathlib import Path
+        import os
+        import sys
+        import tempfile
+
+        source = (Path(__file__).resolve().parents[1] / "test.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        owner = next((node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest"))
+        methods = {node.name: node for node in owner.body if isinstance(node, ast.FunctionDef)}
+        start = methods["_start_stdio_mcp_process"]
+        self.assertIn("save_stage_diagnostics", {argument.arg for argument in start.args.kwonlyargs})
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            (root / "mcp.py").write_text("", encoding="utf-8")
+            scope = {
+                "REPO_ROOT": root,
+                "TEST_OUTPUT_DIR": root,
+                "CITY_WALKTHROUGH_CASES": {},
+                "os": os,
+                "sys": sys,
+                "Path": Path,
+                "build_dir": root,
+                "build_config": None,
+                "traceback": __import__("traceback"),
+            }
+            exec(
+                compile(
+                    ast.Module(body=[start, methods["_run_mcp_walkthrough"]], type_ignores=[]), "mcp-child", "exec"
+                ),
+                scope,
+            )
+            emitted = []
+            case = unittest.TestCase()
+            case._start_stdio_process = lambda command, **kwargs: emitted.append((command, kwargs)) or SimpleNamespace()
+            invoke = lambda **kwargs: scope["_start_stdio_mcp_process"](case, **kwargs)
+            invoke()
+            self.assertIsNone(emitted[-1][1]["env"])
+            invoke(save_stage_diagnostics=True)
+            self.assertEqual({"GAME_SAVE_STAGE_DIAGNOSTICS": "1"}, emitted[-1][1]["env"])
+            invoke(map_name="candlekeep")
+            self.assertIsNone(emitted[-1][1]["env"])
+            selected = []
+
+            def stopAfterOptions(map_name, **options):
+                selected.append((map_name, options))
+                raise RuntimeError("source-only child admission stop")
+
+            case._start_stdio_mcp_process = stopAfterOptions
+            case._write_mcp_walkthrough_log = lambda *_args: None
+            for map_name in ("baldursGate", "candlekeep", "test"):
+                scope["_run_mcp_walkthrough"](case, map_name)
+            self.assertEqual(
+                [("baldursGate", {"save_stage_diagnostics": True}), ("candlekeep", {}), ("test", {})], selected
+            )
+        random_case = methods["testStdioRandomSaveReloadAndSecondSessionControllerMovement"]
+        calls = [
+            node
+            for node in ast.walk(random_case)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and (node.func.attr == "_start_stdio_mcp_process")
+        ]
+        self.assertEqual(1, len(calls))
+        self.assertEqual(
+            {"save_stage_diagnostics": True}, {entry.arg: ast.literal_eval(entry.value) for entry in calls[0].keywords}
+        )
+
     def program(self, method_name, marker):
         case = CityNativeLoadingRuntimeTest(method_name)
         programs = []

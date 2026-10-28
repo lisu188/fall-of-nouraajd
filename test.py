@@ -30241,7 +30241,7 @@ class McpServerTest(unittest.TestCase):
 
         slot = unique_save_name("cpp26-mcp-session")
         self.addCleanup(cleanup_save_slot, slot)
-        proc = self._start_stdio_mcp_process()
+        proc = self._start_stdio_mcp_process(save_stage_diagnostics=True)
         try:
             self._initialize_stdio_mcp(proc)
             session = {"proc": proc, "next_request_id": 3}
@@ -30398,7 +30398,7 @@ class McpServerTest(unittest.TestCase):
         success = False
         log = {}
         try:
-            options = {}
+            options = {"save_stage_diagnostics": True} if map_name == "baldursGate" else {}
             if map_name in CITY_WALKTHROUGH_CASES:
                 import uuid
                 from tests.gameplay_branch_driver import caseSeed
@@ -30437,7 +30437,14 @@ class McpServerTest(unittest.TestCase):
         return success, log
 
     def _start_stdio_mcp_process(
-        self, map_name=None, *, trace_name=None, native_log_file=None, fixture_seed=None, test_seed=None
+        self,
+        map_name=None,
+        *,
+        trace_name=None,
+        native_log_file=None,
+        fixture_seed=None,
+        test_seed=None,
+        save_stage_diagnostics=False,
     ):
         if fixture_seed is not None and test_seed is not None:
             raise ValueError("Choose fixture_seed or test_seed, not both")
@@ -30454,6 +30461,9 @@ class McpServerTest(unittest.TestCase):
             env["GAME_PLAYTEST_TRACE_FILE"] = str(trace_path)
             if map_name in CITY_WALKTHROUGH_CASES:
                 env["GAME_PLAYTEST_TRACE_RETAIN_RECENT"] = "1"
+        if save_stage_diagnostics:
+            env = os.environ.copy() if env is None else env
+            env["GAME_SAVE_STAGE_DIAGNOSTICS"] = "1"
         command = [
             sys.executable,
             str(script),
