@@ -10,6 +10,21 @@ from pathlib import Path
 
 REVIEWED_FILENAME = "baldurs_gate_city_palace_listener_closure.json"
 REVIEWED_EVIDENCE_SHA256 = "88889a146d1a3f22de428eef4440e766e213ee879b070c780a1eaa8f28a58d12"
+# sourceHelpers remains the immutable historical audit identity. These two
+# delivery successors were reviewed for default-output compatibility only; they
+# do not represent another installed-source audit.
+REVIEWED_HELPER_DELIVERY_SUCCESSORS = {
+    "audit_candlekeep_source.py": {
+        "audited": {"bytes": 53508, "sha256": "dcf88b69918312e1684474588a3d2a85ae04eb3a2dc62f79e68ee08468c6e5d8"},
+        "delivery": {"bytes": 61580, "sha256": "124be65873d08ba9c6bca0805540a33ae61c53d4ec8b460470489d04b1787936"},
+    },
+    "build_baldurs_gate_source_fixture.py": {
+        "audited": {"bytes": 28784, "sha256": "0e547d53553fd0a4e2755652bb776dc4592e37c4fde928dc38e27db0359f20cb"},
+        "delivery": {"bytes": 29102, "sha256": "2042070f0b19e2131e623470f60a2487ad24bcd372a5fd65be988e6c08589582"},
+    },
+}
+
+
 EXPECTED_COUNTS = {
     "actorCreatureResources": 21,
     "directActorBCS": 22,
@@ -328,6 +343,14 @@ def validateLogicalEvidence(evidence):
     }
     require(evidence["closureCounts"] == derived == EXPECTED_COUNTS, "Logical closure counts mismatch")
     return True
+
+
+def reviewedDeliveryHelpers(evidence):
+    expected = {name: dict(value) for name, value in evidence["sourceHelpers"].items()}
+    for name, binding in REVIEWED_HELPER_DELIVERY_SUCCESSORS.items():
+        require(expected.get(name) == binding["audited"], "Historical helper audit identity changed: " + name)
+        expected[name] = dict(binding["delivery"])
+    return expected
 
 
 def validateReview(payload, fixtures):

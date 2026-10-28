@@ -2,12 +2,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Source inventory/mapping contracts only; no native execution, coverage or classic-parity credit."""
 
+import ast
 import copy
+from contextlib import redirect_stdout
+import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
+import tempfile
 import unittest
+from unittest.mock import patch
 
+from scripts import build_baldurs_gate_city_ledger as ledger_builder
 from scripts.build_baldurs_gate_city_ledger import buildLedger, validateLedger
+from scripts.build_baldurs_gate_poison_ledger import POISON_PATH
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,7 +24,7 @@ def readJson(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def expectedIds(source, quests):
+def expectedIds(source, quests, poison=None):
     """Enumerate audited records independently from implementation/config mapping."""
     result = set()
     for area_id, area in source["areas"].items():
@@ -54,6 +62,17 @@ def expectedIds(source, quests):
     for quest in quests["quests"]:
         result.add(f"quest:{quest['id']}:accept")
         result.update(f"quest:{quest['id']}:{choice['id']}" for choice in quest["outcomes"])
+    if poison is not None:
+        for dialogue in poison["dialogues"]:
+            result.update(dialogue["resource"] + ":state" + str(row["index"]) for row in dialogue["states"])
+            result.update(dialogue["resource"] + ":edge" + str(row["index"]) for row in dialogue["edges"])
+        for script in poison["scripts"]:
+            result.update(script["resource"] + ":block" + str(row["index"]) for row in script["blocks"])
+        for item in poison["items"]:
+            result.add(item["resource"] + ":header")
+            result.update(item["resource"] + ":ability" + str(row["index"]) for row in item["abilities"])
+            result.update(item["resource"] + ":effect" + str(row["index"]) for row in item["effects"])
+        result.update(row["sourceId"] for row in poison["frontiers"])
     return result
 
 
@@ -379,6 +398,172 @@ class BaldursGateCityLedgerUnitTest(unittest.TestCase):
         ledger["entries"][0]["testStatus"]["coverage"] = "100%"
         self.assertTrue(any("Coverage cannot be awarded" in problem for problem in validateLedger(ledger)))
 
+    def poisonDocument(self):
+        return readJson(ROOT / POISON_PATH)
+
+    def testPoisonInventoryAddsEveryRetainedRecordWithoutChangingOldRows(self):
+        poison = self.poisonDocument()
+        self.assertEqual(
+            (72, 112, 9, 4, 2, 11, 8),
+            (
+                sum(len(row["states"]) for row in poison["dialogues"]),
+                sum(len(row["edges"]) for row in poison["dialogues"]),
+                sum(len(row["blocks"]) for row in poison["scripts"]),
+                len(poison["items"]),
+                sum(len(row["abilities"]) for row in poison["items"]),
+                sum(len(row["effects"]) for row in poison["items"]),
+                len(poison["frontiers"]),
+            ),
+        )
+        legacy = self.ledger()
+        self.assertEqual(legacy, buildLedger(self.source, self.quests, self.config, self.script, poison=None))
+        expanded = buildLedger(self.source, self.quests, self.config, self.script, poison=poison)
+        old_rows = {row["id"]: row for row in legacy["entries"]}
+        rows = {row["id"]: row for row in expanded["entries"]}
+        expected = expectedIds(self.source, self.quests, poison)
+        new_ids = expected - set(old_rows)
+        self.assertEqual(218, len(new_ids))
+        self.assertEqual(expected, set(rows))
+        self.assertEqual(old_rows, {key: rows[key] for key in old_rows})
+        self.assertEqual(
+            legacy["inputs"], {key: value for key, value in expanded["inputs"].items() if key != POISON_PATH}
+        )
+        self.assertNotIn(POISON_PATH, legacy["inputs"])
+        self.assertEqual(ledger_builder.fingerprint(poison), expanded["inputs"][POISON_PATH])
+        self.assertFalse(expanded["acceptanceReady"])
+        self.assertFalse(expanded["originalParityEstablished"])
+        self.assertEqual([], validateLedger(expanded))
+        for key in new_ids:
+            row = rows[key]
+            self.assertEqual("planned", row["implementation"]["status"], key)
+            self.assertEqual([], row["implementation"]["targets"], key)
+            self.assertEqual([], row["implementation"]["callbacks"], key)
+            self.assertEqual("pending", row["testStatus"]["native"], key)
+            self.assertEqual("not established", row["testStatus"]["coverage"], key)
+            self.assertTrue(row["gaps"], key)
+            self.assertTrue(all(proof["fixture"] == POISON_PATH for proof in row["evidence"]), key)
+
+    def testPoisonRequiredRowsAndEvidenceCannotBeDroppedOrCredited(self):
+        poison = self.poisonDocument()
+        expected = buildLedger(self.source, self.quests, self.config, self.script, poison=poison)
+        new_ids = expectedIds(self.source, self.quests, poison) - expectedIds(self.source, self.quests)
+        damaged = copy.deepcopy(expected)
+        removed = next(row for row in damaged["entries"] if row["id"] in new_ids)
+        damaged["entries"].remove(removed)
+        self.assertIn("Missing obligation: " + removed["id"], validateLedger(damaged, expected=expected))
+        damaged = copy.deepcopy(expected)
+        row = next(row for row in damaged["entries"] if row["id"] in new_ids)
+        row["evidence"][0]["fixture"] = "tests/fixtures/unreviewed.json"
+        self.assertIn("Invalid source pointer: " + row["id"], validateLedger(damaged))
+        row["evidence"][0]["fixture"] = POISON_PATH
+        row["testStatus"]["native"] = "passed"
+        self.assertIn(
+            "Native evidence cannot be awarded by this metadata generator: " + row["id"], validateLedger(damaged)
+        )
+        self.assertTrue(validateLedger(expected, require_mapped=True))
+        self.assertTrue(validateLedger(expected, require_acceptance=True))
+
+    def testPoisonCliRequiresTheFixtureAndActuallyPassesItToTheProducer(self):
+        poison = self.poisonDocument()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for path, value in (
+                (ledger_builder.SOURCE_PATH, self.source),
+                (ledger_builder.QUEST_PATH, self.quests),
+                (ledger_builder.CONFIG_PATH, self.config),
+                (POISON_PATH, poison),
+                (ledger_builder.OUTPUT_PATH, self.ledger()),
+            ):
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(json.dumps(value), encoding="utf-8")
+            target = root / ledger_builder.SCRIPT_PATH
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(self.script, encoding="utf-8")
+            with patch.object(ledger_builder, "ROOT", root), patch.object(
+                ledger_builder, "buildLedger", wraps=ledger_builder.buildLedger
+            ) as producer, redirect_stdout(io.StringIO()):
+                self.assertEqual(2, ledger_builder.main(["--check"]))
+                self.assertEqual(1, producer.call_count)
+                self.assertIn("poison", producer.call_args.kwargs)
+                self.assertEqual(poison, producer.call_args.kwargs["poison"])
+                (root / POISON_PATH).unlink()
+                with self.assertRaises(FileNotFoundError):
+                    ledger_builder.main(["--check"])
+                self.assertEqual(1, producer.call_count)
+
+    def testPoisonRequiredRowsReachTheActualPendingProducerAndCatalogAggregator(self):
+        poison = self.poisonDocument()
+        ledger = buildLedger(self.source, self.quests, self.config, self.script, poison=poison)
+        new_ids = expectedIds(self.source, self.quests, poison) - expectedIds(self.source, self.quests)
+        route_tree = ast.parse((ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8"))
+        producer = next(
+            node
+            for node in route_tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "PENDING_GAMEPLAY_OBLIGATIONS" for target in node.targets
+            )
+        )
+        catalog_tree = ast.parse((ROOT / "tests/gameplay_branch_catalog.py").read_text(encoding="utf-8"))
+        aggregator = next(
+            node
+            for node in catalog_tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "pendingGameplayObligations"
+        )
+
+        class LedgerPath:
+            def __truediv__(self, value):
+                if value != "tests/fixtures/baldurs_gate_city_ledger.json":
+                    raise AssertionError(value)
+                return self
+
+            def read_text(self, encoding):
+                return json.dumps(ledger)
+
+        def checkPending(producer_node, aggregator_node):
+            scope = {"ROOT": LedgerPath(), "json": json, "MAP": "baldursGate"}
+            exec(
+                compile(ast.fix_missing_locations(ast.Module(body=[producer_node], type_ignores=[])), "route", "exec"),
+                scope,
+            )
+            module = SimpleNamespace(PENDING_GAMEPLAY_OBLIGATIONS=scope["PENDING_GAMEPLAY_OBLIGATIONS"], CASES=())
+            scope.update(routeModules=lambda: (module,), sharedServiceObligations=lambda: {}, PLAYER_CLASSES=())
+            exec(
+                compile(
+                    ast.fix_missing_locations(ast.Module(body=[aggregator_node], type_ignores=[])), "catalog", "exec"
+                ),
+                scope,
+            )
+            pending = scope["pendingGameplayObligations"]()
+            for key in new_ids:
+                row = pending.get("baldursGate.source." + key)
+                self.assertIsNotNone(row, key)
+                self.assertEqual(key, row["sourceId"])
+                self.assertEqual("planned", row["implementationStatus"])
+                self.assertEqual("tests/fixtures/baldurs_gate_city_ledger.json", row["ledger"])
+                self.assertTrue(row["reason"])
+
+        checkPending(copy.deepcopy(producer), copy.deepcopy(aggregator))
+        disconnected = copy.deepcopy(producer)
+        disconnected.value = ast.Dict(keys=[], values=[])
+        with self.assertRaises(AssertionError):
+            checkPending(disconnected, copy.deepcopy(aggregator))
+        disconnected = copy.deepcopy(aggregator)
+        updates = [
+            node
+            for node in ast.walk(disconnected)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "update"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "result"
+        ]
+        self.assertEqual(1, len(updates))
+        updates[0].args = [ast.Dict(keys=[], values=[])]
+        with self.assertRaises(AssertionError):
+            checkPending(copy.deepcopy(producer), disconnected)
+
 
 class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
     @classmethod
@@ -387,11 +572,14 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         cls.quests = readJson(ROOT / "tests/fixtures/baldurs_gate_city_quests.json")
         cls.config = readJson(ROOT / "res/maps/baldursGate/config.json")
         cls.script = (ROOT / "res/maps/baldursGate/script.py").read_text(encoding="utf-8")
+        cls.poison = readJson(ROOT / POISON_PATH)
         cls.ledger = readJson(ROOT / "tests/fixtures/baldurs_gate_city_ledger.json")
-        cls.expected = buildLedger(cls.source, cls.quests, cls.config, cls.script)
+        cls.expected = buildLedger(cls.source, cls.quests, cls.config, cls.script, poison=cls.poison)
 
     def testSavedLedgerCoversEverySourceObligationAndMatchesCurrentInputs(self):
-        self.assertEqual(expectedIds(self.source, self.quests), {row["id"] for row in self.ledger["entries"]})
+        self.assertEqual(
+            expectedIds(self.source, self.quests, self.poison), {row["id"] for row in self.ledger["entries"]}
+        )
         self.assertEqual([], validateLedger(self.ledger, expected=self.expected))
         self.assertEqual(212, len(self.source["areas"]))
         self.assertGreater(len(self.ledger["entries"]), 7000)
@@ -400,6 +588,7 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         fixtures = {
             "tests/fixtures/baldurs_gate_city_source.json": self.source,
             "tests/fixtures/baldurs_gate_city_quests.json": self.quests,
+            POISON_PATH: self.poison,
         }
         for row in self.ledger["entries"]:
             for evidence in row["evidence"]:
