@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
-
 CITY_JSON_PREFIX = "city-json:"
+TAMOKO_JOURNAL_VERSION = 1
 
 
 def decodeData(encoded):
@@ -422,6 +422,7 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+
     def custody(obj):
         return world(obj).getObjectByName("cityCustody")
 
@@ -1593,6 +1594,48 @@ def load(self, context):
                 staged["name"] = value
             self.requireCustodyStage(binding, actor)
 
+    def tamokoJournalEntries():
+        return {
+            27461: (
+                "cityTamokoWarningJournalQuest",
+                "Tamoko's warning",
+                "Tamoko suspects that Eltan's healer is worsening his illness.",
+                "Find Tamoko near the Flaming Fist headquarters to hear the rest.",
+            ),
+            27462: (
+                "cityTamokoRefusalJournalQuest",
+                "Tamoko's rejected request",
+                "You would not promise to let Sarevok live.",
+                "Tamoko departed after you rejected her condition.",
+            ),
+            27463: (
+                "cityTamokoInformedJournalQuest",
+                "Tamoko's information",
+                "You promised to try to spare Sarevok. Tamoko linked him to the assassins and the Iron Throne.",
+                "Look for Slythe and Krystin in the Undercellar and Cythandria at the Iron Throne; "
+                "she also revealed your shared Bhaal lineage.",
+            ),
+        }
+
+    @register(context)
+    @mapQuest("baldursGate")
+    class BaldursGateTamokoJournalQuest(CQuest):
+        def getObjective(self):
+            entry = tamokoJournalEntries().get(self.getNumericProperty("sourceJournalId"))
+            return entry[2] if entry else ""
+
+        def getHint(self):
+            entry = tamokoJournalEntries().get(self.getNumericProperty("sourceJournalId"))
+            return entry[3] if entry else ""
+
+        def getReward(self):
+            return "No reward."
+
+        def isCompleted(self):
+            return False
+
+        def onComplete(self):
+            pass
 
     @register(context)
     @mapQuest("baldursGate")
@@ -1806,6 +1849,8 @@ def load(self, context):
             return here.z == there.z and abs(here.x - there.x) + abs(here.y - there.y) <= 1
 
         def canAcceptQuest(self, key):
+            if key == "cythandriaDiary":
+                return False
             row = quest(self, key)
             if not row or not self.canInteract() or stage(self, key) != "notStarted":
                 return False
@@ -2130,103 +2175,1154 @@ def load(self, context):
             self.actor().setBoolProperty("open", False)
             return True
 
-        def canTamokoFirstMeeting(self):
+        def syncTamokoJournal(self, game_map, player, current, create=True):
+            # Only these source notes belong to this projection; optional quests stay independent.
+            game = self.getGame()
+            if not game:
+                return False
+            epoch = game.getMapBindingEpoch()
+            captured_current = current
+
+            def current():
+                return (
+                    self.getGame() is game
+                    and game.getMapBindingEpoch() == epoch
+                    and captured_current()
+                    and game.getMapBindingEpoch() == epoch
+                )
+
+            if not current():
+                return False
+
+            def take(callback, *args):
+                value = callback(*args)
+                if not current():
+                    raise RuntimeError("Tamoko journal binding changed.")
+                return value
+
+            table = tamokoJournalEntries()
+            entries = take(read, game_map, "plugin_cityCustodyJournal", [])
+            if not isinstance(entries, list) or any(type(value) is not int for value in entries):
+                return False
+            desired = {number for number in entries if number in table}
+            owned = {entry[0]: number for number, entry in table.items()}
+            active = tuple(take(player.getQuests))
+            completed = set(take(player.getCompletedQuests))
+
+            def identify(entry, captured=True):
+                qid = take(entry.getTypeId)
+                if qid not in owned:
+                    return None
+                number = owned[qid]
+                expected = table[number]
+                if (
+                    not isinstance(entry, CQuest)
+                    or take(entry.getGame) is not game
+                    or take(entry.getNumericProperty, "sourceJournalId") != number
+                    or take(entry.getNumericProperty, "sourceJournalRawFlags") != 92
+                    or take(entry.getStringProperty, "sourceDialogue") != "TAMOKO"
+                    or take(entry.getStringProperty, "description") != expected[1]
+                    or take(entry.getObjective) != expected[2]
+                    or take(entry.getHint) != expected[3]
+                    or take(entry.getReward) != "No reward."
+                    or take(entry.isCompleted)
+                ):
+                    raise ValueError("Invalid Tamoko informational journal entry.")
+                if captured and (
+                    take(entry.getNumericProperty, "questJournalVersion") != TAMOKO_JOURNAL_VERSION
+                    or take(entry.getStringProperty, "questJournalOrigin") != "baldursGate"
+                    or take(entry.getBoolProperty, "questJournalCompleted")
+                    or take(entry.getStringProperty, "questJournalObjective") != expected[2]
+                    or take(entry.getStringProperty, "questJournalReward") != "No reward."
+                    or take(entry.getStringProperty, "questJournalHint") != expected[3]
+                ):
+                    raise ValueError("Invalid Tamoko informational journal snapshot.")
+                return number
+
+            # A completed duplicate makes native addQuest a no-op; never label that visible success.
+            if any(take(entry.getTypeId) in owned for entry in completed):
+                return False
+            seen = {}
+            for entry in active:
+                number = identify(entry)
+                if number is not None:
+                    if number in seen:
+                        return False
+                    seen[number] = entry
+            if not create:
+                desired.intersection_update(seen)
+            for number in sorted(desired - seen.keys()):
+                take(player.addQuest, table[number][0])
+                after = tuple(take(player.getQuests))
+                added = [entry for entry in after if entry not in active]
+                if len(added) != 1 or set(after) != set(active) | {added[0]} or identify(added[0], False) != number:
+                    return False
+                take(added[0].captureJournal, False)
+                expected = table[number]
+                if (
+                    identify(added[0]) != number
+                    or take(added[0].getNumericProperty, "questJournalVersion") != TAMOKO_JOURNAL_VERSION
+                    or take(added[0].getStringProperty, "questJournalOrigin") != "baldursGate"
+                    or take(added[0].getBoolProperty, "questJournalCompleted")
+                    or take(added[0].getStringProperty, "questJournalObjective") != expected[2]
+                    or take(added[0].getStringProperty, "questJournalReward") != "No reward."
+                    or take(added[0].getStringProperty, "questJournalHint") != expected[3]
+                    or set(take(player.getCompletedQuests)) != completed
+                ):
+                    return False
+                active = after
+                seen[number] = added[0]
+            retained = {
+                entry
+                for entry in active
+                if take(entry.getTypeId) not in owned or owned[take(entry.getTypeId)] in desired
+            }
+            if retained != set(active):
+                take(player.setQuests, retained)
+            final = tuple(take(player.getQuests))
             return (
-                self.canInteract()
-                and matches(self.actor(), {"creature": "TAMOKO", "area": "AR0800"})
-                and (world(self).getNumericProperty("plugin_cityPhase") or 5) == 7
-                and not world(self).getBoolProperty("plugin_cityFlag_tamokoMove1")
+                set(final) == retained
+                and set(take(player.getCompletedQuests)) == completed
+                and {identify(entry) for entry in final if take(entry.getTypeId) in owned} == desired
+                and current()
             )
+
+        def tamokoFinalBinding(self, expected=None, outcome_key="", committed=False):
+            game = self.getGame()
+            epoch = game.getMapBindingEpoch() if game else None
+            if expected is not None and (
+                type(expected) is not tuple
+                or len(expected) != 7
+                or type(expected[6]) is not int
+                or expected[6] != epoch
+            ):
+                return None
+            game_map = game.getMap() if game else None
+            if not game_map or outcome_key not in ("", "fight", "complete"):
+                return None
+            if expected and (
+                game_map is not expected[0]
+                or game_map.getObjectByName("player") is not expected[1]
+                or game_map.getObjectByName("cityCustody") is not expected[4]
+                or game_map.getObjectByName("cityClock") is not expected[5]
+            ):
+                return None
+            player = game_map.getObjectByName("player")
+            actor = expected[2] if expected else game_map.getObjectByName(self.getStringProperty("actorId"))
+            source, registry = game_map.getObjectByName("cityCustody"), game_map.getObjectByName("cityClock")
+            if (
+                not player
+                or not actor
+                or not source
+                or not registry
+                or not player.isPlayer()
+                or not player.isAlive()
+                or not isinstance(actor, CCreature)
+                or not actor.isAlive()
+                or not outcome_key
+                and (not actor.isNpc() or actor.getStringProperty("affiliation") != "cityResidents")
+                or player.getMap() is not game_map
+                or any(obj.getGame() is not game for obj in (player, actor, source, registry))
+                or source.getMap() is not game_map
+                or registry.getMap() is not game_map
+                or actor.getName() != "cityAr0800ScriptActorTamoko"
+                or actor.getStringProperty("sourceCreature") != "TAMOKO"
+                or actor.getStringProperty("sourceArea") != "AR0123"
+                or actor.getStringProperty("label") != "Tamoko"
+                or actor.getBoolProperty("plugin_cityPetrified")
+                or game_map.getNumericProperty("plugin_cityPhase") != 7
+                or not game_map.getBoolProperty("plugin_cityFlag_tamokoMove2")
+                or not game_map.getBoolProperty("plugin_cityFlag_palaceCleared")
+                or game_map.getBoolProperty("plugin_cityFlag_cityCompleted")
+                or game_map.getBoolProperty("plugin_cityFlag_poisonFatal")
+                or game_map.getStringProperty("plugin_cityCustodyState") == "hearing"
+            ):
+                return None
+            registered = game_map.getObjectByName(actor.getName())
+            if registered is not actor and not (
+                outcome_key == "complete" and registered is None and actor.getBoolProperty("plugin_cityDeparted")
+            ):
+                return None
+            here, there = player.getCoords(), actor.getCoords()
+            phase = game_map.getNumericProperty("plugin_cityPhase")
+            if (
+                here.z != there.z
+                or abs(here.x - there.x) + abs(here.y - there.y) > 1
+                or not (actor.getNumericProperty("phaseMin") or 5)
+                <= phase
+                <= (actor.getNumericProperty("phaseMax") or 7)
+            ):
+                return None
+            area = game_map.getStringProperty("activeSimulationRegion")
+            atlas = read(registry, "areaAtlas", {})
+            if not isinstance(atlas, dict):
+                return None
+            for key, entry in atlas.items():
+                bounds = entry.get("bounds") if isinstance(entry, dict) else None
+                if not isinstance(bounds, list) or len(bounds) != 5 or any(type(value) is not int for value in bounds):
+                    return None
+                x, y, z, width, height = bounds
+                if here.z == z and x <= here.x < x + width and y <= here.y < y + height:
+                    area = key
+                    break
+            if area != "AR0123" or game_map.getStringProperty("plugin_cityQuest_tamokoMercy") != (
+                "completed" if committed else "active"
+            ):
+                return None
+            attempt = game_map.getStringProperty("plugin_cityTamokoFinalAttempt")
+            if outcome_key:
+                if attempt != outcome_key:
+                    return None
+                opposite = "fight" if outcome_key == "complete" else "complete"
+                opposite_flag = "tamokoFought" if outcome_key == "complete" else "tamokoSpared"
+                if game_map.getBoolProperty("plugin_cityFlag_" + opposite_flag) or game_map.getBoolProperty(
+                    "plugin_cityOutcome_tamokoMercy_" + opposite
+                ):
+                    return None
+                if committed and not game_map.getBoolProperty(
+                    "plugin_cityFlag_" + ("tamokoSpared" if outcome_key == "complete" else "tamokoFought")
+                ):
+                    return None
+                if committed and not game_map.getBoolProperty("plugin_cityOutcome_tamokoMercy_" + outcome_key):
+                    return None
+            elif attempt or any(
+                game_map.getBoolProperty(key)
+                for key in (
+                    "plugin_cityFlag_tamokoSpared",
+                    "plugin_cityFlag_tamokoFought",
+                    "plugin_cityOutcome_tamokoMercy_complete",
+                    "plugin_cityOutcome_tamokoMercy_fight",
+                )
+            ):
+                return None
+            document = read(registry, "questDefinitions", [])
+            definitions = document.get("quests", []) if isinstance(document, dict) else document
+            if not isinstance(definitions, list):
+                return None
+            rows = [row for row in definitions if isinstance(row, dict) and row.get("id") == "tamokoMercy"]
+            if (
+                len(rows) != 1
+                or rows[0].get("givers") != [{"label": "Tamoko", "area": "AR0123"}]
+                or type(rows[0].get("phase")) is not int
+                or rows[0]["phase"] != 7
+                or rows[0].get("acceptConditions") != {"flags": ["tamokoMove2", "palaceCleared"]}
+                or rows[0].get("acceptEffects") != {}
+            ):
+                return None
+            outcomes = rows[0].get("outcomes")
+            if not isinstance(outcomes, list):
+                return None
+            fight = [row for row in outcomes if isinstance(row, dict) and row.get("id") == "fight"]
+            if (
+                len(fight) != 1
+                or fight[0].get("conditions") != {}
+                or fight[0].get("at") not in (None, [{"label": "Tamoko", "area": "AR0123"}])
+            ):
+                return None
+            active = [
+                entry
+                for entry in (*player.getQuests(), *(player.getCompletedQuests() if committed else ()))
+                if entry.getTypeId() == questId("tamokoMercy")
+            ]
+            if len(active) != 1 or active[0].getGame() is not game:
+                return None
+            binding = (game_map, player, actor, active[0], source, registry, epoch)
+            if (
+                self.getGame() is not game
+                or game.getMapBindingEpoch() != epoch
+                or game.getMap() is not game_map
+                or game_map.getObjectByName("player") is not player
+                or game_map.getObjectByName("cityCustody") is not source
+                or game_map.getObjectByName("cityClock") is not registry
+                or game_map.getObjectByName(actor.getName()) is not registered
+                or any(obj.getGame() is not game for obj in (player, actor, active[0], source, registry))
+                or source.getMap() is not game_map
+                or registry.getMap() is not game_map
+                or expected
+                and not (
+                    all(now is old for now, old in pairedValues(binding[:-1], expected[:-1]))
+                    and binding[-1] == expected[-1]
+                )
+            ):
+                return None
+            return binding if game.getMapBindingEpoch() == epoch else None
+
+        def tamokoFinalScore(self, binding):
+            score = binding[1].getStats().getNumericProperty("intelligence") + binding[0].getNumericProperty(
+                "plugin_cityStanding"
+            )
+            return score if type(score) is int and self.tamokoFinalBinding(binding) else None
+
+        def tamokoFinalOutcome(self, binding, outcome_key):
+            document = read(binding[5], "questDefinitions", [])
+            rows = document.get("quests", []) if isinstance(document, dict) else document
+            if not isinstance(rows, list) or not self.tamokoFinalBinding(binding):
+                return None
+            matching = [row for row in rows if isinstance(row, dict) and row.get("id") == "tamokoMercy"]
+            if len(matching) != 1 or not isinstance(matching[0].get("outcomes"), list):
+                return None
+            outcomes = [
+                row for row in matching[0]["outcomes"] if isinstance(row, dict) and row.get("id") == outcome_key
+            ]
+            if len(outcomes) != 1:
+                return None
+            expected = (
+                {
+                    "flags": {"tamokoSpared": True, "tamokoMove4": True},
+                    "departActors": [{"creature": "TAMOKO", "area": "AR0123"}],
+                }
+                if outcome_key == "complete"
+                else {"hostile": [{"creature": "TAMOKO", "area": "AR0123"}], "flags": {"tamokoFought": True}}
+            )
+            row = outcomes[0]
+            if (
+                json.dumps(row.get("effects"), sort_keys=True) != json.dumps(expected, sort_keys=True)
+                or json.dumps(row.get("conditions"), sort_keys=True)
+                != json.dumps({"minSocial": 12} if outcome_key == "complete" else {}, sort_keys=True)
+                or row.get("terminal") is not True
+                or row.get("at") not in (None, [{"creature": "TAMOKO", "area": "AR0123"}])
+                or not self.tamokoFinalBinding(binding)
+            ):
+                return None
+            return row
+
+        def tamokoFinalUiRequest(self, binding, operation, *args, outcome_key="", committed=False):
+            if operation not in ("choose", "showReader", "gui.checkQuests"):
+                return None
+            if operation == "gui.checkQuests":
+                if not self.tamokoFinalBinding(binding, outcome_key, committed):
+                    return None
+                request = uiRequest(operation, *args)
+            else:
+                token = flowGame(self.getGame())
+                if not self.tamokoFinalBinding(binding, outcome_key, committed):
+                    return None
+                request = uiRequest(operation, token, *args)
+            return request if self.tamokoFinalBinding(binding, outcome_key, committed) else None
+
+        def canDiscussTamokoFinalMeeting(self):
+            return self.tamokoFinalBinding() is not None
+
+        def commitTamokoFinalMeeting(self, binding, terminal_state):
+            if terminal_state not in (21, 24, 25) or not self.tamokoFinalBinding(binding):
+                return False
+            game = self.getGame()
+            game_map = game.getMap() if game else None
+            if game_map is not binding[0] or not self.tamokoFinalBinding(binding):
+                return False
+            score = self.tamokoFinalScore(binding)
+            if score is None or terminal_state == 24 and not 7 <= score < 12 or terminal_state == 25 and score < 12:
+                return False
+            outcome_key = "complete" if terminal_state == 25 else "fight"
+            if not self.tamokoFinalOutcome(binding, outcome_key):
+                return False
+            # A failed partial attempt stays quarantined. This is not a quest/outcome flag.
+            binding[0].setStringProperty("plugin_cityTamokoFinalAttempt", outcome_key)
+            current = lambda: self.tamokoFinalBinding(binding, outcome_key) is not None
+            if not current():
+                return False
+            # Source edges 41/48/49 erase these notes before Enemy or Move4/EscapeArea.
+            for number in (27461, 27462, 27463):
+                entries = read(binding[0], "plugin_cityCustodyJournal", [])
+                if not isinstance(entries, list) or any(type(value) is not int for value in entries) or not current():
+                    return False
+                retained = [value for value in entries if value != number]
+                write(binding[0], "plugin_cityCustodyJournal", retained)
+                if read(binding[0], "plugin_cityCustodyJournal", []) != retained or not current():
+                    return False
+                if not self.syncTamokoJournal(binding[0], binding[1], current, create=False):
+                    return False
+            if terminal_state == 25:
+                values = read(binding[0], "plugin_cityCustodyGlobals", {})
+                if not isinstance(values, dict) or not current():
+                    return False
+                values["GLOBAL:TamokoMove"] = 4
+                write(binding[0], "plugin_cityCustodyGlobals", values)
+                if read(binding[0], "plugin_cityCustodyGlobals", {}) != values or not current():
+                    return False
+                binding[0].setNumericProperty("plugin_cityTamokoMove", 4)
+                if not current():
+                    return False
+                binding[2].setBoolProperty("plugin_cityDeparted", True)
+                if not current():
+                    return False
+                binding[5].applySchedules()
+                if not current() or binding[0].getObjectByName(binding[2].getName()) is not None:
+                    return False
+            else:
+                binding[2].setBoolProperty("npc", False)
+                if not current():
+                    return False
+                binding[2].setStringProperty("affiliation", "cityHostile")
+                if not current():
+                    return False
+                game = self.getGame()
+                if not current():
+                    return False
+                controller = game.createObject("CTargetController")
+                if controller.getGame() is not game or not current():
+                    return False
+                controller.setStringProperty("target", "player")
+                if not current():
+                    return False
+                binding[2].setController(controller)
+                if not current():
+                    return False
+            # Publish gameplay-readable outcomes only after the authored terminal effect succeeds.
+            flags = ("tamokoSpared", "tamokoMove4") if terminal_state == 25 else ("tamokoFought",)
+            for key in flags:
+                if key == "tamokoSpared":
+                    game_map.setBoolProperty("plugin_cityFlag_tamokoSpared", True)
+                elif key == "tamokoFought":
+                    game_map.setBoolProperty("plugin_cityFlag_tamokoFought", True)
+                else:
+                    binding[0].setBoolProperty("plugin_cityFlag_" + key, True)
+                if not current():
+                    return False
+            binding[0].setBoolProperty("plugin_cityOutcome_tamokoMercy_" + outcome_key, True)
+            if not current():
+                return False
+            binding[0].setStringProperty("plugin_cityQuest_tamokoMercy", "completed")
+            return self.tamokoFinalBinding(binding, outcome_key, True) is not None
+
+        @resumableHook
+        def discussTamokoFinalMeeting(self):
+            binding = self.tamokoFinalBinding()
+            if not binding:
+                return False
+            state = 20
+            for _step in range(3):
+                if state == 20:
+                    text = "Sarevok has turned away from me. If I face you, perhaps he will notice me again."
+                    options = [
+                        {"id": "appealChoice", "label": "You can choose another way."},
+                        {"id": "threaten", "label": "Stand aside, or I will force my way through."},
+                        {"id": "refuseHarm", "label": "I will not harm you."},
+                    ]
+                elif state == 22:
+                    text = (
+                        "I cannot find a way to keep faith with him without harming you. The choice feels unbearable."
+                    )
+                    options = [
+                        {"id": "removeObstacle", "label": "If you remain in the way, I will remove you."},
+                        {"id": "unavoidableFight", "label": "Then we have no choice but to fight."},
+                        {"id": "notEnemy", "label": "You are not my enemy."},
+                    ]
+                else:
+                    text = "I will not step aside. If you continue toward him, you must face me."
+                    options = [{"id": "forgivingFight", "label": "I forgive you, but I will fight."}]
+                    score = self.tamokoFinalScore(binding)
+                    if score is None:
+                        return False
+                    if score >= 7:
+                        options.append({"id": "philosophy", "label": "Must loyalty cost you your own life?"})
+                request = self.tamokoFinalUiRequest(binding, "choose", text, options, "Answer", "Leave for now")
+                if request is None:
+                    return False
+                selected = yield request
+                if (
+                    type(selected) is not str
+                    or selected not in {entry["id"] for entry in options}
+                    or not self.tamokoFinalBinding(binding)
+                ):
+                    return False
+                if state == 20:
+                    state = {"appealChoice": 22, "threaten": 21, "refuseHarm": 23}[selected]
+                elif state == 22:
+                    state = {"removeObstacle": 21, "unavoidableFight": 21, "notEnemy": 23}[selected]
+                elif selected == "philosophy":
+                    score = self.tamokoFinalScore(binding)
+                    if score is None or score < 7:
+                        return False
+                    state = 25 if score >= 12 else 24
+                else:
+                    state = 21
+                if state in (21, 24, 25):
+                    break
+            else:
+                return False
+            if not self.commitTamokoFinalMeeting(binding, state):
+                return False
+            outcome_key = "complete" if state == 25 else "fight"
+            request = self.tamokoFinalUiRequest(
+                binding, "gui.checkQuests", binding[1], outcome_key=outcome_key, committed=True
+            )
+            if request is None:
+                return False
+            yield request
+            if not self.tamokoFinalBinding(binding, outcome_key, True):
+                return False
+            binding[5].spawnActors()
+            if not self.tamokoFinalBinding(binding, outcome_key, True):
+                return False
+            binding[5].applySchedules()
+            if not self.tamokoFinalBinding(binding, outcome_key, True):
+                return False
+            message = {
+                21: "Then we will fight. I have chosen to stand in your way.",
+                24: "Your reasoning has not changed my mind. I will fight.",
+                25: "You are not like Sarevok. I will leave the way open. Be careful whom you choose to follow.",
+            }[state]
+            request = self.tamokoFinalUiRequest(
+                binding, "showReader", "Tamoko", message, outcome_key=outcome_key, committed=True
+            )
+            if request is None:
+                return False
+            yield request
+            return self.tamokoFinalBinding(binding, outcome_key, True) is not None
+
+        def tamokoEarlyNode(self, state):
+            nodes = {
+                0: {
+                    "text": "Tamoko offers information and asks whether you will hear her.",
+                    "options": [
+                        ("rejectSpy", "Reject information from a stranger who has been following you.", 1),
+                        ("hearInformation", "Offer to hear useful information.", 3),
+                        ("askIdentity", "Ask her name before trusting her.", 2),
+                    ],
+                },
+                1: {
+                    "text": "She invokes Gorion to show that she knows your history.",
+                    "options": [
+                        ("rejectFamily", "Say you have cut your ties to Gorion.", 4),
+                        ("defendGorion", "Demand respect for Gorion's memory.", 5),
+                        ("askKnowledge", "Ask what she knows of your connection to Gorion.", 3),
+                    ],
+                },
+                2: {
+                    "text": "She gives her name, asks for trust cautiously, and offers a trade of information.",
+                    "options": [
+                        ("rejectRiddles", "Refuse another stranger's riddles.", 1),
+                        ("listen", "Tell her to speak.", 3),
+                    ],
+                },
+                3: {
+                    "text": "She warns that Eltan's supposed healer is causing his illness and mentions Gorion's "
+                    "guidance.",
+                    "options": [
+                        ("defendGorion", "Demand respect for Gorion's memory.", 5),
+                        ("rejectFamily", "Say you have broken those family ties.", 4),
+                    ],
+                },
+                4: {
+                    "text": "She questions whether rejecting family can break its influence and hints at a hateful "
+                    "relative.",
+                    "options": [
+                        ("askRelative", "Ask who hates you and why.", 7),
+                        ("endRiddles", "Tell her to leave and stop speaking in riddles.", 6),
+                    ],
+                },
+                5: {
+                    "text": "She distinguishes Gorion from your birth family and hints at a hateful relative.",
+                    "options": [
+                        ("askRelative", "Ask who hates you and why.", 7),
+                        ("endRiddles", "Tell her to leave and stop speaking in riddles.", 6),
+                    ],
+                },
+                6: {
+                    "text": "She repeats the warning about Eltan and arranges a meeting near the headquarters.",
+                    "options": [],
+                },
+                7: {
+                    "text": "She hints that your existence will bring chaos, warns about Eltan, and arranges the "
+                    "meeting.",
+                    "options": [],
+                },
+                8: {"text": "She acknowledges that you have sought her out again.", "options": []},
+                9: {"text": "She acknowledges Eltan's rescue and turns toward those responsible.", "options": []},
+                10: {
+                    "text": "She requires a promise before sharing further information.",
+                    "options": [
+                        ("threaten", "Refuse any promise and demand her information.", 12),
+                        ("questionPromise", "Question a promise whose consequences she has not explained.", 13),
+                        ("promise", "Give your word that you will try to honor her request.", 11),
+                    ],
+                },
+                11: {
+                    "text": "She asks you to defeat Sarevok's plans while preserving his life.",
+                    "options": [
+                        ("mustKill", "Insist that Sarevok must die.", 12),
+                        ("askHow", "Question how you can spare someone who seeks your destruction.", 14),
+                    ],
+                },
+                12: {
+                    "text": "She refuses to help without the promise, hints that you and Sarevok are siblings, and "
+                    "leaves.",
+                    "options": [],
+                },
+                13: {
+                    "text": "She insists that her condition benefits you and asks for agreement.",
+                    "options": [
+                        ("refuseUnknown", "Refuse to promise before knowing the consequences.", 12),
+                        ("promise", "Give your word that you will try to honor her request.", 11),
+                    ],
+                },
+                14: {
+                    "text": "She explains your shared origins, rivalry and Sarevok's hatred, and asks that he be "
+                    "spared.",
+                    "options": [
+                        ("mustKill", "Insist that Sarevok must die.", 12),
+                        ("askDivinity", "Ask about divine ancestry and whom Sarevok serves.", 15),
+                    ],
+                },
+                15: {
+                    "text": "She describes the prophecy and Sarevok's hoped-for ascension through mass slaughter.",
+                    "options": [
+                        ("mustKill", "Insist that killing him is the only option.", 12),
+                        ("askLove", "Ask why she opposes someone whose life she values.", 16),
+                        ("trySpare", "Promise to stop him and try to preserve his life.", 17),
+                    ],
+                },
+                16: {
+                    "text": "She acknowledges their intimacy and says she wants to preserve the man within him.",
+                    "options": [
+                        ("rejectRedemption", "Reject the possibility of redeeming him.", 12),
+                        ("trySpare", "Promise to stop him and try to preserve his life.", 17),
+                    ],
+                },
+                17: {
+                    "text": "She directs you to Slythe and Krystin in the Undercellar for evidence about the "
+                    "assassinations.",
+                    "options": [
+                        ("thankForLead", "Thank her and agree to seek the assassins.", 18),
+                        ("promiseViolence", "Promise a violent end for the assassins.", 19),
+                    ],
+                },
+                18: {
+                    "text": "She identifies Cythandria at the Iron Throne as another obstacle, then leaves secretly.",
+                    "options": [],
+                },
+                19: {
+                    "text": "She reacts to your violent wording, identifies Cythandria, and leaves secretly.",
+                    "options": [],
+                },
+            }
+            return nodes.get(state)
+
+        def tamokoEarlyBinding(self, meeting, expected=None, exiting=False):
+            game = self.getGame()
+            epoch = game.getMapBindingEpoch() if game else None
+            if expected is not None and (
+                type(expected) is not tuple
+                or len(expected) != 6
+                or type(expected[5]) is not int
+                or expected[5] != epoch
+            ):
+                return None
+            game_map = game.getMap() if game else None
+            if not game_map or meeting not in ("first", "second"):
+                return None
+            player = game_map.getObjectByName("player")
+            source, registry = game_map.getObjectByName("cityCustody"), game_map.getObjectByName("cityClock")
+            actor = expected[2] if expected else game_map.getObjectByName(self.getStringProperty("actorId"))
+            if exiting and not actor and registry:
+                actor = registry.getObjectProperty("plugin_cityRelocationActor_tamoko")
+            if (
+                not player
+                or not player.isPlayer()
+                or not player.isAlive()
+                or not isinstance(actor, CCreature)
+                or not actor.isAlive()
+                or not actor.isNpc()
+                or actor.getStringProperty("affiliation") != "cityResidents"
+                or actor.getName() != "cityAr0800ScriptActorTamoko"
+                or actor.getStringProperty("sourceCreature") != "TAMOKO"
+                or not source
+                or not registry
+                or any(obj.getGame() is not game for obj in (player, actor, source, registry))
+                or game_map.getNumericProperty("plugin_cityPhase") != 7
+                or game_map.getBoolProperty("plugin_cityFlag_cityCompleted")
+                or game_map.getBoolProperty("plugin_cityFlag_poisonFatal")
+                or game_map.getStringProperty("plugin_cityCustodyState") == "hearing"
+            ):
+                return None
+            registered = game_map.getObjectByName(actor.getName())
+            if registered is not actor and not (
+                exiting
+                and registered is None
+                and registry.getObjectProperty("plugin_cityRelocationActor_tamoko") is actor
+            ):
+                return None
+            if not exiting:
+                area = "AR0800" if meeting == "first" else "AR1100"
+                here, there = player.getCoords(), actor.getCoords()
+                if (
+                    actor.getStringProperty("sourceArea") != area
+                    or game_map.getStringProperty("activeSimulationRegion") != area
+                    or here.z != there.z
+                    or abs(here.x - there.x) + abs(here.y - there.y) > 1
+                ):
+                    return None
+            if (
+                self.getGame() is not game
+                or game.getMapBindingEpoch() != epoch
+                or game.getMap() is not game_map
+                or game_map.getObjectByName("player") is not player
+                or game_map.getObjectByName("cityCustody") is not source
+                or game_map.getObjectByName("cityClock") is not registry
+                or game_map.getObjectByName(actor.getName()) is not registered
+                or any(obj.getGame() is not game for obj in (player, actor, source, registry))
+            ):
+                return None
+            binding = (game_map, player, actor, source, registry, epoch)
+            if game.getMapBindingEpoch() != epoch:
+                return None
+            return (
+                binding
+                if expected is None
+                or (
+                    all(now is old for now, old in pairedValues(binding[:-1], expected[:-1]))
+                    and binding[-1] == expected[-1]
+                )
+                else None
+            )
+
+        def tamokoEarlyValues(self, binding):
+            game_map = binding[0]
+            values = read(game_map, "plugin_cityCustodyGlobals", {})
+            if not isinstance(values, dict):
+                return (None, None)
+            if "GLOBAL:TamokoMove" in values:
+                move = values["GLOBAL:TamokoMove"]
+            else:
+                move = game_map.getNumericProperty("plugin_cityTamokoMove")
+                first = game_map.getBoolProperty("plugin_cityFlag_tamokoMove1")
+                second = game_map.getBoolProperty("plugin_cityFlag_tamokoMove2")
+                discussed = game_map.getBoolProperty("plugin_cityFlag_tamokoDiscussed")
+                spared = game_map.getBoolProperty("plugin_cityFlag_tamokoSpared")
+                fought = game_map.getBoolProperty("plugin_cityFlag_tamokoFought")
+                if type(move) is not int or move not in range(5) or spared and fought:
+                    return (None, None)
+                if spared:
+                    if move not in (0, 2, 4):
+                        return (None, None)
+                    move = 4
+                elif move == 0:
+                    if second:
+                        move = 2
+                    elif discussed and first:
+                        move = 3
+                    elif discussed:
+                        return (None, None)
+                    elif first:
+                        move = 1
+                elif (move in (1, 3) and second) or (move == 1 and discussed) or (move == 4 and fought):
+                    return (None, None)
+                if fought and move != 2:
+                    return (None, None)
+            if type(move) is not int or move not in range(5):
+                return (None, None)
+            rescued = values.get(
+                "GLOBAL:RescuedEltan",
+                (
+                    1
+                    if game_map.getBoolProperty("plugin_cityFlag_eltanCarried")
+                    or game_map.getBoolProperty("plugin_cityFlag_eltanSafe")
+                    else 0
+                ),
+            )
+            return (move, rescued if type(rescued) is int and rescued in (0, 1) else None)
+
+        def tamokoEarlyCheckpoint(self, meeting, binding=None):
+            game = self.getGame()
+            game_map = binding[0] if binding else game.getMap() if game else None
+            if not game_map:
+                return None
+            checkpoint = read(game_map, "plugin_cityTamokoEarlyDialogue", {})
+            if checkpoint == {}:
+                return {}
+            if (
+                not isinstance(checkpoint, dict)
+                or set(checkpoint) != {"version", "meeting", "state", "move"}
+                or checkpoint["version"] != 1
+                or checkpoint["meeting"] != meeting
+                or type(checkpoint["state"]) is not int
+                or type(checkpoint["version"]) is not int
+                or checkpoint["state"] not in (range(8) if meeting == "first" else range(8, 20))
+                or checkpoint["move"] is not None
+                and not (
+                    type(checkpoint["move"]) is int
+                    and checkpoint["move"] == 3
+                    and meeting == "second"
+                    and checkpoint["state"] in (9, 10)
+                )
+            ):
+                return None
+            return checkpoint
+
+        def tamokoEarlyState(self, meeting, binding):
+            game = self.getGame()
+            game_map = game.getMap() if game else None
+            if game_map is not binding[0] or not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return None
+            move, _rescued = self.tamokoEarlyValues(binding)
+            checkpoint = self.tamokoEarlyCheckpoint(meeting, binding)
+            if move is None or checkpoint is None:
+                return None
+            if not checkpoint:
+                values = read(binding[0], "plugin_cityCustodyGlobals", {})
+                if (
+                    meeting == "second"
+                    and move == 3
+                    and "GLOBAL:TamokoMove" not in values
+                    and game_map.getBoolProperty("plugin_cityFlag_tamokoDiscussed")
+                    and game_map.getBoolProperty("plugin_cityFlag_tamokoMove1")
+                ):
+                    return 10
+                return 0 if meeting == "first" and move == 0 else 8 if meeting == "second" and move == 1 else None
+            state, pending = checkpoint["state"], checkpoint["move"]
+            if meeting == "first":
+                return state if move == 0 or state in (6, 7) and move == 1 else None
+            if state == 8:
+                return state if move == 1 else None
+            if pending == 3 and state in (9, 10):
+                return state if move in (1, 3) else None
+            return state if move == 3 or state in (12, 18, 19) and move == 2 else None
+
+        def saveTamokoEarlyCheckpoint(self, binding, meeting, state, pending=None):
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=state in (6, 7, 12, 18, 19)):
+                return False
+            checkpoint = {"version": 1, "meeting": meeting, "state": state, "move": pending}
+            write(binding[0], "plugin_cityTamokoEarlyDialogue", checkpoint)
+            retained = read(binding[0], "plugin_cityTamokoEarlyDialogue", {})
+            return bool(
+                retained == checkpoint
+                and self.tamokoEarlyBinding(meeting, binding, exiting=state in (6, 7, 12, 18, 19))
+            )
+
+        def writeTamokoEarlyGlobal(self, binding, meeting, name, value):
+            if name not in ("TamokoMove", "RescuedEltan") or type(value) is not int:
+                return False
+            if value not in (range(5) if name == "TamokoMove" else (0, 1)):
+                return False
+            values = read(binding[0], "plugin_cityCustodyGlobals", {})
+            if not isinstance(values, dict) or not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            key = "GLOBAL:" + name
+            if key in values and values[key] == value and type(values[key]) is int:
+                return True
+            values[key] = value
+            write(binding[0], "plugin_cityCustodyGlobals", values)
+            retained = read(binding[0], "plugin_cityCustodyGlobals", {})
+            return bool(retained == values and self.tamokoEarlyBinding(meeting, binding, exiting=True))
+
+        def writeTamokoEarlyJournal(self, binding, meeting, number):
+            if number not in (27461, 27462, 27463):
+                return False
+            current = lambda: self.tamokoEarlyBinding(meeting, binding, exiting=True) is not None
+            entries = read(binding[0], "plugin_cityCustodyJournal", [])
+            if not isinstance(entries, list) or any(type(value) is not int for value in entries) or not current():
+                return False
+            if number not in entries:
+                entries.append(number)
+                write(binding[0], "plugin_cityCustodyJournal", entries)
+                if read(binding[0], "plugin_cityCustodyJournal", []) != entries or not current():
+                    return False
+            return self.syncTamokoJournal(binding[0], binding[1], current)
+
+        def writeTamokoEarlyMove(self, binding, meeting, value):
+            game = self.getGame()
+            game_map = game.getMap() if game else None
+            if game_map is not binding[0] or not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            if not self.writeTamokoEarlyGlobal(binding, meeting, "TamokoMove", value):
+                return False
+            updates = (
+                ("plugin_cityTamokoMove", value),
+                ("plugin_cityFlag_tamokoMove1", value in (1, 2, 3, 4)),
+                ("plugin_cityFlag_tamokoMove2", value in (2, 4)),
+            )
+            for name, expected in updates:
+                current = (
+                    binding[0].getNumericProperty(name)
+                    if name == "plugin_cityTamokoMove"
+                    else binding[0].getBoolProperty(name)
+                )
+                if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                    return False
+                if current != expected:
+                    if name == "plugin_cityTamokoMove":
+                        binding[0].setNumericProperty(name, expected)
+                    elif name == "plugin_cityFlag_tamokoMove1":
+                        game_map.setBoolProperty("plugin_cityFlag_tamokoMove1", expected)
+                    else:
+                        game_map.setBoolProperty("plugin_cityFlag_tamokoMove2", expected)
+                    if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                        return False
+            return True
+
+        def tamokoEarlyResumeBinding(self, meeting):
+            checkpoint = self.tamokoEarlyCheckpoint(meeting)
+            exiting = bool(checkpoint and checkpoint["state"] in (6, 7, 12, 18, 19))
+            return self.tamokoEarlyBinding(meeting, exiting=exiting)
+
+        def canTamokoFirstMeeting(self):
+            binding = self.tamokoEarlyResumeBinding("first")
+            return bool(binding and self.tamokoEarlyState("first", binding) is not None)
+
+        def canTamokoSecondMeeting(self):
+            binding = self.tamokoEarlyResumeBinding("second")
+            return bool(binding and self.tamokoEarlyState("second", binding) is not None)
+
+        def canAcceptTamokoEarlyLead(self):
+            binding = self.tamokoEarlyResumeBinding("second")
+            checkpoint = self.tamokoEarlyCheckpoint("second", binding)
+            return bool(
+                binding
+                and checkpoint
+                and checkpoint["state"] in (18, 19)
+                and self.tamokoEarlyValues(binding)[0] in (2, 3)
+                and self.tamokoEarlyBinding("second", binding, exiting=True)
+            )
+
+        def activateTamokoEarlyLead(self, binding):
+            game = self.getGame()
+            game_map = game.getMap() if game else None
+            if game_map is not binding[0] or not self.tamokoEarlyBinding("second", binding, exiting=True):
+                return False
+            document = read(binding[4], "questDefinitions", [])
+            rows = document.get("quests", []) if isinstance(document, dict) else document
+            if not isinstance(rows, list) or not self.tamokoEarlyBinding("second", binding, exiting=True):
+                return False
+            matching = [row for row in rows if isinstance(row, dict) and row.get("id") == "cythandriaDiary"]
+            if len(matching) != 1:
+                return False
+            row = matching[0]
+            if (
+                row.get("acceptEffects") != {}
+                or row.get("acceptConditions") != {"flags": ["tamokoDiscussed"]}
+                or row.get("givers")
+                != [{"creature": "TAMOKO", "area": "AR1100"}, {"creature": "TAMOKO", "area": "AR0123"}]
+                or row.get("phase") != 7
+                or not self.canAcceptTamokoEarlyLead()
+            ):
+                return False
+            current = binding[0].getStringProperty("plugin_cityQuest_cythandriaDiary") or "notStarted"
+            discussed = game_map.getBoolProperty("plugin_cityFlag_tamokoDiscussed")
+            if (
+                not discussed
+                or not self.tamokoEarlyBinding("second", binding, exiting=True)
+                or current not in ("notStarted", "active", "completed")
+            ):
+                return False
+            if current == "notStarted":
+                binding[0].setStringProperty("plugin_cityQuest_cythandriaDiary", "active")
+                if not self.tamokoEarlyBinding("second", binding, exiting=True):
+                    return False
+            key = questId("cythandriaDiary")
+            owned = [
+                entry
+                for entry in (*binding[1].getQuests(), *binding[1].getCompletedQuests())
+                if entry.getTypeId() == key
+            ]
+            if not self.tamokoEarlyBinding("second", binding, exiting=True) or len(owned) > 1:
+                return False
+            if not owned:
+                if current == "completed":
+                    return False
+                binding[1].addQuest(key)
+                if not self.tamokoEarlyBinding("second", binding, exiting=True):
+                    return False
+                owned = [entry for entry in binding[1].getQuests() if entry.getTypeId() == key]
+            return bool(
+                len(owned) == 1
+                and owned[0].getGame() is self.getGame()
+                and self.tamokoEarlyBinding("second", binding, exiting=True)
+            )
+
+        def tamokoEarlyUiRequest(self, binding, meeting, operation, *args, exiting=False):
+            token = flowGame(self.getGame())
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=exiting):
+                return None
+            request = uiRequest(operation, token, *args)
+            return request if self.tamokoEarlyBinding(meeting, binding, exiting=exiting) else None
+
+        def finishTamokoEarlyTerminal(self, binding, meeting, state):
+            if state not in ((6, 7) if meeting == "first" else (12, 18, 19)) or not self.tamokoEarlyBinding(
+                meeting, binding, exiting=True
+            ):
+                return False
+            if state in (18, 19) and not self.activateTamokoEarlyLead(binding):
+                return False
+            journal = 27461 if meeting == "first" else 27462 if state == 12 else 27463
+            if not self.writeTamokoEarlyJournal(binding, meeting, journal):
+                return False
+            target = 1 if meeting == "first" else 2
+            if not self.writeTamokoEarlyMove(binding, meeting, target):
+                return False
+            key = "plugin_cityTamokoFirstChoice" if meeting == "first" else "plugin_cityTamokoSecondChoice"
+            value = "sourceState" + str(state) if meeting == "first" else "refuse" if state == 12 else "accept"
+            current = binding[0].getStringProperty(key)
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            if current != value:
+                binding[0].setStringProperty(key, value)
+                if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                    return False
+            # EscapeArea is a temporary removal; permanent departed state would block the next authored scene.
+            retained = binding[4].getObjectProperty("plugin_cityRelocationActor_tamoko")
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            if retained is not binding[2]:
+                binding[4].setObjectProperty("plugin_cityRelocationActor_tamoko", binding[2])
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            registered = binding[0].getObjectByName(binding[2].getName())
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            if registered is binding[2]:
+                binding[0].removeObject(binding[2])
+                if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                    return False
+            binding[4].applySchedules()
+            if not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            write(binding[0], "plugin_cityTamokoEarlyDialogue", {})
+            retained = read(binding[0], "plugin_cityTamokoEarlyDialogue", {})
+            return bool(retained == {} and self.tamokoEarlyBinding(meeting, binding, exiting=True))
+
+        @resumableHook
+        def discussTamokoEarlyMeeting(self, meeting):
+            binding = self.tamokoEarlyResumeBinding(meeting)
+            if not binding:
+                return False
+            game = self.getGame()
+            game_map = game.getMap() if game else None
+            if game_map is not binding[0] or not self.tamokoEarlyBinding(meeting, binding, exiting=True):
+                return False
+            state = self.tamokoEarlyState(meeting, binding)
+            if state is None:
+                yield uiRequest(
+                    "showReader",
+                    flowGame(self.getGame()),
+                    "Tamoko",
+                    "This saved conversation cannot be continued safely.",
+                )
+                return False
+            if meeting == "second" and state == 10 and not self.tamokoEarlyCheckpoint(meeting, binding):
+                if not self.saveTamokoEarlyCheckpoint(binding, meeting, state, 3):
+                    return False
+            for _step in range(12):
+                exiting = state in (6, 7, 12, 18, 19)
+                if (
+                    not self.tamokoEarlyBinding(meeting, binding, exiting=exiting)
+                    or self.tamokoEarlyState(meeting, binding) != state
+                ):
+                    return False
+                checkpoint = self.tamokoEarlyCheckpoint(meeting, binding)
+                if checkpoint and checkpoint["move"] == 3:
+                    if not self.writeTamokoEarlyMove(binding, meeting, 3):
+                        return False
+                    discussion = "rescued" if state == 9 else "notRescued"
+                    current_discussion = binding[0].getStringProperty("plugin_cityTamokoEltanDiscussion")
+                    if not self.tamokoEarlyBinding(meeting, binding):
+                        return False
+                    if current_discussion != discussion:
+                        binding[0].setStringProperty("plugin_cityTamokoEltanDiscussion", discussion)
+                        if not self.tamokoEarlyBinding(meeting, binding):
+                            return False
+                    discussed = game_map.getBoolProperty("plugin_cityFlag_tamokoDiscussed")
+                    if not self.tamokoEarlyBinding(meeting, binding):
+                        return False
+                    if not discussed:
+                        game_map.setBoolProperty("plugin_cityFlag_tamokoDiscussed", True)
+                        if not self.tamokoEarlyBinding(meeting, binding):
+                            return False
+                    if not self.saveTamokoEarlyCheckpoint(binding, meeting, state):
+                        return False
+                node = self.tamokoEarlyNode(state)
+                if not self.tamokoEarlyBinding(meeting, binding, exiting=exiting):
+                    return False
+                if node["options"]:
+                    options = [{"id": identifier, "label": label} for identifier, label, _target in node["options"]]
+                    request = self.tamokoEarlyUiRequest(
+                        binding, meeting, "choose", node["text"], options, "Answer", "Leave for now"
+                    )
+                    if request is None:
+                        return False
+                    reply = yield request
+                    if (
+                        type(reply) is not str
+                        or reply not in {entry["id"] for entry in options}
+                        or not self.tamokoEarlyBinding(meeting, binding)
+                        or self.tamokoEarlyState(meeting, binding) != state
+                    ):
+                        return False
+                    next_state = firstMatch(
+                        target for identifier, _label, target in node["options"] if identifier == reply
+                    )
+                    if not self.saveTamokoEarlyCheckpoint(binding, meeting, next_state):
+                        return False
+                    state = next_state
+                    continue
+                request = self.tamokoEarlyUiRequest(
+                    binding, meeting, "showReader", "Tamoko", node["text"], exiting=exiting
+                )
+                if request is None:
+                    return False
+                yield request
+                if (
+                    not self.tamokoEarlyBinding(meeting, binding, exiting=exiting)
+                    or self.tamokoEarlyState(meeting, binding) != state
+                ):
+                    return False
+                if state == 8:
+                    _move, rescued = self.tamokoEarlyValues(binding)
+                    if rescued is None:
+                        return False
+                    state = 9 if rescued == 1 else 10
+                    if not self.saveTamokoEarlyCheckpoint(binding, meeting, state, 3):
+                        return False
+                    values = read(binding[0], "plugin_cityCustodyGlobals", {})
+                    if "GLOBAL:RescuedEltan" not in values:
+                        if not self.writeTamokoEarlyGlobal(binding, meeting, "RescuedEltan", rescued):
+                            return False
+                elif state == 9:
+                    state = 10
+                    if not self.saveTamokoEarlyCheckpoint(binding, meeting, state):
+                        return False
+                else:
+                    return self.finishTamokoEarlyTerminal(binding, meeting, state)
+            return False
+
+        @resumableHook
+        def discussTamokoFirstMeeting(self):
+            return (yield from self.discussTamokoEarlyMeetingFlow("first"))
+
+        @resumableHook
+        def discussTamokoSecondMeeting(self):
+            return (yield from self.discussTamokoEarlyMeetingFlow("second"))
 
         @resumableHook
         def finishTamokoFirstMeeting(self, listen):
-            if not self.canTamokoFirstMeeting():
-                return False
-            world(self).setStringProperty("plugin_cityTamokoFirstChoice", "listen" if listen else "refuse")
-            world(self).setBoolProperty("plugin_cityFlag_tamokoMove1", True)
-            world(self).setNumericProperty("plugin_cityTamokoMove", 1)
-            yield uiRequest(
-                "showReader",
-                flowGame(self.getGame()),
-                "Tamoko",
-                (
-                    "Tamoko asks you to meet her near the Flaming Fist headquarters. "
-                    "She knows more about Sarevok than she is ready to reveal here."
-                    if listen
-                    else "You end the conversation. Tamoko leaves the eastern streets."
-                ),
-            )
-            clock(self).applySchedules()
-            return True
+            return (yield from self.discussTamokoFirstMeetingFlow())
 
         @resumableHook
         def hearTamokoWarning(self):
-            return (yield from self.finishTamokoFirstMeetingFlow(True))
+            return (yield from self.discussTamokoFirstMeetingFlow())
 
         @resumableHook
         def declineTamokoFirstMeeting(self):
-            return (yield from self.finishTamokoFirstMeetingFlow(False))
-
-        def canTamokoSecondMeeting(self):
-            return (
-                self.canInteract()
-                and matches(self.actor(), {"creature": "TAMOKO", "area": "AR1100"})
-                and world(self).getBoolProperty("plugin_cityFlag_tamokoMove1")
-                and not world(self).getBoolProperty("plugin_cityFlag_tamokoMove2")
-            )
+            return (yield from self.discussTamokoFirstMeetingFlow())
 
         @resumableHook
         def discussTamokoRequest(self):
-            if not self.canTamokoSecondMeeting():
-                return False
-            rescued = world(self).getBoolProperty("plugin_cityFlag_eltanCarried") or world(self).getBoolProperty(
-                "plugin_cityFlag_eltanSafe"
-            )
-            world(self).setStringProperty("plugin_cityTamokoEltanDiscussion", "rescued" if rescued else "notRescued")
-            world(self).setBoolProperty("plugin_cityFlag_tamokoDiscussed", True)
-            world(self).setNumericProperty("plugin_cityTamokoMove", 3)
-            yield uiRequest(
-                "showReader",
-                flowGame(self.getGame()),
-                "Tamoko",
-                ("You tell Tamoko that Eltan has been rescued. " if rescued else "Eltan remains in danger. ")
-                + "She wants Cythandria, Sarevok's other lover, removed from his side. "
-                "She asks you to spare Sarevok's life.",
-            )
-            return True
+            return (yield from self.discussTamokoSecondMeetingFlow())
 
         def canFinishTamokoSecondMeeting(self):
-            return self.canTamokoSecondMeeting() and world(self).getBoolProperty("plugin_cityFlag_tamokoDiscussed")
+            return self.canTamokoSecondMeeting()
 
         @resumableHook
         def finishTamokoSecondMeeting(self, accept):
-            if not self.canFinishTamokoSecondMeeting():
-                return False
-            if accept and stage(self, "cythandriaDiary") == "notStarted" and not self.acceptQuest("cythandriaDiary"):
-                return False
-            world(self).setStringProperty("plugin_cityTamokoSecondChoice", "accept" if accept else "refuse")
-            world(self).setBoolProperty("plugin_cityFlag_tamokoMove2", True)
-            world(self).setNumericProperty("plugin_cityTamokoMove", 2)
-            yield uiRequest(
-                "showReader",
-                flowGame(self.getGame()),
-                "Tamoko",
-                (
-                    "You agree to deal with Cythandria. Tamoko leaves to follow Sarevok."
-                    if accept
-                    else "You refuse her request. Tamoko leaves to follow Sarevok."
-                ),
-            )
-            clock(self).applySchedules()
-            return True
+            return (yield from self.discussTamokoSecondMeetingFlow())
 
         @resumableHook
         def acceptTamokoRequest(self):
-            return (yield from self.finishTamokoSecondMeetingFlow(True))
+            return (yield from self.discussTamokoSecondMeetingFlow())
 
         @resumableHook
         def refuseTamokoRequest(self):
-            return (yield from self.finishTamokoSecondMeetingFlow(False))
+            return (yield from self.discussTamokoSecondMeetingFlow())
 
         def canHelpAlora(self):
             if not self.canInteract() or self.actor().getStringProperty("sourceCreature") != "ALORA":

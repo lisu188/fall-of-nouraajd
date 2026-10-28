@@ -3512,6 +3512,89 @@ class GameplayBranchDriverTest(unittest.TestCase):
             self.assertEqual((1, 0, 0), observed[0], "Ordinary current-cell target must clear a previously queued path")
             self.assertEqual((3, 2), (state["turns"], driver.steps))
 
+    def testMcpQuestPanelTextUsesReadonlyNativeShapedDispatchOnly(self):
+        import mcp
+
+        denied = (
+            "setText",
+            "setTrackedQuest",
+            "showActive",
+            "showCompleted",
+            "showHistory",
+            "trackSelectedQuest",
+            "refreshFromQuestsChanged",
+            "questCallback",
+            "_privateText",
+        )
+        denied_reads = []
+
+        class CGameObject:
+            pass
+
+        class CGameGraphicsObject(CGameObject):
+            pass
+
+        class CGamePanel(CGameGraphicsObject):
+            @property
+            def getText(self):
+                denied_reads.append("basePanel.getText")
+                raise AssertionError("Base panels must not gain the quest text getter")
+
+        class CGameQuestPanel(CGamePanel):
+            def __init__(self):
+                self.text = "first owned journal"
+                self.gui_reads = []
+
+            def __getattribute__(self, name):
+                if name in denied:
+                    denied_reads.append(name)
+                    raise AssertionError("Denied panel method was accessed: " + name)
+                return object.__getattribute__(self, name)
+
+            def getText(self, gui):
+                self.gui_reads.append(gui)
+                return self.text
+
+        class DerivedQuestPanel(CGameQuestPanel):
+            pass
+
+        class CQuest(CGameObject):
+            @property
+            def getText(self):
+                denied_reads.append("quest.getText")
+                raise AssertionError("Quest values must not gain a panel getter")
+
+        panel, derived, gui = CGameQuestPanel(), DerivedQuestPanel(), object()
+        server = mcp.EngineMcpServer(Path("."), Path("unused-native-build"))
+        server.handles.update(panel=panel, derived=derived, gui=gui, base=CGamePanel(), quest=CQuest())
+        try:
+            for text in ("first owned journal", "updated owned journal"):
+                panel.text = text
+                response = server._engine_handle_call(
+                    {"handle": "panel", "method": "getText", "args": [{"__handle__": "gui"}]}
+                )
+                self.assertFalse(response["isError"], response)
+                self.assertEqual(text, response["structuredContent"]["result"])
+            response = server._engine_handle_call(
+                {"handle": "derived", "method": "getText", "args": [{"__handle__": "gui"}]}
+            )
+            self.assertFalse(response["isError"], response)
+            self.assertEqual("first owned journal", response["structuredContent"]["result"])
+            self.assertEqual([gui, gui], panel.gui_reads)
+            self.assertEqual([gui], derived.gui_reads)
+            for handle, method in [("panel", name) for name in denied] + [("base", "getText"), ("quest", "getText")]:
+                with self.subTest(handle=handle, method=method):
+                    response = server._engine_handle_call(
+                        {"handle": handle, "method": method, "args": [{"__handle__": "gui"}]}
+                    )
+                    self.assertTrue(response["isError"], response)
+                    self.assertIn("not exported", response["structuredContent"]["error"])
+            self.assertEqual([], denied_reads)
+            self.assertEqual([gui, gui], panel.gui_reads)
+            self.assertEqual({"getText"}, mcp.MCP_ALLOWED_HANDLE_METHODS["CGameQuestPanel"])
+        finally:
+            server.close()
+
 
 if __name__ == "__main__":
     unittest.main()

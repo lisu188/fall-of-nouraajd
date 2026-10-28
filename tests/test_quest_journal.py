@@ -13,6 +13,11 @@ from res import campaign as campaign_driver
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CANDLEKEEP_QUEST_KEYS = ("firebead", "phlydia", "dreppin", "hull", "fuller", "reevor")
+CITY_INFORMATION_JOURNALS = {
+    "cityTamokoWarningJournalQuest": 27461,
+    "cityTamokoRefusalJournalQuest": 27462,
+    "cityTamokoInformedJournalQuest": 27463,
+}
 
 
 class JournalObject:
@@ -413,10 +418,11 @@ class MapQuestJournalTest(unittest.TestCase):
         city = {(map_name, quest_name) for map_name, quest_name in roster if map_name == "baldursGate"}
         expected_city = {("baldursGate", "city" + key[:1].upper() + key[1:] + "Quest") for key in CITY_QUEST_KEYS}
         expected_city.add(("baldursGate", "cityCustodyQuest"))
+        expected_city.update(("baldursGate", name) for name in CITY_INFORMATION_JOURNALS)
         self.assertEqual(expected_city, city)
-        self.assertEqual(57, len(city), "All declared city journal definitions must be covered")
+        self.assertEqual(60, len(city), "All declared city journal definitions must be covered")
         self.assertEqual(27, len(roster - candlekeep - city), "The original 27 authored quests must remain covered")
-        self.assertEqual(90, len(roster))
+        self.assertEqual(93, len(roster))
 
     def test_authored_quest_matrix_keeps_all_33_journals_and_destination_state(self):
         roster = set()
@@ -504,6 +510,7 @@ class MapQuestJournalTest(unittest.TestCase):
                         quest_state_amulet="returned",
                         quest_state_victor="good_end",
                     )
+                    expected_completed = True
                     if map_dir.name == "candlekeep":
                         actor = quest.getStringProperty("questKey")
                         self.assertIn(actor, CANDLEKEEP_QUEST_KEYS)
@@ -513,6 +520,15 @@ class MapQuestJournalTest(unittest.TestCase):
                             self.assertEqual("BaldursGateCustodyQuest", cls.__name__)
                             self.assertEqual("", quest.getStringProperty("questKey"))
                             source.setStringProperty("plugin_cityCustodyState", "escaped")
+                        elif quest_name in CITY_INFORMATION_JOURNALS:
+                            self.assertEqual("BaldursGateTamokoJournalQuest", cls.__name__)
+                            self.assertEqual(
+                                CITY_INFORMATION_JOURNALS[quest_name], quest.getNumericProperty("sourceJournalId")
+                            )
+                            self.assertEqual("", quest.getStringProperty("questKey"))
+                            self.assertEqual("No reward.", quest.getReward())
+                            source.setStringProperty("plugin_cityQuest_tamokoMercy", "completed")
+                            expected_completed = False
                         else:
                             key = quest.getStringProperty("questKey")
                             self.assertIn(key, CITY_QUEST_KEYS)
@@ -522,24 +538,28 @@ class MapQuestJournalTest(unittest.TestCase):
                     scenario = quest.getStringProperty("campaign_scenarioId")
                     if scenario:
                         player.setBoolProperty("campaign_castleCompleted_" + scenario, True)
-                    self.assertTrue(quest.isCompleted())
-                    quest.captureJournal(True)
+                    self.assertEqual(expected_completed, quest.isCompleted())
+                    quest.captureJournal(expected_completed)
                     expected = self.journalText(quest)
-                    player.quests.clear()
-                    player.completed[:] = [quest]
+                    player.quests[:] = [] if expected_completed else [quest]
+                    player.completed[:] = [quest] if expected_completed else []
                     game.map = destination
                     self.assertEqual(expected, self.journalText(quest))
-                    self.assertTrue(quest.isCompleted())
+                    self.assertEqual(expected_completed, quest.isCompleted())
                     restored = cls(game)
                     restored.properties = json.loads(json.dumps(quest.properties))
-                    player.completed[:] = [restored]
+                    player.quests[:] = [] if expected_completed else [restored]
+                    player.completed[:] = [restored] if expected_completed else []
                     self.assertEqual(expected, self.journalText(restored))
-                    self.assertTrue(restored.isCompleted())
+                    self.assertEqual(expected_completed, restored.isCompleted())
                     game.map = source
                     source.properties.clear()
-                    restored.captureJournal(True)
+                    restored.captureJournal(expected_completed)
                     self.assertEqual(expected, self.journalText(restored))
-                    self.assertTrue(restored.isCompleted())
+                    self.assertEqual(expected_completed, restored.isCompleted())
+                    if not expected_completed:
+                        self.assertEqual([restored], player.quests)
+                        self.assertEqual([], player.completed)
                     self.assertEqual({}, destination.properties)
                     self.assertEqual([], game.messages)
         self.assertAuthoredQuestRoster(roster)
