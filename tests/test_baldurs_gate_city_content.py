@@ -995,33 +995,80 @@ class BaldursGateCityContentTest(unittest.TestCase):
         self.assertEqual("player", actor.properties["controller"].getStringProperty("target"))
 
     def testTamokoConversationsPreserveOneActorAndAllowEitherEltanOrder(self):
+        from types import SimpleNamespace
+
+        from tests import test_baldurs_gate_tamoko_early_meetings as early
+        from tests import test_baldurs_gate_tamoko_final_meeting as final
+
         for rescued in (False, True):
             with self.subTest(rescued=rescued):
-                model = CityModel(intelligence=12)
-                model.game_map.setNumericProperty("plugin_cityPhase", 7)
-                tamoko = model.canonical("TAMOKO")
-                item = model.item("RING16", tamoko)
-                self.assertTrue(model.dialog(tamoko).hearTamokoWarning())
+                fixture = early.EarlyFixture("first", rescued=int(rescued))
+                tamoko = fixture.actor
+                item = early.SourceObject(fixture.game, "tamokoCarriedRing", sourceItem="RING16")
+                tamoko.items.append(item)
+                self.assertTrue(fixture.settle(("hearInformation", "defendGorion", "askRelative"))[0])
+                self.assertIs(tamoko, fixture.game_map.getObjectByName(tamoko.getName()))
                 self.assertEqual("AR1100", tamoko.getStringProperty("sourceArea"))
-                model.game_map.setBoolProperty("plugin_cityFlag_eltanSafe", rescued)
-                self.assertTrue(model.dialog(tamoko).discussTamokoRequest())
+                fixture.meeting = "second"
+                fixture.game_map.setStringProperty("activeSimulationRegion", "AR1100")
+                fixture.game_map.setBoolProperty("plugin_cityFlag_eltanSafe", rescued)
+                self.assertTrue(
+                    fixture.settle(("promise", "askHow", "askDivinity", "askLove", "trySpare", "thankForLead"))[0]
+                )
                 self.assertEqual(
                     "rescued" if rescued else "notRescued",
-                    model.game_map.getStringProperty("plugin_cityTamokoEltanDiscussion"),
+                    fixture.game_map.getStringProperty("plugin_cityTamokoEltanDiscussion"),
                 )
-                self.assertTrue(model.dialog(tamoko).acceptTamokoRequest())
-                self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_cythandriaDiary"))
-                self.assertIsNone(model.game_map.getObjectByName(tamoko.getName()))
-                model.game_map.setBoolProperty("plugin_cityFlag_palaceCleared", True)
-                model.clock.applySchedules()
-                self.assertIs(tamoko, model.game_map.getObjectByName(tamoko.getName()))
+                self.assertEqual("active", fixture.game_map.getStringProperty("plugin_cityQuest_cythandriaDiary"))
+                self.assertIsNone(fixture.game_map.getObjectByName(tamoko.getName()))
+                fixture.game_map.setBoolProperty("plugin_cityFlag_palaceCleared", True)
+                fixture.registry.applySchedules()
+                self.assertIs(tamoko, fixture.game_map.getObjectByName(tamoko.getName()))
                 self.assertEqual("AR0123", tamoko.getStringProperty("sourceArea"))
                 self.assertIn(item, tamoko.items)
-                final = model.dialog(tamoko)
-                self.assertTrue(final.acceptTamokoMercy())
-                self.assertTrue(final.questTamokoMercyComplete())
-                self.assertIsNone(model.game_map.getObjectByName(tamoko.getName()))
-                self.assertFalse(model.game_map.getBoolProperty("plugin_cityDeath_" + tamoko.getName()))
+
+                # Keep the same model world and canonical actor while loading the actual final callbacks.
+                exec(final.callbackCode(early.SCRIPT.read_text(encoding="utf-8"), str(early.SCRIPT)), fixture.namespace)
+                final_methods = (
+                    "tamokoFinalBinding",
+                    "tamokoFinalScore",
+                    "tamokoFinalOutcome",
+                    "tamokoFinalUiRequest",
+                    "canDiscussTamokoFinalMeeting",
+                    "commitTamokoFinalMeeting",
+                    "discussTamokoFinalMeeting",
+                )
+                for method in final_methods:
+                    setattr(type(fixture.dialog), method, fixture.namespace[method])
+                fixture.namespace["write"](
+                    fixture.registry,
+                    "questDefinitions",
+                    {"quests": [early.selectedQuest(), final.selectedQuest()], "excursions": []},
+                )
+                fixture.game_map.setStringProperty("activeSimulationRegion", "AR0123")
+                fixture.game_map.setStringProperty("plugin_cityQuest_tamokoMercy", "active")
+                fixture.player.quests.append(early.SourceObject(fixture.game, "cityTamokoMercyQuest"))
+                fixture.player.getStats = lambda: SimpleNamespace(
+                    getNumericProperty=lambda key: 12 if key == "intelligence" else 6
+                )
+                for actor in (fixture.player, fixture.source, fixture.registry):
+                    actor.getMap = lambda fixture=fixture: fixture.game_map
+                flow = fixture.dialog.discussTamokoFinalMeeting()
+                replies, answer = iter(("refuseHarm", "philosophy")), None
+                try:
+                    while True:
+                        try:
+                            request = flow.send(answer)
+                        except StopIteration as result:
+                            self.assertTrue(result.value)
+                            break
+                        answer = next(replies) if request["operation"] == "choose" else None
+                finally:
+                    flow.close()
+                self.assertIsNone(fixture.game_map.getObjectByName(tamoko.getName()))
+                self.assertIs(tamoko, fixture.registry.getObjectProperty("plugin_cityRelocationActor_tamoko"))
+                self.assertIn(item, tamoko.items)
+                self.assertFalse(fixture.game_map.getBoolProperty("plugin_cityDeath_" + tamoko.getName()))
 
     def testStartingProfileAndHistoryFreezeAreNotOverwrittenByReentry(self):
         model = CityModel(strength=14, agility=16, intelligence=12)

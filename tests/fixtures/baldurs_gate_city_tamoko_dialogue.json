@@ -1,0 +1,2015 @@
+{
+  "kind": "TamokoDialogueSourceMappingSupplement",
+  "schemaVersion": 1,
+  "scope": "One active TAMOKO.DLG: all 26 states and 50 transitions. Factual supplement outside city config.",
+  "sourceEdition": "Installed EE archives with effective override equality; authenticated original BG1 unavailable.",
+  "inputs": {
+    "earlySelectedMetadataSha256": "3e8070978d45b6c571796ad0c603111aabb1d0c55051b106b4ccbbb91b7b0995",
+    "finalSelectedMetadataSha256": "e7d6bc3d815d16db6fcc3dbee22c44e2f51fffcf30551973560d014798e89255",
+    "earlierBoundedAuditSha256": "50bb86630e13707c9b3f3598ec3648e1b04a2ed9842095f4c92d4f81e40e7e6c",
+    "auditorSha256": "fba6f98547f88f11fd62e533fb0f30fc5a6b44f9e7daf65ec96bea06aa84c3cb"
+  },
+  "dialogFingerprint": {
+    "baseSha256": "a79ca097443a9fbe126201f4ee9102f2eaff254c1ed13ee74153961c40bd5a27",
+    "effectiveSha256": "a79ca097443a9fbe126201f4ee9102f2eaff254c1ed13ee74153961c40bd5a27",
+    "baseEqualsEffective": true
+  },
+  "dialogOrigin": {
+    "source": "key_biff",
+    "path": "data\\DIALOG.BIF",
+    "offset": 1264484,
+    "size": 3146,
+    "locator": 57672791
+  },
+  "selectedFingerprints": {
+    "TAMOKO.CRE": {
+      "baseSha256": "279bf3d222572553d8624b0e97e9e799f711709bc7ee4a43a09441f177d627a4",
+      "effectiveSha256": "279bf3d222572553d8624b0e97e9e799f711709bc7ee4a43a09441f177d627a4",
+      "baseEqualsEffective": true
+    },
+    "TAMOKO2.CRE": {
+      "baseSha256": "aefb11728654f6e15e8ed45c0e57fd20c0859a4a18cb3e41339ebb15783b9aa7",
+      "effectiveSha256": "aefb11728654f6e15e8ed45c0e57fd20c0859a4a18cb3e41339ebb15783b9aa7",
+      "baseEqualsEffective": true
+    },
+    "AR0800.ARE": {
+      "baseSha256": "049cf18cf41bdfd99f18bd2fe0f9aaa3603a52dc0a3ac95f23fdddb7318ca40c",
+      "effectiveSha256": "049cf18cf41bdfd99f18bd2fe0f9aaa3603a52dc0a3ac95f23fdddb7318ca40c",
+      "baseEqualsEffective": true
+    },
+    "AR1100.ARE": {
+      "baseSha256": "bc63d0dafa6d502acbb307f1faffa90d73dc6ceb94bef46e0787b5163e188285",
+      "effectiveSha256": "bc63d0dafa6d502acbb307f1faffa90d73dc6ceb94bef46e0787b5163e188285",
+      "baseEqualsEffective": true
+    },
+    "AR0123.ARE": {
+      "baseSha256": "35e98b6fcd5341a127a943a0894d5bdaa5c54d04c0885f7aa4a2949e9719f074",
+      "effectiveSha256": "35e98b6fcd5341a127a943a0894d5bdaa5c54d04c0885f7aa4a2949e9719f074",
+      "baseEqualsEffective": true
+    },
+    "ACTION.IDS": {
+      "baseSha256": "fb4b2c021fc4131d10863420a7bfda0e947bc86766e30edf6c4cabb38ccc2129",
+      "effectiveSha256": "fb4b2c021fc4131d10863420a7bfda0e947bc86766e30edf6c4cabb38ccc2129",
+      "baseEqualsEffective": true
+    },
+    "TRIGGER.IDS": {
+      "baseSha256": "74072a62b4d27259759a81ce465226a67bc673a100c7a4aa8b0b7d89f7d44d30",
+      "effectiveSha256": "74072a62b4d27259759a81ce465226a67bc673a100c7a4aa8b0b7d89f7d44d30",
+      "baseEqualsEffective": true
+    },
+    "AR0800.BCS": {
+      "baseSha256": "6c6f686322587c0ff05f2a5222d067b342f798b3d61524e24ed82a83d8991544",
+      "effectiveSha256": "6c6f686322587c0ff05f2a5222d067b342f798b3d61524e24ed82a83d8991544",
+      "baseEqualsEffective": true
+    },
+    "AR1100.BCS": {
+      "baseSha256": "8bb9117c29d489f9f49f5e7bf962ed41ed1a9d6a174e98fef00f259c516053bd",
+      "effectiveSha256": "8bb9117c29d489f9f49f5e7bf962ed41ed1a9d6a174e98fef00f259c516053bd",
+      "baseEqualsEffective": true
+    },
+    "AR0123.BCS": {
+      "baseSha256": "e0f3f324feeeaa2fc3105eef66478830eff79e8baef4c58168ae89f56ff4594e",
+      "effectiveSha256": "e0f3f324feeeaa2fc3105eef66478830eff79e8baef4c58168ae89f56ff4594e",
+      "baseEqualsEffective": true
+    }
+  },
+  "states": [
+    {
+      "state": 0,
+      "npcParaphrase": "Tamoko offers information and asks whether you will hear her.",
+      "npcStrref": 11064,
+      "condition": {
+        "sha256": "e02d38ff7d5efba6aff38b2958c3952dcd654275681ab879879f5c15f6790d1b",
+        "operationNamesInOrder": [
+          "Global"
+        ],
+        "globalNumericFacts": [
+          {
+            "operation": "Global",
+            "name": "TamokoMove",
+            "scope": "GLOBAL",
+            "value": 0
+          }
+        ],
+        "selectedShortCalls": [],
+        "arbitraryExpressionInterpreted": false
+      },
+      "edges": [
+        {
+          "edge": 0,
+          "replyId": "rejectSpy",
+          "paraphrase": "Reject information from a stranger who has been following you.",
+          "replyStrref": 11066,
+          "targetState": 1,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1",
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair3",
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 1,
+          "replyId": "hearInformation",
+          "paraphrase": "Offer to hear useful information.",
+          "replyStrref": 11072,
+          "targetState": 3,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair4",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 2,
+          "replyId": "askIdentity",
+          "paraphrase": "Ask her name before trusting her.",
+          "replyStrref": 11073,
+          "targetState": 2,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair6"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 1,
+      "npcParaphrase": "She invokes Gorion to show that she knows your history.",
+      "npcStrref": 11067,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 3,
+          "replyId": "rejectFamily",
+          "paraphrase": "Say you have cut your ties to Gorion.",
+          "replyStrref": 11068,
+          "targetState": 4,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1",
+              "baldurs-gate-native-early-tamoko-pair7"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 4,
+          "replyId": "defendGorion",
+          "paraphrase": "Demand respect for Gorion's memory.",
+          "replyStrref": 11069,
+          "targetState": 5,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 5,
+          "replyId": "askKnowledge",
+          "paraphrase": "Ask what she knows of your connection to Gorion.",
+          "replyStrref": 11071,
+          "targetState": 3,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair3"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 2,
+      "npcParaphrase": "She gives her name, asks for trust cautiously, and offers a trade of information.",
+      "npcStrref": 11074,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 6,
+          "replyId": "rejectRiddles",
+          "paraphrase": "Refuse another stranger's riddles.",
+          "replyStrref": 11080,
+          "targetState": 1,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair5"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 7,
+          "replyId": "listen",
+          "paraphrase": "Tell her to speak.",
+          "replyStrref": 11087,
+          "targetState": 3,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair6"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 3,
+      "npcParaphrase": "She warns that Eltan's supposed healer is causing his illness and mentions Gorion's guidance.",
+      "npcStrref": 11088,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 8,
+          "replyId": "defendGorion",
+          "paraphrase": "Demand respect for Gorion's memory.",
+          "replyStrref": 11136,
+          "targetState": 5,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair3",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 9,
+          "replyId": "rejectFamily",
+          "paraphrase": "Say you have broken those family ties.",
+          "replyStrref": 11137,
+          "targetState": 4,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair4"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 4,
+      "npcParaphrase": "She questions whether rejecting family can break its influence and hints at a hateful relative.",
+      "npcStrref": 11100,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 10,
+          "replyId": "askRelative",
+          "paraphrase": "Ask who hates you and why.",
+          "replyStrref": 11665,
+          "targetState": 7,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1",
+              "baldurs-gate-native-early-tamoko-pair7"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 11,
+          "replyId": "endRiddles",
+          "paraphrase": "Tell her to leave and stop speaking in riddles.",
+          "replyStrref": 11666,
+          "targetState": 6,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair4"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 5,
+      "npcParaphrase": "She distinguishes Gorion from your birth family and hints at a hateful relative.",
+      "npcStrref": 11135,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 12,
+          "replyId": "askRelative",
+          "paraphrase": "Ask who hates you and why.",
+          "replyStrref": 11138,
+          "targetState": 7,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair3",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 13,
+          "replyId": "endRiddles",
+          "paraphrase": "Tell her to leave and stop speaking in riddles.",
+          "replyStrref": 11139,
+          "targetState": 6,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 6,
+      "npcParaphrase": "She repeats the warning about Eltan and arranges a meeting near the headquarters.",
+      "npcStrref": 11140,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 14,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": null,
+          "targetResource": "",
+          "flags": 92,
+          "journalStrref": 27461,
+          "condition": null,
+          "action": {
+            "sha256": "5d3d4f3a798329fcf3fc0e27f652c1182f25b9d62ad83ec4be19e3bc2b47a4e3",
+            "operationNamesInOrder": [
+              "SetGlobal",
+              "EscapeArea"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 1
+              }
+            ],
+            "selectedShortCalls": [
+              "EscapeArea()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "finishTamokoEarlyTerminal",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair4",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 7,
+      "npcParaphrase": "She hints that your existence will bring chaos, warns about Eltan, and arranges the meeting.",
+      "npcStrref": 11141,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 15,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": null,
+          "targetResource": "",
+          "flags": 92,
+          "journalStrref": 27461,
+          "condition": null,
+          "action": {
+            "sha256": "5d3d4f3a798329fcf3fc0e27f652c1182f25b9d62ad83ec4be19e3bc2b47a4e3",
+            "operationNamesInOrder": [
+              "SetGlobal",
+              "EscapeArea"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 1
+              }
+            ],
+            "selectedShortCalls": [
+              "EscapeArea()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoFirstMeeting",
+          "implementation": "finishTamokoEarlyTerminal",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEveryFirstMeetingBranchJournalsAndActuallyLeavesForTheNextScene"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1",
+              "baldurs-gate-native-early-tamoko-pair3",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair7"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "first",
+      "callback": "discussTamokoFirstMeeting"
+    },
+    {
+      "state": 8,
+      "npcParaphrase": "She acknowledges that you have sought her out again.",
+      "npcStrref": 11142,
+      "condition": {
+        "sha256": "1c3b19a5be27a2c1e2d6187f78d0803dcaafecf557a3286eb9ed5d84b90cc7cf",
+        "operationNamesInOrder": [
+          "Global"
+        ],
+        "globalNumericFacts": [
+          {
+            "operation": "Global",
+            "name": "TamokoMove",
+            "scope": "GLOBAL",
+            "value": 1
+          }
+        ],
+        "selectedShortCalls": [],
+        "arbitraryExpressionInterpreted": false
+      },
+      "edges": [
+        {
+          "edge": 16,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": 9,
+          "targetResource": "TAMOKO",
+          "flags": 6,
+          "journalStrref": null,
+          "condition": {
+            "sha256": "094e13839d12896ca963cc293b5d2bb9924fe88fd9da1953bf9c3625388625fd",
+            "operationNamesInOrder": [
+              "Global"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "Global",
+                "name": "RescuedEltan",
+                "scope": "GLOBAL",
+                "value": 1
+              }
+            ],
+            "selectedShortCalls": [],
+            "arbitraryExpressionInterpreted": false
+          },
+          "action": {
+            "sha256": "8051b44784d8bd9d381e506adb30bcc394c19562ba56a1514e659c7b6670c8e9",
+            "operationNamesInOrder": [
+              "SetGlobal"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 3
+              }
+            ],
+            "selectedShortCalls": [],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "planned carried-first source-state-9 route; native execution pending; legacy carried-to-rescued translation is a native adaptation",
+            "executed": false
+          }
+        },
+        {
+          "edge": 17,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": 10,
+          "targetResource": "TAMOKO",
+          "flags": 6,
+          "journalStrref": null,
+          "condition": {
+            "sha256": "192ff3f6bc43db8937ac087d1fdd8c417f73a3cf0d2afb3124c0c59b2508721f",
+            "operationNamesInOrder": [
+              "Global"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "Global",
+                "name": "RescuedEltan",
+                "scope": "GLOBAL",
+                "value": 0
+              }
+            ],
+            "selectedShortCalls": [],
+            "arbitraryExpressionInterpreted": false
+          },
+          "action": {
+            "sha256": "8051b44784d8bd9d381e506adb30bcc394c19562ba56a1514e659c7b6670c8e9",
+            "operationNamesInOrder": [
+              "SetGlobal"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 3
+              }
+            ],
+            "selectedShortCalls": [],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1",
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair3",
+              "baldurs-gate-native-early-tamoko-pair4",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight source-zero routes assert neither carried nor safe; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 9,
+      "npcParaphrase": "She acknowledges Eltan's rescue and turns toward those responsible.",
+      "npcStrref": 1662,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 18,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": 10,
+          "targetResource": "TAMOKO",
+          "flags": 0,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "planned carried-first source-state-9 route; native execution pending; legacy carried-to-rescued translation is a native adaptation",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 10,
+      "npcParaphrase": "She requires a promise before sharing further information.",
+      "npcStrref": 1680,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 19,
+          "replyId": "threaten",
+          "paraphrase": "Refuse any promise and demand her information.",
+          "replyStrref": 11060,
+          "targetState": 12,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 20,
+          "replyId": "questionPromise",
+          "paraphrase": "Question a promise whose consequences she has not explained.",
+          "replyStrref": 11061,
+          "targetState": 13,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair3"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 21,
+          "replyId": "promise",
+          "paraphrase": "Give your word that you will try to honor her request.",
+          "replyStrref": 11062,
+          "targetState": 11,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair4",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-pair8",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 11,
+      "npcParaphrase": "She asks you to defeat Sarevok's plans while preserving his life.",
+      "npcStrref": 11143,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 22,
+          "replyId": "mustKill",
+          "paraphrase": "Insist that Sarevok must die.",
+          "replyStrref": 11172,
+          "targetState": 12,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair3"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 23,
+          "replyId": "askHow",
+          "paraphrase": "Question how you can spare someone who seeks your destruction.",
+          "replyStrref": 11173,
+          "targetState": 14,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair4",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-pair8",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 12,
+      "npcParaphrase": "She refuses to help without the promise, hints that you and Sarevok are siblings, and leaves.",
+      "npcStrref": 11157,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 24,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": null,
+          "targetResource": "",
+          "flags": 92,
+          "journalStrref": 27462,
+          "condition": null,
+          "action": {
+            "sha256": "0adb98fd29e9db09ada3241e3616c4720675d69a878aec2c15ffa8f57185f889",
+            "operationNamesInOrder": [
+              "SetGlobal",
+              "EscapeArea"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 2
+              }
+            ],
+            "selectedShortCalls": [
+              "EscapeArea()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "finishTamokoEarlyTerminal",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair1",
+              "baldurs-gate-native-early-tamoko-pair2",
+              "baldurs-gate-native-early-tamoko-pair3",
+              "baldurs-gate-native-early-tamoko-pair4",
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair6"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 13,
+      "npcParaphrase": "She insists that her condition benefits you and asks for agreement.",
+      "npcStrref": 1683,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 25,
+          "replyId": "refuseUnknown",
+          "paraphrase": "Refuse to promise before knowing the consequences.",
+          "replyStrref": 11170,
+          "targetState": 12,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair2"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 26,
+          "replyId": "promise",
+          "paraphrase": "Give your word that you will try to honor her request.",
+          "replyStrref": 11171,
+          "targetState": 11,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair3"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 14,
+      "npcParaphrase": "She explains your shared origins, rivalry and Sarevok's hatred, and asks that he be spared.",
+      "npcStrref": 11184,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 27,
+          "replyId": "mustKill",
+          "paraphrase": "Insist that Sarevok must die.",
+          "replyStrref": 11174,
+          "targetState": 12,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair4"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 28,
+          "replyId": "askDivinity",
+          "paraphrase": "Ask about divine ancestry and whom Sarevok serves.",
+          "replyStrref": 11185,
+          "targetState": 15,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair5",
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-pair8",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 15,
+      "npcParaphrase": "She describes the prophecy and Sarevok's hoped-for ascension through mass slaughter.",
+      "npcStrref": 11187,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 29,
+          "replyId": "mustKill",
+          "paraphrase": "Insist that killing him is the only option.",
+          "replyStrref": 11189,
+          "targetState": 12,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair5"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 30,
+          "replyId": "askLove",
+          "paraphrase": "Ask why she opposes someone whose life she values.",
+          "replyStrref": 11190,
+          "targetState": 16,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair6",
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 31,
+          "replyId": "trySpare",
+          "paraphrase": "Promise to stop him and try to preserve his life.",
+          "replyStrref": 11191,
+          "targetState": 17,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 16,
+      "npcParaphrase": "She acknowledges their intimacy and says she wants to preserve the man within him.",
+      "npcStrref": 11192,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 32,
+          "replyId": "rejectRedemption",
+          "paraphrase": "Reject the possibility of redeeming him.",
+          "replyStrref": 11193,
+          "targetState": 12,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair6"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 33,
+          "replyId": "trySpare",
+          "paraphrase": "Promise to stop him and try to preserve his life.",
+          "replyStrref": 11194,
+          "targetState": 17,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 17,
+      "npcParaphrase": "She directs you to Slythe and Krystin in the Undercellar for evidence about the assassinations.",
+      "npcStrref": 11195,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 34,
+          "replyId": "thankForLead",
+          "paraphrase": "Thank her and agree to seek the assassins.",
+          "replyStrref": 11199,
+          "targetState": 18,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair7",
+              "baldurs-gate-native-early-tamoko-rescued"
+            ],
+            "coverage": "authored paired and carried-first route plans; native execution pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 35,
+          "replyId": "promiseViolence",
+          "paraphrase": "Promise a violent end for the assassins.",
+          "replyStrref": 11200,
+          "targetState": 19,
+          "targetResource": "TAMOKO",
+          "flags": 1,
+          "journalStrref": null,
+          "condition": null,
+          "action": null,
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "discussTamokoEarlyMeeting",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 18,
+      "npcParaphrase": "She identifies Cythandria at the Iron Throne as another obstacle, then leaves secretly.",
+      "npcStrref": 11196,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 36,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": null,
+          "targetResource": "",
+          "flags": 92,
+          "journalStrref": 27463,
+          "condition": null,
+          "action": {
+            "sha256": "0adb98fd29e9db09ada3241e3616c4720675d69a878aec2c15ffa8f57185f889",
+            "operationNamesInOrder": [
+              "SetGlobal",
+              "EscapeArea"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 2
+              }
+            ],
+            "selectedShortCalls": [
+              "EscapeArea()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "finishTamokoEarlyTerminal",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair7"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 19,
+      "npcParaphrase": "She reacts to your violent wording, identifies Cythandria, and leaves secretly.",
+      "npcStrref": 11202,
+      "condition": null,
+      "edges": [
+        {
+          "edge": 37,
+          "replyId": null,
+          "paraphrase": null,
+          "replyStrref": null,
+          "targetState": null,
+          "targetResource": "",
+          "flags": 92,
+          "journalStrref": 27463,
+          "condition": null,
+          "action": {
+            "sha256": "0adb98fd29e9db09ada3241e3616c4720675d69a878aec2c15ffa8f57185f889",
+            "operationNamesInOrder": [
+              "SetGlobal",
+              "EscapeArea"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 2
+              }
+            ],
+            "selectedShortCalls": [
+              "EscapeArea()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "callback": "discussTamokoSecondMeeting",
+          "implementation": "finishTamokoEarlyTerminal",
+          "modelTests": [
+            "BaldursGateTamokoEarlyMeetingTest.testEverySecondBranchSeparatesRefusalFromInformedAgreementWithoutRewards",
+            "BaldursGateTamokoEarlyMeetingTest.testBothStateEightEdgesSetMoveThreeBeforeTheFirstChoice"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoEarlyTopology",
+            "chooser": "tamokoEarlyNativeChoice",
+            "caseIds": [
+              "baldurs-gate-native-early-tamoko-pair8"
+            ],
+            "coverage": "eight authored paired plans; native execution pending",
+            "executed": false
+          }
+        }
+      ],
+      "meeting": "second",
+      "callback": "discussTamokoSecondMeeting"
+    },
+    {
+      "state": 20,
+      "meeting": "final",
+      "npcParaphrase": "Tamoko challenges the promise about sparing Sarevok.",
+      "condition": {
+        "sha256": "1d560e2abfe5c9a11a5c3844779d179247d48666c2b931f339e84b2f463cbef6",
+        "operationNamesInOrder": [
+          "Global"
+        ],
+        "globalNumericFacts": [
+          {
+            "operation": "Global",
+            "name": "TamokoMove",
+            "scope": "GLOBAL",
+            "value": 2
+          }
+        ],
+        "selectedShortCalls": [],
+        "arbitraryExpressionInterpreted": false
+      },
+      "callback": "discussTamokoFinalMeeting",
+      "edges": [
+        {
+          "edge": 38,
+          "sourceStates": [
+            20
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 22,
+          "condition": null,
+          "action": null,
+          "replyId": "appealChoice",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 39,
+          "sourceStates": [
+            20
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 21,
+          "condition": null,
+          "action": null,
+          "replyId": "threaten",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 40,
+          "sourceStates": [
+            20
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 23,
+          "condition": null,
+          "action": null,
+          "replyId": "refuseHarm",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        }
+      ]
+    },
+    {
+      "state": 21,
+      "meeting": "final",
+      "npcParaphrase": "Tamoko rejects the answer and becomes hostile.",
+      "condition": null,
+      "callback": "discussTamokoFinalMeeting",
+      "edges": [
+        {
+          "edge": 41,
+          "sourceStates": [
+            21
+          ],
+          "flags": 284,
+          "targetResource": "",
+          "targetState": null,
+          "condition": null,
+          "action": {
+            "sha256": "0cfb82ad941f961ccac0e9c86bb5e0bf2e0399cd9a19eb1579cbd94d1a62bab3",
+            "operationNamesInOrder": [
+              "EraseJournalEntry",
+              "EraseJournalEntry",
+              "EraseJournalEntry",
+              "Enemy"
+            ],
+            "globalNumericFacts": [],
+            "selectedShortCalls": [
+              "Enemy()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "replyId": null,
+          "journalEraseStrrefs": [
+            27461,
+            27462,
+            27463
+          ],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "commitTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        }
+      ]
+    },
+    {
+      "state": 22,
+      "meeting": "final",
+      "npcParaphrase": "Tamoko asks why she should stand aside.",
+      "condition": null,
+      "callback": "discussTamokoFinalMeeting",
+      "edges": [
+        {
+          "edge": 42,
+          "sourceStates": [
+            22
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 21,
+          "condition": null,
+          "action": null,
+          "replyId": "removeObstacle",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 43,
+          "sourceStates": [
+            22
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 21,
+          "condition": null,
+          "action": null,
+          "replyId": "unavoidableFight",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 44,
+          "sourceStates": [
+            22
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 23,
+          "condition": null,
+          "action": null,
+          "replyId": "notEnemy",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        }
+      ]
+    },
+    {
+      "state": 23,
+      "meeting": "final",
+      "npcParaphrase": "Tamoko weighs the offered argument.",
+      "condition": null,
+      "callback": "discussTamokoFinalMeeting",
+      "edges": [
+        {
+          "edge": 45,
+          "sourceStates": [
+            23
+          ],
+          "flags": 1,
+          "targetResource": "TAMOKO",
+          "targetState": 21,
+          "condition": null,
+          "action": null,
+          "replyId": "forgivingFight",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 46,
+          "sourceStates": [
+            23
+          ],
+          "flags": 3,
+          "targetResource": "TAMOKO",
+          "targetState": 25,
+          "condition": {
+            "sha256": "72996ebb0765dc98f4aeee27b87f9319983da300bdfb6367f37448a2da80373f",
+            "operationNamesInOrder": [
+              "ReactionGT"
+            ],
+            "globalNumericFacts": [],
+            "selectedShortCalls": [
+              "ReactionGT(LastTalkedToBy,NEUTRAL_UPPER)"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "action": null,
+          "replyId": "philosophy",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        },
+        {
+          "edge": 47,
+          "sourceStates": [
+            23
+          ],
+          "flags": 3,
+          "targetResource": "TAMOKO",
+          "targetState": 24,
+          "condition": {
+            "sha256": "9349ebbaf188abba5ecb7cd470aecb4be6e00e668cdef35ecffac5923df07d6b",
+            "operationNamesInOrder": [
+              "ReactionLT",
+              "ReactionGT",
+              "LastTalkedToBy"
+            ],
+            "globalNumericFacts": [],
+            "selectedShortCalls": [
+              "ReactionLT(LastTalkedToBy,FRIENDLY_LOWER)",
+              "ReactionGT(LastTalkedToBy(Myself),HOSTILE_UPPER)"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "action": null,
+          "replyId": "philosophy",
+          "journalEraseStrrefs": [],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "discussTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        }
+      ]
+    },
+    {
+      "state": 24,
+      "meeting": "final",
+      "npcParaphrase": "Tamoko remains unconvinced and becomes hostile.",
+      "condition": null,
+      "callback": "discussTamokoFinalMeeting",
+      "edges": [
+        {
+          "edge": 48,
+          "sourceStates": [
+            24
+          ],
+          "flags": 284,
+          "targetResource": "",
+          "targetState": null,
+          "condition": null,
+          "action": {
+            "sha256": "0cfb82ad941f961ccac0e9c86bb5e0bf2e0399cd9a19eb1579cbd94d1a62bab3",
+            "operationNamesInOrder": [
+              "EraseJournalEntry",
+              "EraseJournalEntry",
+              "EraseJournalEntry",
+              "Enemy"
+            ],
+            "globalNumericFacts": [],
+            "selectedShortCalls": [
+              "Enemy()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "replyId": null,
+          "journalEraseStrrefs": [
+            27461,
+            27462,
+            27463
+          ],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "commitTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        }
+      ]
+    },
+    {
+      "state": 25,
+      "meeting": "final",
+      "npcParaphrase": "Tamoko accepts the argument and leaves peacefully.",
+      "condition": null,
+      "callback": "discussTamokoFinalMeeting",
+      "edges": [
+        {
+          "edge": 49,
+          "sourceStates": [
+            25
+          ],
+          "flags": 284,
+          "targetResource": "",
+          "targetState": null,
+          "condition": null,
+          "action": {
+            "sha256": "bdfbed916dc16c16e485754739ddb679d46d1e9037a1a4203cf3a4f250efbf66",
+            "operationNamesInOrder": [
+              "EraseJournalEntry",
+              "EraseJournalEntry",
+              "EraseJournalEntry",
+              "SetGlobal",
+              "EscapeArea"
+            ],
+            "globalNumericFacts": [
+              {
+                "operation": "SetGlobal",
+                "name": "TamokoMove",
+                "scope": "GLOBAL",
+                "value": 4
+              }
+            ],
+            "selectedShortCalls": [
+              "EscapeArea()"
+            ],
+            "arbitraryExpressionInterpreted": false
+          },
+          "replyId": null,
+          "journalEraseStrrefs": [
+            27461,
+            27462,
+            27463
+          ],
+          "callback": "discussTamokoFinalMeeting",
+          "implementation": "commitTamokoFinalMeeting",
+          "modelTests": [
+            "BaldursGateTamokoFinalMeetingTest.testEveryInitialAndSecondChoiceReachesItsOwnAuditedTerminal",
+            "BaldursGateTamokoFinalMeetingTest.testReactionBoundariesOfferOnlySourceEligibleRepliesAndKeepOrdinaryAppealHostile"
+          ],
+          "plannedNativeRoute": {
+            "method": "tamokoFinalTopology",
+            "coverage": "seven authored final choice plans; exact native score boundaries remain pending",
+            "executed": false
+          }
+        }
+      ]
+    }
+  ],
+  "sourceJournalIds": [
+    27461,
+    27462,
+    27463
+  ],
+  "sourceRouteSelection": "Active TAMOKO.DLG via three scene CreateCreature(TAMOKO) blocks; final AR0123 uses Move2, not unused TAMOKO3. No new source actor copy.",
+  "nativeAdaptations": [
+    "Saved finite cursor/cancellation continuation is a native adaptation; source Move3 has no entry trigger.",
+    "Legacy migration uses the existing custody globals dictionary, never a second source-global registry.",
+    "Early EscapeArea uses actual temporary actor removal plus existing schedule relocation; it sets no permanent departed flag.",
+    "Only informed source states18/19 activate the named optional diary lead; owned diary and prior kills remain intact."
+  ],
+  "reactionAdaptation": {
+    "stat": "current composed intelligence + current plugin_cityStanding",
+    "below7": "forgivingFight only",
+    "7to11": "philosophy -> state24 hostile",
+    "12plus": "philosophy -> state25 peaceful",
+    "originalFormulaOrIdsConstantsProved": false
+  },
+  "classicEditionBoundary": {
+    "guide": "https://forgottenwars.com/bg1/ar0800b.htm",
+    "reportedFirstMeetingWarning": "The classic guide warns against admitting the Iron Throne leaders' murder.",
+    "installedActiveGraph": "States0..7 contain no admission-of-murder choice; unused TAMOKO3 is not substituted into the active graph.",
+    "originOfMismatch": "unresolved",
+    "navigationStar": "Part1/2/3 stars also mark current-page navigation. They do not establish a DudleyFixes-only dialogue variant.",
+    "finalGuideSequence": "Guide choices1,3,2 agree structurally with the installed final path; this does not authenticate original behavior."
+  },
+  "openObligations": [
+    "The existing 7471 interaction matrix obligations remain open; this supplement neither closes that matrix nor regenerates its digest.",
+    "Original BG1 binaries, source reaction formula/IDS constants, unused TAMOKO2/3 reachability and classic dialogue differences remain unresolved.",
+    "Actual early/final MCP route, native chooser panels, save/reload, actor lifecycle, source-stat combat and visual validation remain pending.",
+    "Informational native CQuest projection is an unrewarded map-local adaptation; source rawFlags92 does not establish original-BG1 unsolved-quest category. Actual native journal/save/UI acceptance remains pending.",
+    "Full DLG coverage does not implement TAMOKO CRE script slots NONE/INITDLG/PRIEST5/NONE/WTASIGHT; native auto-hail/timing/spell AI and ongoing-combat interruption remain unproved. Configured fightController is not an active combat claim."
+  ],
+  "copyrightBoundary": "Numeric IDs, fingerprints, bounded expression metadata and authored paraphrases only; no compiled DLG/BCS payloads or full TLK text.",
+  "acceptance": {
+    "native": false,
+    "mcp": false,
+    "saveReload": false,
+    "originalParity": false,
+    "sourceConditionSemanticsComplete": false,
+    "fullMatrixClosed": false
+  },
+  "nativeJournalProjection": {
+    "class": "BaldursGateTamokoJournalQuest",
+    "rawFlags": 92,
+    "ids": {
+      "27461": "cityTamokoWarningJournalQuest",
+      "27462": "cityTamokoRefusalJournalQuest",
+      "27463": "cityTamokoInformedJournalQuest"
+    },
+    "reward": "No reward.",
+    "completion": false,
+    "erase": "Only these owned active informational entries; preserve completed and unrelated quests."
+  }
+}
