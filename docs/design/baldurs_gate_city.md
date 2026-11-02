@@ -19,6 +19,25 @@ python scripts/build_baldurs_gate_source_fixture.py --game-root "C:\Program File
 
 The general auditor retains its existing Candlekeep invocation. Use `--scope city --area AR0800` with `scripts/audit_candlekeep_source.py` to audit the bounded city dependency closure. Audit output belongs outside the original installation and outside resource configuration directories.
 
+## Disabled poison source foundation
+
+The city builder stages seven retained poison dialogue graphs, including TENYA2: 84 states, 135 transitions and
+219 authored state/reply mappings. `scripts/build_baldurs_gate_city_poison.py` validates that exact inventory and
+adds separate source-mode dialogs, actor factories and finite action positions to the existing city resources.
+`plugin_cityPoisonSourceEnabled` remains false. All existing dialog definitions retain their previous contents.
+
+The map-local implementation binds conversations and saved continuations to actual actor instances. It implements
+ordered fees, rewards and item transfers; separately created NPC ownership; prospective death witnesses; delayed
+actions; and the acquisition/cure consumer with distinct 650 kill XP, 1,500 scroll-delivery XP and 10,000 cure XP.
+The city separately opts into native `sourceKillXp` settlement on fresh entry and verified load. It never adds a
+second kill reward from Python. The source-only callback tests use doubles and do not establish native gameplay.
+
+Source-mode activation remains pending actual routes and the unfinished SHOUT listeners, charm producer, BOOK08
+conversion, warning/fatal scheduler, outside-history producers, progressed-save migration and source slot priority.
+Unlinked branches remain in the inventory without a claim of natural reachability. Unsupported SHOUT continuations
+are refused before mutation. These holds and the original-versus-EE differences remain acceptance requirements;
+staging these graphs does not close their ledger obligations.
+
 ## Opt-in regional simulation
 
 `CMap.activeSimulationRegion` is a serialized string. An empty value preserves the existing all-object simulation. With a nonempty value, objects with a matching `simulationRegion` receive turn hooks, controller planning, movement commits and controller turn-end callbacks. The actual map player, objects with no region and objects with `alwaysSimulate=true` remain active.

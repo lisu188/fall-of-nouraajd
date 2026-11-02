@@ -14,16 +14,21 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_source.json"
 QUESTS = ROOT / "tests/fixtures/baldurs_gate_city_quests.json"
 CUSTODY_SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_prison_source.json"
+POISON_DIALOGUE = ROOT / "tests/fixtures/baldurs_gate_city_poison_dialogue.json"
+POISON_FOLLOWUP = ROOT / "tests/fixtures/baldurs_gate_city_poison_followup.json"
+POISON_TEXT = ROOT / "tests/fixtures/baldurs_gate_city_poison_semantic.json"
 try:
     from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from scripts.build_baldurs_gate_city_relocations import buildRelocations
     from scripts.build_baldurs_gate_city_regions import buildRegions
     from scripts.build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
+    from scripts.build_baldurs_gate_city_poison import preparePoisonSource
 except ModuleNotFoundError:
     from build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from build_baldurs_gate_city_relocations import buildRelocations
     from build_baldurs_gate_city_regions import buildRegions
     from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
+    from build_baldurs_gate_city_poison import preparePoisonSource
 
 LANDMARKS = {
     "AR0002": "Temple of Helm",
@@ -1137,6 +1142,15 @@ def compileCity(source, quests=None):
         ],
         "sourceParityEstablished": False,
     }
+    geometry["poisonSourcePortConfigured"] = preparePoisonSource(
+        document,
+        config,
+        source,
+        json.loads(POISON_DIALOGUE.read_text(encoding="utf-8")),
+        json.loads(POISON_FOLLOWUP.read_text(encoding="utf-8")),
+        json.loads(POISON_TEXT.read_text(encoding="utf-8")),
+        usablePosition,
+    )
     protectCityDefinitions(config)
     return document, config, geometry
 
