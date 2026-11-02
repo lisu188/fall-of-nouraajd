@@ -1224,7 +1224,9 @@ void testOpponentEffectCreditSelectionWorkIsBounded() {
               << " pureTargetSnapshots=" << directWork.targetSnapshots
               << " anonymousTargetSnapshots=" << anonymousWork.targetSnapshots
               << " selfTargetSnapshots=" << selfWork.targetSnapshots << " noEffectKeyBudget=0\n";
-    opponent->releaseEffectReferences();
+    opponent->setEffects({});
+    expect_true(opponent->getEffects().empty() && fixture.game->getContext()->getEffectOwnerCount() == 0,
+                "public cleanup must release opponent effects and their context ownership");
     fixture.game->getContext()->shutdown();
 }
 
