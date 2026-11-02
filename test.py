@@ -158,6 +158,7 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
     "BaldursGateCityLedgerFixtureTest.",
+    "BaldursGatePoisonFollowupTest.",
     "BaldursGateCityRegionTest.",
     "BaldursGateCityGeometryTest.",
     "MultilevelRuinsContentTest.",
@@ -28210,6 +28211,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_baldurs_gate_city_ledger import (
         BaldursGateCityLedgerFixtureTest as _BaldursGateCityLedgerFixtureTest,
     )
+    from tests.test_baldurs_gate_poison_followup import BaldursGatePoisonFollowupTest as _BaldursGatePoisonFollowupTest
     from tests.test_baldurs_gate_city_regions import BaldursGateCityRegionTest as _BaldursGateCityRegionTest
     from tests.test_baldurs_gate_city_geometry import BaldursGateCityGeometryTest as _BaldursGateCityGeometryTest
     from tests.test_candlekeep_content import CandlekeepContentTest as _CandlekeepContentTest
@@ -28357,6 +28359,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class BaldursGateCityLedgerFixtureTest(_BaldursGateCityLedgerFixtureTest):
+        pass
+
+    class BaldursGatePoisonFollowupTest(_BaldursGatePoisonFollowupTest):
         pass
 
     class BaldursGateCityRegionTest(_BaldursGateCityRegionTest):
@@ -28739,6 +28744,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
+    del _BaldursGatePoisonFollowupTest
     del _BaldursGateCityRegionTest
     del _BaldursGateCityGeometryTest
     del _CandlekeepContentTest, _CandlekeepModelTest, _CandlekeepSourceParserTest, _CandlekeepSourceAuditTest

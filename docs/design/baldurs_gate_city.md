@@ -45,7 +45,7 @@ The city starts with a recorded native hero profile and history selection. The e
 
 First-visit and later-return states share one serialized map. Deaths, actual possessions, containers, locks, followers, stock, clocks and optional quests must survive transitions and reloads. Outside errands are labelled text-choice excursions; the city interlude applies only after its prerequisites. Completing the finale records the city storyline without completing unrelated optional quests.
 
-Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. The local C: disk guard currently blocks large native builds and captures; CI can provide compilation and automated checks, but cannot substitute for missing original-source reconciliation or owner acceptance.
+Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. Check local capacity against the 90 percent disk guard before native builds or captures. Prefer CI for heavy compilation and automated checks; these cannot substitute for missing original-source reconciliation or owner acceptance.
 
 ## Generated district content
 
@@ -80,6 +80,30 @@ eleven inline effects and eight explicit unresolved frontiers. All 218 additiona
 ledger obligations remain planned, with native, original-game and owner
 acceptance pending. These records retain source identities and fingerprints;
 original binaries, dialogue prose and full script dumps stay outside Git.
+
+`tests/fixtures/baldurs_gate_city_poison_followup.json` preserves 41 additional
+supporting-EE source records: TENYA2's 12 states and 23 transitions, BDMAREK's
+header, ability and two effects, and two GTIMES constants. Every record adds a
+required planned ledger obligation; the preceding 218 poison records and all
+older ledger rows remain unchanged. These additions award no native, original
+game, coverage or owner acceptance.
+
+TENYA2 supplies body-item alternatives through BOYBODY and MISC54. Seven terminal
+transitions give the item to LastTalkedToBy and depart; those transitions occur
+on eight syntactic paths. A separate transition creates MISC54 on the actor and
+turns hostile. The retained graph does not establish external entry into its
+unlinked state. PUMBERL's conditioned summon, the separate Tenya/Tenya2 death
+identities, actual ownership and the starting-history bridge remain pending.
+
+PoisonParty and PoisonParty2 are distinct GLOBAL timers, initialized respectively
+to ONE_DAY = 7200 and TEN_DAYS = 72000 before Lothander's later agreement choice.
+The selected warning block rearms only PoisonParty. Their durations are not
+summed; source scheduling and conversion to this engine's clock remain pending.
+BDMAREK's declared ability owns opcode 215 and opcode 142 effects. That table
+contains no opcode 309. This selected payload does not establish exclusive
+manual drinking, absence of automatic cure, or the complete producer chain;
+42 BALDUR blocks and newly encountered resource identifiers remain unfollowed.
+No original dialogue prose, binary payload or full script dump is committed.
 
 The development auditor can additionally decode bounded ITM V1 inline effect
 fields with `--item-effects`; existing invocations retain their previous output

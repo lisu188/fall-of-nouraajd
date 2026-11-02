@@ -15,6 +15,11 @@ try:
 except ModuleNotFoundError:
     from build_baldurs_gate_poison_ledger import POISON_PATH, buildPoisonObligations
 
+try:
+    from scripts.build_baldurs_gate_poison_followup_ledger import FOLLOWUP_PATH, buildFollowupObligations
+except ModuleNotFoundError:
+    from build_baldurs_gate_poison_followup_ledger import FOLLOWUP_PATH, buildFollowupObligations
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PATH = "tests/fixtures/baldurs_gate_city_source.json"
 QUEST_PATH = "tests/fixtures/baldurs_gate_city_quests.json"
@@ -68,7 +73,7 @@ def dialogActions(value):
             yield from dialogActions(child)
 
 
-def buildLedger(source, quests, config, script, *, poison=None):
+def buildLedger(source, quests, config, script, *, poison=None, followup=None):
     """All obligations originate in source rows, never in the set of implemented objects."""
     entries = []
     methods = methodNames(script)
@@ -694,6 +699,8 @@ def buildLedger(source, quests, config, script, *, poison=None):
 
     if poison is not None:
         entries.extend(buildPoisonObligations(poison))
+    if followup is not None:
+        entries.extend(buildFollowupObligations(followup))
     entries.sort(key=lambda row: row["id"])
     return {
         "schemaVersion": 1,
@@ -707,6 +714,7 @@ def buildLedger(source, quests, config, script, *, poison=None):
             CONFIG_PATH: fingerprint(config),
             SCRIPT_PATH: hashlib.sha256(script.encode()).hexdigest(),
             **({POISON_PATH: fingerprint(poison)} if poison is not None else {}),
+            **({FOLLOWUP_PATH: fingerprint(followup)} if followup is not None else {}),
         },
         "evidencePolicy": {
             "inventoryBoundary": "Complete enumeration of the audited fixture is not proof that the fixture includes every original game obligation.",
@@ -793,6 +801,7 @@ def validateLedger(ledger, expected=None, require_mapped=False, require_acceptan
                 SOURCE_PATH,
                 QUEST_PATH,
                 POISON_PATH,
+                FOLLOWUP_PATH,
             }:
                 problems.append("Invalid source pointer: " + key)
             digest = proof.get("sha256", "")
@@ -834,6 +843,7 @@ def main(argv=None):
         readJson(ROOT / CONFIG_PATH),
         (ROOT / SCRIPT_PATH).read_text(encoding="utf-8"),
         poison=readJson(ROOT / POISON_PATH),
+        followup=readJson(ROOT / FOLLOWUP_PATH),
     )
     destination = ROOT / OUTPUT_PATH
     problems = validateLedger(ledger, require_mapped=args.require_mapped, require_acceptance=args.require_acceptance)

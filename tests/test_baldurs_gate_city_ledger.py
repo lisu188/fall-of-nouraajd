@@ -16,6 +16,7 @@ from unittest.mock import patch
 from scripts import build_baldurs_gate_city_ledger as ledger_builder
 from scripts.build_baldurs_gate_city_ledger import buildLedger, validateLedger
 from scripts.build_baldurs_gate_poison_ledger import POISON_PATH
+from scripts.build_baldurs_gate_poison_followup_ledger import FOLLOWUP_PATH
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,7 +25,7 @@ def readJson(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def expectedIds(source, quests, poison=None):
+def expectedIds(source, quests, poison=None, followup=None):
     """Enumerate audited records independently from implementation/config mapping."""
     result = set()
     for area_id, area in source["areas"].items():
@@ -73,6 +74,19 @@ def expectedIds(source, quests, poison=None):
             result.update(item["resource"] + ":ability" + str(row["index"]) for row in item["abilities"])
             result.update(item["resource"] + ":effect" + str(row["index"]) for row in item["effects"])
         result.update(row["sourceId"] for row in poison["frontiers"])
+    if followup is not None:
+        result.update("TENYA2.DLG:state" + str(index) for index in range(12))
+        result.update("TENYA2.DLG:edge" + str(index) for index in range(23))
+        result.update(
+            (
+                "BDMAREK.SPL:header",
+                "BDMAREK.SPL:ability0",
+                "BDMAREK.SPL:effect0",
+                "BDMAREK.SPL:effect1",
+                "GTIMES.IDS:ONE_DAY",
+                "GTIMES.IDS:TEN_DAYS",
+            )
+        )
     return result
 
 
@@ -472,6 +486,7 @@ class BaldursGateCityLedgerUnitTest(unittest.TestCase):
                 (ledger_builder.QUEST_PATH, self.quests),
                 (ledger_builder.CONFIG_PATH, self.config),
                 (POISON_PATH, poison),
+                (FOLLOWUP_PATH, readJson(ROOT / FOLLOWUP_PATH)),
                 (ledger_builder.OUTPUT_PATH, self.ledger()),
             ):
                 target = root / path
@@ -573,12 +588,16 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         cls.config = readJson(ROOT / "res/maps/baldursGate/config.json")
         cls.script = (ROOT / "res/maps/baldursGate/script.py").read_text(encoding="utf-8")
         cls.poison = readJson(ROOT / POISON_PATH)
+        cls.followup = readJson(ROOT / FOLLOWUP_PATH)
         cls.ledger = readJson(ROOT / "tests/fixtures/baldurs_gate_city_ledger.json")
-        cls.expected = buildLedger(cls.source, cls.quests, cls.config, cls.script, poison=cls.poison)
+        cls.expected = buildLedger(
+            cls.source, cls.quests, cls.config, cls.script, poison=cls.poison, followup=cls.followup
+        )
 
     def testSavedLedgerCoversEverySourceObligationAndMatchesCurrentInputs(self):
         self.assertEqual(
-            expectedIds(self.source, self.quests, self.poison), {row["id"] for row in self.ledger["entries"]}
+            expectedIds(self.source, self.quests, self.poison, self.followup),
+            {row["id"] for row in self.ledger["entries"]},
         )
         self.assertEqual([], validateLedger(self.ledger, expected=self.expected))
         self.assertEqual(212, len(self.source["areas"]))
@@ -589,6 +608,7 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
             "tests/fixtures/baldurs_gate_city_source.json": self.source,
             "tests/fixtures/baldurs_gate_city_quests.json": self.quests,
             POISON_PATH: self.poison,
+            FOLLOWUP_PATH: self.followup,
         }
         for row in self.ledger["entries"]:
             for evidence in row["evidence"]:
