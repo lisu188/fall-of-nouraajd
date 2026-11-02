@@ -1501,6 +1501,119 @@ void testEffectCloneFixturePreservesStatsAcrossControllerTurns() {
     game->getContext()->shutdown();
 }
 
+void testMonsterFightControllerDiscountsRejectedTargetEffects() {
+    class DirectActionProbe : public CInteraction {
+      public:
+        int calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> victim) override {
+            ++calls;
+            victim->hurt(7);
+        }
+    };
+    auto verify = [](const std::string &candidateId, const std::string &activeId, const std::string &activeType,
+                     const std::string &activeName, bool duplicate, bool cumulative, bool sharedPrototype = false) {
+        auto game = fight_fixture_game();
+        register_effect_and_interaction(game);
+        auto monster = creature_at(0, 0, 0);
+        auto opponent = creature_at(1, 0, 0);
+        for (const auto &actor : {monster, opponent}) {
+            actor->setGame(game);
+            actor->getBaseStats()->setStamina(10);
+            actor->getBaseStats()->setIntelligence(100);
+            actor->getBaseStats()->setDmgMin(10);
+            actor->getBaseStats()->setDmgMax(10);
+            actor->setHp(actor->getHpMax());
+            actor->setMana(actor->getManaMax());
+        }
+        auto prototype = opponent_debuff(game, 4);
+        prototype->setType("CEffect");
+        prototype->setTypeId(candidateId);
+        prototype->setName("shared");
+        prototype->setCumulative(cumulative);
+        auto active = sharedPrototype ? prototype : opponent_debuff(game, 4);
+        active->setType(activeType);
+        active->setTypeId(activeId);
+        active->setName(activeName);
+        active->setCumulative(cumulative);
+        active->setTimeLeft(2);
+        opponent->addEffect(active);
+        const auto activeNameBefore = active->getName();
+        auto repeated = caster_interaction(game, 15, prototype);
+        repeated->setName("repeatedEffect");
+        repeated->setTypeId("repeatedEffect");
+        auto alternative = std::make_shared<DirectActionProbe>();
+        alternative->setGame(game);
+        alternative->setName("directAlternative");
+        alternative->setTypeId("directAlternative");
+        monster->addAction(repeated);
+        monster->addAction(alternative);
+        const auto mana = monster->getMana();
+        const auto hp = opponent->getHp();
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(monster, opponent), "a valid offensive alternative must remain usable");
+        expect_true(monster->getMana() == mana - (duplicate ? 0 : 15) && alternative->calls == (duplicate ? 1 : 0) &&
+                        opponent->getHp() == hp - (duplicate ? 7 : 0),
+                    "rejected duration credit must lose to a free direct action; a fresh effect keeps its rank");
+        expect_true(opponent->getEffects().contains(active) && active->getTimeLeft() == 2 &&
+                        opponent->getEffects().size() == (duplicate ? 1 : 2),
+                    "ranking must preserve the original effect pointer/time and native fresh-effect admission");
+        if (!duplicate) {
+            const auto effects = opponent->getEffects();
+            std::shared_ptr<CEffect> installed;
+            for (const auto &effect : effects)
+                if (effect != active)
+                    installed = effect;
+            expect_true(installed && installed != prototype && installed->getName() != prototype->getName() &&
+                            installed->getTypeId() == candidateId &&
+                            !CGameObject::sameConfiguredType(installed, active) &&
+                            active->getName() == activeNameBefore,
+                        "actual onAction must install a fresh clone, not rank the prototype as the installed object");
+        }
+        monster->releaseEffectReferences();
+        opponent->releaseEffectReferences();
+    };
+    verify("sameEffect", "sameEffect", "OtherRuntimeType", "differentName", true, false);
+    verify("sameEffect", "sameEffect", "CEffect", "shared", true, true);
+    verify("", "", "CEffect", "shared", false, false);
+    verify("", "", "OtherRuntimeType", "shared", false, false);
+    verify("differentEffect", "sameEffect", "CEffect", "shared", false, false);
+    verify("sameEffect", "", "CEffect", "shared", false, false);
+    verify("", "sameEffect", "CEffect", "shared", false, false);
+    verify("", "", "CEffect", "otherName", false, false);
+    verify("", "", "CEffect", "shared", false, false, true);
+    verify("sameEffect", "sameEffect", "CEffect", "shared", true, false, true);
+
+    auto game = fight_fixture_game();
+    register_effect_and_interaction(game);
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    monster->setMana(monster->getManaMax());
+    opponent->setHp(opponent->getHpMax());
+    auto active = opponent_debuff(game, 4);
+    active->setTypeId("compositeEffect");
+    active->setTimeLeft(2);
+    opponent->addEffect(active);
+    auto composite = std::make_shared<DirectActionProbe>();
+    composite->setGame(game);
+    composite->setName("composite");
+    composite->setTypeId("composite");
+    composite->setManaCost(5);
+    auto duplicate = opponent_debuff(game, 4);
+    duplicate->setTypeId("compositeEffect");
+    composite->setEffect(duplicate);
+    monster->addAction(composite);
+    const auto hp = opponent->getHp();
+    const auto mana = monster->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent) && composite->calls == 1 && opponent->getHp() == hp - 7 &&
+                    monster->getMana() == mana - 5,
+                "a duplicate effect must not suppress the direct payload of a composite interaction");
+    expect_true(opponent->getEffects() == std::set<std::shared_ptr<CEffect>>{active} && active->getTimeLeft() == 2,
+                "composite use preserves rejected-effect admission and does not refresh its old duration");
+    monster->releaseEffectReferences();
+    opponent->releaseEffectReferences();
+}
+
 void test_monster_fight_controller_applies_missing_self_buff() {
     auto game = fight_fixture_game();
     auto monster = self_target_fixture_monster(game, false); // full health: no heal/mana detours
@@ -2023,6 +2136,7 @@ int main() {
     test_monster_fight_controller_heals_when_next_hit_would_kill();
     testEffectCloneFixturePreservesStatsAcrossControllerTurns();
     test_monster_fight_controller_ranks_interactions_by_weakening();
+    testMonsterFightControllerDiscountsRejectedTargetEffects();
     test_monster_fight_controller_applies_missing_self_buff();
     test_monster_fight_controller_skips_duplicate_self_buff();
     test_monster_fight_controller_heals_self_only_when_hurt();

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <set>
+#include <utility>
 
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -407,6 +409,7 @@ int expected_incoming_hit(const std::shared_ptr<CCreature> &me, const std::share
 }
 
 thread_local std::optional<std::size_t> healingItemSelectionVisits;
+thread_local std::optional<performance_guard::InteractionSelectionWork> interactionSelectionWork;
 
 // Choose the least powerful heal that preserves the combatant. A nonviable weak
 // potion must not hide a stronger net-gain heal; emergency turns retain the
@@ -439,22 +442,66 @@ std::shared_ptr<CItem> selectHealingItem(const std::shared_ptr<CCreature> &me,
     return selected;
 }
 
+class TargetEffectAdmission {
+  public:
+    explicit TargetEffectAdmission(std::shared_ptr<CCreature> target) : target(target) {}
+
+    bool rejects(const std::shared_ptr<CEffect> &effect) const {
+        if (!effect)
+            return false;
+        const auto typeId = effect->getTypeId();
+        if (typeId.empty())
+            return false;
+        prepare();
+        if (interactionSelectionWork)
+            ++interactionSelectionWork->admissionLookups;
+        return configuredIds.contains(typeId);
+    }
+
+  private:
+    void prepare() const {
+        if (prepared)
+            return;
+        prepared = true;
+        if (interactionSelectionWork)
+            ++interactionSelectionWork->targetSnapshots;
+        for (const auto &active : target->getEffects()) {
+            if (interactionSelectionWork)
+                ++interactionSelectionWork->targetEffectEntries;
+            if (!active)
+                continue;
+            auto typeId = active->getTypeId();
+            if (!typeId.empty())
+                configuredIds.insert(std::move(typeId));
+        }
+    }
+
+    std::shared_ptr<CCreature> target;
+    mutable bool prepared = false;
+    mutable std::set<std::string> configuredIds;
+};
+
 // Deterministic estimate of how much a single cast weakens the opponent, used to
 // rank a caster's interactions. Every castable interaction is credited with the
 // caster's expected landed hit on the opponent (expected_incoming_hit in the
 // attacking direction: caster's top damage plus flat bonus, mitigated by the
 // opponent's normal resist and armor, with the block dice deliberately excluded
 // so the estimate stays stable). An interaction that also routes a non-buff
-// effect onto the opponent keeps weakening it for the effect's whole duration,
-// so credit that hit once more per lingering turn. Mana cost is intentionally
+// effect onto the opponent keeps weakening it for the effect's whole duration
+// unless the target already carries its configured type ID. Anonymous templates
+// retain their duration estimate because casting gives their clones fresh names.
+// Mana cost is intentionally
 // not part of the value: the previous selector maximized mana cost, which made
 // casters spend their priciest spell instead of their most weakening one.
 int weakening_estimate(const std::shared_ptr<CInteraction> &interaction, const std::shared_ptr<CCreature> &me,
-                       const std::shared_ptr<CCreature> &opponent) {
+                       const std::shared_ptr<CCreature> &opponent, const TargetEffectAdmission &targetEffects) {
+    if (interactionSelectionWork)
+        ++interactionSelectionWork->weakeningEvaluations;
     const int hit = expected_incoming_hit(opponent, me);
     int value = hit;
     const auto effect = interaction->getEffect();
-    if (effect && !interaction->effectRoutesToCaster(effect) && !effect->hasTag(CTag::Buff)) {
+    if (effect && !interaction->effectRoutesToCaster(effect) && !effect->hasTag(CTag::Buff) &&
+        !targetEffects.rejects(effect)) {
         // A lingering debuff/stun weakens even a caster with no melee damage, so
         // floor the per-turn value at 1 to keep such effects ranked above an
         // interaction that merely lands the same hit once.
@@ -679,9 +726,11 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     // Rank affordable, non-buff interactions by how much they weaken the current
     // opponent rather than by mana cost. Ties break toward the cheaper spell, then
     // by name, so the choice is deterministic regardless of container ordering.
-    auto pred = [me, opponent](const std::shared_ptr<CInteraction> &a, const std::shared_ptr<CInteraction> &b) {
-        const int wa = weakening_estimate(a, me, opponent);
-        const int wb = weakening_estimate(b, me, opponent);
+    const TargetEffectAdmission targetEffects(opponent);
+    auto pred = [me, opponent, &targetEffects](const std::shared_ptr<CInteraction> &a,
+                                               const std::shared_ptr<CInteraction> &b) {
+        const int wa = weakening_estimate(a, me, opponent, targetEffects);
+        const int wb = weakening_estimate(b, me, opponent, targetEffects);
         if (wa != wb) {
             return wa < wb;
         }
@@ -1097,4 +1146,12 @@ void resetHealingItemSelectionProbe() { healingItemSelectionVisits = 0; }
 std::size_t healingItemSelectionProbeCount() { return healingItemSelectionVisits.value_or(0); }
 
 void disableHealingItemSelectionProbe() { healingItemSelectionVisits.reset(); }
+
+void resetInteractionSelectionProbe() { interactionSelectionWork.emplace(); }
+
+InteractionSelectionWork interactionSelectionProbeCounts() {
+    return interactionSelectionWork.value_or(InteractionSelectionWork{});
+}
+
+void disableInteractionSelectionProbe() { interactionSelectionWork.reset(); }
 } // namespace performance_guard
