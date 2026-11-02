@@ -1569,8 +1569,11 @@ void testMonsterFightControllerDiscountsRejectedTargetEffects() {
                             active->getName() == activeNameBefore,
                         "actual onAction must install a fresh clone, not rank the prototype as the installed object");
         }
-        monster->releaseEffectReferences();
-        opponent->releaseEffectReferences();
+        monster->setEffects({});
+        opponent->setEffects({});
+        expect_true(monster->getEffects().empty() && opponent->getEffects().empty() &&
+                        game->getContext()->getEffectOwnerCount() == 0,
+                    "public cleanup must release both actor effect sets and their context ownership");
     };
     verify("sameEffect", "sameEffect", "OtherRuntimeType", "differentName", true, false);
     verify("sameEffect", "sameEffect", "CEffect", "shared", true, true);
@@ -1610,8 +1613,11 @@ void testMonsterFightControllerDiscountsRejectedTargetEffects() {
                 "a duplicate effect must not suppress the direct payload of a composite interaction");
     expect_true(opponent->getEffects() == std::set<std::shared_ptr<CEffect>>{active} && active->getTimeLeft() == 2,
                 "composite use preserves rejected-effect admission and does not refresh its old duration");
-    monster->releaseEffectReferences();
-    opponent->releaseEffectReferences();
+    monster->setEffects({});
+    opponent->setEffects({});
+    expect_true(monster->getEffects().empty() && opponent->getEffects().empty() &&
+                    game->getContext()->getEffectOwnerCount() == 0,
+                "composite fixture public cleanup must release its effect sets and context ownership");
 }
 
 void test_monster_fight_controller_applies_missing_self_buff() {
