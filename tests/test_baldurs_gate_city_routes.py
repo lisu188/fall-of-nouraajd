@@ -7,6 +7,7 @@ from collections import Counter
 import json
 from pathlib import Path
 import unittest
+from unittest import mock
 
 from scripts.build_baldurs_gate_city import decodeCityData
 from tests import gameplay_routes_baldurs_gate as routes
@@ -16,6 +17,57 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testComponentAwarePlanningHasBoundedExpansionAndCellWork(self):
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        approach = routes.cityApproachParents
+        work = {"expansions": 0, "cells": 0}
+
+        def counted(*args):
+            work["expansions"] += 1
+            self.assertLessEqual(work["expansions"], 40, "Fixed Lothander planner expansion budget")
+            result = approach(*args)
+            work["cells"] += len(result)
+            self.assertLessEqual(work["cells"], 20000, "Fixed Lothander planner reachable-cell budget")
+            return result
+
+        with mock.patch.object(routes, "cityApproachParents", side_effect=counted):
+            path = routes.cityTravelPath(
+                (156, 35, 0),
+                "AR0300",
+                "AR0300",
+                geometry["connections"],
+                lambda _link: True,
+                geometry["atlas"],
+                walkable,
+                portals,
+                destination_point=(183, 48, 0),
+            )
+        self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], [link["object"] for link in path])
+        self.assertEqual({"expansions": 34, "cells": 18210}, work)
+
+    def testUnreachableComponentCycleStopsAtDistinctArrivalBudget(self):
+        atlas = {"A": {"bounds": [0, 0, 0, 4, 1]}, "B": {"bounds": [6, 0, 0, 2, 1]}}
+        cells = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (6, 0, 0), (7, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0)})
+        links = [
+            {"object": "out", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "back", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [0, 0, 0]},
+        ]
+        approach, visits = routes.cityApproachParents, []
+
+        def counted(*args):
+            visits.append(tuple(args[0]))
+            self.assertLessEqual(len(visits), 2, "Repeated arrival must not expand the cyclic route again")
+            return approach(*args)
+
+        with mock.patch.object(routes, "cityApproachParents", side_effect=counted):
+            with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+                routes.cityTravelPath(
+                    (0, 0, 0), "A", "A", links, lambda _link: True, atlas, cells, portals, destination_point=(3, 0, 0)
+                )
+        self.assertEqual([(0, 0, 0), (6, 0, 0)], visits)
+
     def testLothanderContactNeedsTheAuthoredReturnToItsOwnStreetComponent(self):
         geometry = routes.documents()["geometry"]
         walkable, portals = routes.cityMovementCells()
