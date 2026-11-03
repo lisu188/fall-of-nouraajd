@@ -176,11 +176,11 @@ std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, in
     if (auto player = map->getPlayer()) {
         include_coords(bounds, hasBounds, player->getCoords());
     }
-    for (const auto &tile : map->getTiles()) {
+    map->forTiles([&](std::shared_ptr<CTile> tile) {
         if (tile && z_matches(tile->getCoords(), z)) {
             include_coords(bounds, hasBounds, tile->getCoords());
         }
-    }
+    });
     for (const auto &object : map->getObjects()) {
         if (object && z_matches(object->getCoords(), z)) {
             include_coords(bounds, hasBounds, object->getCoords());
@@ -297,16 +297,16 @@ std::size_t terrain_signature(const std::shared_ptr<CMap> &map, int z, const Lev
     hash_combine(seed, intHash(width));
     hash_combine(seed, intHash(height));
     hash_combine(seed, stringHash(default_tile_type(map, z)));
-    for (const auto &tile : map->getTiles()) {
+    map->forTiles([&](std::shared_ptr<CTile> tile) {
         if (!tile || !z_matches(tile->getCoords(), z)) {
-            continue;
+            return;
         }
         const auto coords = tile->getCoords();
         hash_combine(seed, intHash(coords.x));
         hash_combine(seed, intHash(coords.y));
         hash_combine(seed, intHash(coords.z));
         hash_combine(seed, stringHash(tile_type(tile)));
-    }
+    });
     return seed;
 }
 

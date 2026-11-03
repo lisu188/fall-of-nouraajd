@@ -407,6 +407,14 @@ class CMap : public CGameObject {
 };
 
 namespace performance_guard {
+struct MapTileTraversalWork {
+    std::size_t snapshots = 0;
+    std::size_t snapshotReferences = 0;
+    std::size_t directVisits = 0;
+};
+void resetMapTileTraversalProbe();
+MapTileTraversalWork mapTileTraversalWork();
+void disableMapTileTraversalProbe();
 void resetMapCoordinateLookupProbe();
 std::size_t mapCoordinateLookupProbeCount();
 void disableMapCoordinateLookupProbe();
