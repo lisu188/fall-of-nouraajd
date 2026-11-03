@@ -3091,9 +3091,12 @@ def load(self, context):
             yield uiRequest("showReader", flowGame(self.getGame()), row["title"], outcome["text"])
             return True
 
+        def canCityInterlude(self):
+            return self.canInteract() and world(self).getBoolProperty("plugin_cityFlag_cityInterludeReady")
+
         @resumableHook
         def cityInterlude(self):
-            if not self.canInteract() or not world(self).getBoolProperty("plugin_cityFlag_cityInterludeReady"):
+            if not self.canCityInterlude():
                 return False
             world(self).setBoolProperty("plugin_cityFlag_interludeOffered", True)
             yield uiRequest(
@@ -3106,10 +3109,15 @@ def load(self, context):
             )
             return True
 
+        def canReturnFromInterlude(self):
+            return (
+                self.canInteract()
+                and world(self).getBoolProperty("plugin_cityFlag_interludeOffered")
+                and world(self).getNumericProperty("plugin_cityPhase") != 7
+            )
+
         def returnFromInterlude(self):
-            if not self.canInteract() or not world(self).getBoolProperty("plugin_cityFlag_interludeOffered"):
-                return False
-            if world(self).getNumericProperty("plugin_cityPhase") == 7:
+            if not self.canReturnFromInterlude():
                 return False
             world(self).setNumericProperty("plugin_cityPhase", 7)
             world(self).setBoolProperty("plugin_cityFlag_fugitive", True)

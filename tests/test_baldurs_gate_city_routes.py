@@ -16,6 +16,332 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testInterludeMappingsSeparateUnavailableOffersFromSuccessfulReturn(self):
+        prefix = "res/maps/baldursGate/script.py:BaldursGateDialog."
+        for predicate in ("canCityInterlude", "canReturnFromInterlude"):
+            self.assertEqual(
+                ("baldursGate.interlude.earlyReturnRefused",), routes.SOURCE_BRANCHES.get(prefix + predicate)
+            )
+        for action in ("cityInterlude", "returnFromInterlude"):
+            self.assertEqual(
+                ("baldursGate.quest.cythandriaDiary.complete",), routes.SOURCE_BRANCHES.get(prefix + action)
+            )
+        positive = [case for case in routes.CASES if "baldursGate.quest.cythandriaDiary.complete" in case.branches]
+        self.assertEqual(1, len(positive), "Successful return needs its existing positive registered quest plan")
+        quest = next(row for row in routes.documents()["quests"] if row["id"] == "cythandriaDiary")
+        self.assertEqual(7, quest["phase"], "The positive plan must actually request the later city visit")
+        history = {
+            case.id: case
+            for case in routes.CASES
+            if case.id in {"baldurs-gate-history-helped", "baldurs-gate-history-killed"}
+        }
+        self.assertEqual(2, len(history))
+        self.assertTrue(all(case.isolated_gui for case in history.values()))
+        self.assertTrue(all("baldursGate.interlude.earlyReturnRefused" in case.branches for case in history.values()))
+
+    def testPositiveInterludePlanSettlesPrerequisitesThenChoosesBothAuthoredActions(self):
+        from types import SimpleNamespace
+
+        events = []
+        phase = [5]
+
+        def choose(dialog, action):
+            events.append(("choose", dialog, action))
+            if action == "returnFromInterlude":
+                phase[0] = 7
+
+        planner = routes.QuestRoute.__new__(routes.QuestRoute)
+        planner.d = SimpleNamespace(test=self, number=lambda _key: phase[0], choose=choose)
+        planner.settle = lambda key, choice: events.append(("settle", key, choice))
+        planner.contact = lambda actor: events.append(("contact", actor))
+        planner.ensurePhase(7)
+        self.assertEqual(
+            [
+                ("settle", "eltanIronThrone", "complete"),
+                ("contact", "cityStart"),
+                ("choose", "cityStartDialog", "cityInterlude"),
+                ("choose", "cityStartDialog", "returnFromInterlude"),
+            ],
+            events,
+        )
+        self.assertEqual(7, phase[0])
+        planner.ensurePhase(7)
+        self.assertEqual(4, len(events), "An existing later visit must not replay departure")
+
+    def historyUiDriver(self, mutation=None):
+        """A paged native-API double; this is source regression evidence only."""
+        from tempfile import TemporaryDirectory
+
+        home = TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        test = self
+
+        class Driver:
+            game, game_map, player = "game", "map", "player"
+            trace_path = Path(home.name) / "native.jsonl"
+            _combat_trace_seq = 0
+            position = (207, 85, 0)
+            history = None
+            frozen = False
+            panel_open = False
+            focused = -1
+            page = 0
+
+            def __init__(self):
+                self.test = test
+                self.history, self.records, self.choices, self.moves, self.saves = {}, [], [], [], []
+                self.trace_path.write_text("", encoding="utf-8")
+                actions = [
+                    "historyAldethHelped",
+                    "historyAldethKilled",
+                    "historyTenyaHelped",
+                    "historyTenyaKilled",
+                    "cityInterlude",
+                    "returnFromInterlude",
+                    "historyEldothAbsent",
+                    "finishHistoryChoices",
+                    "",
+                ]
+                self.rows = []
+                for number, action in enumerate(actions):
+                    row = {"number": number, "action": action, "text": "Reply " + (action or "Leave")}
+                    condition = {
+                        "cityInterlude": "canCityInterlude",
+                        "returnFromInterlude": "canReturnFromInterlude",
+                        "finishHistoryChoices": "canFinishHistoryChoices",
+                    }.get(action)
+                    if condition:
+                        row["condition"] = condition
+                    self.rows.append(row)
+
+            def available(self):
+                return [
+                    row
+                    for row in self.rows
+                    if not row.get("condition") or self.condition("cityStartDialog", row["condition"])
+                ]
+
+            def condition(self, _dialog_id, method):
+                if method == "canFinishHistoryChoices":
+                    return not self.frozen
+                return mutation == "unearnedOffer" and method == "canCityInterlude"
+
+            def apply(self, action):
+                self.choices.append(action)
+                if action.startswith("history"):
+                    key = next(key for key in ("aldeth", "tenya", "eldoth") if key in action.lower())
+                    if not self.frozen and key not in self.history:
+                        self.history[key] = next(
+                            value for value in ("helped", "killed", "absent") if value in action.lower()
+                        )
+                elif action == "finishHistoryChoices":
+                    self.frozen = True
+                    for key in ("aldeth", "tenya", "eldoth"):
+                        self.history.setdefault(key, "unspecified")
+
+            def call(self, owner, method, *args):
+                if method == "createObject":
+                    return "dialog"
+                if method == "invokeCondition":
+                    return self.condition("cityStartDialog", args[0])
+                if method == "getGuiHandler":
+                    return "handler"
+                if method == "openDialog":
+                    self.panel_open, self.focused, self.page = True, -1, 0
+                    return "panel"
+                if method == "getObjectProperty":
+                    return "dialog"
+                if method == "getTypeId":
+                    return "cityStartDialog"
+                if method == "getChildren":
+                    indexes = list(range(self.page, min(self.page + 2, len(self.available()))))
+                    if mutation == "missingPage":
+                        indexes = [index for index in indexes if index != len(self.available()) - 1]
+                    if mutation == "foreignButton":
+                        indexes.append(len(self.available()))
+                    return indexes
+                if method == "getType":
+                    return "CButton"
+                if method == "getParent":
+                    return "gui" if self.panel_open else None
+                if method == "getStringProperty" and isinstance(owner, int):
+                    if args[0] == "click":
+                        return "chooseReply" + str(owner)
+                    row = self.available()[owner]
+                    return str(owner + 1) + "  " + ("wrong native text" if mutation == "wrongText" else row["text"])
+                if method == "keyboardEvent":
+                    key = args[-1]
+                    if key == 1073741905:
+                        self.focused = min(self.focused + 1, len(self.available()) - 1)
+                        if not self.page <= self.focused < self.page + 2:
+                            self.page = self.focused
+                    elif key == 13:
+                        row = self.available()[self.focused]
+                        record = {
+                            "seq": len(self.choices) + 1,
+                            "event": "dialog_option_selected",
+                            "dialog": {"typeId": "cityStartDialog"},
+                            "stateId": "ENTRY",
+                            "action": row["action"],
+                            "optionNumber": row["number"],
+                        }
+                        if mutation == "wrongNumber":
+                            record["optionNumber"] += 1
+                        if mutation != "missingTrace":
+                            with self.trace_path.open("a", encoding="utf-8") as stream:
+                                stream.write(json.dumps(record) + "\n")
+                        self.apply(row["action"])
+                    elif key == 27:
+                        self.panel_open = False
+                    return True
+                if method == "getItems":
+                    return []
+                if method == "getNumericProperty":
+                    return 10000
+                if method == "getStringProperty":
+                    data = self.history if args[0] == "plugin_cityHistory" else {"history": self.history}
+                    return json.dumps(data)
+                raise AssertionError((owner, method, args))
+
+            def _dialogStates(self, _dialog_id):
+                return {"ENTRY": {"options": [{"properties": row} for row in self.rows]}}
+
+            def enableIsolatedGui(self):
+                return "gui"
+
+            def nativePanel(self, _type_name, *, required=True):
+                panel = "panel" if self.panel_open else None
+                if required:
+                    test.assertIsNotNone(panel)
+                return panel
+
+            def assertNativeCombatOutcomes(self):
+                if self.trace_path.read_text():
+                    self._combat_trace_seq = json.loads(self.trace_path.read_text().splitlines()[-1])["seq"]
+
+            def pump(self):
+                pass
+
+            def record(self, record, **_kwargs):
+                self.records.append(record)
+
+            def startMap(self, _name):
+                pass
+
+            def flag(self, key):
+                return self.frozen if key == "plugin_cityHistoryFrozen" else key == "plugin_cityInitialized"
+
+            def number(self, key):
+                return {
+                    "plugin_cityStartingGoldGrant": 1000,
+                    "plugin_cityStartingExpGrant": 10000,
+                    "plugin_cityPhase": 5,
+                }[key]
+
+            def coords(self):
+                return self.position
+
+            def navigateTo(self, _name):
+                self.position = (207, 85, 0)
+                self.moves.append(self.position)
+
+            def canStep(self, _point):
+                return True
+
+            def navigateCoords(self, point, *, limit):
+                self.position = point
+                self.moves.append(point)
+
+            def gold(self):
+                return 1000
+
+            def choose(self, _dialog_id, action):
+                test.assertNotIn(action, ("cityInterlude", "returnFromInterlude"), "Cannot select an unoffered reply")
+                self.apply(action)
+
+            def saveAndReload(self, label):
+                self.saves.append((label, dict(self.history), self.frozen))
+
+            def check(self, branch, condition, **evidence):
+                test.assertTrue(condition)
+                self.records.append({"branch": branch, **evidence})
+
+        return Driver()
+
+    def requireHistoryUiHelper(self):
+        helper = getattr(routes, "historyDialogUi", None)
+        self.assertTrue(callable(helper), "History routes must inspect the actual native filtered replies")
+        return helper
+
+    def testHistoryNativeInspectionVisitsAllFilteredPagesWithoutSelectingHiddenOffers(self):
+        driver = self.historyUiDriver()
+        witness = self.requireHistoryUiHelper()(driver)
+        self.assertEqual("nativeUnofferedHistoryInspection", witness["kind"])
+        self.assertEqual(7, len(witness["replies"]))
+        self.assertEqual([], driver.choices)
+        self.assertFalse(driver.panel_open)
+        self.assertFalse({"cityInterlude", "returnFromInterlude"} & {row["action"] for row in witness["replies"]})
+
+    def testHistoryNativeSelectionUsesFilteredIndexButOriginalResourceNumber(self):
+        driver = self.historyUiDriver()
+        witness = self.requireHistoryUiHelper()(driver, "finishHistoryChoices")
+        self.assertEqual(["finishHistoryChoices"], driver.choices)
+        self.assertEqual(1, witness["nativeOptionSeq"])
+        self.assertEqual({"aldeth": "unspecified", "tenya": "unspecified", "eldoth": "unspecified"}, driver.history)
+        self.assertFalse(driver.panel_open)
+
+    def testHistoryNativeInspectionRejectsForeignRepliesWrongTextAndMissingPages(self):
+        helper = self.requireHistoryUiHelper()
+        for mutation in ("foreignButton", "wrongText", "missingPage", "unearnedOffer"):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                helper(self.historyUiDriver(mutation))
+
+    def testHistoryNativeChoiceRequiresTheExactActualInputReceipt(self):
+        helper = self.requireHistoryUiHelper()
+        for mutation in ("missingTrace", "wrongNumber"):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                helper(self.historyUiDriver(mutation), "finishHistoryChoices")
+
+    def testHistoryRoutePreservesFreezeDefaultsAndUsesNativeChoicesAfterRealMovement(self):
+        from unittest.mock import patch
+
+        for outcome in ("Helped", "Killed"):
+            with self.subTest(outcome=outcome):
+                driver = self.historyUiDriver()
+                with patch.object(routes, "cityMovementCells", return_value=(frozenset({(208, 85, 0)}), frozenset())):
+                    routes.history(driver, outcome)
+                expected = {"aldeth": outcome.lower(), "tenya": outcome.lower(), "eldoth": "unspecified"}
+                self.assertEqual(expected, driver.history)
+                self.assertEqual(expected, driver.saves[0][1])
+                self.assertTrue(driver.saves[0][2])
+                self.assertIn((208, 85, 0), driver.moves)
+                self.assertEqual((207, 85, 0), driver.moves[-1])
+                selected = [
+                    row["nativeHistoryUi"]
+                    for row in driver.records
+                    if row.get("nativeHistoryUi", {}).get("kind") == "nativeHistoryChoice"
+                ]
+                self.assertEqual(6, len(selected), "Every history choice needs its actual native callback receipt")
+                early_return = next(
+                    row for row in driver.records if row.get("branch") == "baldursGate.interlude.earlyReturnRefused"
+                )
+                self.assertEqual("unavailable-unoffered", early_return["outcome"])
+                self.assertTrue(early_return["nativeInspection"])
+
+    def testHistoryRoutesDeclareIsolatedGuiPreserveClassesAndBudgets(self):
+        selected = {case.id: case for case in routes.CASES if case.id.startswith("baldurs-gate-history-")}
+        self.assertEqual({"baldurs-gate-history-helped", "baldurs-gate-history-killed"}, set(selected))
+        for identity, class_id in (
+            ("baldurs-gate-history-helped", "Wayfarer"),
+            ("baldurs-gate-history-killed", "Inquisitor"),
+        ):
+            with self.subTest(route=identity):
+                case = selected[identity]
+                self.assertTrue(case.isolated_gui, "Native history panels require the declared isolated GUI route")
+                self.assertEqual((class_id,), case.classes)
+                self.assertEqual(90, case.duration_seconds)
+                self.assertIn("baldursGate.interlude.earlyReturnRefused", case.branches)
+
     def testNortheastArrivalCannotReachItsWestExitEvenWithOtherPortalCellsAllowed(self):
         walkable, portals = routes.cityMovementCells()
         bounds = routes.documents()["geometry"]["atlas"]["AR0300"]["bounds"]
@@ -408,6 +734,8 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
+                "baldurs-gate-history-helped",
+                "baldurs-gate-history-killed",
             },
             set(cases),
         )

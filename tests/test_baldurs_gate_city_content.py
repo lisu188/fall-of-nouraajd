@@ -13,7 +13,7 @@ from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from scripts.build_baldurs_gate_city import decodeCityData
+from scripts.build_baldurs_gate_city import compileDialogs, decodeCityData
 from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, renderCallbacks, storeDialogRows
 from scripts.build_baldurs_gate_city_relocations import buildRelocations
 from tests.hook_flow_support import installHookFlows
@@ -1552,6 +1552,133 @@ class BaldursGateCityContentTest(unittest.TestCase):
         with patch.object(owner, "SCRIPT", source), patch.object(owner, "CityModel", return_value=model):
             with self.assertRaisesRegex(AssertionError, "next"):
                 self.testResourceCallbacksUseOnlyNativeAllowedBuiltins()
+
+    def interludeFixture(self):
+        model = CityModel()
+        start = model.createObject("BaldursGateStart")
+        start.setStringProperty("name", "cityStart")
+        model.game_map.addObject(start)
+        dialog = model.dialog(start)
+        self.assertTrue(
+            callable(getattr(dialog, "canCityInterlude", None)), "Departure needs its own visible-condition predicate"
+        )
+        self.assertTrue(
+            callable(getattr(dialog, "canReturnFromInterlude", None)),
+            "Return needs its own visible-condition predicate",
+        )
+        return model, dialog
+
+    def interludeOptions(self):
+        document = compileDialogs(
+            {"cityStart": {"class": "BaldursGateStart", "properties": {"label": "City history and journeys"}}},
+            DOCUMENT,
+        )
+        return document["cityStartDialog"]["properties"]["states"][0]["properties"]["options"]
+
+    def testInterludeOptionsUseExistingActionEligibilityAndStableNumbers(self):
+        options = self.interludeOptions()
+        expected = {"cityInterlude": "canCityInterlude", "returnFromInterlude": "canReturnFromInterlude"}
+        for action, condition in expected.items():
+            matching = [option["properties"] for option in options if option["properties"].get("action") == action]
+            self.assertEqual(1, len(matching))
+            self.assertEqual(condition, matching[0].get("condition"))
+            self.assertEqual("ENTRY", matching[0]["nextStateId"])
+        self.assertEqual(
+            [(4, "cityInterlude"), (5, "returnFromInterlude")],
+            [
+                (option["properties"]["number"], option["properties"]["action"])
+                for option in options
+                if option["properties"].get("action") in expected
+            ],
+        )
+        history = [
+            option["properties"] for option in options if option["properties"].get("action") == "finishHistoryChoices"
+        ]
+        self.assertEqual("canFinishHistoryChoices", history[0]["condition"])
+
+    def testFreshInterludeOptionsAndRejectedActionsLeaveCityUnchanged(self):
+        model, dialog = self.interludeFixture()
+        before = dict(model.game_map.properties)
+        self.assertFalse(dialog.canCityInterlude())
+        self.assertFalse(dialog.canReturnFromInterlude())
+        self.assertFalse(dialog.cityInterlude())
+        self.assertFalse(dialog.returnFromInterlude())
+        self.assertEqual(before, model.game_map.properties)
+        self.assertEqual([], model.readers)
+        self.assertEqual([], model.player.getQuests())
+
+    def testInterludeReadinessAndInteractionMatchDepartureActionExactly(self):
+        for interaction in (False, True):
+            for ready in (False, True):
+                with self.subTest(interaction=interaction, ready=ready):
+                    model, dialog = self.interludeFixture()
+                    dialog.canInteract = lambda: interaction
+                    model.game_map.setBoolProperty("plugin_cityFlag_cityInterludeReady", ready)
+                    before = dict(model.game_map.properties)
+                    expected = interaction and ready
+                    self.assertIs(dialog.canCityInterlude(), expected)
+                    self.assertEqual(before, model.game_map.properties)
+                    self.assertIs(dialog.cityInterlude(), expected)
+                    self.assertEqual(5, model.game_map.getNumericProperty("plugin_cityPhase"))
+                    self.assertEqual(expected, model.game_map.getBoolProperty("plugin_cityFlag_interludeOffered"))
+                    self.assertEqual(1 if expected else 0, len(model.readers))
+                    if not expected:
+                        self.assertEqual(before, model.game_map.properties)
+
+    def testInterludeReturnMatchesOfferInteractionAndExistingPhaseSevenBoundary(self):
+        for interaction in (False, True):
+            for offered in (False, True):
+                for phase in (4, 5, 6, 7, 8):
+                    with self.subTest(interaction=interaction, offered=offered, phase=phase):
+                        model, dialog = self.interludeFixture()
+                        dialog.canInteract = lambda: interaction
+                        model.clock.spawnActors = Mock()
+                        model.clock.applySchedules = Mock()
+                        model.game_map.setBoolProperty("plugin_cityFlag_interludeOffered", offered)
+                        model.game_map.setNumericProperty("plugin_cityPhase", phase)
+                        before = dict(model.game_map.properties)
+                        expected = interaction and offered and phase != 7
+                        self.assertIs(dialog.canReturnFromInterlude(), expected)
+                        self.assertEqual(before, model.game_map.properties)
+                        self.assertIs(dialog.returnFromInterlude(), expected)
+                        if expected:
+                            self.assertEqual(7, model.game_map.getNumericProperty("plugin_cityPhase"))
+                            self.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_fugitive"))
+                            model.clock.spawnActors.assert_called_once_with()
+                            model.clock.applySchedules.assert_called_once_with()
+                        else:
+                            self.assertEqual(before, model.game_map.properties)
+                            model.clock.spawnActors.assert_not_called()
+                            model.clock.applySchedules.assert_not_called()
+                        self.assertEqual([], model.readers)
+
+    def testInterludePredicateDoesNotInventOfferedOrPhaseRestrictions(self):
+        model, dialog = self.interludeFixture()
+        model.game_map.setBoolProperty("plugin_cityFlag_cityInterludeReady", True)
+        model.game_map.setBoolProperty("plugin_cityFlag_interludeOffered", True)
+        model.game_map.setNumericProperty("plugin_cityPhase", 7)
+        before = dict(model.game_map.properties)
+        self.assertTrue(dialog.canInteract())
+        self.assertTrue(dialog.canCityInterlude())
+        self.assertFalse(dialog.canReturnFromInterlude())
+        self.assertEqual(before, model.game_map.properties)
+
+    def testDeferringInterludeReturnPreservesCityProgressAndExplorationExit(self):
+        model, dialog = self.interludeFixture()
+        model.game_map.setBoolProperty("plugin_cityFlag_cityInterludeReady", True)
+        model.game_map.setStringProperty("plugin_cityQuest_optionalDeferred", "active")
+        self.assertTrue(dialog.cityInterlude())
+        after_offer = dict(model.game_map.properties)
+        for _ in range(3):
+            self.assertTrue(dialog.canReturnFromInterlude())
+            self.assertTrue(dialog.canCityInterlude())
+        self.assertEqual(after_offer, model.game_map.properties)
+        self.assertEqual(5, model.game_map.getNumericProperty("plugin_cityPhase"))
+        self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_optionalDeferred"))
+        exit_option = self.interludeOptions()[-1]["properties"]
+        self.assertEqual("Return to exploration.", exit_option["text"])
+        self.assertEqual("EXIT", exit_option["nextStateId"])
+        self.assertNotIn("action", exit_option)
 
 
 if __name__ == "__main__":

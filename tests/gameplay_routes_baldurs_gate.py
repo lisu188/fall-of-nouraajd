@@ -371,29 +371,142 @@ def cityTour(d):
     )
 
 
+def historyDialogUi(d, action=None):
+    """Inspect or select actual filtered history replies through the isolated native panel."""
+    from tests.gameplay_branch_driver import readNewNativeTrace
+
+    gui = d.enableIsolatedGui()
+    d.test.assertIsNotNone(d.trace_path, "Native history choices require the actual option trace")
+    d.test.assertIsNone(d.nativePanel("CGameDialogPanel", required=False), "An earlier dialog is still open")
+    dialog_id = "cityStartDialog"
+    dialog = d.call(d.game, "createObject", dialog_id)
+    options = [
+        row["properties"]
+        for row in sorted(d._dialogStates(dialog_id)["ENTRY"]["options"], key=lambda row: row["properties"]["number"])
+        if not row["properties"].get("condition") or d.call(dialog, "invokeCondition", row["properties"]["condition"])
+    ]
+    d.test.assertLessEqual(len(options), 32, "Bounded native history reply inspection")
+    for method in ("canCityInterlude", "canReturnFromInterlude"):
+        d.test.assertFalse(d.call(dialog, "invokeCondition", method), "An unearned interlude offer became available")
+    d.test.assertFalse({"cityInterlude", "returnFromInterlude"} & {row.get("action") for row in options})
+    d.assertNativeCombatOutcomes()
+    after_seq = d._combat_trace_seq
+    handler = d.call(d.game, "getGuiHandler")
+    panel = d.call(handler, "openDialog", dialog)
+    d.test.assertEqual(panel, d.nativePanel("CGameDialogPanel"))
+    actual_dialog = d.call(panel, "getObjectProperty", "dialog")
+    d.test.assertEqual(dialog_id, d.call(actual_dialog, "getTypeId"))
+    observed = {}
+
+    def inspectButtons():
+        for child in d.call(panel, "getChildren"):
+            if d.call(child, "getType") != "CButton":
+                continue
+            click = d.call(child, "getStringProperty", "click")
+            if not click.startswith("chooseReply"):
+                continue
+            suffix = click.removeprefix("chooseReply")
+            d.test.assertTrue(suffix.isdecimal(), ("Unexpected native reply callback", click))
+            index = int(suffix)
+            d.test.assertLess(index, len(options), "A native reply is absent from the filtered authored catalog")
+            row = options[index]
+            text = str(index + 1) + "  " + (row.get("actionLabel", "") + "\n" if row.get("actionLabel") else "")
+            text += row["text"]
+            d.test.assertEqual(text, d.call(child, "getStringProperty", "text"), "Native reply text/action mismatch")
+            observed[index] = {"action": row.get("action", ""), "text": row["text"], "number": row["number"]}
+
+    inspectButtons()
+    if action is None:
+        for _ in options:
+            d.call(panel, "keyboardEvent", gui, 768, 1073741905)
+            inspectButtons()
+        d.test.assertEqual(set(range(len(options))), set(observed), "Native history pagination omitted a reply")
+    else:
+        indexes = [index for index, row in enumerate(options) if row.get("action") == action]
+        d.test.assertEqual(1, len(indexes), ("Expected one available native history action", action))
+        index = indexes[0]
+        for _ in range(index + 1):
+            d.call(panel, "keyboardEvent", gui, 768, 1073741905)
+        inspectButtons()
+        d.test.assertIn(index, observed, "The selected reply must be present in the actual native viewport")
+        d.call(panel, "keyboardEvent", gui, 768, 13)
+        d.pump()
+    d.call(panel, "keyboardEvent", gui, 768, 27)
+    d.pump()
+    d.test.assertIsNone(d.call(panel, "getParent"), "Native history inspection left its dialog open")
+    records = readNewNativeTrace(d.trace_path, {}, after_seq)
+    selections = [row for row in records if row.get("event") == "dialog_option_selected"]
+    if action is None:
+        d.test.assertFalse(selections, "Inspecting and cancelling must not choose an authored reply")
+    else:
+        d.test.assertEqual(1, len(selections), "Native history choice requires exactly one input receipt")
+        selection = selections[0]
+        d.test.assertEqual(
+            (dialog_id, "ENTRY", action, options[index]["number"]),
+            (
+                selection.get("dialog", {}).get("typeId"),
+                selection.get("stateId"),
+                selection.get("action"),
+                selection.get("optionNumber"),
+            ),
+            "Native history receipt does not identify the selected authored reply",
+        )
+    witness = {
+        "kind": "nativeHistoryChoice" if action else "nativeUnofferedHistoryInspection",
+        "dialog": dialog_id,
+        "action": action,
+        "replies": [observed[index] for index in sorted(observed)],
+        "nativeOptionSeq": selections[0]["seq"] if selections else None,
+    }
+    d.record({"nativeHistoryUi": witness}, replay=True)
+    return witness
+
+
 def history(d, outcome):
     start(d)
     d.navigateTo("cityStart")
-    d.choose("cityStartDialog", "historyAldeth" + outcome)
-    d.choose("cityStartDialog", "historyTenya" + outcome)
+    origin = d.coords()
+    walkable, portals = cityMovementCells()
+    neighbors = [(origin[0] + dx, origin[1] + dy, origin[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+    neighbor = next((point for point in neighbors if point in walkable - portals and d.canStep(point)), None)
+    d.test.assertIsNotNone(neighbor, "The real hero needs an authored step away from the starting event")
+    d.navigateCoords(neighbor, limit=8)
+    d.test.assertEqual(neighbor, d.coords())
+    d.navigateTo("cityStart")
+    d.test.assertEqual(origin, d.coords())
+    before = resources(d)
+    historyDialogUi(d)
+    d.test.assertEqual(before, resources(d))
+    d.test.assertEqual({}, read(d, d.game_map, "plugin_cityHistory", {}))
+    d.test.assertEqual(5, d.number("plugin_cityPhase"))
+    historyDialogUi(d, "historyAldeth" + outcome)
+    historyDialogUi(d, "historyTenya" + outcome)
     expected = {"aldeth": outcome.lower(), "tenya": outcome.lower()}
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
     other = "Killed" if outcome == "Helped" else "Helped"
-    d.choose("cityStartDialog", "historyAldeth" + other)
-    d.choose("cityStartDialog", "historyTenya" + other)
+    historyDialogUi(d, "historyAldeth" + other)
+    historyDialogUi(d, "historyTenya" + other)
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
-    d.choose("cityStartDialog", "finishHistoryChoices")
-    d.choose("cityStartDialog", "historyEldothAbsent")
+    historyDialogUi(d, "finishHistoryChoices")
+    historyDialogUi(d, "historyEldothAbsent")
+    expected["eldoth"] = "unspecified"
     d.test.assertTrue(d.flag("plugin_cityHistoryFrozen"))
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityStartingProfile", {})["history"])
-    before = resources(d)
-    d.choose("cityStartDialog", "returnFromInterlude")
+    historyDialogUi(d)
     d.test.assertEqual(5, d.number("plugin_cityPhase"))
     d.test.assertEqual(before, resources(d))
     d.saveAndReload("city-history-" + outcome.lower())
+    d.test.assertEqual(before, resources(d))
+    d.test.assertFalse(d.condition("cityStartDialog", "canCityInterlude"))
+    d.test.assertFalse(d.condition("cityStartDialog", "canReturnFromInterlude"))
     d.check("baldursGate.history." + outcome.lower(), expected == read(d, d.game_map, "plugin_cityHistory", {}))
-    d.check("baldursGate.interlude.earlyReturnRefused", d.number("plugin_cityPhase") == 5)
+    d.check(
+        "baldursGate.interlude.earlyReturnRefused",
+        d.number("plugin_cityPhase") == 5,
+        outcome="unavailable-unoffered",
+        nativeInspection=True,
+    )
 
 
 def openContainer(d, name, *, forced=False):
@@ -1747,6 +1860,7 @@ CASES = (
             classes=("Wayfarer",),
             sources=SOURCES,
             duration_seconds=90,
+            isolated_gui=True,
         ),
         RouteCase(
             "baldurs-gate-history-killed",
@@ -1757,6 +1871,7 @@ CASES = (
             classes=("Inquisitor",),
             sources=SOURCES,
             duration_seconds=90,
+            isolated_gui=True,
         ),
         RouteCase(
             "baldurs-gate-ownership",
@@ -2010,7 +2125,8 @@ SOURCE_BRANCHES = {
             ("historyAldethKilled", "baldursGate.history.killed"),
             ("historyTenyaHelped", "baldursGate.history.helped"),
             ("historyTenyaKilled", "baldursGate.history.killed"),
-            ("returnFromInterlude", "baldursGate.interlude.earlyReturnRefused"),
+            ("canCityInterlude", "baldursGate.interlude.earlyReturnRefused"),
+            ("canReturnFromInterlude", "baldursGate.interlude.earlyReturnRefused"),
             ("unlock", "baldursGate.locks.picked"),
             ("force", "baldursGate.locks.forced"),
             ("open", "baldursGate.ownership.exactLootAndReload"),
@@ -2067,6 +2183,9 @@ SOURCE_BRANCHES.update(
         "res/maps/baldursGate/script.py:BaldursGateDialog.close": ("baldursGate.doors.openAndClose",),
         "res/maps/baldursGate/script.py:BaldursGateDialog.disarm": ("baldursGate.traps.disarmed",),
         "res/maps/baldursGate/script.py:BaldursGateDialog.cityInterlude": (
+            "baldursGate.quest.cythandriaDiary.complete",
+        ),
+        "res/maps/baldursGate/script.py:BaldursGateDialog.returnFromInterlude": (
             "baldursGate.quest.cythandriaDiary.complete",
         ),
         "res/maps/baldursGate/script.py:BaldursGateDialog.warnNarlen": ("baldursGate.quest.narlenLookout.complete",),
