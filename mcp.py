@@ -1421,6 +1421,11 @@ class EngineMcpServer:
                         "args": {"type": "array", "default": []},
                         "kwargs": {"type": "object", "default": {}},
                         "include_handle_methods": {"type": "boolean", "default": True},
+                        "include_text_content": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Set false only for structuredContent-aware clients to omit duplicate JSON text.",
+                        },
                     },
                     "required": ["name"],
                     "additionalProperties": False,
@@ -1448,6 +1453,11 @@ class EngineMcpServer:
                         "args": {"type": "array", "default": []},
                         "kwargs": {"type": "object", "default": {}},
                         "include_handle_methods": {"type": "boolean", "default": True},
+                        "include_text_content": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Set false only for structuredContent-aware clients to omit duplicate JSON text.",
+                        },
                     },
                     "required": ["handle", "method"],
                     "additionalProperties": False,
@@ -1692,6 +1702,12 @@ class EngineMcpServer:
         if not isinstance(arguments, dict):
             raise ProtocolError(-32602, "Invalid params")
 
+        if (
+            tool_name in {"engine_call", "engine_handle_call"}
+            and type(arguments.get("include_text_content", True)) is not bool
+        ):
+            raise ProtocolError(-32602, "include_text_content must be a boolean")
+
         if tool_name == "engine_list":
             exports = [
                 {
@@ -1755,6 +1771,7 @@ class EngineMcpServer:
         call_args = arguments.get("args", [])
         call_kwargs = arguments.get("kwargs", {})
         include_handle_methods = arguments.get("include_handle_methods", True)
+        include_text_content = arguments.get("include_text_content", True)
 
         if not isinstance(name, str) or not name:
             raise ProtocolError(-32602, "engine_call requires non-empty string `name`")
@@ -1762,6 +1779,8 @@ class EngineMcpServer:
             raise ProtocolError(-32602, "engine_call `args` must be an array")
         if type(include_handle_methods) is not bool:
             raise ProtocolError(-32602, "include_handle_methods must be a boolean")
+        if type(include_text_content) is not bool:
+            raise ProtocolError(-32602, "include_text_content must be a boolean")
         if not isinstance(call_kwargs, dict):
             raise ProtocolError(-32602, "engine_call `kwargs` must be an object")
 
@@ -1784,12 +1803,16 @@ class EngineMcpServer:
                 "result": serialized,
             }
             return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": json.dumps(structured, ensure_ascii=False),
-                    }
-                ],
+                "content": (
+                    [
+                        {
+                            "type": "text",
+                            "text": json.dumps(structured, ensure_ascii=False),
+                        }
+                    ]
+                    if include_text_content
+                    else []
+                ),
                 "structuredContent": structured,
                 "isError": False,
             }
@@ -1801,12 +1824,16 @@ class EngineMcpServer:
                 "traceback": traceback.format_exc(limit=10),
             }
             return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": json.dumps(error_payload, ensure_ascii=False),
-                    }
-                ],
+                "content": (
+                    [
+                        {
+                            "type": "text",
+                            "text": json.dumps(error_payload, ensure_ascii=False),
+                        }
+                    ]
+                    if include_text_content
+                    else []
+                ),
                 "structuredContent": error_payload,
                 "isError": True,
             }
@@ -1823,6 +1850,7 @@ class EngineMcpServer:
         call_args = arguments.get("args", [])
         call_kwargs = arguments.get("kwargs", {})
         include_handle_methods = arguments.get("include_handle_methods", True)
+        include_text_content = arguments.get("include_text_content", True)
 
         if not isinstance(handle, str) or not handle:
             raise ProtocolError(-32602, "engine_handle_call requires non-empty string `handle`")
@@ -1832,12 +1860,16 @@ class EngineMcpServer:
             raise ProtocolError(-32602, "engine_handle_call `args` must be an array")
         if type(include_handle_methods) is not bool:
             raise ProtocolError(-32602, "include_handle_methods must be a boolean")
+        if type(include_text_content) is not bool:
+            raise ProtocolError(-32602, "include_text_content must be a boolean")
         if not isinstance(call_kwargs, dict):
             raise ProtocolError(-32602, "engine_handle_call `kwargs` must be an object")
         if method.startswith("_"):
             result = {"error": f"Method `{method}` is not exported for handle calls"}
             return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}] if include_text_content else []
+                ),
                 "structuredContent": result,
                 "isError": True,
             }
@@ -1846,7 +1878,9 @@ class EngineMcpServer:
         if target is None:
             result = {"error": f"Unknown handle: {handle}"}
             return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}] if include_text_content else []
+                ),
                 "structuredContent": result,
                 "isError": True,
             }
@@ -1860,7 +1894,9 @@ class EngineMcpServer:
         if method not in self._allowed_handle_methods_for(target):
             result = {"error": f"Method `{method}` is not exported for handle calls"}
             return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}] if include_text_content else []
+                ),
                 "structuredContent": result,
                 "isError": True,
             }
@@ -1869,7 +1905,9 @@ class EngineMcpServer:
         except AttributeError:
             result = {"error": f"Unknown method `{method}` for handle `{handle}`"}
             return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}] if include_text_content else []
+                ),
                 "structuredContent": result,
                 "isError": True,
             }
@@ -1877,7 +1915,9 @@ class EngineMcpServer:
         if not callable(method_callable):
             result = {"error": f"Attribute `{method}` on handle `{handle}` is not callable"}
             return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}] if include_text_content else []
+                ),
                 "structuredContent": result,
                 "isError": True,
             }
@@ -1888,7 +1928,11 @@ class EngineMcpServer:
         except Exception as exc:
             error_payload = {"error": str(exc)}
             return {
-                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}]
+                    if include_text_content
+                    else []
+                ),
                 "structuredContent": error_payload,
                 "isError": True,
             }
@@ -1898,7 +1942,11 @@ class EngineMcpServer:
             guard_error = self._validateEquipmentCall(target, method, resolved_args, resolved_kwargs)
         if guard_error is not None:
             return {
-                "content": [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}],
+                "content": (
+                    [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}]
+                    if include_text_content
+                    else []
+                ),
                 "structuredContent": guard_error,
                 "isError": True,
             }
@@ -1918,12 +1966,16 @@ class EngineMcpServer:
             )
             structured = {"result": serialized}
             return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": json.dumps(structured, ensure_ascii=False),
-                    }
-                ],
+                "content": (
+                    [
+                        {
+                            "type": "text",
+                            "text": json.dumps(structured, ensure_ascii=False),
+                        }
+                    ]
+                    if include_text_content
+                    else []
+                ),
                 "structuredContent": structured,
                 "isError": False,
             }
@@ -1933,12 +1985,16 @@ class EngineMcpServer:
                 "traceback": traceback.format_exc(limit=10),
             }
             return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": json.dumps(error_payload, ensure_ascii=False),
-                    }
-                ],
+                "content": (
+                    [
+                        {
+                            "type": "text",
+                            "text": json.dumps(error_payload, ensure_ascii=False),
+                        }
+                    ]
+                    if include_text_content
+                    else []
+                ),
                 "structuredContent": error_payload,
                 "isError": True,
             }
