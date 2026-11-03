@@ -508,6 +508,76 @@ def nativeVictory(d, name):
     d.combats += 1
 
 
+def alatosOwnedItems(d, owner):
+    owned = {}
+    items = [*d.call(owner, "getItems"), *d.call(owner, "getEquipped").values()]
+    for item in items:
+        if item is None:
+            continue
+        name = d.call(item, "getName")
+        if name in owned:
+            d.test.assertEqual(owned[name]["__handle__"], item["__handle__"], "Distinct possessions share one name")
+        owned[name] = item
+    return owned
+
+
+def captureAlatosBetrayal(d, planner, outcome):
+    d.test.assertEqual([{"label": "Resar"}], outcome["effects"]["hostile"])
+    name = planner.actorName(outcome["effects"]["hostile"])
+    actor = d.object(name)
+    d.test.assertTrue(d.call(actor, "isAlive"), "Capture Resar's actual possessions before the betrayal")
+    owned = alatosOwnedItems(d, actor)
+    expected = Counter()
+    for row in read(d, actor, "sourceInventory", []):
+        expected[row["item"]] += sourceQuantity(row)
+    actual = Counter()
+    profile = []
+    for item_name, item in owned.items():
+        d.test.assertFalse(d.call(item, "getBoolProperty", "plugin_cityUndroppable"))
+        code = d.call(item, "getStringProperty", "plugin_citySourceItem")
+        quantity = d.call(item, "getNumericProperty", "plugin_cityQuantity")
+        actual[code] += max(1, quantity)
+        profile.append((item_name, code, quantity))
+    d.test.assertTrue(expected, "Resar's authored native possessions must be initialized")
+    d.test.assertEqual(expected, actual, "Capture all actual inventory and equipped source possessions")
+    d.test.assertTrue(set(owned).isdisjoint(alatosOwnedItems(d, d.player)))
+    d.assertNativeCombatOutcomes()
+    return {"name": name, "actor": actor, "items": owned, "profile": sorted(profile), "after_seq": d._combat_trace_seq}
+
+
+def finishAlatosBetrayal(d, witness):
+    name, actor = witness["name"], witness["actor"]
+    current = d.object(name, required=False)
+    if current is not None:
+        d.test.assertEqual(actor["__handle__"], current["__handle__"], "Resar's captured native identity changed")
+        nativeVictory(d, name)
+    else:
+        d.assertNativeCombatOutcomes()
+        d.test.assertFalse(d.call(actor, "isAlive"), "A removed living actor is not a native victory")
+        d.test.assertIsNotNone(
+            d.playerVictoryAgainst(MAP, name, after_seq=witness["after_seq"]),
+            "Missing fresh native Resar victory before settlement",
+        )
+        d.combats += 1
+    d.test.assertIsNone(d.object(name, required=False), "The betrayal must finish before the reward baseline")
+    d.test.assertFalse(d.call(actor, "isAlive"), "Resar must actually die in native combat")
+    victory = d.playerVictoryAgainst(MAP, name, after_seq=witness["after_seq"])
+    d.test.assertIsNotNone(victory, "Missing fresh native Resar victory before settlement")
+    remaining, player = alatosOwnedItems(d, actor), alatosOwnedItems(d, d.player)
+    for item_name, item in witness["items"].items():
+        d.test.assertNotIn(item_name, remaining, "Defeated Resar retained a transferred possession")
+        d.test.assertIn(item_name, player, "Resar's actual possession was not transferred")
+        d.test.assertEqual(item["__handle__"], player[item_name]["__handle__"], "A new item replaced owned Resar loot")
+    for item_name, code, quantity in witness["profile"]:
+        d.test.assertEqual(code, d.call(player[item_name], "getStringProperty", "plugin_citySourceItem"))
+        d.test.assertEqual(quantity, d.call(player[item_name], "getNumericProperty", "plugin_cityQuantity"))
+    return {
+        "resarOpponent": name,
+        "resarNativeVictorySeq": victory["seq"],
+        "resarSourcePossessions": witness["profile"],
+    }
+
+
 class QuestRoute:
     """Finite dependency planner whose only mutations are normal movement and authored choices."""
 
@@ -519,6 +589,7 @@ class QuestRoute:
         self.pending_outcomes = set()
         self.actions = 0
         self.tamoko_refuse = False
+        self.alatos_betrayal = None
 
     def bounded(self, goal):
         self.actions += 1
@@ -581,6 +652,11 @@ class QuestRoute:
         self.conditions(row.get("acceptConditions", {}))
         name = self.actorName(row["givers"])
         self.contact(name)
+        if self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"):
+            self.item({"item": "SCRLPET"})
+            self.contact(name)
+            self.d.choose(name + "Dialog", "restoreStatue")
+            self.d.test.assertFalse(self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"))
         self.d.choose(name + "Dialog", "accept" + upperFirst(key))
         self.d.test.assertEqual("active", state(self.d, key), key)
         self.d.test.assertIn("city" + upperFirst(key) + "Quest", self.d.questNames())
@@ -891,6 +967,8 @@ class QuestRoute:
             before = resources(self.d)
             standing = self.d.number("plugin_cityStanding")
             action = "quest" + upperFirst(key) + upperFirst(outcome["id"])
+            if key == "alatosTheft" and outcome["id"] == "complete":
+                self.alatos_betrayal = captureAlatosBetrayal(self.d, self, outcome)
             self.d.choose(name + "Dialog", action)
             effects = outcome.get("effects", {})
             self.d.test.assertEqual(before[0] + effects.get("gold", 0), self.d.gold())
@@ -921,14 +999,26 @@ def questRoute(d, key, outcome_key, *, item_first=False):
     name, result = planner.settle(key, outcome_key)
     if key == "tamokoMercy" and outcome_key == "fight":
         nativeVictory(d, name)
+    betrayal = {}
+    if key == "alatosTheft" and outcome_key == "complete":
+        d.test.assertIsNotNone(planner.alatos_betrayal)
+        betrayal = finishAlatosBetrayal(d, planner.alatos_betrayal)
     prefix = "baldursGate.quest." + key + "." + outcome_key
     before = resources(d)
     d.saveAndReload("city-quest-" + key + "-" + outcome_key)
+    if betrayal:
+        d.test.assertIsNone(d.object(betrayal["resarOpponent"], required=False))
+        owned = alatosOwnedItems(d, d.player)
+        for item_name, code, quantity in betrayal["resarSourcePossessions"]:
+            d.test.assertIn(item_name, owned, "Resar loot did not survive native reload")
+            d.test.assertEqual(code, d.call(owned[item_name], "getStringProperty", "plugin_citySourceItem"))
+            d.test.assertEqual(quantity, d.call(owned[item_name], "getNumericProperty", "plugin_cityQuantity"))
     d.check(
         prefix,
         state(d, key) == ("completed" if result.get("terminal", True) and not row.get("repeatable") else "active"),
         sourceId="quest:" + key + ":" + outcome_key,
         itemBeforeAccept=item_first,
+        **betrayal,
     )
     if not outcome.get("effects", {}).get("finale") and d.object(name, required=False):
         planner.contact(name)
