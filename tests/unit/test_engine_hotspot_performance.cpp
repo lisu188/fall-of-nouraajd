@@ -1339,6 +1339,79 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
               << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
 }
 
+void testEqualPowerHealingTieSelectionKeepsFixedWork() {
+    constexpr std::size_t inventoryCount = 96;
+    constexpr std::size_t turns = 64;
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "healingTieActor", Coords(0, 0, 0), "healingTieOpponent");
+    auto opponent = make_actor(fixture, "healingTieOpponent", Coords(1, 0, 0), "healingTieActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    auto actorStats = std::make_shared<CStats>();
+    actorStats->setMainStat("intelligence");
+    actorStats->setStamina(10);
+    actor->setBaseStats(actorStats);
+    actor->setHp(35);
+    auto opponentStats = std::make_shared<CStats>();
+    opponentStats->setMainStat("intelligence");
+    opponentStats->setStamina(10);
+    opponentStats->setDmgMin(16);
+    opponentStats->setDmgMax(16);
+    opponent->setBaseStats(opponentStats);
+    opponent->setHp(70);
+    auto attack = std::make_shared<CombatActionCountProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("tieAttack");
+    attack->setTypeId("Attack");
+    actor->addAction(attack);
+    std::vector<std::shared_ptr<HealingSelectionPotionProbe>> probes;
+    std::shared_ptr<HealingSelectionPotionProbe> preferred;
+    for (std::size_t index = 0; index < inventoryCount; ++index) {
+        auto item = std::make_shared<HealingSelectionPotionProbe>();
+        item->setGame(fixture.game);
+        item->setName("healingTieItem" + std::to_string(index));
+        item->setTypeId(index % 2 == 0 ? "aConfiguredHeal" : "bConfiguredHeal");
+        item->setPower(2);
+        if (index < 64)
+            item->addTag(CTag::Heal);
+        actor->addItem(item);
+        probes.push_back(item);
+        if (index == 0)
+            preferred = item;
+    }
+    const auto inventory = actor->getItems();
+    const auto actions = actor->getInteractions();
+    const auto effects = actor->getEffects();
+    const auto objects = fixture.map->getObjects();
+    const auto epoch = fixture.map->getRoutingEpoch();
+    const int mana = actor->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    HealingSelectionProbeScope selection;
+    int renderedFrames = 0;
+    auto frameObserver = vstd::event_loop<>::instance()->connectFrameCallback([&](int) { ++renderedFrames; });
+    for (std::size_t turn = 0; turn < turns; ++turn) {
+        expect_true(controller->control(actor, opponent), "equal-power fixed workload must take one healing turn");
+        expect_true(preferred->calls == turn + 1, "each tie turn must invoke the same semantic winner once");
+    }
+    const auto visits = performance_guard::healingItemSelectionProbeCount();
+    std::size_t callbacks = 0;
+    for (const auto &item : probes) {
+        callbacks += item->calls;
+        expect_true(item->calls == (item == preferred ? turns : 0), "unselected equal-power items must stay unused");
+    }
+    expect_true(visits == inventoryCount * turns && callbacks == turns && attack->calls == 0 && renderedFrames == 0,
+                "tie selection must retain one inventory scan, one callback and zero attack/render work per turn");
+    expect_true(actor->getItems() == inventory && actor->getInteractions() == actions &&
+                    actor->getEffects() == effects && fixture.map->getObjects() == objects &&
+                    fixture.map->getRoutingEpoch() == epoch && actor->getHp() == 35 && actor->getMana() == mana &&
+                    opponent->getHp() == 70,
+                "fixed healing ties must not mutate ownership, actions, effects, navigation or resource workload");
+    std::cout << "equal-power healing tie guard: inventory=" << inventoryCount << " turns=" << turns
+              << " visits=" << visits << " visitBudget=" << inventoryCount * turns << " callbacks=" << callbacks
+              << " callbackBudget=" << turns << " attackCallbacks=" << attack->calls
+              << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
+}
+
 struct MonsterItemWorkCounters {
     int started = 0;
     int resumed = 0;
@@ -2072,4 +2145,5 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testEqualPowerHealingTieSelectionKeepsFixedWork();
 }

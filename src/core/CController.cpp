@@ -411,6 +411,11 @@ int expected_incoming_hit(const std::shared_ptr<CCreature> &me, const std::share
 thread_local std::optional<std::size_t> healingItemSelectionVisits;
 thread_local std::optional<performance_guard::InteractionSelectionWork> interactionSelectionWork;
 
+std::pair<std::string, std::string> healingItemIdentity(const std::shared_ptr<CItem> &item) {
+    auto typeId = item->getTypeId();
+    return {typeId.empty() ? item->getType() : std::move(typeId), item->getName()};
+}
+
 // Choose the least powerful heal that preserves the combatant. A nonviable weak
 // potion must not hide a stronger net-gain heal; emergency turns retain the
 // existing fallback of trying any available heal.
@@ -434,7 +439,8 @@ std::shared_ptr<CItem> selectHealingItem(const std::shared_ptr<CCreature> &me,
         if (!emergency && restoration <= incoming) {
             continue;
         }
-        if (!selected || power < selectedPower) {
+        if (!selected || power < selectedPower ||
+            (power == selectedPower && healingItemIdentity(item) < healingItemIdentity(selected))) {
             selected = item;
             selectedPower = power;
         }

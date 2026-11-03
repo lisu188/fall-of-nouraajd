@@ -55,7 +55,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
+extern "C" PyObject *PyInit__game();
+
 namespace {
+void initializeControllerPythonContent() {
+    auto sys = pybind11::module_::import("sys");
+    sys.attr("path").attr("insert")(0, GAME_CONTROLLER_TEST_RESOURCE_ROOT);
+    pybind11::module_::import("_game");
+    pybind11::module_::import("game");
+    pybind11::module_::import("json");
+}
 
 std::shared_ptr<CCreature> creature_at(int x, int y, int z) {
     auto creature = std::make_shared<CCreature>();
@@ -1315,6 +1324,119 @@ void testMonsterFightControllerRetainsHealEqualToIncomingDamage() {
                 "equal restoration and incoming damage must not reintroduce net-zero chain drinking");
 }
 
+void testHealingItemTiesUseConfiguredIdentityAcrossCreationAndInsertionOrders() {
+    class AttackProbe : public CInteraction {
+      public:
+        int calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+    };
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    int cases = 0;
+    for (int policy : {-1, 0, 1}) {
+        for (bool reverseCreation : {false, true}) {
+            for (bool reverseInsertion : {false, true}) {
+                auto actor = fight_fixture_monster(game, 13, 67);
+                auto opponent = fight_fixture_hitter(game, 2);
+                auto first = game->createObject<CPotion>(reverseCreation ? "LesserLifePotion" : "DarkBeer");
+                auto second = game->createObject<CPotion>(reverseCreation ? "DarkBeer" : "LesserLifePotion");
+                auto dark = reverseCreation ? second : first;
+                auto lesser = reverseCreation ? first : second;
+                expect_true(dark && lesser,
+                            "healing tie fixture requires actual configured DarkBeer and LesserLifePotion");
+                if (!dark || !lesser)
+                    continue;
+                dark->setName("zActualDarkBeer");
+                lesser->setName("aActualLesserLifePotion");
+                actor->addItem(reverseInsertion ? lesser : dark);
+                actor->addItem(reverseInsertion ? dark : lesser);
+                auto attack = std::make_shared<AttackProbe>();
+                attack->setName("tieFallbackAttack");
+                actor->addAction(attack);
+                auto controller = std::make_shared<CMonsterFightController>();
+                if (policy >= 0)
+                    controller->setBoolProperty("discountKnownTargetEffectDuration", policy == 1);
+                const int mana = actor->getMana();
+                std::cout << "healing configured fixture: policy=" << policy << " reverseCreation=" << reverseCreation
+                          << " reverseInsertion=" << reverseInsertion << " hpBefore=" << actor->getHp()
+                          << " hpMax=" << actor->getHpMax() << " stamina=" << actor->getStats()->getStamina()
+                          << " darkPower=" << dark->getPower() << " darkType=" << dark->getType()
+                          << " darkTypeId=" << dark->getTypeId() << " darkName=" << dark->getName()
+                          << " lesserPower=" << lesser->getPower() << " lesserType=" << lesser->getType()
+                          << " lesserTypeId=" << lesser->getTypeId() << " lesserName=" << lesser->getName() << "\n";
+                expect_true(
+                    actor->getHpMax() == 91 && dark->getPower() == 1 && lesser->getPower() == 1 &&
+                        dark->hasTag(CTag::Heal) && lesser->hasTag(CTag::Heal) && dark->getTypeId() == "DarkBeer" &&
+                        lesser->getTypeId() == "LesserLifePotion" && dark->getType() == "LifePotion" &&
+                        lesser->getType() == "LifePotion",
+                    "actual healing tie resources must retain equal power, native class and configured identities");
+                const auto firstType = (*actor->getItems().begin())->getTypeId();
+                expect_true(controller->control(actor, opponent), "equal-power native healing must take one item turn");
+                expect_true(
+                    actor->getItems().size() == 1 && !actor->hasItem(dark) && actor->hasItem(lesser),
+                    "equal-power heals must prefer configured identity independent of allocation and insertion");
+                expect_true(actor->getHp() == 85 && actor->getMana() == mana && attack->calls == 0,
+                            "actual equal-power healing must invoke one unchanged 18-hp heal and no attack");
+                expect_true(controller->hasProperty("discountKnownTargetEffectDuration") == (policy >= 0),
+                            "healing tie selection must not create an absent interaction policy");
+                std::cout << "healing configured tie: policy=" << policy << " reverseCreation=" << reverseCreation
+                          << " reverseInsertion=" << reverseInsertion << " firstInventoryType=" << firstType
+                          << " expected=DarkBeer hp=" << actor->getHp() << " itemCount=" << actor->getItems().size()
+                          << " attackCalls=" << attack->calls << "\n";
+                ++cases;
+            }
+        }
+    }
+    expect_true(cases == 12, "all fixed configured-healing tie variants must execute");
+    game->getContext()->shutdown();
+}
+
+void testEqualResourceHealingTiesUseUniqueNamesInsteadOfContainerOrder() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    int cases = 0;
+    for (bool reverseInsertion : {false, true}) {
+        auto actor = fight_fixture_monster(game, 13, 67);
+        auto opponent = fight_fixture_hitter(game, 2);
+        auto first = game->createObject<CPotion>("DarkBeer");
+        auto second = game->createObject<CPotion>("DarkBeer");
+        expect_true(first && second, "same-resource healing tie fixture requires actual configured potions");
+        if (!first || !second)
+            continue;
+        actor->addItem(reverseInsertion ? second : first);
+        actor->addItem(reverseInsertion ? first : second);
+        const auto inventory = actor->getItems();
+        auto cursor = inventory.begin();
+        auto containerFirst = *cursor++;
+        auto preferred = *cursor;
+        // Deliberately oppose semantic names to the observed container order; the policy must ignore that order.
+        containerFirst->setName("zSameConfiguredHeal");
+        preferred->setName("aSameConfiguredHeal");
+        std::cout << "healing instance fixture: reverseInsertion=" << reverseInsertion << " hpBefore=" << actor->getHp()
+                  << " hpMax=" << actor->getHpMax() << " stamina=" << actor->getStats()->getStamina()
+                  << " firstPower=" << containerFirst->getPower() << " firstType=" << containerFirst->getType()
+                  << " firstTypeId=" << containerFirst->getTypeId() << " firstName=" << containerFirst->getName()
+                  << " preferredPower=" << preferred->getPower() << " preferredType=" << preferred->getType()
+                  << " preferredTypeId=" << preferred->getTypeId() << " preferredName=" << preferred->getName() << "\n";
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(actor, opponent), "same-resource native healing must take one item turn");
+        expect_true(actor->getItems().size() == 1 && actor->hasItem(containerFirst) && !actor->hasItem(preferred),
+                    "equal-resource heals must prefer unique native name independent of container order");
+        expect_true(actor->getHp() == 85 && containerFirst->getTypeId() == "DarkBeer" &&
+                        preferred->getTypeId() == "DarkBeer",
+                    "same-resource tie must preserve actual resource behavior and exact healing");
+        std::cout << "healing instance tie: reverseInsertion=" << reverseInsertion
+                  << " observedFirst=zSameConfiguredHeal expected=aSameConfiguredHeal hp=" << actor->getHp() << "\n";
+        ++cases;
+    }
+    expect_true(cases == 2, "both fixed same-resource container-order variants must execute");
+    game->getContext()->shutdown();
+}
+
 void test_monster_fight_controller_heals_when_next_hit_would_kill() {
     auto game = fight_fixture_game();
     // hpMax 70, hp 10: the expected 25 hp hit is lethal, so healing is the only play
@@ -2209,6 +2331,10 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
 } // namespace
 
 int main() {
+    if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
+        std::cerr << "Cannot register the real embedded _game module\n";
+        return 1;
+    }
     pybind11::scoped_interpreter guard{};
 
     test_movement_controller_null_and_no_map_paths();
@@ -2260,6 +2386,10 @@ int main() {
     testHuntPhasesKeepOrdinarySpellAndItemPriority();
     testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
     testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack();
+
+    initializeControllerPythonContent();
+    testHealingItemTiesUseConfiguredIdentityAcrossCreationAndInsertionOrders();
+    testEqualResourceHealingTiesUseUniqueNamesInsteadOfContainerOrder();
 
     return finish_tests();
 }
