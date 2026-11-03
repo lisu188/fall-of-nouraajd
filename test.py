@@ -206,6 +206,7 @@ FAST_TEST_PREFIXES = (
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "McpEngineThreadTest.",
+    "McpHandleLifetimeTest.",
     "McpNativeUiOwnershipSourceTest.",
     "UsurpergateEntryDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
@@ -28233,6 +28234,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
+    from tests.test_mcp_handle_lifetime import McpHandleLifetimeTest as _McpHandleLifetimeTest
     from tests.test_mcp_http_native_ui import McpNativeUiOwnershipSourceTest as _McpNativeUiOwnershipSourceTest
     from tests.test_usurpergate_entry_diagnostics import (
         UsurpergateEntryDiagnosticsTest as _UsurpergateEntryDiagnosticsTest,
@@ -28540,6 +28542,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class McpEngineThreadTest(_McpEngineThreadTest):
         pass
 
+    class McpHandleLifetimeTest(_McpHandleLifetimeTest):
+        pass
+
     class McpNativeUiOwnershipSourceTest(_McpNativeUiOwnershipSourceTest):
         pass
 
@@ -28713,7 +28718,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _CandlekeepMetadataSourceTest, _CandlekeepMetadataRuntimeTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
-    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
+    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest, _McpHandleLifetimeTest
     del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
     del _PermanentPlayerDefeatSourceTest, _PermanentDefeatJsonSyntaxTest
     del _DefeatContinuationSourceTest
