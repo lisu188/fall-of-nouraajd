@@ -1570,6 +1570,189 @@ def inventoryReaderLines(d, owner):
     ] or ["No carried belongings."]
 
 
+BOOK08_PENDING_OUTCOMES = ("successfulUse", "handInBeforeUse", "useBeforeHandIn", "originalParity")
+
+
+def book08StatsSnapshot(d, stats):
+    values = d.properties(stats)
+    fields = (
+        "strength",
+        "agility",
+        "stamina",
+        "intelligence",
+        "armor",
+        "block",
+        "dmgMin",
+        "dmgMax",
+        "attack",
+        "hit",
+        "crit",
+        "fireResist",
+        "frostResist",
+        "normalResist",
+        "thunderResist",
+        "shadowResist",
+        "damage",
+        "mainStat",
+    )
+    d.test.assertTrue(set(fields) <= set(values), "A complete native CStats snapshot is required")
+    return {key: values[key] for key in fields}
+
+
+def book08DisabledSnapshot(d, name):
+    clock = d.object("cityClock")
+    for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+        d.test.assertIs(
+            d.call(clock, "getBoolProperty", flag), False, "The public route requires disabled source flags"
+        )
+    items = itemInstances(d, d.player)
+    d.test.assertIn(name, items, "Disabled use must retain the actual carried tome")
+    book = items[name]
+    d.test.assertEqual("cityItemBook08", d.call(book, "getTypeId"))
+    d.test.assertEqual(
+        "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
+    )
+    d.test.assertEqual("BOOK08", d.call(book, "getStringProperty", "plugin_citySourceItem"))
+    d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
+    d.test.assertFalse(d.call(book, "isDisposable"), "The registered native scroll wrapper must own use disposal")
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityBook08Consumed"))
+    d.test.assertEqual(
+        1, sum(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in items.values())
+    )
+    source_state = read(d, clock, "plugin_cityPoisonSourceState", {})
+    d.test.assertNotIn("book08Use:" + name, source_state.get("receipts", {}), "Disabled use must create no use receipt")
+    owner_items = itemInstances(d, d.object("cityAr0132Actor1"))
+    d.test.assertNotIn(name, owner_items, "The original owner must not retain a duplicate tome")
+    d.test.assertFalse(
+        any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in owner_items.values())
+    )
+    base = d.call(d.player, "getObjectProperty", "baseStats")
+    d.test.assertIsNotNone(base)
+    return {
+        "book": {
+            "name": name,
+            "type": d.call(book, "getTypeId"),
+            "nativeType": d.call(book, "getType"),
+            "quantity": d.call(book, "getNumericProperty", "plugin_cityQuantity"),
+            "charges": read(d, book, "plugin_cityCharges", []),
+            "unidentified": d.call(book, "getBoolProperty", "plugin_cityUnidentified"),
+            "stolen": d.call(book, "getBoolProperty", "plugin_cityStolen"),
+        },
+        "baseStats": book08StatsSnapshot(d, base),
+        "composedStats": book08StatsSnapshot(d, d.call(d.player, "getStats")),
+        "inventory": {key: d.call(item, "getTypeId") for key, item in items.items()},
+        "ownerInventory": {key: d.call(item, "getTypeId") for key, item in owner_items.items()},
+        "equipment": {
+            slot: d.call(item, "getName") if item else None for slot, item in d.call(d.player, "getEquipped").items()
+        },
+        "resources": resources(d),
+        "activeQuests": sorted(d.questNames()),
+        "completedQuests": sorted(d.questNames(completed=True)),
+        "phase": d.number("plugin_cityPhase"),
+        "standing": d.number("plugin_cityStanding"),
+        "crimes": d.number("plugin_cityCrimes"),
+        "history": read(d, d.game_map, "plugin_cityHistory", {}),
+        "sourceState": source_state,
+    }
+
+
+def book08DisabledUse(d):
+    """A normal-source denial witness; successful use and hand-in outcomes remain pending."""
+    start(d)
+    for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+        d.test.assertIs(d.call(d.object("cityClock"), "getBoolProperty", flag), False)
+    name = "cityAr0132Actor1"
+    QuestRoute(d).contact(name)
+    owner = d.object(name)
+    d.test.assertEqual("AR0132", currentArea(d))
+    d.test.assertEqual("CHANTH", d.call(owner, "getStringProperty", "sourceCreature"))
+    before_owner, before_player = itemInstances(d, owner), itemInstances(d, d.player)
+    books = [
+        item for item in before_owner.values() if d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08"
+    ]
+    d.test.assertEqual(1, len(books), "Chanthalas must own his one actual source tome")
+    book = books[0]
+    selected = d.call(book, "getName")
+    d.test.assertTrue(selected)
+    d.test.assertEqual("cityItemBook08", d.call(book, "getTypeId"))
+    d.test.assertEqual(
+        "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
+    )
+    d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
+    d.test.assertFalse(d.call(book, "isDisposable"))
+    d.test.assertNotIn(selected, before_player)
+    d.test.assertFalse(
+        any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in before_player.values())
+    )
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityUnstealable"))
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityUndroppable"))
+    d.test.assertFalse(d.call(owner, "getBoolProperty", "plugin_cityUnavoidableDetection"))
+    d.test.assertGreaterEqual(
+        d.call(d.call(d.player, "getStats"), "getNumericProperty", "agility"),
+        d.call(owner, "getNumericProperty", "plugin_cityTheftAgility") or 16,
+    )
+    before = resources(d)
+    crime, standing = d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")
+    theft = d.chooseUi(name + "Dialog", "pickPocket", selected_id=selected)
+    after_player, after_owner = itemInstances(d, d.player), itemInstances(d, owner)
+    d.test.assertEqual(set(before_player) | {selected}, set(after_player))
+    d.test.assertEqual(set(before_owner) - {selected}, set(after_owner))
+    d.test.assertEqual(
+        book["__handle__"], after_player[selected]["__handle__"], "The chooser must transfer the exact original tome"
+    )
+    d.test.assertEqual(before[:2], resources(d)[:2])
+    d.test.assertEqual(before[2] + Counter({"BOOK08": 1}), resources(d)[2])
+    d.test.assertEqual((crime, standing), (d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")))
+    initial = book08DisabledSnapshot(d, selected)
+    d.test.assertEqual([0, 0, 0], initial["book"]["charges"], "Retain the original source charge triple")
+    for checkpoint in ("before-use", "after-use"):
+        d.saveAndReload("city-book08-disabled-" + checkpoint)
+        d.test.assertEqual(
+            initial, book08DisabledSnapshot(d, selected), "Reload must preserve the exact disabled-use state"
+        )
+        d.enableIsolatedGui()
+        for repeat in range(2):
+            for panel in ("CGameTextPanel", "CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                d.test.assertIsNone(
+                    d.nativePanel(panel, required=False), "A prior native modal would hide the use outcome"
+                )
+            carried = itemInstances(d, d.player)[selected]
+            d.call(d.player, "useItem", carried)
+            d.pump()
+            for panel in ("CGameTextPanel", "CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                d.test.assertIsNone(
+                    d.nativePanel(panel, required=False),
+                    "Disabled tome use must not run the default native scroll text action",
+                )
+            d.test.assertEqual(
+                initial, book08DisabledSnapshot(d, selected), "Disabled use changed tome, stats or city progress"
+            )
+            d.record(
+                {
+                    "nativeBook08DisabledUse": {
+                        "item": selected,
+                        "checkpoint": checkpoint,
+                        "repeat": repeat + 1,
+                        "outcome": "disabledUseNoMutation",
+                        "successfulUse": False,
+                        "noDefaultTextPanel": True,
+                    }
+                },
+                replay=True,
+            )
+    d.check(
+        "baldursGate.book08.disabledUseNoMutation",
+        True,
+        sourceActor="AR0132#actor1",
+        item=selected,
+        nativeTheft=theft,
+        nativeUses=4,
+        saveCheckpoints=2,
+        sourceFlagsEnabled=False,
+        pendingOutcomes=BOOK08_PENDING_OUTCOMES,
+    )
+
+
 def inventoryUi(d, *, failed=False):
     start(d)
     name = "cityAr0800Actor73"  # Niklos's authored backpack holds a Potion of Master Thievery.
@@ -2069,8 +2252,24 @@ CASES += (
         isolated_gui=True,
     ),
 )
+CASES += (
+    RouteCase(
+        "baldurs-gate-book08-disabled-use",
+        MAP,
+        (MAP,),
+        ("baldursGate.book08.disabledUseNoMutation",),
+        book08DisabledUse,
+        classes=("Assasin",),
+        race="wandererRace",
+        sources=SOURCES,
+        duration_seconds=300,
+        isolated_gui=True,
+    ),
+)
+
 
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse": ("baldursGate.book08.disabledUseNoMutation",),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (

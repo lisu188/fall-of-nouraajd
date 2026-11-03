@@ -16,6 +16,394 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def book08DisabledDriver(self, mutation=None):
+        """Native-shaped source double; only the registered MCP route can provide gameplay evidence."""
+        from copy import deepcopy
+
+        test = self
+
+        class Driver:
+            game_map, player = "map", "player"
+            gold_value, base_int, composed_int, other_stat = 1000, 7, 9, 10
+
+            def __init__(self):
+                self.test, self.events, self.saves, self.records, self.uses = test, [], [], [], 0
+                self.flags = {
+                    "plugin_cityBook08NativeConversionEnabled": False,
+                    "plugin_cityPoisonSourceEnabled": False,
+                }
+                if mutation in self.flags:
+                    self.flags[mutation] = True
+                self.book = {
+                    "__handle__": "original-book",
+                    "name": "native-chanthalas-book3",
+                    "code": "BOOK08",
+                    "type": "cityItemBook08",
+                    "quantity": 1,
+                    "charges": [0, 0, 0],
+                    "consumed": False,
+                    "unidentified": True,
+                    "stolen": False,
+                }
+                if mutation == "wrongType":
+                    self.book["type"] = "cityOtherItem"
+                self.gear = {
+                    "__handle__": "gear",
+                    "name": "native-helmet",
+                    "code": "",
+                    "type": "CHelmet",
+                    "quantity": 1,
+                }
+                self.owner_items = [] if mutation == "missingBook" else [self.book]
+                self.player_items = [self.gear]
+                self.equipment = {"2": self.gear}
+                self.source_state = {}
+                self.gui_enabled, self.native_popup, self.use_gui_states = False, False, []
+
+            def startMap(self, map_name):
+                test.assertEqual("baldursGate", map_name)
+                self.events.append(("start", map_name))
+
+            def flag(self, key):
+                return key == "plugin_cityInitialized"
+
+            def number(self, key):
+                return {
+                    "plugin_cityStartingGoldGrant": 1000,
+                    "plugin_cityStartingExpGrant": 10000,
+                    "plugin_cityPhase": 5,
+                    "plugin_cityStanding": 0,
+                    "plugin_cityCrimes": 0,
+                }[key]
+
+            def properties(self, stats):
+                result = {
+                    key: 0
+                    for key in (
+                        "strength",
+                        "agility",
+                        "stamina",
+                        "intelligence",
+                        "armor",
+                        "block",
+                        "dmgMin",
+                        "dmgMax",
+                        "attack",
+                        "hit",
+                        "crit",
+                        "fireResist",
+                        "frostResist",
+                        "normalResist",
+                        "thunderResist",
+                        "shadowResist",
+                        "damage",
+                    )
+                }
+                result.update(
+                    strength=self.other_stat,
+                    intelligence=self.base_int if stats == "base" else self.composed_int,
+                    mainStat="agility",
+                )
+                return result
+
+            def gold(self):
+                return self.gold_value
+
+            def object(self, name, **_kwargs):
+                test.assertIn(name, ("cityClock", "cityAr0132Actor1"))
+                return name
+
+            def contact(self, name):
+                test.assertEqual("cityAr0132Actor1", name)
+                self.events.append(("contact", name))
+
+            def call(self, owner, method, *args):
+                if method == "getItems":
+                    return list(self.player_items if owner == self.player else self.owner_items)
+                if method == "getEquipped":
+                    return self.equipment
+                if method == "getObjectProperty":
+                    test.assertEqual("baseStats", args[0])
+                    return "base"
+                if method == "getStats":
+                    return "composed"
+                if method == "getName":
+                    return owner["name"]
+                if method == "getType":
+                    return "CItem" if mutation == "wrongNativeType" else "BaldursGateUnderstandingTome"
+                if method == "getTypeId":
+                    return owner["type"]
+                if method == "isDisposable":
+                    return False
+                if method == "getBoolProperty":
+                    key = args[0]
+                    if owner == "cityClock":
+                        return self.flags[key]
+                    if key == "plugin_cityUnavoidableDetection":
+                        return mutation == "unavoidableDetection"
+                    if key in {"plugin_cityUnstealable", "plugin_cityUndroppable"}:
+                        return mutation == "unstealable" and key == "plugin_cityUnstealable"
+                    return owner[
+                        {
+                            "plugin_cityBook08Consumed": "consumed",
+                            "plugin_cityUnidentified": "unidentified",
+                            "plugin_cityStolen": "stolen",
+                        }[key]
+                    ]
+                if method == "getNumericProperty":
+                    key = args[0]
+                    if key == "exp":
+                        return 10000
+                    if key == "agility":
+                        return 15 if mutation == "lowAgility" else 18
+                    if key == "plugin_cityTheftAgility":
+                        return 16
+                    if key == "intelligence":
+                        return self.base_int if owner == "base" else self.composed_int
+                    return owner["quantity"]
+                if method == "getStringProperty":
+                    key = args[0]
+                    if key == "sourceCreature":
+                        return "CHANTH"
+                    if key == "plugin_citySourceItem":
+                        return owner["code"]
+                    if key == "plugin_cityCharges":
+                        return json.dumps(owner["charges"])
+                    if key == "plugin_cityPoisonSourceState":
+                        return json.dumps(self.source_state)
+                    if key == "plugin_cityHistory":
+                        return json.dumps({"aldeth": "unspecified", "tenya": "unspecified", "eldoth": "unspecified"})
+                if method == "useItem":
+                    test.assertEqual(self.player, owner)
+                    test.assertTrue(
+                        any(item is args[0] for item in self.player_items),
+                        "The native use needs the current owned instance",
+                    )
+                    self.use_gui_states.append(self.gui_enabled)
+                    self.uses += 1
+                    self.events.append(("useItem", args[0]["__handle__"]))
+                    if mutation == "defaultScrollPopup":
+                        self.native_popup = self.gui_enabled
+                    elif mutation == "baseMutation":
+                        self.base_int += 1
+                    elif mutation == "composedMutation":
+                        self.composed_int += 1
+                    elif mutation == "otherStatMutation":
+                        self.other_stat += 1
+                    elif mutation == "chargesMutation":
+                        self.book["charges"] = [1, 0, 0]
+                    elif mutation == "quantityMutation":
+                        self.book["quantity"] = 2
+                    elif mutation == "consumedMutation":
+                        self.book["consumed"] = True
+                    elif mutation == "receiptMutation":
+                        self.source_state = {"receipts": {"book08Use:" + self.book["name"]: {"status": "complete"}}}
+                    elif mutation == "goldMutation":
+                        self.gold_value += 1
+                    elif mutation == "equipmentMutation":
+                        self.equipment = {}
+                    elif mutation == "duplicateMutation":
+                        duplicate = deepcopy(self.book)
+                        duplicate.update(name="cloned-tome", __handle__="clone")
+                        self.player_items.append(duplicate)
+                    elif mutation == "flagMutation":
+                        self.flags["plugin_cityBook08NativeConversionEnabled"] = True
+                    return None
+                raise AssertionError((owner, method, args))
+
+            def chooseUi(self, dialog, action, *, selected_id):
+                test.assertEqual([("start", "baldursGate"), ("contact", "cityAr0132Actor1")], self.events)
+                test.assertEqual(
+                    ("cityAr0132Actor1Dialog", "pickPocket", self.book["name"]), (dialog, action, selected_id)
+                )
+                self.events.append(("chooseUi", action, selected_id))
+                transferred = self.book
+                if mutation == "clonedTransfer":
+                    transferred = deepcopy(self.book)
+                    transferred["__handle__"] = "cloned-transfer"
+                self.owner_items.remove(self.book)
+                self.player_items.append(transferred)
+                transferred["stolen"] = True
+                return {"nativeOptionSeq": 12, "kind": "nativeChoice", "action": action}
+
+            def questNames(self, completed=False):
+                return [] if completed else ["cityOptionalQuest"]
+
+            def enableIsolatedGui(self):
+                self.gui_enabled = True
+                return "current-reloaded-native-gui"
+
+            def nativePanel(self, panel_type, *, required):
+                test.assertFalse(required)
+                return (
+                    "default-native-text-panel"
+                    if self.gui_enabled and self.native_popup and panel_type == "CGameTextPanel"
+                    else None
+                )
+
+            def saveAndReload(self, label):
+                self.saves.append(label)
+                self.gui_enabled, self.native_popup = False, False
+                # Rebind the carried native item as a real save/reload does; stale handles must never drive use.
+                old = self.book
+                self.book = deepcopy(old)
+                self.book["__handle__"] = "reloaded-book-" + str(len(self.saves))
+                self.player_items = [self.book if item is old else item for item in self.player_items]
+                if mutation == "reloadMutation" and len(self.saves) == 2:
+                    self.base_int += 1
+
+            def pump(self):
+                self.events.append(("pump",))
+
+            def record(self, record, **_kwargs):
+                self.records.append(record)
+
+            def check(self, branch, condition, **evidence):
+                test.assertTrue(condition)
+                self.records.append({"branch": branch, **evidence})
+
+        return Driver()
+
+    def runBook08DisabledModel(self, mutation=None):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        callback = getattr(routes, "book08DisabledUse", None)
+        self.assertTrue(callable(callback), "An actual public native route is required for disabled Book08 use")
+        driver = self.book08DisabledDriver(mutation)
+        with patch.object(routes, "QuestRoute", lambda _driver: SimpleNamespace(contact=driver.contact)), patch.object(
+            routes, "currentArea", return_value="AR0132"
+        ):
+            callback(driver)
+        return driver
+
+    def testBook08DisabledUseHasOnlyItsRealPublicDenialBranchAndKeepsPositiveHolds(self):
+        cases = [case for case in routes.CASES if case.id == "baldurs-gate-book08-disabled-use"]
+        self.assertEqual(1, len(cases), "Book08 needs its own public MCP case")
+        case = cases[0]
+        self.assertEqual(("Assasin",), case.classes)
+        self.assertEqual("wandererRace", case.race)
+        self.assertTrue(case.isolated_gui)
+        self.assertEqual(("baldursGate.book08.disabledUseNoMutation",), case.branches)
+        self.assertEqual(300, case.duration_seconds)
+        callback = "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse"
+        self.assertEqual(case.branches, routes.SOURCE_BRANCHES.get(callback))
+        self.assertNotIn(callback, routes.DEFENSIVE_SOURCE_BRANCHES)
+        self.assertEqual(
+            ("successfulUse", "handInBeforeUse", "useBeforeHandIn", "originalParity"), routes.BOOK08_PENDING_OUTCOMES
+        )
+        ledger = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_ledger.json").read_text())
+        books = [row for row in ledger["entries"] if row["id"].startswith("BOOK08")]
+        self.assertTrue(books)
+        self.assertTrue(all(row["implementation"]["status"] in {"partial", "planned"} for row in books))
+        self.assertFalse(ledger["acceptanceReady"])
+        self.assertFalse(ledger["originalParityEstablished"])
+
+    def testBook08DisabledRouteUsesOriginalOwnershipNativeChoiceAndFourPersistedNoOps(self):
+        driver = self.runBook08DisabledModel()
+        self.assertEqual(4, driver.uses)
+        self.assertEqual(["city-book08-disabled-before-use", "city-book08-disabled-after-use"], driver.saves)
+        use_handles = [row[1] for row in driver.events if row[0] == "useItem"]
+        self.assertEqual(["reloaded-book-1"] * 2 + ["reloaded-book-2"] * 2, use_handles)
+        witness = driver.records[-1]
+        self.assertEqual("baldursGate.book08.disabledUseNoMutation", witness["branch"])
+        self.assertFalse(witness["sourceFlagsEnabled"])
+        self.assertEqual(routes.BOOK08_PENDING_OUTCOMES, witness["pendingOutcomes"])
+        self.assertEqual((7, 9, 1000), (driver.base_int, driver.composed_int, driver.gold_value))
+        self.assertEqual({}, driver.source_state)
+
+    def testBook08DisabledRouteRejectsEnabledFlagsWithoutSelectingOrUsingAnything(self):
+        self.assertTrue(
+            callable(getattr(routes, "book08DisabledUse", None)),
+            "The public route must exist before rejection coverage can pass",
+        )
+        for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+            with self.subTest(flag=flag), self.assertRaises(AssertionError):
+                self.runBook08DisabledModel(flag)
+
+    def testBook08DisabledRouteRejectsMissingWrongUnstealableOrClonedSourcePossessions(self):
+        self.assertTrue(
+            callable(getattr(routes, "book08DisabledUse", None)),
+            "The public route must exist before rejection coverage can pass",
+        )
+        for mutation in (
+            "missingBook",
+            "wrongType",
+            "wrongNativeType",
+            "unstealable",
+            "lowAgility",
+            "unavoidableDetection",
+            "clonedTransfer",
+        ):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.runBook08DisabledModel(mutation)
+
+    def testBook08DisabledRouteRejectsStatChargeOwnershipReceiptOrResourceMutations(self):
+        self.assertTrue(
+            callable(getattr(routes, "book08DisabledUse", None)),
+            "The public route must exist before rejection coverage can pass",
+        )
+        for mutation in (
+            "baseMutation",
+            "composedMutation",
+            "otherStatMutation",
+            "chargesMutation",
+            "quantityMutation",
+            "consumedMutation",
+            "receiptMutation",
+            "goldMutation",
+            "equipmentMutation",
+            "duplicateMutation",
+            "flagMutation",
+            "reloadMutation",
+        ):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.runBook08DisabledModel(mutation)
+
+    def testBook08DisabledPublicRouteCannotActivateFlagsCreateItemsOrCallPrivateHooks(self):
+        callback = getattr(routes, "book08DisabledUse", None)
+        self.assertTrue(callable(callback), "The route must exist before its native action surface can be reviewed")
+        import inspect
+
+        text = inspect.getsource(callback)
+        tree = ast.parse(text)
+        self.assertIn("QuestRoute(d).contact", text)
+        self.assertIn("d.chooseUi", text)
+        self.assertIn('d.call(d.player, "useItem", carried)', text)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                self.assertNotIn(
+                    node.func.attr,
+                    {
+                        "moveTo",
+                        "setBoolProperty",
+                        "setNumericProperty",
+                        "addItem",
+                        "createObject",
+                        "onUse",
+                        "poisonUseUnderstandingTome",
+                    },
+                )
+                if node.func.attr == "call" and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+                    self.assertNotIn(
+                        node.args[1].value,
+                        {
+                            "setBoolProperty",
+                            "setNumericProperty",
+                            "addItem",
+                            "createObject",
+                            "onUse",
+                            "poisonUseUnderstandingTome",
+                        },
+                    )
+
+    def testBook08DisabledUseRequiresReloadedNativeGuiAndRejectsDefaultScrollPopup(self):
+        self.assertTrue(callable(getattr(routes, "book08DisabledUse", None)), "The actual native route must exist")
+        driver = self.runBook08DisabledModel()
+        self.assertEqual([True] * 4, driver.use_gui_states, "Each use must retain the real reloaded GUI")
+        with self.assertRaisesRegex(AssertionError, "default native scroll text"):
+            self.runBook08DisabledModel("defaultScrollPopup")
+
     def testInterludeMappingsSeparateUnavailableOffersFromSuccessfulReturn(self):
         prefix = "res/maps/baldursGate/script.py:BaldursGateDialog."
         for predicate in ("canCityInterlude", "canReturnFromInterlude"):
@@ -734,6 +1122,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
+                "baldurs-gate-book08-disabled-use",
                 "baldurs-gate-history-helped",
                 "baldurs-gate-history-killed",
             },
