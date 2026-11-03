@@ -4,7 +4,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
 
 from scripts import generate_screenshots
@@ -12,6 +12,89 @@ from scripts import generate_walkthrough_video
 
 
 class ScreenshotDisplayIsolationTest(unittest.TestCase):
+    def sdlFixture(self, accepted, driver=b"dummy"):
+        ctypes = ModuleType("ctypes")
+        ctypes.__path__ = []
+        utility = ModuleType("ctypes.util")
+        ctypes.util = utility
+        ctypes.c_char_p = object()
+        sdl = SimpleNamespace(SDL_GetCurrentVideoDriver=Mock(return_value=driver))
+
+        def load(name):
+            if name == accepted:
+                return sdl
+            raise OSError("Simulated unavailable SDL candidate")
+
+        ctypes.CDLL = Mock(side_effect=load)
+        utility.find_library = Mock(return_value=None)
+        return ctypes, utility, sdl
+
+    def testCaptureSdlResolvesRegisteredWindowsDependencyWhenAppLocalCopyIsAbsent(self):
+        build_dir = Path("selected-build")
+        ctypes, utility, sdl = self.sdlFixture("SDL2.dll")
+        with (
+            patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+            patch.object(generate_screenshots.os, "name", "nt"),
+            patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+            patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+        ):
+            try:
+                loaded = generate_screenshots.captureSdl()
+            except RuntimeError:
+                loaded = None
+        self.assertIs(
+            sdl, loaded, "Windows must resolve an already-loaded/registered SDL2.dll after build-local misses"
+        )
+        self.assertEqual(
+            [str(build_dir / "Release/SDL2.dll"), str(build_dir / "SDL2.dll"), "SDL2.dll"],
+            [call.args[0] for call in ctypes.CDLL.call_args_list],
+        )
+
+    def testCaptureSdlStillPrefersTheActiveBuildConfiguration(self):
+        build_dir = Path("selected-build")
+        expected = str(build_dir / "Release/SDL2.dll")
+        ctypes, utility, sdl = self.sdlFixture(expected, b"offscreen")
+        with (
+            patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+            patch.object(generate_screenshots.os, "name", "nt"),
+            patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+            patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+        ):
+            self.assertIs(sdl, generate_screenshots.captureSdl())
+        self.assertEqual([expected], [call.args[0] for call in ctypes.CDLL.call_args_list])
+
+    def testCaptureSdlKeepsPosixLookupOrder(self):
+        build_dir = Path("selected-build")
+        expected = "/existing/libSDL2.so"
+        ctypes, utility, sdl = self.sdlFixture(expected)
+        utility.find_library.return_value = expected
+        with (
+            patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+            patch.object(generate_screenshots.os, "name", "posix"),
+            patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+            patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+        ):
+            self.assertIs(sdl, generate_screenshots.captureSdl())
+        self.assertEqual(
+            [str(build_dir / "Release/SDL2.dll"), str(build_dir / "SDL2.dll"), expected],
+            [call.args[0] for call in ctypes.CDLL.call_args_list],
+        )
+
+    def testCaptureSdlStillRejectsNonisolatedVideoDrivers(self):
+        build_dir = Path("selected-build")
+        expected = str(build_dir / "Release/SDL2.dll")
+        for driver in (b"windows", b"x11"):
+            ctypes, utility, _sdl = self.sdlFixture(expected, driver)
+            with (
+                self.subTest(driver=driver),
+                patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+                patch.object(generate_screenshots.os, "name", "nt"),
+                patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+                patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+                self.assertRaisesRegex(RuntimeError, "not isolated"),
+            ):
+                generate_screenshots.captureSdl()
+
     def testCaptureUsesTheCompilerSpecificBuild(self):
         import os
 
@@ -107,6 +190,228 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
 
 
 class ScreenshotPanelSetupTest(unittest.TestCase):
+    def mapPreviewFixture(self, failure=None):
+        import ast
+
+        events = []
+        context = SimpleNamespace(shutdown=lambda: events.append("shutdown"))
+        instance = SimpleNamespace(gui_loaded=False, getContext=lambda: context)
+
+        def step(name):
+            events.append(name)
+            if failure == name:
+                raise RuntimeError("Preview failure: " + name)
+
+        def loadGame():
+            step("loadGame")
+            return instance
+
+        def loadGui(current):
+            self.assertIs(instance, current)
+            step("loadGui")
+            instance.gui_loaded = True
+
+        def start(current, *args):
+            self.assertIs(instance, current)
+            events.append(("guiAtStart", current.gui_loaded))
+            step("start")
+
+        game = SimpleNamespace(
+            CGameLoader=SimpleNamespace(
+                loadGame=loadGame, loadGui=loadGui, startGameWithPlayer=start, startRandomGameWithPlayer=start
+            )
+        )
+
+        class Simulation:
+            def __init__(self, module, current, map_name, player):
+                self.gameInstance = current
+                step("construct")
+
+            def pumpEvents(self, count):
+                events.append(("pump", count))
+                step("pump")
+
+            def captureGuiScreenshot(self, path):
+                events.append(("capturePath", path))
+                step("capture")
+                return {"bytes": 123}
+
+        source = (generate_screenshots.REPO_ROOT / "game_simulation.py").read_text(encoding="utf-8")
+        definition = next(
+            node for node in ast.parse(source).body if isinstance(node, ast.ClassDef) and node.name == "GameSimulation"
+        )
+        start_method = next(
+            node for node in definition.body if isinstance(node, ast.FunctionDef) and node.name == "startGame"
+        )
+        namespace = {}
+        exec(
+            compile(ast.Module(body=[start_method], type_ignores=[]), "actual-GameSimulation.startGame", "exec"),
+            namespace,
+        )
+        Simulation.startGame = namespace["startGame"]
+        module = ModuleType("game_simulation")
+        module.GameSimulation = Simulation
+        return game, module, events
+
+    def testPosedMapPreviewInitializesBeforeGuiForAuthoredAndRandomMaps(self):
+        for random_map in (False, True):
+            game, module, events = self.mapPreviewFixture()
+            with self.subTest(random=random_map), patch.dict("sys.modules", {"game_simulation": module}):
+                path = generate_screenshots.capture_map(
+                    game, Path("preview-output"), "Warrior", "candlekeep", random_map
+                )
+                expected = Path("preview-output") / ("map-random.png" if random_map else "map-candlekeep.png")
+                self.assertEqual(expected, path)
+                self.assertEqual(
+                    [("guiAtStart", False)],
+                    [event for event in events if isinstance(event, tuple) and event[0] == "guiAtStart"],
+                )
+                self.assertLess(events.index("start"), events.index("loadGui"))
+                self.assertLess(events.index("loadGui"), events.index("construct"))
+                self.assertEqual(
+                    [("pump", 5), ("pump", 5)],
+                    [event for event in events if isinstance(event, tuple) and event[0] == "pump"],
+                )
+                self.assertIn(("capturePath", expected), events)
+                self.assertEqual(1, events.count("shutdown"))
+
+    def testPosedMapPreviewShutsDownAfterSetupAndCaptureFailures(self):
+        for failure in ("start", "loadGui", "construct", "pump", "capture"):
+            game, module, events = self.mapPreviewFixture(failure)
+            with self.subTest(failure=failure), patch.dict("sys.modules", {"game_simulation": module}):
+                with self.assertRaisesRegex(RuntimeError, "Preview failure: " + failure):
+                    generate_screenshots.capture_map(game, Path("preview-output"), "Warrior", "candlekeep")
+                self.assertEqual(1, events.count("shutdown"))
+                if failure != "capture":
+                    self.assertNotIn("capture", events)
+
+    def artifactCaptureFixture(self, fail_piece=""):
+        import ast
+        import inspect
+
+        source = (generate_screenshots.REPO_ROOT / "res/plugins/artifact_sets.py").read_text(encoding="utf-8")
+        schedule = next(
+            node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.FunctionDef) and node.name == "_schedule_assembly_offer"
+        )
+        offers = []
+        namespace = {"maybeOfferAssemblyFlow": lambda player: offers.append(player)}
+        exec(
+            compile(ast.Module(body=[schedule], type_ignores=[]), "actual-artifact-offer-scheduler", "exec"), namespace
+        )
+
+        class Game:
+            def __init__(self):
+                self.queue = []
+
+            def runUiFlowLater(self, callback):
+                self.queue.append(callback)
+
+            def createObject(self, item_id):
+                return SimpleNamespace(item_id=item_id)
+
+            def getSlotConfiguration(self):
+                return SimpleNamespace(getFittingSlots=lambda item: {item.item_id})
+
+        instance = Game()
+        original_post = Game.runUiFlowLater
+        old_item = SimpleNamespace(item_id="originalEquipment")
+        inventory = {}
+        equipped = {"originalSlot": old_item}
+        created = []
+
+        class Player:
+            def isPlayer(self):
+                return True
+
+            def getGame(self):
+                return instance
+
+            def getEquipped(self):
+                return dict(equipped)
+
+            def addItem(self, item):
+                inventory[item.item_id] = item
+                created.append(item)
+
+            def equipItem(self, slot, item):
+                old = equipped.pop(slot, None)
+                if old:
+                    inventory[old.item_id] = old
+                if item:
+                    namespace["_schedule_assembly_offer"](SimpleNamespace(getCause=lambda: self))
+                    if item.item_id == fail_piece:
+                        raise RuntimeError("Posed equip failure")
+                    equipped[slot] = item
+                    inventory.pop(item.item_id)
+
+        player = Player()
+        pumps = []
+
+        def pump(count):
+            pumps.append((count, Game.runUiFlowLater is original_post, len(instance.queue)))
+            while instance.queue:
+                instance.queue.pop(0)()
+
+        sim = SimpleNamespace(gameInstance=instance, player=player, pumpEvents=pump)
+        module = SimpleNamespace(CGame=Game)
+        definition = {"pieces": ["pieceA", "pieceB", "pieceC", "pieceD"]}
+        function = ast.parse(inspect.getsource(generate_screenshots.captureAcceptanceStates)).body[0]
+        body = next(node.body for node in function.body if isinstance(node, ast.Try))
+        start = next(
+            index
+            for index, node in enumerate(body)
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "definition" for target in node.targets)
+        )
+        stop = next(
+            index
+            for index in range(start + 1, len(body))
+            if isinstance(body[index], ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "before" for target in body[index].targets)
+        )
+        held_setup = compile(
+            ast.Module(body=body[start + 1 : stop], type_ignores=[]), "actual-artifact-capture-setup", "exec"
+        )
+
+        def seed():
+            exec(held_setup, {"game": module, "player": player, "sim": sim, "definition": definition, "patch": patch})
+
+        return seed, instance, player, definition, old_item, inventory, equipped, created, offers, pumps, original_post
+
+    def testPosedArtifactEquipmentCannotPostCompetingNativeOffers(self):
+        seed, instance, player, definition, old, inventory, equipped, created, offers, pumps, original = (
+            self.artifactCaptureFixture()
+        )
+        seed()
+        self.assertEqual([], offers, "Posed set seeding must not open automatic native assembly modals")
+        self.assertEqual([], instance.queue)
+        self.assertEqual([(3, True, 0)], pumps, "Restore real posting before the unchanged event pumps")
+        self.assertEqual(set(definition["pieces"]), set(equipped))
+        self.assertEqual(created, [equipped[item_id] for item_id in definition["pieces"]])
+        self.assertEqual({old.item_id: old}, inventory)
+        self.assertIs(original, type(instance).runUiFlowLater)
+        instance.runUiFlowLater(lambda: offers.append(player))
+        self.assertEqual(1, len(instance.queue), "Deliberate/native offers must work after fixture setup")
+        instance.queue.pop()()
+        self.assertEqual([player], offers)
+
+    def testPosedArtifactOfferSuppressionRestoresPostingAfterEquipFailure(self):
+        seed, instance, player, _definition, _old, _inventory, _equipped, _created, offers, pumps, original = (
+            self.artifactCaptureFixture(fail_piece="pieceB")
+        )
+        with self.assertRaisesRegex(RuntimeError, "Posed equip failure"):
+            seed()
+        self.assertIs(original, type(instance).runUiFlowLater)
+        self.assertEqual([], instance.queue, "Failed posed setup must not orphan automatic UI work")
+        self.assertEqual([], offers)
+        self.assertEqual([], pumps)
+        instance.runUiFlowLater(lambda: offers.append(player))
+        self.assertEqual(1, len(instance.queue))
+        instance.queue.pop()()
+        self.assertEqual([player], offers)
+
     def modifierFixture(self):
         sim = Mock()
         gui = sim.gameInstance.getGui.return_value
@@ -378,6 +683,60 @@ class ScreenshotPanelSetupTest(unittest.TestCase):
         child.setStringProperty.assert_called_once_with("text", "Begin chapter")
         panel.setStringProperty.assert_any_call("body", "Follow the road.")
         panel.setCloseable.assert_called_once_with(False)
+
+    def testPanelPreparationDoesNotEnterAStoryReaderBeforeTheFirstCapture(self):
+        items = []
+        quests = []
+        story_entries = []
+        origin = (110, 111, 0)
+        position = [origin]
+
+        def enterStory(x, y, z):
+            position[0] = (x, y, z)
+            story_entries.append(position[0])
+            raise RuntimeError("A native campaign reader now needs dismissal")
+
+        start_event = SimpleNamespace(
+            getTypeId=lambda: "StartEvent",
+            getCoords=lambda: SimpleNamespace(x=109, y=110, z=0),
+        )
+        player = SimpleNamespace(
+            addItem=items.append,
+            addQuest=quests.append,
+            moveTo=enterStory,
+            checkQuests=Mock(),
+        )
+        sim = SimpleNamespace(
+            player=player,
+            gameInstance=SimpleNamespace(createObject=lambda item: item),
+            gameMap=SimpleNamespace(getObjects=lambda: [start_event]),
+            pumpEvents=Mock(),
+        )
+
+        generate_screenshots._prepare_player_for_panels(sim)
+
+        self.assertEqual((origin, []), (position[0], story_entries))
+        self.assertEqual(["Sword", "Scroll", "LeatherArmor"], items)
+        self.assertEqual(["mainQuest"], quests)
+
+    def testPanelPreparationKeepsRepresentativeQuestWhenAnOptionalItemIsUnavailable(self):
+        items = []
+        quests = []
+
+        def createItem(item):
+            if item == "Scroll":
+                raise ValueError("Optional screenshot item unavailable")
+            return item
+
+        sim = SimpleNamespace(
+            player=SimpleNamespace(addItem=items.append, addQuest=quests.append),
+            gameInstance=SimpleNamespace(createObject=createItem),
+        )
+
+        generate_screenshots._prepare_player_for_panels(sim)
+
+        self.assertEqual(["Sword", "LeatherArmor"], items)
+        self.assertEqual(["mainQuest"], quests)
 
     def testNewFrontendModalsCancelDuringMapSetup(self):
         names = (
