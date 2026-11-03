@@ -1840,7 +1840,9 @@ class BaldursGateCustodySourceTest(unittest.TestCase):
             getStringProperty=lambda key: "cityParty",
         )
         game = SimpleNamespace(createObject=lambda key: key)
-        clock_object = SimpleNamespace(initializeActors=lambda: None, applySchedules=lambda: None)
+        clock_object = NativeObject()
+        clock_object.initializeActors = lambda: None
+        clock_object.applySchedules = lambda: None
         namespace.update(
             game_map=game_map,
             player=player,

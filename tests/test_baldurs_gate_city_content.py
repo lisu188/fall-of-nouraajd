@@ -24,7 +24,7 @@ SCRIPT = ROOT / "res/maps/baldursGate/script.py"
 DOCUMENT = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_quests.json").read_text(encoding="utf-8"))
 
 
-def nativePluginBuiltins():
+def nativePluginBuiltins(resource_api=None):
     source = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
     declaration = re.search(r"const std::vector<std::string> allowedNames = \{(.*?)\};", source, re.S)
     if not declaration:
@@ -34,6 +34,8 @@ def nativePluginBuiltins():
     def resourceImport(name, globals=None, locals=None, fromlist=(), level=0):
         if level or name not in ("game", "json"):
             raise ImportError("Native resource plugins may only import game and json")
+        if name == "game" and resource_api is not None:
+            return resource_api
         return builtins.__import__(name, globals, locals, fromlist, level)
 
     result["__import__"] = resourceImport
@@ -161,11 +163,33 @@ class CityModel:
         self.gui = Mock()
         self.player = CityPlayer(self, **stats)
         self.game_map = CityMap(self)
+        self.game_map.setStringProperty("mapName", "baldursGate")
+        self.map_binding_epoch = 0
+        self.context = SimpleNamespace(generation=0, active=True)
+        self.context.getTransitionGeneration = lambda: self.context.generation
+        self.context.isTransitionGenerationCurrent = (
+            lambda value: self.context.active and value == self.context.generation
+        )
         self.game_map.setNumericProperty("plugin_cityPhase", 5)
         self.game_map.setNumericProperty("plugin_cityReputation", 10)
         self.game_map.setStringProperty("activeSimulationRegion", "AR0100")
         api = ModuleType("game")
         api.CCreature = CityCreature
+        api.CGameObject = type(
+            "BoundGameObjectApi",
+            (),
+            {
+                name: staticmethod(getattr(ModelObject, name))
+                for name in ("getGame", "getStringProperty", "getBoolProperty", "setBoolProperty")
+            },
+        )
+        api.CGame = type(
+            "BoundGameApi",
+            (),
+            {name: staticmethod(getattr(CityModel, name)) for name in ("getMap", "getContext", "getMapBindingEpoch")},
+        )
+        api.CMap = type("BoundMapApi", (), {"getObjectByName": staticmethod(ModelMap.getObjectByName)})
+        api.CMapObject = type("BoundMapObjectApi", (), {"getMap": staticmethod(ModelObject.getMap)})
         for name in ("CDialog", "CBuilding", "CQuest", "CTrigger", "CEvent"):
             setattr(api, name, type(name, (CityObject,), {}))
 
@@ -188,9 +212,10 @@ class CityModel:
 
         api.claim_once = claimOnce
         installHookFlows(api)
+        api.flowGame = lambda game: SimpleNamespace(resolve=lambda: game)
         api.showReader = lambda *_args: self.readers.append(_args)
         api.choose = lambda *_args: getattr(self, "choice", "")
-        namespace = {"__builtins__": nativePluginBuiltins(), "__name__": "baldursGateResource"}
+        namespace = {"__builtins__": nativePluginBuiltins(api), "__name__": "baldursGateResource"}
         with patch.dict(sys.modules, game=api):
             exec(compile(SCRIPT.read_text(encoding="utf-8"), str(SCRIPT), "exec"), namespace)
             namespace["load"](None, self)
@@ -208,6 +233,12 @@ class CityModel:
 
     def getMap(self):
         return self.game_map
+
+    def getContext(self):
+        return self.context
+
+    def getMapBindingEpoch(self):
+        return self.map_binding_epoch
 
     def getGuiHandler(self):
         return self.gui
@@ -309,6 +340,57 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+    def testCityModelKeepsLateResourceImportsBoundToItsNativeShapedApi(self):
+        model = CityModel()
+        other = CityModel()
+        source_method = type(model.clock).ensureCitySourceKillXp
+        self.assertEqual(str(SCRIPT), source_method.__code__.co_filename)
+        resource_import = source_method.__globals__["__builtins__"]["__import__"]
+        api = resource_import("game", fromlist=("CGame",))
+        other_api = type(other.clock).ensureCitySourceKillXp.__globals__["__builtins__"]["__import__"]("game")
+        self.assertIsNot(api, other_api)
+        self.assertFalse(hasattr(api.CGameObject, "getMap"))
+        self.assertTrue(hasattr(api.CMapObject, "getMap"))
+        self.assertFalse(hasattr(model, "resolve"))
+        self.assertFalse(hasattr(api.CGame, "resolve"))
+        with patch.dict(sys.modules, game=ModuleType("foreignGame")):
+            self.assertIs(api, resource_import("game"))
+            self.assertTrue(model.clock.ensureCitySourceKillXp())
+        self.assertTrue(model.game_map.getBoolProperty("plugin_citySourceKillXp"))
+        self.assertFalse(other.game_map.getBoolProperty("plugin_citySourceKillXp"))
+        for name, level in (("os", 0), ("_game", 0), ("game", 1)):
+            with self.subTest(name=name, level=level), self.assertRaises(ImportError):
+                resource_import(name, level=level)
+
+    def testCityModelUsesRealPolicyToRefuseForeignAndStaleBindings(self):
+        for invalid in ("foreignMap", "inactiveContext", "missingClock", "epochChangedAfterWrite"):
+            with self.subTest(invalid=invalid):
+                model = CityModel()
+                if invalid == "foreignMap":
+                    model.game_map.setStringProperty("mapName", "candlekeep")
+                    self.assertFalse(model.clock.ensureCitySourceKillXp())
+                    self.assertFalse(model.game_map.getBoolProperty("plugin_citySourceKillXp"))
+                    continue
+                if invalid == "inactiveContext":
+                    model.context.active = False
+                elif invalid == "missingClock":
+                    model.game_map.removeObject(model.clock)
+                else:
+                    original = ModelObject.setBoolProperty
+
+                    def setAndInvalidate(obj, key, value):
+                        original(obj, key, value)
+                        model.map_binding_epoch += 1
+
+                    api = type(model.clock).ensureCitySourceKillXp.__globals__["__builtins__"]["__import__"]("game")
+                    api.CGameObject.setBoolProperty = staticmethod(setAndInvalidate)
+                with self.assertRaises(model.clock.PoisonBindingChanged):
+                    model.clock.ensureCitySourceKillXp()
+                self.assertEqual(
+                    invalid == "epochChangedAfterWrite",
+                    model.game_map.getBoolProperty("plugin_citySourceKillXp"),
+                )
+
     def testResourceCallbacksUseOnlyNativeAllowedBuiltins(self):
         allowed = nativePluginBuiltins()
         unsupported = unsupportedPluginBuiltins(SCRIPT.read_text(encoding="utf-8"), allowed)
