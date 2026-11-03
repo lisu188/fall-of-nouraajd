@@ -2193,7 +2193,7 @@ def load(self, context):
             source_row = clock(self).poisonQuestPresentation(self.getStringProperty("questKey"))
             if source_row is not None and source_row.get("hint"):
                 return source_row["hint"]
-            return self.getStringProperty("hint") or "Follow the named people, source items and city journal."
+            return self.getStringProperty("hintText") or "Follow the named people, source items and city journal."
 
         def onComplete(self):
             pass

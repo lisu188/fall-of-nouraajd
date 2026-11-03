@@ -1099,7 +1099,7 @@ class BaldursGatePoisonSourceTest(unittest.TestCase):
         before = deepcopy((self.clock.properties, self.world.properties, self.player.properties))
         quest = self.fixture.game.createObject("cityMarekPoisonQuest")
         self.assertEqual("Follow the named people, source items and city journal.", quest.getHint())
-        quest.setStringProperty("hint", "Existing custom legacy hint.")
+        quest.setStringProperty("hintText", "Existing custom legacy hint.")
         self.assertEqual("Existing custom legacy hint.", quest.getHint())
         self.assertEqual(before, (self.clock.properties, self.world.properties, self.player.properties))
 

@@ -14,6 +14,122 @@ from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
 class CityNativeLoadingRuntimeTest(unittest.TestCase):
     runChild = PythonCallbackLifecycleTest.runChild
 
+    def testCityQuestHintNativeDispatchReadsNonvirtualBackingTextOnce(self):
+        output, errors = self.runChild(
+            """
+
+        import json
+        import os
+        from pathlib import Path
+        import sys
+        import types
+        instance = game.CGameLoader.loadGame()
+        try:
+            game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior')
+            loop.run()
+            world = instance.getMap()
+            player = world.getPlayer()
+            candidate = instance.createObject('cityQuinnDaggerQuest')
+            assert isinstance(candidate, game.CQuest)
+            assert candidate.getGame() is instance
+            assert candidate.getStringProperty('questKey') == 'quinnDagger'
+            logical_script = 'maps/baldursGate/script.py'
+            module_dir = Path(game.__file__).resolve().parent
+            roots = ([Path(os.environ['GAME_BUILD_DIR'])] if os.environ.get('GAME_BUILD_DIR') else [])
+            roots += [module_dir, module_dir.parent]
+            source_path = next((root / logical_script for root in roots if (root / logical_script).is_file()), None)
+            if source_path is None:
+                raise AssertionError('staged city script is required for profiler source identity')
+            source_text = source_path.read_text(encoding='utf8')
+            # Match CPluginLoader/pybind exec framing; compile only, never execute a replacement plugin.
+            compiled = compile('# -*- coding: utf-8 -*-\\n' + source_text + '\\n', '<string>', 'exec', dont_inherit=True)
+            def codes(value):
+                result = [value]
+                for child in value.co_consts:
+                    if isinstance(child, types.CodeType):
+                        result.extend(codes(child))
+                return result
+            expected = [code for code in codes(compiled) if code.co_qualname == 'load.<locals>.BaldursGateQuest.getHint']
+            if len(expected) != 1:
+                raise AssertionError(('staged authored getHint code must be unique', len(expected)))
+            expected_code = expected[0]
+            native_identity = game.CGameObject.ptr(candidate)
+            candidate_name = game.CGameObject.getName(candidate)
+            candidate_type = game.CGameObject.getTypeId(candidate)
+            if not candidate_name or game.CGameObject.ptr(candidate) is not native_identity:
+                raise AssertionError('candidate canonical native identity is unstable')
+            def snapshot():
+                return (world.getTurn(), tuple(player.getNumericProperty(key) for key in ('hp', 'mana', 'gold', 'exp')),
+                        sorted(item.getName() for item in player.getItems()),
+                        sorted((slot, item.getName() if item else None) for slot, item in player.getEquipped().items()),
+                        sorted(quest.getName() for quest in player.getQuests()),
+                        sorted(quest.getName() for quest in player.getCompletedQuests()))
+            before = snapshot()
+            for custom, expected_hint in (
+                ('', 'Follow the named people, source items and city journal.'),
+                ('Ask the named contact about the keepsake.', 'Ask the named contact about the keepsake.'),
+            ):
+                if custom:
+                    candidate.setStringProperty('hintText', custom)
+                calls, observed_codes, mismatches = [], [], []
+                previous = sys.getprofile()
+                def count(frame, event, argument):
+                    code = frame.f_code
+                    if event != 'call' or code.co_qualname != expected_code.co_qualname:
+                        return
+                    if (code.co_filename != expected_code.co_filename or code.co_firstlineno != expected_code.co_firstlineno
+                            or code != expected_code or frame.f_globals.get('__file__') != logical_script):
+                        if len(mismatches) < 8:
+                            mismatches.append('source code identity')
+                        return
+                    owner = frame.f_locals.get('self')
+                    if owner is None or game.CGameObject.ptr(owner) is not native_identity:
+                        return
+                    if (game.CGameObject.getName(owner) != candidate_name
+                            or game.CGameObject.getTypeId(owner) != candidate_type
+                            or game.CGameObject.getGame(owner) is not instance):
+                        if len(mismatches) < 8:
+                            mismatches.append('native quest ownership')
+                        return
+                    if observed_codes and code is not observed_codes[0]:
+                        if len(mismatches) < 8:
+                            mismatches.append('multiple actual code objects')
+                        return
+                    if not observed_codes:
+                        observed_codes.append(code)
+                    calls.append(1)
+                game.set_logger_sink('stderr')
+                try:
+                    sys.setprofile(count)
+                    try:
+                        actual = game.CQuest.getHint(candidate)
+                    finally:
+                        sys.setprofile(previous)
+                finally:
+                    game.set_logger_sink('disabled')
+                assert sys.getprofile() is previous, 'quest hint probe must restore the prior profiler'
+                print('native city quest hint override calls=' + str(len(calls)), flush=True)
+                print('native city quest hint identity=' + json.dumps(dict(
+                    filename=expected_code.co_filename, qualname=expected_code.co_qualname,
+                    firstLine=expected_code.co_firstlineno, pluginFile=logical_script,
+                    nativeName=candidate_name, nativeType=candidate_type,
+                    codeObjects=len(observed_codes), mismatches=mismatches)), flush=True)
+                if not calls or mismatches:
+                    raise AssertionError(('actual authored profiler target was not uniquely bound', len(calls), mismatches))
+                if len(calls) != 1:
+                    raise AssertionError(('native CQuest.getHint must call the authored override once', len(calls)))
+                assert actual == expected_hint, (actual, expected_hint)
+                assert snapshot() == before, 'reading a hint must preserve native progress, resources and ownership'
+            print('native city quest hint fallback and authored text passed', flush=True)
+        finally:
+            instance.getContext().shutdown()
+                """,
+            return_stderr=True,
+        )
+        self.assertEqual(2, output.count("native city quest hint override calls=1"))
+        self.assertIn("native city quest hint fallback and authored text passed", output)
+        self.assertNotIn("RecursionError", errors)
+
     def testOptionalCityReferencesRespectActualNativeMissingPropertyContract(self):
         output = self.runChild("""
             import json
@@ -309,6 +425,43 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         ast.parse(textwrap.dedent(program))
         self.assertEqual({}, kwargs, "Keep the shared bounded child timeout")
         return program
+
+    def testCityQuestHintFallbackNeverReadsItsReflectedVirtualProperty(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / "res/maps/baldursGate/script.py").read_text(encoding="utf8")
+        load = next(
+            node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name == "load"
+        )
+        quest = next(node for node in load.body if isinstance(node, ast.ClassDef) and node.name == "BaldursGateQuest")
+        hint = next(node for node in quest.body if isinstance(node, ast.FunctionDef) and node.name == "getHint")
+        state = {}
+        namespace = {"clock": lambda _quest: SimpleNamespace(poisonQuestPresentation=lambda _key: state.get("source"))}
+        exec(compile(ast.Module(body=[hint], type_ignores=[]), "<actual-city-quest-hint>", "exec"), namespace)
+
+        class ReflectedQuest:
+            def __init__(self, values):
+                self.values, self.reads = values, []
+
+            def getStringProperty(self, name):
+                self.reads.append(name)
+                if name == "hint":
+                    raise AssertionError("CQuest.hint reflects virtual getHint and must not be its backing field")
+                return self.values.get(name, "")
+
+        for source_row, custom, expected in (
+            (None, "", "Follow the named people, source items and city journal."),
+            (None, "Authored contact.", "Authored contact."),
+            ({"hint": "Heard clue."}, "Other text.", "Heard clue."),
+            ({"hint": ""}, "Authored contact.", "Authored contact."),
+        ):
+            with self.subTest(source_row=source_row, custom=custom):
+                state["source"] = source_row
+                candidate = ReflectedQuest({"questKey": "quinnDagger", "hintText": custom})
+                self.assertEqual(expected, namespace["getHint"](candidate))
+                self.assertEqual(
+                    ["questKey"] + ([] if source_row and source_row.get("hint") else ["hintText"]), candidate.reads
+                )
 
     def testChildCanReturnDiagnosticStderrWithoutChangingItsDefaultResultOrDeadline(self):
         import subprocess
