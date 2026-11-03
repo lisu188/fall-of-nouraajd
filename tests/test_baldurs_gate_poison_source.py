@@ -130,7 +130,7 @@ class BaldursGatePoisonSourceTest(unittest.TestCase):
 
         def createConfiguredObject(name):
             row = self.config.get(name, {})
-            if row.get("class") in ("BaldursGateQuest", "BaldursGateDialog"):
+            if row.get("class") in ("BaldursGateQuest", "BaldursGateDialog", "BaldursGateUnderstandingTome"):
                 obj = self.fixture.classes[row["class"]]()
                 obj.game, obj.kind = self.fixture.game, name
                 obj.properties.update(deepcopy(row["properties"]))
@@ -204,7 +204,7 @@ class BaldursGatePoisonSourceTest(unittest.TestCase):
         if actor.getBoolProperty("plugin_cityInventoryInitialized"):
             return
         for index, row in enumerate(json.loads(actor.getStringProperty("sourceInventory").removeprefix("city-json:"))):
-            item = self.fixture.createObject("cityItem" + row["item"][:1].upper() + row["item"][1:].lower())
+            item = self.fixture.game.createObject("cityItem" + row["item"][:1].upper() + row["item"][1:].lower())
             item.setStringProperty("plugin_citySourceItem", row["item"])
             item.setStringProperty("plugin_cityCharges", "city-json:" + json.dumps(row["charges"]))
             item.setStringProperty("name", actor.getName() + "Stock" + str(index))
@@ -1129,6 +1129,270 @@ class BaldursGatePoisonSourceTest(unittest.TestCase):
         for clue in ("Diviner", "Jalantha", "Water Queen", "Blade and Stars", "Blushing Mermaid"):
             self.assertNotIn(clue, " ".join(row.values()))
         self.assertIsNone(self.clock.poisonQuestPresentation("lothanderGeas"))
+
+    def book08Scenario(self, *, positive_charge=True):
+        """Preserve the acquired raw zero triple unless this fixture explicitly supplies one charge."""
+        base = NativeObject()
+        base.setNumericProperty("intelligence", 5)
+        base.setNumericProperty("strength", 9)
+        self.player.setObjectProperty("baseStats", base)
+
+        def composed(owner):
+            value = NativeObject()
+            owned_base = owner.getObjectProperty("baseStats")
+            for key in ("intelligence", "strength"):
+                value.setNumericProperty(key, owned_base.getNumericProperty(key) if owned_base else 0)
+            value.setNumericProperty("intelligence", value.getNumericProperty("intelligence") + 6)
+            return value
+
+        patcher = patch.object(Creature, "getStats", composed, create=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.clock.setBoolProperty("plugin_cityBook08NativeConversionEnabled", True)
+        self.globalValue("HelpJalantha", 1)
+        priest = self.actor("CHANTH")
+        book = next(item for item in priest.items if item.getStringProperty("plugin_citySourceItem") == "BOOK08")
+        self.assertEqual([0, 0, 0], json.loads(book.getStringProperty("plugin_cityCharges").removeprefix("city-json:")))
+        cursor = self.clock.poisonBeginDialogue(priest)
+        for edge in (2, 4, 9):
+            self.assertTrue(self.clock.poisonChooseEdge(cursor, edge))
+        self.assertTrue(any(item is book for item in self.player.items))
+        self.assertFalse(any(item is book for item in priest.items))
+        book.setNumericProperty("plugin_cityQuantity", 1)
+        book.setBoolProperty("plugin_cityUnidentified", False)
+        if positive_charge:
+            book.setStringProperty("plugin_cityCharges", "city-json:[1,0,0]")
+        return book, base
+
+    def invokeBook08Use(self, item, owner=None):
+        """Native-shaped onUse dispatch; the current CItem with no Python override is exactly a no-op."""
+        callback = getattr(item, "onUse", None)
+        return bool(callback(SimpleNamespace(getCause=lambda: owner or self.player))) if callback else False
+
+    def testBook08ExplicitChargeUsesActualItemAndOwnedBaseRatherThanComposedSnapshot(self):
+        book, base = self.book08Scenario()
+        if hasattr(book, "isDisposable"):
+            self.assertFalse(book.isDisposable(), "The callback owns successful exact-item consumption")
+        before = Creature.getStats(self.player)
+        resources = (
+            self.player.getNumericProperty("gold"),
+            self.player.getNumericProperty("exp"),
+            self.world.getNumericProperty("plugin_cityStanding"),
+        )
+        self.assertTrue(self.invokeBook08Use(book))
+        self.assertEqual(
+            resources,
+            (
+                self.player.getNumericProperty("gold"),
+                self.player.getNumericProperty("exp"),
+                self.world.getNumericProperty("plugin_cityStanding"),
+            ),
+        )
+        self.assertEqual(6, base.getNumericProperty("intelligence"))
+        self.assertEqual(12, Creature.getStats(self.player).getNumericProperty("intelligence"))
+        self.assertEqual(11, before.getNumericProperty("intelligence"), "The prior composed snapshot is unchanged")
+        self.assertEqual(9, base.getNumericProperty("strength"))
+        self.assertNotIn(book, self.player.items)
+        self.assertEqual("city-json:[0,0,0]", book.getStringProperty("plugin_cityCharges"))
+        self.assertTrue(book.getBoolProperty("plugin_cityBook08Consumed"))
+        record = self.state()["receipts"]["book08Use:" + book.getName()]
+        self.assertEqual("complete", record["status"])
+        self.assertEqual(
+            ["singleEffectiveChargeReserved", "permanentOwnedBaseIntelligence", "actualUsedInstanceRemoved"],
+            record["steps"],
+        )
+
+    def testBook08UseBeforeHandInRemovesTheSourceBookCondition(self):
+        book, _ = self.book08Scenario()
+        self.assertTrue(self.invokeBook08Use(book))
+        self.assertFalse(any(item.getStringProperty("plugin_citySourceItem") == "BOOK08" for item in self.player.items))
+        priest = self.create("JALANT", "AR0609", [216, 677], "book08JalanthaSourceCreation")
+        session = self.clock.poisonBeginDialogue(priest)
+        if session is not None:
+            cursor = self.state()["cursors"][session]
+            self.assertNotEqual(7, cursor["state"], "Jalantha's PartyHasItem book entry cannot survive consumption")
+        self.assertNotIn(book, priest.items)
+
+    def testBook08HandInBeforeUsePreservesJalanthasActualPossessionAndGrantsNoStat(self):
+        book, base = self.book08Scenario()
+        priest = self.create("JALANT", "AR0609", [216, 677], "book08JalanthaSourceCreation")
+        session = self.clock.poisonBeginDialogue(priest)
+        for edge in (14, 19):
+            self.assertTrue(self.clock.poisonChooseEdge(session, edge))
+        self.assertIn(book, priest.items)
+        self.assertNotIn(book, self.player.items)
+        self.assertFalse(self.invokeBook08Use(book))
+        self.assertEqual(5, base.getNumericProperty("intelligence"))
+        self.assertEqual("city-json:[1,0,0]", book.getStringProperty("plugin_cityCharges"))
+
+    def testBook08InvalidChargeTriplesRemainUnusableWithoutMutation(self):
+        book, base = self.book08Scenario(positive_charge=False)
+        for charges in ([2, 0, 0], [True, 0, 0], [1, 0], [1, 1, 0]):
+            with self.subTest(charges=charges):
+                encoded = "city-json:" + json.dumps(charges)
+                book.setStringProperty("plugin_cityCharges", encoded)
+                before = self.clock.getStringProperty("plugin_cityPoisonSourceState")
+                self.assertFalse(self.invokeBook08Use(book))
+                self.assertEqual(5, base.getNumericProperty("intelligence"))
+                self.assertIn(book, self.player.items)
+                self.assertEqual(encoded, book.getStringProperty("plugin_cityCharges"))
+                self.assertEqual(before, self.clock.getStringProperty("plugin_cityPoisonSourceState"))
+
+    def testBook08UnidentifiedOrDisabledIsACompleteNoOp(self):
+        book, base = self.book08Scenario()
+        book.setBoolProperty("plugin_cityUnidentified", True)
+        self.assertFalse(self.invokeBook08Use(book))
+        book.setBoolProperty("plugin_cityUnidentified", False)
+        self.clock.setBoolProperty("plugin_cityBook08NativeConversionEnabled", False)
+        self.player.hp = 0
+        self.assertFalse(self.invokeBook08Use(book), "Disabled mode must not impose the live poison-player guard")
+        self.assertEqual(5, base.getNumericProperty("intelligence"))
+        self.assertIn(book, self.player.items)
+
+    def testBook08SpentInstanceCannotAwardAgainAfterReinsertion(self):
+        book, base = self.book08Scenario()
+        self.assertTrue(self.invokeBook08Use(book))
+        self.player.items.append(book)
+        self.assertFalse(self.invokeBook08Use(book))
+        book.setStringProperty("plugin_cityCharges", "city-json:[1,0,0]")
+        book.setBoolProperty("plugin_cityBook08Consumed", False)
+        self.assertFalse(self.invokeBook08Use(book), "The saved complete receipt also prevents duplicate grants")
+        self.assertEqual(6, base.getNumericProperty("intelligence"))
+
+    def testBook08AmbiguousActualOwnershipAndSameNameClonesRefuseBeforeReward(self):
+        book, base = self.book08Scenario()
+        priest = self.actor("CHANTH")
+        priest.items.append(book)
+        self.assertFalse(self.invokeBook08Use(book))
+        priest.items.remove(book)
+        clone = self.give(priest, "BOOK08")
+        clone.setStringProperty("name", book.getName())
+        self.assertFalse(self.invokeBook08Use(book))
+        self.assertEqual(5, base.getNumericProperty("intelligence"))
+        self.assertFalse(book.getBoolProperty("plugin_cityBook08Consumed"))
+
+    def testBook08PartyFollowerIsTheSelfTargetAndHeroStatsStayUnchanged(self):
+        book, hero_base = self.book08Scenario()
+        follower = self.fixture.object(Creature, "tomeFollower")
+        base = NativeObject()
+        base.setNumericProperty("intelligence", 2)
+        follower.setObjectProperty("baseStats", base)
+        self.player.items.remove(book)
+        follower.items.append(book)
+        self.clock.setStringProperty("plugin_cityRoster", json.dumps(["tomeFollower"]))
+        self.clock.setObjectProperty("plugin_cityCompanion_tomeFollower", follower)
+        self.assertTrue(self.invokeBook08Use(book, follower))
+        self.assertEqual(3, base.getNumericProperty("intelligence"))
+        self.assertEqual(5, hero_base.getNumericProperty("intelligence"))
+        self.assertNotIn(book, follower.items)
+
+    def testBook08RetainedSourceHolderCannotShareTheActualUseInstance(self):
+        book, base = self.book08Scenario()
+        priest = self.actor("CHANTH")
+        priest.items.append(book)
+        self.world.removeObject(priest)
+        self.clock.setObjectProperty("plugin_cityCorpse_" + priest.getName(), priest)
+        self.assertFalse(self.invokeBook08Use(book))
+        self.assertEqual(5, base.getNumericProperty("intelligence"))
+        self.assertIn(book, self.player.items)
+
+    def testBook08ModelPropertyRoundTripRetainsPermanentBaseAndSpentReceipt(self):
+        book, base = self.book08Scenario()
+        self.assertTrue(self.invokeBook08Use(book))
+        saved = json.loads(
+            json.dumps(
+                {
+                    "baseStats": base.properties,
+                    "sourceState": self.state(),
+                    "inventoryNames": [item.getName() for item in self.player.items],
+                }
+            )
+        )
+        restored_base = NativeObject()
+        restored_base.properties.update(saved["baseStats"])
+        self.player.setObjectProperty("baseStats", restored_base)
+        self.writeState(saved["sourceState"])
+        self.assertEqual(6, restored_base.getNumericProperty("intelligence"))
+        self.assertNotIn(book.getName(), saved["inventoryNames"])
+        self.assertEqual("complete", self.state()["receipts"]["book08Use:" + book.getName()]["status"])
+        self.assertFalse(self.invokeBook08Use(book))
+        self.assertEqual(12, Creature.getStats(self.player).getNumericProperty("intelligence"))
+
+    def testBook08MapTransitionDuringBaseLookupRefusesBeforeAnyMutation(self):
+        book, base = self.book08Scenario()
+        original = self.player.properties
+        fixture = self.fixture
+
+        class TransitionOnBase(dict):
+            def get(self, key, default=None):
+                value = super().get(key, default)
+                if key == "baseStats":
+                    fixture.context.generation += 1
+                return value
+
+        self.player.properties = TransitionOnBase(original)
+        with self.assertRaises(self.clock.PoisonBindingChanged):
+            self.invokeBook08Use(book)
+        self.player.properties = original
+        self.assertEqual(5, base.getNumericProperty("intelligence"))
+        self.assertIn(book, self.player.items)
+        self.assertFalse(book.getBoolProperty("plugin_cityBook08Consumed"))
+
+    def testBook08OwnershipChangeDuringBaseLookupRefusesBeforeAnyMutation(self):
+        book, base = self.book08Scenario()
+        original, player, recipient = self.player.properties, self.player, self.actor("CHANTH")
+
+        class TransferOnBase(dict):
+            def get(self, key, default=None):
+                value = super().get(key, default)
+                if key == "baseStats" and book in player.items:
+                    player.items.remove(book)
+                    recipient.items.append(book)
+                return value
+
+        self.player.properties = TransferOnBase(original)
+        with self.assertRaises(self.clock.PoisonBindingChanged):
+            self.invokeBook08Use(book)
+        self.player.properties = original
+        self.assertEqual(5, base.getNumericProperty("intelligence"))
+        self.assertIn(book, recipient.items)
+        self.assertFalse(book.getBoolProperty("plugin_cityBook08Consumed"))
+
+    def testBook08RawZeroHasOneDerivedOrdinaryUseWithoutRewritingSourceStock(self):
+        book, base = self.book08Scenario(positive_charge=False)
+        self.assertEqual([0, 0, 0], json.loads(book.getStringProperty("plugin_cityCharges").removeprefix("city-json:")))
+        self.assertTrue(self.invokeBook08Use(book))
+        self.assertEqual(6, base.getNumericProperty("intelligence"))
+        record = self.state()["receipts"]["book08Use:" + book.getName()]
+        self.assertEqual([0, 0, 0], record["storedChargesBefore"])
+        self.assertEqual(1, record["chargeBefore"])
+        self.assertEqual("ordinaryBook08SingleUse", record["chargePolicy"])
+        self.assertEqual("complete", record["status"])
+        self.assertEqual("city-json:[0,0,0]", book.getStringProperty("plugin_cityCharges"))
+        self.assertNotIn(book, self.player.items)
+        self.player.items.append(book)
+        self.assertFalse(self.invokeBook08Use(book))
+        self.assertEqual(6, base.getNumericProperty("intelligence"))
+
+    def testBook08AbsentOptionalRetainedHoldersNeverCallMissingNativeObjectGetter(self):
+        book, base = self.book08Scenario(positive_charge=False)
+        original = NativeObject.getObjectProperty
+        missing_calls = []
+
+        def strict(owner, key):
+            if (
+                owner is self.clock
+                and key.startswith(("plugin_cityCorpse_", "plugin_cityParked_"))
+                and key not in owner.properties
+            ):
+                missing_calls.append(key)
+                raise IndexError("Missing native reflected object property")
+            return original(owner, key)
+
+        with patch.object(NativeObject, "getObjectProperty", strict):
+            self.assertTrue(self.invokeBook08Use(book))
+        self.assertEqual([], missing_calls)
+        self.assertEqual(6, base.getNumericProperty("intelligence"))
 
 
 if __name__ == "__main__":

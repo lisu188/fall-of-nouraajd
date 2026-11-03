@@ -249,3 +249,17 @@ correct geas answer or completes the Diviner task. Their existing effects and on
 Tests execute those dialogue paths through the source model, compare repeated reads against all active/completed quest
 collections and serialized state, and keep the disabled/dead-player legacy path available. They supply no native GUI,
 MCP, save/reload or fresh visual acceptance; updated staged views must be captured and inspected separately.
+
+
+## Partial BOOK08 native use conversion
+
+The disabled `plugin_cityBook08NativeConversionEnabled` component also requires poison source mode. It maps source Wisdom+1 to permanent owned `baseStats.intelligence`+1, using current composed stats only to verify the result. It accepts one identified carried actual BOOK08 with a valid raw charge triple `[0,0,0]` or explicit `[1,0,0]`. For the retained zero triple, a documented map-local ordinary-load conversion derives one effective use; the unchanged stored triple and policy are retained in the same-instance receipt. This follows pinned GemRB ordinary-load charge sanitization and the documented single-use tome, without claiming patched original BG1 loader equivalence. It never recharges a spent item, awards on acquisition, or rewrites source fixtures. The callback reserves the use, adds the owned base bonus, removes the exact item and completes a saved receipt. Disabled/unidentified/malformed/shared items grant nothing; consumed items or existing receipts cannot grant twice. Interrupted pending receipts remain quarantined. Giving the unused tome to Jalantha retains its actual ownership and grants no statistic; using it first removes her required book condition.
+
+Fresh configured BOOK08 objects use the existing scroll Python wrapper through the map-local `BaldursGateUnderstandingTome(CScrollBase)` class. Its inherited engine disposal policy is false; its own successful callback removes the exact item. The default scroll text action is never called. Existing saved plain `CItem` instances require a reviewed migration; they are not silently replaced. The source ability-pending marker stays true: blue lighting, EFF_M08 audio and unread notice11338 are not implemented, and original Wisdom/cap/usability behavior remains an original-versus-EE acceptance question. The authored use notice describes the native Intelligence outcome. Source checks are not native use/save, MCP, exhaustive-parity or owner acceptance.
+
+Focused native component checks transfer Chanthalas's original zero-charge book by identity, call the actual player's
+`useItem`, and verify unchanged resources, owned base Intelligence 5 to 6 and composed Intelligence 15 to 16 with the
+existing Wanderer race and a real equipment bonus. Independent disabled/identified and enabled/unidentified refusals
+retain the item. Spent state and an unspent registered subclass survive actual save/reload; the saved receipt prevents
+a repeat award. These use fresh private resource copies with both opt-ins enabled before map creation. Their explicit
+inventory transfer, identification and equipment setup are unit fixtures, not played acquisition or MCP/UI acceptance.

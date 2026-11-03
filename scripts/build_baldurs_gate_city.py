@@ -258,6 +258,8 @@ def nativeItem(source_id, item):
             plugin_cityItemImmovable=immovable,
             plugin_cityUndroppable=immovable,
         )
+    if source_id == "BOOK08":
+        class_id = "BaldursGateUnderstandingTome"
     if bonus:
         props["bonus"] = definition("CStats", **bonus)
     if item.get("flags", 0) & 2 and class_id in {"CWeapon", "CSmallWeapon"}:

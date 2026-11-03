@@ -364,7 +364,7 @@ def pairedValues(left, right):
 def load(self, context):
     import json
 
-    from game import CBuilding, CCreature, CDialog, CEvent, CQuest, CTrigger, Coords
+    from game import CBuilding, CCreature, CDialog, CEvent, CScrollBase, CQuest, CTrigger, Coords
     from game import claim_once, flowGame, mapQuest, register, resumableHook, uiRequest
 
     region_indices = {}
@@ -6089,6 +6089,22 @@ def load(self, context):
         # QUEST_CALLBACKS_END
 
     @register(context)
+    class BaldursGateUnderstandingTome(CScrollBase):
+        def onUse(self, event):
+            from game import CGame, CGameObject, CMap
+
+            game = CGameObject.getGame(self)
+            game_map = CGame.getMap(game) if game else None
+            if game_map is None or CGameObject.getStringProperty(game_map, "mapName") != "baldursGate":
+                return False
+            coordinator = CMap.getObjectByName(game_map, "cityClock")
+            if coordinator is None or not CGameObject.getBoolProperty(
+                coordinator, "plugin_cityBook08NativeConversionEnabled"
+            ):
+                return False
+            return coordinator.poisonUseUnderstandingTome(self, event.getCause() if event else None)
+
+    @register(context)
     class BaldursGatePersonTrigger(CTrigger):
         @resumableHook
         def trigger(self, actor, event):
@@ -6300,6 +6316,136 @@ def load(self, context):
                 item, key, CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":"))
             )
             self.poisonRequire(binding)
+
+        def poisonUseUnderstandingTome(self, item, owner):
+            """Opt-in adaptation: identified BOOK08 has one effective use, granting owned base Intelligence+1."""
+            from game import CGameObject
+
+            if not CGameObject.getBoolProperty(
+                self, "plugin_cityBook08NativeConversionEnabled"
+            ) or not CGameObject.getBoolProperty(self, "plugin_cityPoisonSourceEnabled"):
+                return False
+            binding = self.poisonCapture()
+            native, native_map = binding["objectClass"], binding["mapClass"]
+            data = self.poisonRead(binding)
+            if not data.get("sourceVersion") or not isinstance(owner, CCreature) or not CCreature.isAlive(owner):
+                return False
+            party = self.poisonPartyOwners(binding)
+            if not any(candidate is owner for candidate in party):
+                return False
+            if (
+                item is None
+                or native.getGame(item) is not binding["game"].resolve()
+                or native.getTypeId(item) != "cityItemBook08"
+                or native.getStringProperty(item, "plugin_citySourceItem") != "BOOK08"
+                or native.getBoolProperty(item, "plugin_cityUnidentified")
+                or native.getBoolProperty(item, "plugin_cityBook08Consumed")
+                or native.getNumericProperty(item, "plugin_cityQuantity") != 1
+                or not any(candidate is item for candidate in CCreature.getItems(owner))
+                or any(candidate is item for candidate in CCreature.getEquipped(owner).values())
+            ):
+                return False
+            item_name = native.getName(item)
+            charges = self.poisonReadItemData(binding, item, "plugin_cityCharges", [])
+            if (
+                not item_name
+                or charges not in ([0, 0, 0], [1, 0, 0])
+                or any(type(value) is not int for value in charges)
+            ):
+                return False
+            # Local ordinary-load conversion: retained CRE zeros denote one usable BOOK08 charge.
+            # No counter is recharged; the stored triple is preserved in the same-instance use receipt.
+            charge_policy = "ordinaryBook08SingleUse" if charges == [0, 0, 0] else "explicitSingleCharge"
+            holders = list(native_map.getObjects(binding["map"])) + party
+            for identity in data.get("actors", {}):
+                for prefix in ("plugin_cityCorpse_", "plugin_cityParked_"):
+                    retained = optionalObjectProperty(self, prefix + identity, native.getObjectProperty)
+                    if retained:
+                        if native.getGame(retained) is not binding["game"].resolve():
+                            raise self.PoisonBindingChanged("Retained tome holder belongs to another session")
+                        holders.append(retained)
+            distinct_holders, matches = [], []
+            for holder in holders:
+                if native.getStringProperty(holder, "plugin_citySourceItem") == "BOOK08" and (
+                    holder is item or native.getName(holder) == item_name
+                ):
+                    matches.append((holder, holder))
+                if not isinstance(holder, CCreature) or any(candidate is holder for candidate in distinct_holders):
+                    continue
+                distinct_holders.append(holder)
+                for candidate in self.poisonItems(binding, holder):
+                    if candidate is item or native.getName(candidate) == item_name:
+                        matches.append((holder, candidate))
+            if len(matches) != 1 or matches[0][0] is not owner or matches[0][1] is not item:
+                return False
+            base_stats = native.getObjectProperty(owner, "baseStats")
+            self.poisonRequire(binding)
+            if base_stats is None:
+                return False
+            base_before = native.getNumericProperty(base_stats, "intelligence")
+            current_stats = CCreature.getStats(owner)
+            composed_before = native.getNumericProperty(current_stats, "intelligence")
+            self.poisonRequire(binding)
+            if (
+                type(base_before) is not int
+                or type(composed_before) is not int
+                or not -2147483648 <= base_before < 2147483647
+                or not -2147483648 <= composed_before < 2147483647
+            ):
+                return False
+
+            def requireOwner(require_owned=True):
+                self.poisonRequire(binding)
+                if (
+                    not native.getBoolProperty(self, "plugin_cityBook08NativeConversionEnabled")
+                    or native.getGame(owner) is not binding["game"].resolve()
+                    or binding["mapObjectClass"].getMap(owner) is not binding["map"]
+                    or native_map.getObjectByName(binding["map"], native.getName(owner)) is not owner
+                    or not CCreature.isAlive(owner)
+                    or native.getObjectProperty(owner, "baseStats") is not base_stats
+                    or native.getName(item) != item_name
+                    or require_owned
+                    and not any(candidate is item for candidate in CCreature.getItems(owner))
+                ):
+                    raise self.PoisonBindingChanged("The tome lost its actual user/base-stat binding")
+
+            requireOwner()
+            receipt_key = "book08Use:" + item_name
+            if receipt_key in data["receipts"] or native.getNumericProperty(base_stats, "intelligence") != base_before:
+                return False
+            data["receipts"][receipt_key] = {
+                "status": "pending",
+                "item": item_name,
+                "owner": native.getName(owner),
+                "chargeBefore": 1,
+                "storedChargesBefore": list(charges),
+                "chargePolicy": charge_policy,
+                "sourceEffect": "BOOK08.ITM:effect0",
+                "conversion": "ownedBaseIntelligencePlusOne",
+                "baseBefore": base_before,
+                "composedBefore": composed_before,
+                "steps": [],
+            }
+            self.poisonWrite(binding, data)
+            native.setBoolProperty(item, "plugin_cityBook08Consumed", True)
+            requireOwner()
+            self.poisonWriteItemData(binding, item, "plugin_cityCharges", [0, 0, 0])
+            data["receipts"][receipt_key]["steps"].append("singleEffectiveChargeReserved")
+            self.poisonWrite(binding, data)
+            requireOwner()
+            native.setNumericProperty(base_stats, "intelligence", base_before + 1)
+            requireOwner()
+            if native.getNumericProperty(CCreature.getStats(owner), "intelligence") != composed_before + 1:
+                raise self.PoisonBindingChanged("The tome's current native stat result needs reconciliation")
+            data["receipts"][receipt_key]["steps"].append("permanentOwnedBaseIntelligence")
+            self.poisonWrite(binding, data)
+            self.poisonRemoveOwnedItem(binding, owner, item)
+            requireOwner(False)
+            data["receipts"][receipt_key]["steps"].append("actualUsedInstanceRemoved")
+            data["receipts"][receipt_key]["status"] = "complete"
+            self.poisonWrite(binding, data)
+            notify(self, "The tome's lessons take hold. Your Intelligence permanently increases by 1.")
+            return True
 
         def poisonRegisterAntidoteStock(self, actor, binding=None, data=None):
             """Called once by the AR0115 source factory after its original inventory is installed."""

@@ -190,7 +190,7 @@ class CityModel:
         )
         api.CMap = type("BoundMapApi", (), {"getObjectByName": staticmethod(ModelMap.getObjectByName)})
         api.CMapObject = type("BoundMapObjectApi", (), {"getMap": staticmethod(ModelObject.getMap)})
-        for name in ("CDialog", "CBuilding", "CQuest", "CTrigger", "CEvent"):
+        for name in ("CDialog", "CBuilding", "CQuest", "CTrigger", "CEvent", "CScrollBase"):
             setattr(api, name, type(name, (CityObject,), {}))
 
         def register(_context):

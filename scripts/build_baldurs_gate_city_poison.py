@@ -154,5 +154,6 @@ def preparePoisonSource(document, config, source, dialogue, followup, authored, 
         poisonSourceDefinitions=encoded(definitions),
         poisonAuthoredText=encoded(authored),
         plugin_cityPoisonSourceEnabled=False,
+        plugin_cityBook08NativeConversionEnabled=False,
     )
     return True

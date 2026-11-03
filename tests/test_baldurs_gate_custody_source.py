@@ -140,6 +140,11 @@ class NativeObject:
                 self.completed.append(quest)
 
 
+class NativeScroll(NativeObject):
+    def isDisposable(self):
+        return False
+
+
 class Creature(NativeObject):
     pass
 
@@ -250,6 +255,7 @@ class Fixture:
         selectedSupport(support / "quest_state.py", {"mapQuest"}, quest_generic)
         exports = {
             "CBuilding": NativeObject,
+            "CScrollBase": NativeScroll,
             "CCreature": Creature,
             "CGameObject": NativeObject,
             "CGame": CompactGame,
