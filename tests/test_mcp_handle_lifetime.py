@@ -325,6 +325,269 @@ class McpHandleLifetimeTest(unittest.TestCase):
                 sizes[compact] = total
         self.assertLess(sizes[True] * 4, sizes[False], sizes)
 
+    def testTextContentOptionIsExplicitOnlyOnEngineCallsAndDefaultsToTrue(self):
+        tools = {row["name"]: row for row in self.server._list_tools()}
+        for name, tool in tools.items():
+            with self.subTest(tool=name):
+                option = tool["inputSchema"].get("properties", {}).get("include_text_content")
+                if name in {"engine_call", "engine_handle_call"}:
+                    self.assertIsNotNone(option)
+                    self.assertEqual("boolean", option["type"])
+                    self.assertIs(True, option["default"])
+                    self.assertIn("structuredContent-aware", option["description"])
+                    self.assertNotIn("include_text_content", tool["inputSchema"]["required"])
+                    self.assertEqual("object", tool["outputSchema"]["type"])
+                else:
+                    self.assertIsNone(option)
+
+    def testTextContentDefaultAndExplicitTrueKeepSuccessAndExceptionBytes(self):
+        obj = CGameObject()
+        self.server.handles["owner"] = obj
+        self.server.exports["probe"].callable_obj = lambda: {"nested": [obj, None, 17, "Łódź"]}
+        for tool, arguments in (
+            ("engine_call", {"name": "probe"}),
+            ("engine_handle_call", {"handle": "owner", "method": "getName"}),
+        ):
+            with self.subTest(tool=tool, error=False):
+                invoke = getattr(self.server, "_" + tool)
+                implicit = invoke(arguments)
+                explicit = invoke({**arguments, "include_text_content": True})
+                self.assertEqual(implicit, explicit)
+                self.assertEqual(
+                    json.dumps(implicit, ensure_ascii=True, separators=(",", ":")),
+                    json.dumps(explicit, ensure_ascii=True, separators=(",", ":")),
+                )
+                self.assertEqual(json.loads(implicit["content"][0]["text"]), implicit["structuredContent"])
+        self.server.exports["probe"].callable_obj = Mock(side_effect=ValueError("controlled export error"))
+        obj.getName = Mock(side_effect=ValueError("controlled method error"))
+        with patch.object(mcp.traceback, "format_exc", return_value="controlled traceback\n") as trace:
+            for tool, arguments in (
+                ("engine_call", {"name": "probe"}),
+                ("engine_handle_call", {"handle": "owner", "method": "getName"}),
+            ):
+                with self.subTest(tool=tool, error=True):
+                    invoke = getattr(self.server, "_" + tool)
+                    implicit = invoke(arguments)
+                    explicit = invoke({**arguments, "include_text_content": True})
+                    self.assertTrue(implicit["isError"])
+                    self.assertEqual(
+                        json.dumps(implicit, ensure_ascii=True, separators=(",", ":")),
+                        json.dumps(explicit, ensure_ascii=True, separators=(",", ":")),
+                    )
+                    self.assertEqual("controlled traceback\n", implicit["structuredContent"]["traceback"])
+            self.assertEqual(4, trace.call_count)
+            self.assertTrue(all(call.kwargs == {"limit": 10} for call in trace.call_args_list))
+
+    def testTextOmissionKeepsNestedResultsMetadataAndActualHandleIdentity(self):
+        obj = CGameObject()
+        nested = {"objects": [obj, {"again": obj}], "empty": [], "none": None, "value": "Łódź"}
+        self.server.handles["owner"] = obj
+        obj.getObjectProperty = lambda key: nested
+        self.server.exports["probe"].callable_obj = lambda: nested
+        for metadata in (True, False):
+            for tool, arguments in (
+                ("engine_call", {"name": "probe"}),
+                ("engine_handle_call", {"handle": "owner", "method": "getObjectProperty", "args": ["nested"]}),
+            ):
+                with self.subTest(metadata=metadata, tool=tool):
+                    invoke = getattr(self.server, "_" + tool)
+                    full = invoke({**arguments, "include_handle_methods": metadata})
+                    textless = invoke({**arguments, "include_handle_methods": metadata, "include_text_content": False})
+                    self.assertEqual([], textless["content"])
+                    self.assertEqual(full["structuredContent"], textless["structuredContent"])
+                    self.assertEqual(full["isError"], textless["isError"])
+                    handle = textless["structuredContent"]["result"]["objects"][0]
+                    self.assertEqual(metadata, "pythonMethods" in handle)
+                    self.assertEqual(handle, textless["structuredContent"]["result"]["objects"][1]["again"])
+                    self.assertIs(obj, self.server.handles[handle["__handle__"]])
+
+    def testInvalidTextFlagsRefuseBeforeRegistryExportOrTargetLookup(self):
+        called = Mock(return_value="called")
+        self.server.exports["probe"].callable_obj = called
+
+        class CGameObject:
+            @property
+            def getName(self):
+                called()
+                return lambda: "descriptor value"
+
+        self.server.handles["owner"] = CGameObject()
+        lookups = Mock()
+
+        class TrackingDict(dict):
+            def get(self, key, default=None):
+                lookups(key)
+                return super().get(key, default)
+
+        self.server.exports = TrackingDict(self.server.exports)
+        self.server._stdio_handles.handles = TrackingDict(self.server.handles)
+        with patch.object(self.server, "_handleRegistry", wraps=self.server._handleRegistry) as registry, patch.object(
+            self.server, "_resolve_handle_references", wraps=self.server._resolve_handle_references
+        ) as resolved, patch.object(
+            self.server, "_allowed_handle_methods_for", wraps=self.server._allowed_handle_methods_for
+        ) as allowed:
+            for flag in (None, 0, 1, 0.0, "false", [], {}):
+                for tool, arguments in (
+                    ("engine_call", {"name": "probe"}),
+                    ("engine_handle_call", {"handle": "owner", "method": "getName"}),
+                ):
+                    for dispatched in (False, True):
+                        with self.subTest(flag=flag, tool=tool, dispatched=dispatched):
+                            arguments = {**arguments, "include_text_content": flag}
+                            with self.assertRaises(mcp.ProtocolError) as caught:
+                                if dispatched:
+                                    self.server._dispatch_tool({"name": tool, "arguments": arguments}, "stdio", None)
+                                else:
+                                    getattr(self.server, "_" + tool)(arguments)
+                            self.assertEqual(-32602, caught.exception.code)
+                            self.assertEqual("include_text_content must be a boolean", caught.exception.message)
+            lookups.assert_not_called()
+            called.assert_not_called()
+            registry.assert_not_called()
+            resolved.assert_not_called()
+            allowed.assert_not_called()
+
+    def testTextOmissionKeepsEveryEarlyHandleFailureAndGuard(self):
+        obj = CGameObject()
+        self.server.handles["owner"] = obj
+
+        def compare(arguments):
+            full = self.server._engine_handle_call(arguments)
+            textless = self.server._engine_handle_call({**arguments, "include_text_content": False})
+            self.assertEqual([], textless["content"])
+            self.assertTrue(full["isError"])
+            self.assertEqual(full["isError"], textless["isError"])
+            self.assertEqual(full["structuredContent"], textless["structuredContent"])
+            self.assertIsInstance(textless["structuredContent"], dict)
+
+        for arguments in (
+            {"handle": "owner", "method": "__dict__"},
+            {"handle": "missing", "method": "getName"},
+            {"handle": "owner", "method": "notExported"},
+            {"handle": "owner", "method": "getLabel"},
+        ):
+            with self.subTest(arguments=arguments):
+                compare(arguments)
+        obj.getName = 17
+        compare({"handle": "owner", "method": "getName"})
+        obj.getName = lambda: "probe"
+        with patch.object(self.server, "_resolve_handle_references", side_effect=ValueError("controlled resolution")):
+            compare({"handle": "owner", "method": "getName"})
+        for hook in ("_validate_pathfinding_call", "_validateEquipmentCall"):
+            with self.subTest(guard=hook), patch.object(self.server, hook, return_value={"error": "controlled guard"}):
+                compare({"handle": "owner", "method": "getName"})
+
+    def testTextOmissionKeepsExceptionPayloadAndSkipsCompatibilityJsonEncoding(self):
+        obj = CGameObject()
+        self.server.handles["owner"] = obj
+        self.server.exports["probe"].callable_obj = Mock(side_effect=ValueError("export failed"))
+        obj.getName = Mock(side_effect=ValueError("method failed"))
+        with patch.object(mcp.traceback, "format_exc", return_value="controlled traceback\n"):
+            for tool, arguments in (
+                ("engine_call", {"name": "probe"}),
+                ("engine_handle_call", {"handle": "owner", "method": "getName"}),
+            ):
+                with self.subTest(tool=tool):
+                    invoke = getattr(self.server, "_" + tool)
+                    full = invoke(arguments)
+                    with patch.object(mcp.json, "dumps", wraps=mcp.json.dumps) as encoded:
+                        textless = invoke({**arguments, "include_text_content": False})
+                    self.assertEqual([], textless["content"])
+                    self.assertTrue(textless["isError"])
+                    self.assertEqual(full["structuredContent"], textless["structuredContent"])
+                    self.assertEqual(0, encoded.call_count)
+
+    def testTextChoiceIsLocalAcrossReentrantAndFollowingDefaultCalls(self):
+        seen = []
+        self.server.exports["inner"] = mcp.ExportedCallable("inner", "test", "inner", lambda: 17, "()")
+
+        def outer():
+            seen.append(self.server._engine_call({"name": "inner"}))
+            return "outer"
+
+        self.server.exports["probe"].callable_obj = outer
+        textless = self.server._engine_call({"name": "probe", "include_text_content": False})
+        full = self.server._engine_call({"name": "probe"})
+        self.assertEqual([], textless["content"])
+        self.assertTrue(full["content"])
+        self.assertTrue(all(response["content"] for response in seen))
+        self.assertEqual({"name": "probe", "source": "test", "result": "outer"}, textless["structuredContent"])
+
+    def testTextlessHandleKeepsHttpSessionAuthorizationAndRelease(self):
+        obj = CGameObject()
+        self.server.exports["probe"].callable_obj = lambda: obj
+        first, second = self.initializeHttp(), self.initializeHttp()
+        response = self.server._call_tool(
+            {"name": "engine_call", "arguments": {"name": "probe", "include_text_content": False}}, "http", first
+        )
+        self.assertEqual([], response["content"])
+        handle = response["structuredContent"]["result"]["__handle__"]
+        denied = self.server._call_tool(
+            {
+                "name": "engine_handle_call",
+                "arguments": {"handle": handle, "method": "getName", "include_text_content": False},
+            },
+            "http",
+            second,
+        )
+        self.assertEqual([], denied["content"])
+        self.assertTrue(denied["isError"])
+        self.assertIn("Unknown handle", denied["structuredContent"]["error"])
+        self.assertEqual(
+            "probe",
+            self.callTool(
+                "engine_handle_call", {"handle": handle, "method": "getName", "include_text_content": False}, first
+            )["result"],
+        )
+        self.assertEqual({"released": 0}, self.callTool("engine_release_handles", {"handles": [handle]}, second))
+        self.assertEqual({"released": 1}, self.callTool("engine_release_handles", {"handles": [handle]}, first))
+
+    def testFixedTextlessWireWorkKeepsActionsAndReflectionExactlyEqual(self):
+        class CGameObject:
+            def getName(self):
+                return "fixed-handle"
+
+            def __repr__(self):
+                return "<fixed-text-content-probe>"
+
+            getBoolProperty = getDescription = getLabel = getNumericProperty = getName
+            getObjectProperty = getStringProperty = getType = getTypeId = hasTag = getName
+
+        objects = [CGameObject() for _ in range(5)]
+        action = Mock(return_value={"nested": [objects, None], "value": 17})
+        self.server.exports["probe"].callable_obj = action
+        results = {}
+        for metadata in (True, False):
+            for text in (True, False):
+                with patch.object(
+                    self.server, "_python_methods_for", wraps=self.server._python_methods_for
+                ) as inspected, patch.object(mcp.json, "dumps", wraps=mcp.json.dumps) as encoded:
+                    responses = [
+                        self.server._engine_call(
+                            {"name": "probe", "include_handle_methods": metadata, "include_text_content": text}
+                        )
+                        for _ in range(64)
+                    ]
+                self.assertEqual(320 if metadata else 0, inspected.call_count)
+                self.assertEqual(64 if text else 0, encoded.call_count)
+                self.assertTrue(all(not response["isError"] for response in responses))
+                self.assertTrue(all(bool(response["content"]) == text for response in responses))
+                results[metadata, text] = (
+                    responses[0]["structuredContent"],
+                    sum(
+                        len(json.dumps(response, ensure_ascii=True, separators=(",", ":")).encode("ascii"))
+                        for response in responses
+                    ),
+                )
+            self.assertEqual(results[metadata, True][0], results[metadata, False][0])
+            self.assertLess(results[metadata, False][1] * 5, results[metadata, True][1] * 3, results)
+            print(
+                f"[MCP text content] metadata={metadata} calls=64 fullBytes={results[metadata, True][1]} "
+                f"textlessBytes={results[metadata, False][1]} fullEncodes=64 textlessEncodes=0 "
+                f"inspectionEach={320 if metadata else 0} budget=textless<60%"
+            )
+        self.assertEqual(256, action.call_count)
+
 
 if __name__ == "__main__":
     unittest.main()
