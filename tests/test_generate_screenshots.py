@@ -4,7 +4,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
 
 from scripts import generate_screenshots
@@ -12,6 +12,89 @@ from scripts import generate_walkthrough_video
 
 
 class ScreenshotDisplayIsolationTest(unittest.TestCase):
+    def sdlFixture(self, accepted, driver=b"dummy"):
+        ctypes = ModuleType("ctypes")
+        ctypes.__path__ = []
+        utility = ModuleType("ctypes.util")
+        ctypes.util = utility
+        ctypes.c_char_p = object()
+        sdl = SimpleNamespace(SDL_GetCurrentVideoDriver=Mock(return_value=driver))
+
+        def load(name):
+            if name == accepted:
+                return sdl
+            raise OSError("Simulated unavailable SDL candidate")
+
+        ctypes.CDLL = Mock(side_effect=load)
+        utility.find_library = Mock(return_value=None)
+        return ctypes, utility, sdl
+
+    def testCaptureSdlResolvesRegisteredWindowsDependencyWhenAppLocalCopyIsAbsent(self):
+        build_dir = Path("selected-build")
+        ctypes, utility, sdl = self.sdlFixture("SDL2.dll")
+        with (
+            patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+            patch.object(generate_screenshots.os, "name", "nt"),
+            patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+            patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+        ):
+            try:
+                loaded = generate_screenshots.captureSdl()
+            except RuntimeError:
+                loaded = None
+        self.assertIs(
+            sdl, loaded, "Windows must resolve an already-loaded/registered SDL2.dll after build-local misses"
+        )
+        self.assertEqual(
+            [str(build_dir / "Release/SDL2.dll"), str(build_dir / "SDL2.dll"), "SDL2.dll"],
+            [call.args[0] for call in ctypes.CDLL.call_args_list],
+        )
+
+    def testCaptureSdlStillPrefersTheActiveBuildConfiguration(self):
+        build_dir = Path("selected-build")
+        expected = str(build_dir / "Release/SDL2.dll")
+        ctypes, utility, sdl = self.sdlFixture(expected, b"offscreen")
+        with (
+            patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+            patch.object(generate_screenshots.os, "name", "nt"),
+            patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+            patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+        ):
+            self.assertIs(sdl, generate_screenshots.captureSdl())
+        self.assertEqual([expected], [call.args[0] for call in ctypes.CDLL.call_args_list])
+
+    def testCaptureSdlKeepsPosixLookupOrder(self):
+        build_dir = Path("selected-build")
+        expected = "/existing/libSDL2.so"
+        ctypes, utility, sdl = self.sdlFixture(expected)
+        utility.find_library.return_value = expected
+        with (
+            patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+            patch.object(generate_screenshots.os, "name", "posix"),
+            patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+            patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+        ):
+            self.assertIs(sdl, generate_screenshots.captureSdl())
+        self.assertEqual(
+            [str(build_dir / "Release/SDL2.dll"), str(build_dir / "SDL2.dll"), expected],
+            [call.args[0] for call in ctypes.CDLL.call_args_list],
+        )
+
+    def testCaptureSdlStillRejectsNonisolatedVideoDrivers(self):
+        build_dir = Path("selected-build")
+        expected = str(build_dir / "Release/SDL2.dll")
+        for driver in (b"windows", b"x11"):
+            ctypes, utility, _sdl = self.sdlFixture(expected, driver)
+            with (
+                self.subTest(driver=driver),
+                patch.object(generate_screenshots, "_selected_build_dir", return_value=build_dir),
+                patch.object(generate_screenshots.os, "name", "nt"),
+                patch.dict(generate_screenshots.os.environ, {"GAME_BUILD_CONFIG": "Release"}, clear=True),
+                patch.dict("sys.modules", {"ctypes": ctypes, "ctypes.util": utility}),
+                self.assertRaisesRegex(RuntimeError, "not isolated"),
+            ):
+                generate_screenshots.captureSdl()
+
     def testCaptureUsesTheCompilerSpecificBuild(self):
         import os
 
@@ -107,6 +190,101 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
 
 
 class ScreenshotPanelSetupTest(unittest.TestCase):
+    def mapPreviewFixture(self, failure=None):
+        import ast
+
+        events = []
+        context = SimpleNamespace(shutdown=lambda: events.append("shutdown"))
+        instance = SimpleNamespace(gui_loaded=False, getContext=lambda: context)
+
+        def step(name):
+            events.append(name)
+            if failure == name:
+                raise RuntimeError("Preview failure: " + name)
+
+        def loadGame():
+            step("loadGame")
+            return instance
+
+        def loadGui(current):
+            self.assertIs(instance, current)
+            step("loadGui")
+            instance.gui_loaded = True
+
+        def start(current, *args):
+            self.assertIs(instance, current)
+            events.append(("guiAtStart", current.gui_loaded))
+            step("start")
+
+        game = SimpleNamespace(
+            CGameLoader=SimpleNamespace(
+                loadGame=loadGame, loadGui=loadGui, startGameWithPlayer=start, startRandomGameWithPlayer=start
+            )
+        )
+
+        class Simulation:
+            def __init__(self, module, current, map_name, player):
+                self.gameInstance = current
+                step("construct")
+
+            def pumpEvents(self, count):
+                events.append(("pump", count))
+                step("pump")
+
+            def captureGuiScreenshot(self, path):
+                events.append(("capturePath", path))
+                step("capture")
+                return {"bytes": 123}
+
+        source = (generate_screenshots.REPO_ROOT / "game_simulation.py").read_text(encoding="utf-8")
+        definition = next(
+            node for node in ast.parse(source).body if isinstance(node, ast.ClassDef) and node.name == "GameSimulation"
+        )
+        start_method = next(
+            node for node in definition.body if isinstance(node, ast.FunctionDef) and node.name == "startGame"
+        )
+        namespace = {}
+        exec(
+            compile(ast.Module(body=[start_method], type_ignores=[]), "actual-GameSimulation.startGame", "exec"),
+            namespace,
+        )
+        Simulation.startGame = namespace["startGame"]
+        module = ModuleType("game_simulation")
+        module.GameSimulation = Simulation
+        return game, module, events
+
+    def testPosedMapPreviewInitializesBeforeGuiForAuthoredAndRandomMaps(self):
+        for random_map in (False, True):
+            game, module, events = self.mapPreviewFixture()
+            with self.subTest(random=random_map), patch.dict("sys.modules", {"game_simulation": module}):
+                path = generate_screenshots.capture_map(
+                    game, Path("preview-output"), "Warrior", "candlekeep", random_map
+                )
+                expected = Path("preview-output") / ("map-random.png" if random_map else "map-candlekeep.png")
+                self.assertEqual(expected, path)
+                self.assertEqual(
+                    [("guiAtStart", False)],
+                    [event for event in events if isinstance(event, tuple) and event[0] == "guiAtStart"],
+                )
+                self.assertLess(events.index("start"), events.index("loadGui"))
+                self.assertLess(events.index("loadGui"), events.index("construct"))
+                self.assertEqual(
+                    [("pump", 5), ("pump", 5)],
+                    [event for event in events if isinstance(event, tuple) and event[0] == "pump"],
+                )
+                self.assertIn(("capturePath", expected), events)
+                self.assertEqual(1, events.count("shutdown"))
+
+    def testPosedMapPreviewShutsDownAfterSetupAndCaptureFailures(self):
+        for failure in ("start", "loadGui", "construct", "pump", "capture"):
+            game, module, events = self.mapPreviewFixture(failure)
+            with self.subTest(failure=failure), patch.dict("sys.modules", {"game_simulation": module}):
+                with self.assertRaisesRegex(RuntimeError, "Preview failure: " + failure):
+                    generate_screenshots.capture_map(game, Path("preview-output"), "Warrior", "candlekeep")
+                self.assertEqual(1, events.count("shutdown"))
+                if failure != "capture":
+                    self.assertNotIn("capture", events)
+
     def modifierFixture(self):
         sim = Mock()
         gui = sim.gameInstance.getGui.return_value

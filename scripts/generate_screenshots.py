@@ -270,6 +270,8 @@ def captureSdl():
     build_dir = _selected_build_dir()
     config = os.environ.get("GAME_BUILD_CONFIG", "Release")
     candidates = [build_dir / config / "SDL2.dll", build_dir / "SDL2.dll"]
+    if os.name == "nt":
+        candidates.append("SDL2.dll")
     candidates += [ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"]
     sdl = None
     for candidate in candidates:
@@ -662,27 +664,27 @@ def capture_panels(game, output_dir, player_class, panels):
 
 
 def capture_map(game, output_dir, player_class, map_name, random_map=False):
-    """Start a fresh GUI session for ``map_name`` and capture the map view."""
+    """Initialize a posed map preview before loading its isolated GUI."""
     import game_simulation
 
     label = "random" if random_map else map_name
     path = output_dir / f"map-{label}.png"
-    if random_map:
-        game_instance = game.CGameLoader.loadGame()
-        game.CGameLoader.loadGui(game_instance)
-        game.CGameLoader.startRandomGameWithPlayer(game_instance, player_class)
-        sim = game_simulation.GameSimulation(game, game_instance, "random", player_class)
-        sim.pumpEvents(5)
-    else:
-        sim = game_simulation.GameSimulation.startGame(game, map_name, player_class, load_gui=True)
-    # Pump a few frames so the map view is fully composited before readback.
-    sim.pumpEvents(5)
+    game_instance = game.CGameLoader.loadGame()
     try:
+        if random_map:
+            game.CGameLoader.startRandomGameWithPlayer(game_instance, player_class)
+        else:
+            game.CGameLoader.startGameWithPlayer(game_instance, map_name, player_class)
+        game.CGameLoader.loadGui(game_instance)
+        sim = game_simulation.GameSimulation(game, game_instance, label, player_class)
+        sim.pumpEvents(5)
+        # Retain the final compositing pumps before readback.
+        sim.pumpEvents(5)
         info = sim.captureGuiScreenshot(path=path)
         print(f"  [ok]   map {label}: {path.name} ({info.get('bytes', 0)} bytes)", flush=True)
         return path
     finally:
-        sim.gameInstance.getContext().shutdown()
+        game_instance.getContext().shutdown()
 
 
 def capture_management(game, output_dir, player_class):
