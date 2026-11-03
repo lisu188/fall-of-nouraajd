@@ -774,6 +774,13 @@ set(GAME_UNIT_TEST_TARGETS)
 
 if (WIN32)
     get_filename_component(TEST_PYTHONHOME "${Python3_EXECUTABLE}" DIRECTORY)
+    set(TEST_PYTHON_RUNTIME_PATH "${TEST_PYTHONHOME}")
+    foreach (python_runtime_directory IN LISTS Python3_RUNTIME_LIBRARY_DIRS)
+        if (IS_DIRECTORY "${python_runtime_directory}")
+            set(TEST_PYTHON_RUNTIME_PATH "${python_runtime_directory}")
+            break()
+        endif ()
+    endforeach ()
     if (DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
         set(TEST_RUNTIME_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
     endif ()
@@ -816,6 +823,8 @@ function(add_game_unit_test target_name)
                     ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
                     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
                 )
+                set_property(TEST "${test_name}" APPEND PROPERTY ENVIRONMENT_MODIFICATION
+                    "PATH=path_list_prepend:${TEST_PYTHON_RUNTIME_PATH}")
             else ()
                 set_tests_properties("${test_name}" PROPERTIES
                     ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
@@ -962,6 +971,8 @@ if (WIN32)
                 ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
             )
+            set_property(TEST "performance.performance_guard_tests" APPEND PROPERTY ENVIRONMENT_MODIFICATION
+                "PATH=path_list_prepend:${TEST_PYTHON_RUNTIME_PATH}")
         else ()
             set_tests_properties("performance.performance_guard_tests" PROPERTIES
                 ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
