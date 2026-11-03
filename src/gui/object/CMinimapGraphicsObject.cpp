@@ -306,6 +306,7 @@ std::size_t terrain_signature(const std::shared_ptr<CMap> &map, int z, const Lev
         hash_combine(seed, intHash(coords.y));
         hash_combine(seed, intHash(coords.z));
         hash_combine(seed, stringHash(tile_type(tile)));
+        hash_combine(seed, std::hash<const CTile *>{}(tile.get()));
     });
     return seed;
 }
