@@ -197,3 +197,55 @@ override remains an item/effect boundary. Script scheduling, event consumption,
 geometry, live actor ownership and original-versus-EE reconciliation remain pending.
 These tests/audits grant no native execution, gameplay, original parity, acceptance
 or ledger credit; all corresponding closure acceptance flags remain false.
+
+
+### Item movement and per-instance restrictions
+
+Known source ITM flags and CRE/STO instance flags remain separate. `plugin_cityItemFlags` preserves the known
+item-header bits; the existing `plugin_citySourceFlags` on materialized possessions continues to record instance
+bits. An item without the ITM movable/droppable bit (`0x4`) is immovable. The generated item template records that
+restriction, and source materialization combines it with instance undroppable (`0x8`) into
+`plugin_cityUndroppable`. Instance unstealable (`0x2`), stolen (`0x4`), identified (`0x1`), quantities and charges keep
+their existing meanings. Missing header evidence retains the existing fallback policy.
+
+This projection is local to city source items. Existing native city fixed-loot settlement already skips an actual
+undroppable possession before removing or granting it; the city's theft, companion-transfer and selling paths also
+check that value. The item stays with its actual owner. No weapon is deleted, no stock is reduced, and no natural-
+weapon blacklist or global loot policy is introduced. Known immovable templates are also ineligible for sale.
+Classic BG1's separate unsellable bit (`0x800`) remains respected; its critical bit (`0x1`) alone does not prevent sale.
+
+For example, retained CARRIO1 has header flags 32, which lack movement permission, and CARRIO's instance flags 0 add no
+extra restriction. Its actual Attack item must remain owned instead of becoming loot or a theft/sale choice. The
+retained crawler's authored 420 XP stays unchanged. This uses supporting EE base facts and format documentation;
+original patched BG1 parity remains open.
+
+The primary definitions are [ITM flags](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm#Header_Flags)
+and [CRE item flags](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/cre_v1.htm#CREV1_0_Item). The pinned
+[GemRB inventory implementation](https://github.com/gemrb/gemrb/blob/e76cad7a6190b65292b223a92cf219e0c7a39047/gemrb/core/Inventory.cpp#L137)
+corroborates deriving undroppable from missing movement permission. Reimplementation code is supporting evidence.
+
+Already-initialized saved items require a separately reviewed migration; no retrospective deletion or source-stock
+reseed is authorized here. Source callback tests and JSON property round trips are distinct from native defeat,
+native save/reload and real MCP evidence, which remain required before gameplay acceptance.
+
+
+### Poison journal clues
+
+The opt-in poison source path presents readable objectives and hints for the active poison/geas tasks and completed
+Diviner reading. These getters use existing quest stages and heard-clue flags; they do not progress a quest, pay a fee,
+change a timer or grant a reward. Default-off legacy text, the completed cure's genuine branch journal and both geas
+outcome descriptions remain unchanged.
+
+Before Lothander's offer is accepted, the hint directs the player back to him. Agreeing to help introduces the Diviner
+in the market square. The correct Diviner answer names Jalantha Mistmyr at the Water Queen's House; its automatic
+continuation records `DivinerAsked=1`. Only Lothander's later directions (`DivinerAsked=2`) introduce the Blade and
+Stars Inn. His completed scroll-return or priest-death outcome supplies the later Marek lead. No temple or inn clue is
+shown before the corresponding information has been heard.
+
+The completed reading records its actual 50-gold fee and no experience. Wrong-question alternatives retain their
+source differences: the treasure answer sets `LothanderMove=9`, while the profit answer does not. Neither invents the
+correct geas answer or completes the Diviner task. Their existing effects and one-reading-per-day rule are untouched.
+
+Tests execute those dialogue paths through the source model, compare repeated reads against all active/completed quest
+collections and serialized state, and keep the disabled/dead-player legacy path available. They supply no native GUI,
+MCP, save/reload or fresh visual acceptance; updated staged views must be captured and inspected separately.

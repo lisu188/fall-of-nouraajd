@@ -197,6 +197,9 @@ def definition(class_id, **properties):
 def nativeItem(source_id, item):
     """Native gear conversion; source-specific abilities remain explicit, unaudited obligations."""
     item_type = item.get("item_type", 0)
+    item_flags = item.get("flags")
+    item_flags_known = type(item_flags) is int and 0 <= item_flags <= 0xFFFFFFFF
+    immovable = item_flags_known and not bool(item_flags & 4)
     enchantment = min(5, max(0, item.get("enchantment", 0)))
     equipped_effect_count = item.get("equipped_effect_count")
     equipped_effects_known = type(equipped_effect_count) is int and 0 <= equipped_effect_count <= 65535
@@ -233,7 +236,7 @@ def nativeItem(source_id, item):
         "description": "A city possession converted to native item rules. Its source identity and ownership persist.",
         "plugin_citySourceItem": source_id,
         "plugin_cityItemType": item_type,
-        "plugin_cityTradeable": not bool(item.get("flags", 0) & 2048),
+        "plugin_cityTradeable": not bool(item.get("flags", 0) & 2048) and not immovable,
         "plugin_cityValue": max(0, item.get("price", item.get("base_value", 1))),
         "plugin_citySourceFlags": item.get("flags", 0),
         "plugin_cityLore": item.get("lore", 0),
@@ -249,6 +252,12 @@ def nativeItem(source_id, item):
         ),
         "tags": ["cursed"] if item.get("flags", 0) & 16 else [],
     }
+    if item_flags_known:
+        props.update(
+            plugin_cityItemFlags=item_flags,
+            plugin_cityItemImmovable=immovable,
+            plugin_cityUndroppable=immovable,
+        )
     if bonus:
         props["bonus"] = definition("CStats", **bonus)
     if item.get("flags", 0) & 2 and class_id in {"CWeapon", "CSmallWeapon"}:

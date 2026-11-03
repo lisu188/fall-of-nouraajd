@@ -737,7 +737,9 @@ def load(self, context):
         item.setNumericProperty("plugin_cityExpiration", row.get("expiration", 0))
         write(item, "plugin_cityCharges", row.get("charges", [0, 0, 0]))
         item.setBoolProperty("plugin_cityUnstealable", bool(row.get("flags", 0) & 2))
-        item.setBoolProperty("plugin_cityUndroppable", bool(row.get("flags", 0) & 8))
+        item.setBoolProperty(
+            "plugin_cityUndroppable", item.getBoolProperty("plugin_cityItemImmovable") or bool(row.get("flags", 0) & 8)
+        )
         item.setBoolProperty("plugin_cityStolen", bool(row.get("flags", 0) & 4))
         item.setBoolProperty("plugin_cityUnidentified", not bool(row.get("flags", 0) & 1))
         if row.get("flags", 0) & 8:
@@ -2177,6 +2179,9 @@ def load(self, context):
             return self.getStringProperty("rewardText") or "The recorded choice determines the reward."
 
         def getHint(self):
+            source_row = clock(self).poisonQuestPresentation(self.getStringProperty("questKey"))
+            if source_row is not None and source_row.get("hint"):
+                return source_row["hint"]
             return self.getStringProperty("hint") or "Follow the named people, source items and city journal."
 
         def onComplete(self):
@@ -6684,7 +6689,54 @@ def load(self, context):
                         "objective": "The priests could not provide the scroll. Lothander left an antidote half and departed.",
                         "reward": "The geas remains unresolved. This fallback grants an antidote half and no experience.",
                     }
-            return None
+            globals_ = state["globals"]
+            asked = globals_.get("DivinerAsked", 0)
+            quest_stage = stage(self, key)
+            if key == "divinerPoison" and quest_stage == "completed" and asked in (1, 2):
+                return {
+                    "objective": "The Diviner named Jalantha Mistmyr at the Water Queen's House as the priestess who can lift the geas.",
+                    "reward": "The reading cost 50 gold and grants no experience.",
+                    "hint": (
+                        "Tell Lothander what the Diviner revealed."
+                        if asked == 1
+                        else "Follow the Diviner's lead to Jalantha at the Water Queen's House."
+                    ),
+                }
+            if key not in ("marekPoison", "lothanderGeas") or quest_stage != "active":
+                return None
+            if key == "marekPoison" and state.get("geasOutcome") in ("scrollReturned", "priestsDeadNoRelease"):
+                return {
+                    "objective": "Lothander left his antidote half; recover the rest from Marek at the Blushing Mermaid Inn.",
+                    "reward": "A successful cure grants 10,000 experience once.",
+                    "hint": "Lothander named the Blushing Mermaid Inn. Find Marek there and obtain his antidote.",
+                }
+            if asked in (1, 2):
+                objective = (
+                    "Seek Jalantha Mistmyr at the Water Queen's House to arrange Lothander's release from the geas."
+                )
+                hint = (
+                    "Tell Lothander that the Diviner named Jalantha at the Water Queen's House."
+                    if asked == 1
+                    else "Ask Jalantha for help, then return to Lothander at the Blade and Stars Inn with her remedy."
+                )
+            elif globals_.get("HelpLothander", 0) == 1:
+                objective = "Help Lothander escape his geas so he can tell you how to find the antidote."
+                hint = "Ask the Diviner in the market square how to lift Lothander's geas."
+                if globals_.get("LothanderMove", 0) == 9:
+                    objective = "The Diviner answered another question; Lothander's geas is still unresolved."
+                    hint = "The Diviner can answer only one question each day. Return for a reading about Lothander's geas."
+            else:
+                objective = "Speak with Lothander about Marek's threat."
+                hint = "Lothander may know how to survive Marek's threat; hear what he has to say."
+            return {
+                "objective": objective,
+                "reward": (
+                    "A successful cure grants 10,000 experience once."
+                    if key == "marekPoison"
+                    else "Lothander has offered information about the antidote in exchange for your help."
+                ),
+                "hint": hint,
+            }
 
         def poisonSyncSourceQuests(self, binding, state, edge_id):
             mapping = {

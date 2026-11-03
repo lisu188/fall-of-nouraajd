@@ -900,6 +900,191 @@ class BaldursGatePoisonSourceTest(unittest.TestCase):
             self.clock.ensureCitySourceKillXp()
         self.assertEqual(19, self.player.getNumericProperty("exp"))
 
+    def journalHelpScenario(self):
+        lothander = self.create("LOTHAN", "AR0700", [2361, 1090], "AR0700.BCS#spawn4")
+        self.globalValue("LothanderMove", 3)
+        requests = self.drive(
+            self.clock.poisonDialogueFlow(lothander),
+            ["LOTHAN.DLG:edge1", "LOTHAN.DLG:edge3", "LOTHAN.DLG:edge10"],
+        )
+        self.assertTrue(requests)
+        self.assertEqual(1, self.state()["globals"]["HelpLothander"])
+        return lothander
+
+    def journalPresentation(self, key):
+        identities = {
+            "marekPoison": "cityMarekPoisonQuest",
+            "lothanderGeas": "cityLothanderGeasQuest",
+            "divinerPoison": "cityDivinerPoisonQuest",
+        }
+        obj = self.fixture.game.createObject(identities[key])
+
+        def snapshot():
+            return deepcopy(
+                {
+                    "clock": self.clock.properties,
+                    "world": self.world.properties,
+                    "player": self.player.properties,
+                    "items": [(item.getName(), item.getTypeId(), item.properties) for item in self.player.items],
+                    "active": [(q.getName(), q.getTypeId(), q.properties) for q in self.player.getQuests()],
+                    "completed": [(q.getName(), q.getTypeId(), q.properties) for q in self.player.getCompletedQuests()],
+                    "notices": self.notices,
+                }
+            )
+
+        before = snapshot()
+        result = {"objective": obj.getObjective(), "reward": obj.getReward(), "hint": obj.getHint()}
+        self.assertEqual(before, snapshot())
+        self.assertEqual(result, {"objective": obj.getObjective(), "reward": obj.getReward(), "hint": obj.getHint()})
+        self.assertEqual(before, snapshot())
+        return result
+
+    def testActiveSourceJournalUsesKnownDivinerLeadWithoutTempleSpoilers(self):
+        self.journalHelpScenario()
+        for key in ("marekPoison", "lothanderGeas"):
+            with self.subTest(key=key):
+                row = self.journalPresentation(key)
+                self.assertIn("geas", row["objective"])
+                self.assertIn("Diviner", row["hint"])
+                self.assertIn("market square", row["hint"])
+                self.assertNotIn(": active", row["objective"])
+                self.assertNotIn("source items", row["hint"])
+                for clue in ("Jalantha", "Water Queen", "Blade and Stars", "Blushing Mermaid"):
+                    self.assertNotIn(clue, " ".join(row.values()))
+        self.assertEqual(5000, self.player.getNumericProperty("gold"))
+        self.assertEqual(19, self.player.getNumericProperty("exp"))
+
+    def testCompletedDivinerJournalUsesHeardTempleClueBeforeInnLocation(self):
+        self.journalHelpScenario()
+        requests = self.drive(
+            self.clock.poisonDialogueFlow(self.actor("DIVINE")), ["DIVINE.DLG:edge1", "DIVINE.DLG:edge4"]
+        )
+        self.assertTrue(any("Jalantha" in str(row.get("args", [])) for row in requests))
+        self.assertEqual(1, self.state()["globals"]["DivinerAsked"])
+        self.assertEqual(4950, self.player.getNumericProperty("gold"))
+        self.assertEqual(19, self.player.getNumericProperty("exp"))
+        for key in ("marekPoison", "lothanderGeas", "divinerPoison"):
+            with self.subTest(key=key):
+                row = self.journalPresentation(key)
+                self.assertIn("Jalantha", row["objective"])
+                self.assertIn("Water Queen's House", row["objective"])
+                self.assertNotIn("Blade and Stars", " ".join(row.values()))
+                self.assertNotIn("Blushing Mermaid", " ".join(row.values()))
+        diviner = self.journalPresentation("divinerPoison")
+        self.assertEqual("The reading cost 50 gold and grants no experience.", diviner["reward"])
+        self.assertIn("Tell Lothander", diviner["hint"])
+
+    def testActiveGeasJournalRevealsInnOnlyAfterLothanderNamesIt(self):
+        lothander = self.journalHelpScenario()
+        self.drive(self.clock.poisonDialogueFlow(self.actor("DIVINE")), ["DIVINE.DLG:edge1", "DIVINE.DLG:edge4"])
+        self.drive(self.clock.poisonDialogueFlow(lothander), [])
+        self.assertEqual(2, self.state()["globals"]["DivinerAsked"])
+        for key in ("marekPoison", "lothanderGeas"):
+            row = self.journalPresentation(key)
+            self.assertIn("Jalantha", row["objective"])
+            self.assertIn("Blade and Stars Inn", row["hint"])
+            self.assertNotIn("Blushing Mermaid", " ".join(row.values()))
+        self.assertEqual(4950, self.player.getNumericProperty("gold"))
+        self.assertEqual(19, self.player.getNumericProperty("exp"))
+
+    def testWrongDivinerQuestionDoesNotRevealGeasAnswerOrCompleteItsTask(self):
+        self.journalHelpScenario()
+        self.drive(self.clock.poisonDialogueFlow(self.actor("DIVINE")), ["DIVINE.DLG:edge1", "DIVINE.DLG:edge5"])
+        self.assertEqual(9, self.state()["globals"]["LothanderMove"])
+        self.assertEqual(0, self.state()["globals"].get("DivinerAsked", 0))
+        self.assertFalse(any(q.getTypeId() == "cityDivinerPoisonQuest" for q in self.player.getCompletedQuests()))
+        for key in ("marekPoison", "lothanderGeas"):
+            row = self.journalPresentation(key)
+            self.assertIn("another question", row["objective"])
+            self.assertIn("one question each day", row["hint"])
+            self.assertNotIn("Jalantha", " ".join(row.values()))
+            self.assertNotIn("Water Queen", " ".join(row.values()))
+        self.assertEqual(4950, self.player.getNumericProperty("gold"))
+        self.assertEqual(19, self.player.getNumericProperty("exp"))
+
+    def testLaterAntidoteLeadRequiresLothanderOutcomeWithoutCompletingPoison(self):
+        self.journalHelpScenario()
+        for outcome in ("scrollReturned", "priestsDeadNoRelease"):
+            state = self.state()
+            state["geasOutcome"] = outcome
+            self.writeState(state)
+            row = self.journalPresentation("marekPoison")
+            self.assertIn("Blushing Mermaid Inn", row["objective"])
+            self.assertIn("Marek", row["hint"])
+            self.assertEqual(0, self.state()["globals"].get("PartyCured", 0))
+            self.assertFalse(any(q.getTypeId() == "cityMarekPoisonQuest" for q in self.player.getCompletedQuests()))
+
+    def testExistingCompletedCureAndGeasPresentationRemainsExact(self):
+        for outcome, expected in (
+            (
+                "scrollReturned",
+                {
+                    "objective": "The geas-removal scroll was returned to Lothander; he left an antidote half.",
+                    "reward": "Returning the scroll grants 1,500 experience and an antidote half.",
+                },
+            ),
+            (
+                "priestsDeadNoRelease",
+                {
+                    "objective": "The priests could not provide the scroll. Lothander left an antidote half and departed.",
+                    "reward": "The geas remains unresolved. This fallback grants an antidote half and no experience.",
+                },
+            ),
+        ):
+            state = self.state()
+            state["geasOutcome"] = outcome
+            self.writeState(state)
+            self.assertEqual(expected, self.clock.poisonQuestPresentation("lothanderGeas"))
+        state = self.state()
+        state["globals"]["PartyCured"] = 1
+        state["journal"].append({"sourceConsumer": 44, "text": "Retained actual cure journal witness."})
+        self.writeState(state)
+        self.assertEqual(
+            {
+                "objective": "Retained actual cure journal witness.",
+                "reward": "The cure grants 10,000 experience once.",
+            },
+            self.clock.poisonQuestPresentation("marekPoison"),
+        )
+
+    def testDisabledLegacyQuestHintReturnsBeforeLivingSourceBinding(self):
+        self.clock.setBoolProperty("plugin_cityPoisonSourceEnabled", False)
+        self.player.hp = 0
+        self.clock.poisonCapture = lambda: self.fail("Disabled legacy hint entered the source binding")
+        before = deepcopy((self.clock.properties, self.world.properties, self.player.properties))
+        quest = self.fixture.game.createObject("cityMarekPoisonQuest")
+        self.assertEqual("Follow the named people, source items and city journal.", quest.getHint())
+        quest.setStringProperty("hint", "Existing custom legacy hint.")
+        self.assertEqual("Existing custom legacy hint.", quest.getHint())
+        self.assertEqual(before, (self.clock.properties, self.world.properties, self.player.properties))
+
+    def testProfitAnswerDoesNotInventMoveNineOrAHeardGeasClue(self):
+        self.journalHelpScenario()
+        self.drive(self.clock.poisonDialogueFlow(self.actor("DIVINE")), ["DIVINE.DLG:edge1", "DIVINE.DLG:edge3"])
+        self.assertEqual(1, self.state()["globals"]["LothanderMove"])
+        self.assertEqual(0, self.state()["globals"].get("DivinerAsked", 0))
+        self.assertFalse(any(q.getTypeId() == "cityDivinerPoisonQuest" for q in self.player.getCompletedQuests()))
+        for key in ("marekPoison", "lothanderGeas"):
+            row = self.journalPresentation(key)
+            self.assertIn("geas", row["objective"])
+            self.assertIn("Diviner", row["hint"])
+            self.assertNotIn("Jalantha", " ".join(row.values()))
+            self.assertNotIn("Water Queen", " ".join(row.values()))
+        self.assertEqual(4950, self.player.getNumericProperty("gold"))
+        self.assertEqual(19, self.player.getNumericProperty("exp"))
+
+    def testBeforeAgreeingToGeasHelpJournalDoesNotInventDivinerClue(self):
+        lothander = self.create("LOTHAN", "AR0700", [2361, 1090], "AR0700.BCS#spawn4")
+        self.globalValue("LothanderMove", 3)
+        session = self.clock.poisonBeginDialogue(lothander)
+        self.assertTrue(self.clock.poisonChooseEdge(session, 1))
+        self.assertEqual(0, self.state()["globals"].get("HelpLothander", 0))
+        row = self.journalPresentation("marekPoison")
+        self.assertIn("Speak with Lothander", row["objective"])
+        for clue in ("Diviner", "Jalantha", "Water Queen", "Blade and Stars", "Blushing Mermaid"):
+            self.assertNotIn(clue, " ".join(row.values()))
+        self.assertIsNone(self.clock.poisonQuestPresentation("lothanderGeas"))
+
 
 if __name__ == "__main__":
     unittest.main()
