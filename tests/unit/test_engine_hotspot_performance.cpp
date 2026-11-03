@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTrigger.h"
 #include "handler/CObjectHandler.h"
 #include "gui/CGui.h"
+#include "gui/CTextManager.h"
 #include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
@@ -1723,6 +1724,62 @@ void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
     fixture.game->getContext()->shutdown();
 }
 
+void testEmptyTextMetricsKeepZeroTextureWork() {
+    constexpr int EMPTY_REQUESTS = 1024;
+    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "dummy", SDL_HINT_OVERRIDE);
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
+    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0)
+        expect_true(SDL_Init(SDL_INIT_VIDEO) == 0, "empty text guard must initialize isolated SDL video");
+    const auto driver = SDL_GetCurrentVideoDriver();
+    const bool isolated = driver && std::string(driver) == "dummy";
+    expect_true(isolated, "empty text guard must use the dummy video driver");
+    if (!isolated)
+        return;
+    auto gui = std::make_shared<CGui>();
+    auto renderer = gui->getRenderer();
+    SDL_RendererInfo rendererInfo{};
+    const bool software = renderer && SDL_GetRendererInfo(renderer, &rendererInfo) == 0 &&
+                          (rendererInfo.flags & SDL_RENDERER_SOFTWARE) != 0;
+    expect_true(software, "empty text guard needs a real software renderer");
+    if (!software)
+        return;
+    auto manager = std::make_shared<CTextManager>(gui);
+    const std::string sentinel = "empty text work sentinel";
+    const auto sentinelSize = manager->getTextureSize(sentinel);
+    const bool fontReady = sentinelSize.first > 0 && sentinelSize.second > 0 && manager->getTextureLoadCount() == 1 &&
+                           manager->getCachedFontCount() > 0;
+    expect_true(fontReady, "empty text guard must first rasterize a real nonempty font texture");
+    if (!fontReady)
+        return;
+    const auto loads = manager->getTextureLoadCount();
+    const auto entries = manager->getCachedTextureCount();
+    const auto fonts = manager->getCachedFontCount();
+    const auto copies = gui->getRenderContext().getStats().attemptedCopies;
+    const char *const roles[] = {"body", "title", "heading", "dialogue", "small"};
+    int nonzeroSizes = 0;
+    SDL_ClearError();
+    for (int index = 0; index < EMPTY_REQUESTS; ++index) {
+        if (manager->measureText("", index, roles[index % 5]) != std::make_pair(0, 0))
+            ++nonzeroSizes;
+    }
+    const auto emptyLoads = manager->getTextureLoadCount() - loads;
+    const std::string error = SDL_GetError();
+    std::cout << "empty text work guard: requests=" << EMPTY_REQUESTS << " texture-loads=" << emptyLoads
+              << " texture-load-budget=0 cache-before=" << entries
+              << " cache-after=" << manager->getCachedTextureCount() << " font-before=" << fonts
+              << " font-after=" << manager->getCachedFontCount()
+              << " copy-delta=" << gui->getRenderContext().getStats().attemptedCopies - copies
+              << " copy-budget=0 sdl-error=[" << error << "]\n";
+    expect_true(nonzeroSizes == 0, "1024 distinct empty metric keys must all retain zero native dimensions");
+    expect_true(emptyLoads == 0 && manager->getCachedTextureCount() == entries &&
+                    manager->getCachedFontCount() == fonts,
+                "1024 empty requests must add zero texture loads, cache entries, evictions or font entries");
+    expect_true(gui->getRenderContext().getStats().attemptedCopies == copies && error.empty(),
+                "1024 empty requests must add zero render copies or SDL errors");
+    expect_true(manager->getTextureSize(sentinel) == sentinelSize && manager->getTextureLoadCount() == loads,
+                "fixed empty workload must preserve the existing nonempty texture and its cache hit");
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -1881,4 +1938,5 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testEmptyTextMetricsKeepZeroTextureWork();
 }
