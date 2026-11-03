@@ -30679,6 +30679,8 @@ class McpServerTest(unittest.TestCase):
         path.write_text(json.dumps(log, indent=2, sort_keys=True))
 
     def _mcp_tool(self, session, name, arguments, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
+        if name in {"engine_call", "engine_handle_call"}:
+            arguments = {**arguments, "include_text_content": False}
         request_id = session["next_request_id"]
         session["next_request_id"] += 1
         return self._call_tool(session["proc"], request_id, name, arguments, timeout=timeout)
