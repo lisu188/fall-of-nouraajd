@@ -4138,6 +4138,63 @@ void test_render_context_copy_ex_rotates_and_tracks_stats() {
     expect_true(stats.failedCopies == 0, "render context copyEx should not count failed copies for valid smoke path");
 }
 
+void testEmptyTextMetricsDoNotLoadTexturesOrEvictValidEntries() {
+    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "dummy", SDL_HINT_OVERRIDE);
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
+    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0)
+        expect_true(SDL_Init(SDL_INIT_VIDEO) == 0, "empty text fixture must initialize isolated SDL video");
+    const auto driver = SDL_GetCurrentVideoDriver();
+    const bool isolated = driver && std::string(driver) == "dummy";
+    expect_true(isolated, "empty text fixture must use the dummy video driver");
+    if (!isolated)
+        return;
+    auto gui = std::make_shared<CGui>();
+    auto renderer = gui->getRenderer();
+    SDL_RendererInfo rendererInfo{};
+    const bool software = renderer && SDL_GetRendererInfo(renderer, &rendererInfo) == 0 &&
+                          (rendererInfo.flags & SDL_RENDERER_SOFTWARE) != 0;
+    expect_true(software, "empty text fixture must have a real software renderer");
+    if (!software)
+        return;
+    auto manager = std::make_shared<CTextManager>(gui);
+    const std::string sentinel = "empty text nonempty sentinel";
+    const auto sentinelSize = manager->getTextureSize(sentinel);
+    const bool fontReady = sentinelSize.first > 0 && sentinelSize.second > 0 && manager->getTextureLoadCount() == 1 &&
+                           manager->getCachedFontCount() > 0;
+    expect_true(fontReady, "empty text fixture must first rasterize a real nonempty font texture");
+    if (!fontReady)
+        return;
+    constexpr std::size_t CACHE_CAPACITY = 512;
+    for (std::size_t index = 1; index < CACHE_CAPACITY; ++index)
+        manager->getTextureSize("empty text cache sentinel " + std::to_string(index));
+    expect_true(manager->getCachedTextureCount() == CACHE_CAPACITY,
+                "empty text fixture must reach the unchanged 512-texture boundary");
+    const auto loads = manager->getTextureLoadCount();
+    const auto fonts = manager->getCachedFontCount();
+    SDL_ClearError();
+    const auto emptySize = manager->getTextureSize("");
+    const std::string firstError = SDL_GetError();
+    std::cout << "empty text native observation: renderer=software sentinel=" << sentinelSize.first << "x"
+              << sentinelSize.second << " empty=" << emptySize.first << "x" << emptySize.second
+              << " load-delta=" << manager->getTextureLoadCount() - loads << " cache-before=" << CACHE_CAPACITY
+              << " cache-after=" << manager->getCachedTextureCount() << " first-error=[" << firstError << "]\n";
+    expect_true(emptySize == std::make_pair(0, 0), "empty text must have zero native dimensions");
+    expect_true(firstError.empty(), "empty text must not enter TTF or leave a new SDL error");
+    expect_true(manager->getWrappedTextureSize("", 64) == std::make_pair(0, 0) &&
+                    manager->measureText("", 80, "heading") == std::make_pair(0, 0) && manager->countLines("", 80) == 1,
+                "all public empty metric paths must preserve zero-size and one-line fallback semantics");
+    expect_true(manager->getTextureLoadCount() == loads && manager->getCachedFontCount() == fonts,
+                "empty metrics must perform zero texture loads or font-cache work");
+    expect_true(manager->getCachedTextureCount() == CACHE_CAPACITY,
+                "empty metrics must not insert a null entry or evict a full valid texture cache");
+    expect_true(manager->getTextureSize(sentinel) == sentinelSize && manager->getTextureLoadCount() == loads,
+                "nonempty sentinel must remain cached with unchanged dimensions after empty reads");
+    expect_true(std::string(SDL_GetError()).empty(), "empty wrapped and role metrics must leave SDL error clear");
+    gui.reset();
+    expect_true(manager->getTextureSize("") == std::make_pair(0, 0) && manager->getCachedTextureCount() == 0,
+                "empty metrics after GUI expiry must retain existing renderer-owned cache cleanup");
+}
+
 void testTextMetricsCacheAndExpiredGuiFallbacks() {
     auto gui = std::make_shared<CGui>();
     auto manager = std::make_shared<CTextManager>(gui);
@@ -5024,6 +5081,8 @@ int main() {
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
     testRetainedGuiReleasesSdlOwnersAtShutdownBeforeLateTextureAndWorkerCleanup();
     test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
+
+    testEmptyTextMetricsDoNotLoadTexturesOrEvictValidEntries();
 
     return finish_tests();
 }
