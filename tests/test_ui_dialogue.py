@@ -6,6 +6,7 @@
 import ast
 import copy
 import importlib.util
+import hashlib
 import json
 import sys
 import types
@@ -234,6 +235,180 @@ def assertCustodyDialogueProvenance(test, definitions, prison):
     test.assertEqual("BaldursGateCustodyQuest", quest["class"])
     test.assertNotIn("questKey", quest["properties"])
     return facts
+
+
+def poisonSourceContentFacts(config, source, document, dialogue, followup):
+    """Validate the finite source-owned poison additions before deriving structural audit counts."""
+
+    def require(value, message):
+        if not value:
+            raise ValueError(message)
+
+    def decode(value):
+        require(isinstance(value, str) and value.startswith("city-json:"), "Missing encoded poison source facts")
+        return json.loads(value.removeprefix("city-json:"))
+
+    definitions = decode(config["cityClock"]["properties"]["poisonSourceDefinitions"])
+    graphs = dialogue["dialogues"] + [followup["dialogue"]]
+    require(definitions["dialogues"] == graphs, "Poison graph provenance changed")
+    require(
+        (len(graphs), sum(len(g["states"]) for g in graphs), sum(len(g["edges"]) for g in graphs)) == (7, 84, 135),
+        "The seven poison graphs must retain all84 states and135 edges",
+    )
+    require(definitions["originalParityEstablished"] is False, "Supporting EE records cannot claim original parity")
+    initial = {
+        "cityAr0132Actor1": ("CHANTH", "AR0132", 1),
+        "cityAr0300Actor28": ("LOTHAN", "AR0300", 28),
+        "cityAr0300Actor29": ("MAREK", "AR0300", 29),
+        "cityAr0609Actor1": ("PUMBERL", "AR0609", 1),
+        "cityAr0726Actor1": ("DIVINE", "AR0726", 1),
+    }
+    factories = {
+        "MAREK1": ("cityPoisonMarek1", "AR0115", "AR0115.BCS#spawn0"),
+        "LOTHAN": ("cityPoisonLothander", "AR0700", "AR0700.BCS#spawn4"),
+        "TENYA2": ("cityPoisonTenya2", "AR0609", "PUMBERL.DLG#spawn1"),
+        "JALANT": ("cityAr0609ScriptActorJalant", "AR0609", "PUMBERL.DLG#spawn0"),
+    }
+    placed = {obj["name"] for layer in document["layers"] if layer["type"] == "objectgroup" for obj in layer["objects"]}
+    scripted = {row["sourceId"]: row for row in source["scriptedActors"]}
+    ordinary = {row["id"] for row in decode(config["cityClock"]["properties"]["actorDefinitions"])}
+    initial_rows = {row["id"]: row for row in definitions["initialActors"]}
+    require(
+        len(initial_rows) == len(definitions["initialActors"]) and set(initial_rows) == set(initial),
+        "The five initial poison owner identities changed",
+    )
+    require(set(definitions["factories"]) == set(factories), "The four source poison factory identities changed")
+
+    def actor(identity, code, area):
+        require(identity in config, "A source-owned poison factory or initial actor is missing")
+        row = config[identity]
+        props, creature = row["properties"], source["creatures"][code]
+        require(row["class"] == "CCreature", "A poison source actor must be an actual native creature")
+        require(
+            (props["sourceCreature"], props["sourceArea"], props["simulationRegion"]) == (code, area, area),
+            "Poison source creature or area changed",
+        )
+        require(props["sourceDialogue"] == creature["dialogue"], "Poison source dialogue owner changed")
+        require(props["label"] == creature["displayName"], "Poison source speaker identity changed")
+        require(
+            decode(props["sourceInventory"]) == [dict(item, sourceIndex=i) for i, item in enumerate(creature["items"])],
+            "Poison source inventory, flags, charges or order changed",
+        )
+        require(decode(props["sourceItemSlots"]) == creature["itemSlots"], "Poison source item-slot ownership changed")
+        return props
+
+    aliases = {}
+    for identity, (code, area, index) in initial.items():
+        source_id = f"{area}#actor{index}"
+        placements = [row for row in source["areas"][area]["actors"] if row["sourceId"] == source_id]
+        require(len(placements) == 1 and placements[0]["creature"] == code, "Initial poison source placement changed")
+        props = actor(identity, code, area)
+        expected = {
+            "id": identity,
+            "typeId": identity,
+            "resource": code,
+            "area": area,
+            "sourceActor": source_id,
+            "dialogId": identity + "SourceDialog",
+        }
+        require(
+            initial_rows[identity] == expected and props["sourceActor"] == source_id and identity in placed,
+            "Initial poison owner provenance, alias or placement changed",
+        )
+        aliases[identity + "SourceDialog"] = identity
+    added_actors = set()
+    for code, (identity, area, source_id) in factories.items():
+        props = actor(identity, code, area)
+        fact = scripted[source_id]
+        require((fact["creature"], fact["areas"]) == (code, [area]), "Poison factory producer facts changed")
+        require(identity not in placed, "A deferred poison factory must not also have an initial placement")
+        dialog_id = identity + ("SourceDialog" if code == "JALANT" else "Dialog")
+        require(
+            definitions["factories"][code] == {"typeId": identity, "area": area, "dialogId": dialog_id},
+            "Poison factory binding, area or dialogue alias changed",
+        )
+        if code == "JALANT":
+            require(
+                identity in ordinary and props["sourceSpawnFact"] == source_id,
+                "The existing Jalantha factory must remain owned by the generic source inventory",
+            )
+        else:
+            require(
+                identity not in ordinary and props["sourceActor"] == identity,
+                "A poison coordinator factory cannot become a second generic actor definition",
+            )
+            require((props["phaseMin"], props["phaseMax"]) == (5, 7), "Poison factory phase admission changed")
+            added_actors.add(identity)
+        if code == "MAREK1":
+            require(props["sourceSpawnFact"] == source_id, "Marek's inn owner must retain AR0115 spawn0")
+        aliases[dialog_id] = identity
+    aliases["cityPoisonStoreTEM0132Dialog"] = "cityAr0132Actor1"
+    new_dialogues = set(aliases)
+    require(new_dialogues.issubset(config), "A source poison dialogue alias is missing")
+    legacy = {
+        name: row
+        for name, row in config.items()
+        if isinstance(row, dict)
+        and isinstance(row.get("properties", {}).get("states"), list)
+        and name not in new_dialogues
+    }
+    legacy_sha = hashlib.sha256(json.dumps(legacy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    require(
+        len(legacy) == 1323 and legacy_sha == "621bc6f055fe8c143a6ebe3480fdc6093ec8734d737ae3c4e248dff5b09c430a",
+        "Existing city dialogue identities, conditions or content changed",
+    )
+    quest_contexts = {
+        "cityAr0132Actor1SourceDialog": ("cityChanthalasTomeQuest",),
+        "cityAr0300Actor28SourceDialog": ("cityMarekPoisonQuest", "cityLothanderGeasQuest"),
+        "cityAr0726Actor1SourceDialog": ("cityDivinerPoisonQuest",),
+        "cityAr0609ScriptActorJalantSourceDialog": ("cityJalanthaBookQuest",),
+        "cityPoisonStoreTEM0132Dialog": ("cityChanthalasTomeQuest",),
+    }
+    for dialog_id, identity in aliases.items():
+        actual = config[dialog_id]
+        props = actual["properties"]
+        creature = source["creatures"][config[identity]["properties"]["sourceCreature"]]
+        require(
+            actual["class"] == "BaldursGateDialog"
+            and props["actorId"] == identity
+            and props["speaker"] == creature["displayName"],
+            "Poison dialogue actor or speaker binding changed",
+        )
+        context = tuple(props["questIds"].split(",")) if "questIds" in props else ()
+        require(context == quest_contexts.get(dialog_id, ()), "Poison dialogue quest context changed")
+        for quest_id in context:
+            require(
+                quest_id in config and config[quest_id]["class"].endswith("Quest"), "Poison context lost its real quest"
+            )
+        if dialog_id == "cityPoisonStoreTEM0132Dialog":
+            expected = copy.deepcopy(config["cityAr0132Actor1Dialog"])
+            for state in expected["properties"]["states"]:
+                state["properties"]["options"] = [
+                    o
+                    for o in state["properties"].get("options", [])
+                    if not o["properties"].get("action") or "StoreTem0132" in o["properties"].get("action", "")
+                ]
+        else:
+            expected = copy.deepcopy(
+                config[identity + "Dialog"] if identity not in added_actors else config["cityAr0300Actor29Dialog"]
+            )
+            if identity in added_actors:
+                expected["properties"].update(actorId=identity, speaker=creature["displayName"])
+                for state in expected["properties"]["states"]:
+                    if state["properties"]["stateId"] == "ENTRY":
+                        state["properties"]["text"] = creature["displayName"]
+            for state in expected["properties"]["states"]:
+                for option in state["properties"].get("options", []):
+                    if option["properties"].get("action") == "talk":
+                        option["properties"]["nextStateId"] = "EXIT"
+        require(actual == expected, "Poison alias changed retained conditions, actions or non-talk routes")
+    return {
+        "addedActorIds": frozenset(added_actors),
+        "factoryIds": frozenset(row[0] for row in factories.values()),
+        "scriptedFactoryIds": frozenset({factories["MAREK1"][0]}),
+        "dialogueIds": frozenset(new_dialogues),
+        "questContexts": quest_contexts,
+    }
 
 
 class DialogueContentTest(unittest.TestCase):
@@ -760,6 +935,13 @@ class DialogueContentTest(unittest.TestCase):
                 custody_facts = assertCustodyDialogueProvenance(
                     self, definitions, readJson("tests/fixtures/baldurs_gate_city_prison_source.json")
                 )
+                poison_facts = poisonSourceContentFacts(
+                    readJson("res/maps/baldursGate/config.json"),
+                    readJson("tests/fixtures/baldurs_gate_city_source.json"),
+                    readJson("res/maps/baldursGate/map.json"),
+                    readJson("tests/fixtures/baldurs_gate_city_poison_dialogue.json"),
+                    readJson("tests/fixtures/baldurs_gate_city_poison_followup.json"),
+                )
 
             def resolve(option, seen=()):
                 ref = option.get("ref")
@@ -799,7 +981,7 @@ class DialogueContentTest(unittest.TestCase):
                         self.assertEqual(len(numbers), len(set(numbers)))
         self.assertEqual(
             {
-                "baldursGate": 2124 + len(custody_facts),
+                "baldursGate": 2124 + len(custody_facts) + len(poison_facts["dialogueIds"]),
                 "candlekeep": 84,
                 "castleGriffinCliff": 2,
                 "castleGuardianAngels": 2,
@@ -1026,9 +1208,111 @@ class DialogueContentTest(unittest.TestCase):
             },
             candlekeep_contexts,
         )
-        self.assertEqual(56, len(city_contexts))
+        poison = poisonSourceContentFacts(*self.poisonSourceFixture())
+        added_contexts = poison["questContexts"]
+        self.assertEqual(added_contexts, {key: city_contexts[key] for key in added_contexts})
+        self.assertEqual(56, len(set(city_contexts) - set(added_contexts)))
         self.assertEqual(24, conversations - len(candlekeep_contexts) - len(city_contexts))
-        self.assertEqual(86, conversations)
+        self.assertEqual(86 + len(added_contexts), conversations)
+
+    def poisonSourceFixture(self):
+        return (
+            readJson("res/maps/baldursGate/config.json"),
+            readJson("tests/fixtures/baldurs_gate_city_source.json"),
+            readJson("res/maps/baldursGate/map.json"),
+            readJson("tests/fixtures/baldurs_gate_city_poison_dialogue.json"),
+            readJson("tests/fixtures/baldurs_gate_city_poison_followup.json"),
+        )
+
+    def testPoisonSourceFactoryCountsComeFromExactOwnedBlueprints(self):
+        args = self.poisonSourceFixture()
+        before = copy.deepcopy(args)
+        facts = poisonSourceContentFacts(*args)
+        self.assertEqual({"cityPoisonMarek1", "cityPoisonLothander", "cityPoisonTenya2"}, facts["addedActorIds"])
+        self.assertEqual({"cityPoisonMarek1"}, facts["scriptedFactoryIds"])
+        self.assertEqual(4, len(facts["factoryIds"]))
+        self.assertEqual(10, len(facts["dialogueIds"]))
+        self.assertEqual(5, len(facts["questContexts"]))
+        self.assertEqual(before, args, "Fact/count audits must not alter generated resources or source records")
+
+    def testPoisonFactoryAuditRejectsWrongDeletedOrInitiallyPlacedOwners(self):
+        config, source, document, dialogue, followup = self.poisonSourceFixture()
+        for mutation in (
+            "wrongCreature",
+            "wrongArea",
+            "missingActor",
+            "missingFactory",
+            "wrongInventory",
+            "initialPlacement",
+        ):
+            with self.subTest(mutation=mutation):
+                changed, placed = copy.deepcopy(config), copy.deepcopy(document)
+                if mutation == "wrongCreature":
+                    changed["cityPoisonMarek1"]["properties"]["sourceCreature"] = "MAREK"
+                elif mutation == "wrongArea":
+                    changed["cityPoisonLothander"]["properties"]["sourceArea"] = "AR0300"
+                elif mutation == "missingActor":
+                    del changed["cityPoisonTenya2"]
+                elif mutation == "missingFactory":
+                    props = changed["cityClock"]["properties"]
+                    defs = json.loads(props["poisonSourceDefinitions"].removeprefix("city-json:"))
+                    del defs["factories"]["TENYA2"]
+                    props["poisonSourceDefinitions"] = "city-json:" + json.dumps(defs)
+                elif mutation == "wrongInventory":
+                    props = changed["cityPoisonMarek1"]["properties"]
+                    items = json.loads(props["sourceInventory"].removeprefix("city-json:"))
+                    items[-1]["charges"][0] -= 1
+                    props["sourceInventory"] = "city-json:" + json.dumps(items)
+                else:
+                    next(layer for layer in placed["layers"] if layer["type"] == "objectgroup")["objects"].append(
+                        {"name": "cityPoisonLothander"}
+                    )
+                with self.assertRaises(ValueError):
+                    poisonSourceContentFacts(changed, source, placed, dialogue, followup)
+
+    def testPoisonDialogueAuditRejectsAliasesContextsAndLegacyConditionChanges(self):
+        config, source, document, dialogue, followup = self.poisonSourceFixture()
+        for mutation in (
+            "missingAlias",
+            "wrongActor",
+            "wrongSpeaker",
+            "wrongContext",
+            "inventedContext",
+            "legacyCondition",
+            "sourceCondition",
+        ):
+            with self.subTest(mutation=mutation):
+                changed = copy.deepcopy(config)
+                alias = changed["cityAr0300Actor28SourceDialog"]["properties"]
+                if mutation == "missingAlias":
+                    del changed["cityAr0726Actor1SourceDialog"]
+                elif mutation == "wrongActor":
+                    alias["actorId"] = "cityAr0300Actor29"
+                elif mutation == "wrongSpeaker":
+                    alias["speaker"] = "Marek"
+                elif mutation == "wrongContext":
+                    alias["questIds"] = "cityMarekPoisonQuest"
+                elif mutation == "inventedContext":
+                    changed["cityPoisonMarek1Dialog"]["properties"]["questIds"] = "cityMarekPoisonQuest"
+                else:
+                    identity = (
+                        "cityAr0300Actor28Dialog" if mutation == "legacyCondition" else "cityAr0300Actor28SourceDialog"
+                    )
+                    option = changed[identity]["properties"]["states"][0]["properties"]["options"][0]["properties"]
+                    option["condition"] = "inventedCondition"
+                with self.assertRaises(ValueError):
+                    poisonSourceContentFacts(changed, source, document, dialogue, followup)
+
+    def testPoisonSourceGraphAuditRejectsRemovingAnObligation(self):
+        config, source, document, dialogue, followup = self.poisonSourceFixture()
+        for kind in ("states", "edges"):
+            changed = copy.deepcopy(config)
+            props = changed["cityClock"]["properties"]
+            defs = json.loads(props["poisonSourceDefinitions"].removeprefix("city-json:"))
+            defs["dialogues"][0][kind].pop()
+            props["poisonSourceDefinitions"] = "city-json:" + json.dumps(defs)
+            with self.subTest(kind=kind), self.assertRaises(ValueError):
+                poisonSourceContentFacts(changed, source, document, dialogue, followup)
 
     def testRitualRecordDescribesActualTurnCadence(self):
         tree = ast.parse((ROOT / "res/maps/ritual/script.py").read_text())
