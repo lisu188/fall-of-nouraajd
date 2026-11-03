@@ -601,6 +601,44 @@ void testCharacterPagerReservationKeepsWarmLayoutWorkBounded() {
                 "warm character layout must retain its bounded list and unchanged detail geometry");
     std::cout << "[character pager layout] frames=25 proxy refreshes=" << refreshes
               << " refresh budget=0 text loads=" << textures << " text budget=0\n";
+    gui->setWidth(1920);
+    gui->setHeight(600);
+    gui->applyUiPreferences(R"({"uiScale":150,"textScale":150})");
+    shell->setRect(58, 18, 1804, 564);
+    list->setTileSize(64);
+    list->setSearchable(true);
+    panel->renderShell(gui, shell->getRect(panel));
+    list->refresh();
+    panel->renderShell(gui, shell->getRect(panel));
+    const auto shortRefreshesBefore = list->refreshes;
+    const auto shortTexturesBefore = gui->getTextManager()->getTextureLoadCount();
+    const auto shortListBefore = *listLayout->getRect(list);
+    const auto shortDetailsBefore = *detailsLayout->getRect(details);
+    const auto shortParsesBefore = listLayout->getValueParseCountForTesting() +
+                                   detailsLayout->getValueParseCountForTesting() +
+                                   footerLayout->getValueParseCountForTesting();
+    for (int frame = 0; frame < 25; ++frame)
+        panel->renderShell(gui, shell->getRect(panel));
+    const auto shortRefreshes = list->refreshes - shortRefreshesBefore;
+    const auto shortTextures = gui->getTextManager()->getTextureLoadCount() - shortTexturesBefore;
+    const auto shortParses = listLayout->getValueParseCountForTesting() +
+                             detailsLayout->getValueParseCountForTesting() +
+                             footerLayout->getValueParseCountForTesting() - shortParsesBefore;
+    const auto shortListAfter = listLayout->getRect(list);
+    const auto shortDetailsAfter = detailsLayout->getRect(details);
+    expect_true(shortRefreshes == 0,
+                "25 warm short character layouts must perform zero additional ability proxy refreshes");
+    expect_true(shortTextures == 0, "25 warm short character layouts must perform zero additional text texture loads");
+    expect_true(shortParses == 0, "25 warm short character layouts must perform zero additional authored-value parses");
+    expect_true(list->isVisible() && !details->isVisible() && shortListAfter->h >= list->getCellSize(gui),
+                "short character warm work must retain a complete row on its compact ability page");
+    expect_true(shortListAfter->x == shortListBefore.x && shortListAfter->y == shortListBefore.y &&
+                    shortListAfter->w == shortListBefore.w && shortListAfter->h == shortListBefore.h &&
+                    shortDetailsAfter->y == shortDetailsBefore.y && shortDetailsAfter->h == shortDetailsBefore.h,
+                "short character warm work must not churn the list or hidden detail geometry");
+    std::cout << "[character short pager layout] frames=25 proxy refreshes=" << shortRefreshes
+              << " refresh budget=0 text loads=" << shortTextures << " text budget=0 authored parses=" << shortParses
+              << " parse budget=0 listHeight=" << shortListAfter->h << " rowHeight=" << list->getCellSize(gui) << '\n';
     game->getContext()->shutdown();
 }
 

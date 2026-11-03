@@ -13,6 +13,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
+#include "gui/CUiTheme.h"
 #include "gui/CDetailViewport.h"
 #include "gui/object/CWidget.h"
 #include "gui/object/CStatsGraphicsObject.h"
@@ -1309,8 +1310,7 @@ void testCharacterAbilityPagingStaysAboveTheUnchangedDetails() {
                     SDL_Event nextGroup{};
                     nextGroup.type = SDL_KEYDOWN;
                     nextGroup.key.keysym.sym = SDLK_RIGHTBRACKET;
-                    expect_true(h.gui->event(&nextGroup),
-                                "the native compact group key must select ability details");
+                    expect_true(h.gui->event(&nextGroup), "the native compact group key must select ability details");
                     panel->renderShell(h.gui, shell->getRect(panel));
                     expect_true(!list->isVisible() && details->isVisible(),
                                 "the native compact details page must be selected before its wide transition");
@@ -1343,6 +1343,179 @@ void testCharacterAbilityPagingStaysAboveTheUnchangedDetails() {
             }
         }
     }
+}
+
+void testCharacterAbilityPagingFitsAWholeRowAtShortHeights() {
+    int completedCases = 0;
+    for (const bool listFirst : {true, false}) {
+        ManagementHarness h;
+        auto panel = std::make_shared<CGameCharacterPanel>();
+        panel->setGame(h.game);
+        auto shell = std::make_shared<CLayout>();
+        panel->setLayout(shell);
+        auto sheet = std::make_shared<CWidget>();
+        sheet->setStringProperty("uiGroup", "1:Character");
+        sheet->setLayout(std::make_shared<CLayout>());
+        sheet->getLayout()->setRect(36, 79, 847, 423);
+        panel->addChild(sheet);
+        auto list = std::make_shared<CListView>();
+        list->setGame(h.game);
+        list->setPriority(listFirst ? 0 : 1);
+        list->setCollection("interactionsCollection");
+        list->setRows(true);
+        list->setTileSize(64);
+        list->setSearchable(true);
+        list->setGrouping(false);
+        list->setShowEmpty(false);
+        list->setStringProperty("uiGroup", "2:Abilities");
+        auto listLayout = std::make_shared<CLayout>();
+        listLayout->setX("53%");
+        listLayout->setY("23%");
+        listLayout->setW("45%");
+        listLayout->setH("27%");
+        list->setLayout(listLayout);
+        auto details = std::make_shared<CWidget>();
+        details->setRender("renderAbilityDetails");
+        details->setStringProperty("uiGroup", "3:Ability details");
+        details->setPriority(listFirst ? 1 : 0);
+        auto detailsLayout = std::make_shared<CLayout>();
+        detailsLayout->setX("53%");
+        detailsLayout->setY("53%");
+        detailsLayout->setW("45%");
+        detailsLayout->setH("36%");
+        details->setLayout(detailsLayout);
+        if (listFirst) {
+            panel->addChild(list);
+            panel->addChild(details);
+        } else {
+            panel->addChild(details);
+            panel->addChild(list);
+        }
+        auto footer = std::make_shared<CButton>();
+        footer->setText("Inspect modifiers");
+        footer->setBoolProperty("uiFooter", true);
+        footer->setStringProperty("uiFooterGroup", "1:Character");
+        auto footerLayout = std::make_shared<CLayout>();
+        footerLayout->setX("2%");
+        footerLayout->setY("91%");
+        footerLayout->setW("28%");
+        footerLayout->setH("6%");
+        footer->setLayout(footerLayout);
+        panel->addChild(footer);
+        h.gui->pushChild(panel);
+        for (int index = 0; index < 24; ++index) {
+            auto action = std::make_shared<CInteraction>();
+            action->setGame(h.game);
+            action->setName("shortAbility" + std::to_string(index));
+            action->setTypeId(action->getName());
+            action->setLabel(action->getName());
+            h.player->addAction(action);
+        }
+        auto nextGroup = [&]() {
+            SDL_Event event{};
+            event.type = SDL_KEYDOWN;
+            event.key.keysym.sym = SDLK_RIGHTBRACKET;
+            expect_true(h.gui->event(&event), "short-height fixture must use the public native group input");
+            panel->renderShell(h.gui, shell->getRect(panel));
+        };
+        auto checkPage = [&](bool compact) {
+            ++completedCases;
+            panel->renderShell(h.gui, shell->getRect(panel));
+            for (int page = 0; page < 3 && !list->isVisible(); ++page)
+                nextGroup();
+            list->refresh();
+            expect_true(list->isVisible(), "short-height fixture must expose its actual ability list");
+            expect_true(details->isVisible() != compact,
+                        "short character layout must select compact only when a whole ability row cannot fit");
+            const auto listRect = listLayout->getRect(list);
+            expect_true(listRect->h >= list->getCellSize(h.gui),
+                        "short character ability viewport must contain at least one complete native row");
+            const int rowsBottom = listRect->y + list->getSizeY(h.gui) * list->getCellSize(h.gui);
+            int controls = 0;
+            for (const auto &child : list->getChildren()) {
+                auto button = vstd::cast<CButton>(child);
+                if (!button || !button->isVisible())
+                    continue;
+                ++controls;
+                const auto buttonRect = button->getLayout()->getRect(button);
+                expect_true(buttonRect->y >= rowsBottom,
+                            "short character ability rows must not overlap the actual native paging controls");
+                if (details->isVisible())
+                    expect_true(buttonRect->y + buttonRect->h < detailsLayout->getRect(details)->y,
+                                "short character wide pager must remain above the authored details");
+                if (footer->isVisible())
+                    expect_true(buttonRect->y + buttonRect->h < footerLayout->getRect(footer)->y,
+                                "short character pager must remain above every visible action footer");
+            }
+            expect_true(controls == 2, "short-height overflow must retain both real paging controls");
+            list->pagePrevious(h.gui);
+            const auto beforePage = list->getViewState().offset;
+            list->pageNext(h.gui);
+            expect_true(list->getViewState().offset > beforePage,
+                        "short-height native paging must keep later abilities reachable");
+        };
+        auto viewport = [&](int width, int height, int panelWidth, int panelHeight, int textScale) {
+            h.gui->setWidth(width);
+            h.gui->setHeight(height);
+            const int uiScale = std::min(150, textScale);
+            expect_true(h.gui->applyUiPreferences("{\"uiScale\":" + std::to_string(uiScale) +
+                                                  ",\"textScale\":" + std::to_string(textScale) + "}"),
+                        "short-height fixture must apply valid native preference steps");
+            const double displayScale = std::max(1.0, h.gui->getHeight() / 1080.0);
+            expect_true(h.gui->getUiScale() == displayScale * uiScale / 100.0 &&
+                            h.gui->getTextScale() == displayScale * std::max(uiScale, textScale) / 100.0,
+                        "short-height fixture must observe the requested effective native scales");
+            shell->setRect(58, 18, panelWidth, panelHeight);
+        };
+        viewport(1920, 600, 1804, 564, 150);
+        checkPage(true);
+        if (!details->isVisible()) {
+            const auto panelRect = shell->getRect(panel);
+            const int groupHeight = std::max(
+                48,
+                h.gui->getTextManager()->measureText("Previous / Next region", panelRect->w - 48, "body").second + 8);
+            SDL_Event headerClick{};
+            headerClick.type = SDL_MOUSEBUTTONDOWN;
+            headerClick.button.button = SDL_BUTTON_LEFT;
+            headerClick.button.x = panelRect->x + panelRect->w * 3 / 4;
+            headerClick.button.y = panelRect->y + panel->getShellHeaderHeight(h.gui) + 8 + groupHeight / 2;
+            expect_true(h.gui->event(&headerClick), "short-height compact header must accept native mouse-down");
+            panel->renderShell(h.gui, shell->getRect(panel));
+            headerClick.type = SDL_MOUSEBUTTONUP;
+            expect_true(h.gui->event(&headerClick), "short-height compact header must accept native mouse-up");
+            panel->renderShell(h.gui, shell->getRect(panel));
+            expect_true(details->isVisible() && !list->isVisible(),
+                        "short-height compact header press must survive a render before release");
+        }
+        viewport(1920, 1080, 1804, 1015, 150);
+        checkPage(false);
+        const auto wideDetails = detailsLayout->getRect(details);
+        expect_true(wideDetails->y == 18 + 1015 * 53 / 100 && wideDetails->h == 1015 * 36 / 100,
+                    "first tall character layout must restore the authored details after compact paging");
+        viewport(1920, 1080, 1804, 564, 150);
+        checkPage(true);
+        viewport(1920, 600, 1804, 564, 150);
+        listLayout->clearRuntimeRect();
+        const int row = list->getCellSize(h.gui);
+        const int pager =
+            std::max(UiTheme::scaled(h.gui, 40),
+                     h.gui->getTextManager()->measureText("Previous", 0, "body").second + UiTheme::scaled(h.gui, 16));
+        const int authoredTop = listLayout->getRect(list)->y - shell->getRect(panel)->y;
+        for (const int delta : {-1, 0, 1}) {
+            detailsLayout->setY(std::to_string(authoredTop + 8 + pager + UiTheme::scaled(h.gui, 4) + row + delta));
+            checkPage(delta < 0);
+        }
+        detailsLayout->setY("53%");
+        viewport(1920, 1080, 1800, 1015, 150);
+        checkPage(false);
+        viewport(1920, 1080, 1799, 1015, 150);
+        checkPage(true);
+        viewport(1920, 1080, 1804, 1015, 175);
+        checkPage(true);
+        viewport(1920, 1080, 1804, 1015, 125);
+        checkPage(false);
+    }
+    std::cout << "[character short height] completed cases=" << completedCases << " variants=2\n";
 }
 
 void testDetailOverflowKeepsAVisibleCueAndFrontLoadsRestrictions() {
@@ -1455,6 +1628,7 @@ int main() {
     testCharacterModifierInspectionUsesTheActualCompositionSources();
     testWideInventoryPagingStaysAboveTheActionFooter();
     testCharacterAbilityPagingStaysAboveTheUnchangedDetails();
+    testCharacterAbilityPagingFitsAWholeRowAtShortHeights();
     testDetailOverflowKeepsAVisibleCueAndFrontLoadsRestrictions();
     testDetailLayoutPreservesLongUtf8TextAndReusesWarmRendering();
     std::remove(preferencesPath);
