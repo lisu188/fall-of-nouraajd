@@ -1501,6 +1501,108 @@ void testEffectCloneFixturePreservesStatsAcrossControllerTurns() {
     game->getContext()->shutdown();
 }
 
+void testTargetEffectDurationDiscountRequiresExplicitControllerOptIn() {
+    class PayloadProbe : public CInteraction {
+      public:
+        int calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> target) override {
+            ++calls;
+            target->hurt(7);
+        }
+    };
+    class SelectionScope {
+      public:
+        SelectionScope() { performance_guard::resetInteractionSelectionProbe(); }
+        ~SelectionScope() { performance_guard::disableInteractionSelectionProbe(); }
+    };
+    for (int policy : {-1, 0, 1}) {
+        auto game = fight_fixture_game();
+        register_effect_and_interaction(game);
+        auto actor = creature_at(0, 0, 0);
+        auto target = creature_at(1, 0, 0);
+        for (const auto &creature : {actor, target}) {
+            creature->setGame(game);
+            auto stats = creature->getBaseStats();
+            stats->setStamina(10);
+            stats->setIntelligence(100);
+            stats->setDmgMin(10);
+            stats->setDmgMax(10);
+            creature->setHp(creature->getHpMax());
+            creature->setMana(creature->getManaMax());
+        }
+        auto active = opponent_debuff(game, 4);
+        active->setTypeId("policyEffect");
+        active->setTimeLeft(2);
+        target->addEffect(active);
+        auto prototype = opponent_debuff(game, 4);
+        prototype->setTypeId("policyEffect");
+        auto repeated = std::make_shared<PayloadProbe>();
+        repeated->setGame(game);
+        repeated->setName("repeatedPayload");
+        repeated->setTypeId("repeatedPayload");
+        repeated->setManaCost(15);
+        repeated->setEffect(prototype);
+        auto direct = std::make_shared<PayloadProbe>();
+        direct->setGame(game);
+        direct->setName("directPayload");
+        direct->setTypeId("directPayload");
+        actor->addAction(repeated);
+        actor->addAction(direct);
+        auto controller = std::make_shared<CMonsterFightController>();
+        if (policy >= 0)
+            controller->setBoolProperty("discountKnownTargetEffectDuration", policy == 1);
+        const bool enabled = policy == 1;
+        const auto hp = target->getHp();
+        const auto mana = actor->getMana();
+        performance_guard::InteractionSelectionWork work;
+        {
+            SelectionScope scope;
+            expect_true(controller->control(actor, target), "both explicit policies must retain a real action");
+            work = performance_guard::interactionSelectionProbeCounts();
+        }
+        expect_true(
+            repeated->calls == (enabled ? 0 : 1) && direct->calls == (enabled ? 1 : 0) &&
+                actor->getMana() == mana - (enabled ? 0 : 15) && target->getHp() == hp - 7,
+            "absent/false policy preserves legacy cast payload and cost; true discounts only rejected duration");
+        expect_true(target->getEffects() == std::set<std::shared_ptr<CEffect>>{active} && active->getTimeLeft() == 2,
+                    "both policies retain actual unique effect ownership and never refresh the rejected clone");
+        expect_true(work.targetSnapshots == (enabled ? 1u : 0u) && work.targetEffectEntries == (enabled ? 1u : 0u) &&
+                        work.admissionLookups == (enabled ? 1u : 0u) && work.weakeningEvaluations == 2,
+                    "disabled policy must do zero target admission work; opt-in snapshots once for the real effect");
+        expect_true(controller->hasProperty("discountKnownTargetEffectDuration") == (policy >= 0),
+                    "observing the absent default must not silently activate or write a controller policy");
+        actor->setEffects({});
+        target->setEffects({});
+        expect_true(game->getContext()->getEffectOwnerCount() == 0,
+                    "the policy fixture must release effect ownership through public cleanup");
+        game->getContext()->shutdown();
+    }
+}
+
+void testTargetEffectDurationPolicyRoundTripsWithoutChangingLegacySnapshots() {
+    auto game = CGameLoader::loadGame();
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    for (int policy : {-1, 0, 1}) {
+        auto controller = game->createObject<CMonsterFightController>();
+        if (policy >= 0)
+            controller->setBoolProperty("discountKnownTargetEffectDuration", policy == 1);
+        auto document = ObjectJson::serialize(controller);
+        const auto &properties = document->at("properties");
+        expect_true(properties.contains("discountKnownTargetEffectDuration") == (policy >= 0),
+                    "legacy controller snapshots must not acquire an implicit policy field");
+        if (policy >= 0)
+            expect_true(properties.at("discountKnownTargetEffectDuration").is_boolean() &&
+                            properties.at("discountKnownTargetEffectDuration").get<bool>() == (policy == 1),
+                        "explicit controller policy must serialize as its actual boolean");
+        auto restored = std::dynamic_pointer_cast<CMonsterFightController>(ObjectJson::deserialize(game, document));
+        expect_true(restored && restored != controller && restored->getGame() == game &&
+                        restored->getBoolProperty("discountKnownTargetEffectDuration") == (policy == 1) &&
+                        restored->hasProperty("discountKnownTargetEffectDuration") == (policy >= 0),
+                    "reload must preserve true/false opt-in and missing legacy default without a save-format change");
+    }
+    game->getContext()->shutdown();
+}
+
 void testMonsterFightControllerDiscountsRejectedTargetEffects() {
     class DirectActionProbe : public CInteraction {
       public:
@@ -1550,6 +1652,7 @@ void testMonsterFightControllerDiscountsRejectedTargetEffects() {
         const auto mana = monster->getMana();
         const auto hp = opponent->getHp();
         auto controller = std::make_shared<CMonsterFightController>();
+        controller->setBoolProperty("discountKnownTargetEffectDuration", true);
         expect_true(controller->control(monster, opponent), "a valid offensive alternative must remain usable");
         expect_true(monster->getMana() == mana - (duplicate ? 0 : 15) && alternative->calls == (duplicate ? 1 : 0) &&
                         opponent->getHp() == hp - (duplicate ? 7 : 0),
@@ -1608,6 +1711,7 @@ void testMonsterFightControllerDiscountsRejectedTargetEffects() {
     const auto hp = opponent->getHp();
     const auto mana = monster->getMana();
     auto controller = std::make_shared<CMonsterFightController>();
+    controller->setBoolProperty("discountKnownTargetEffectDuration", true);
     expect_true(controller->control(monster, opponent) && composite->calls == 1 && opponent->getHp() == hp - 7 &&
                     monster->getMana() == mana - 5,
                 "a duplicate effect must not suppress the direct payload of a composite interaction");
@@ -2142,6 +2246,8 @@ int main() {
     test_monster_fight_controller_heals_when_next_hit_would_kill();
     testEffectCloneFixturePreservesStatsAcrossControllerTurns();
     test_monster_fight_controller_ranks_interactions_by_weakening();
+    testTargetEffectDurationDiscountRequiresExplicitControllerOptIn();
+    testTargetEffectDurationPolicyRoundTripsWithoutChangingLegacySnapshots();
     testMonsterFightControllerDiscountsRejectedTargetEffects();
     test_monster_fight_controller_applies_missing_self_buff();
     test_monster_fight_controller_skips_duplicate_self_buff();

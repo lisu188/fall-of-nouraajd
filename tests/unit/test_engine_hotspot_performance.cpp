@@ -1120,6 +1120,26 @@ void testOpponentEffectCreditSelectionWorkIsBounded() {
     const auto objects = fixture.map->getObjects();
     const auto mana = actor->getMana();
     auto controller = std::make_shared<CMonsterFightController>();
+    performance_guard::InteractionSelectionWork legacyWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "default legacy ranking must retain a usable action");
+        legacyWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t legacyCalls = 0;
+    for (const auto &action : probes) {
+        legacyCalls += action->calls;
+        action->calls = 0;
+    }
+    expect_true(legacyWork.targetSnapshots == 0 && legacyWork.targetEffectEntries == 0 &&
+                    legacyWork.admissionLookups == 0 &&
+                    legacyWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && legacyCalls == turns,
+                "default legacy ranking must preserve a zero target-admission budget and its ordinary action work");
+    expect_true(opponent->getEffects() == effects && actor->getInteractions() == actions &&
+                    fixture.map->getObjects() == objects && actor->getMana() == mana,
+                "default policy work must preserve native effects/actions/registry and owned mana");
+    controller->setBoolProperty("discountKnownTargetEffectDuration", true);
     performance_guard::InteractionSelectionWork work;
     {
         SelectionProbeScope probe;
@@ -1223,7 +1243,9 @@ void testOpponentEffectCreditSelectionWorkIsBounded() {
               << " lookups=" << work.admissionLookups << " actionCallbacks=" << calls << " callbackBudget=" << turns
               << " pureTargetSnapshots=" << directWork.targetSnapshots
               << " anonymousTargetSnapshots=" << anonymousWork.targetSnapshots
-              << " selfTargetSnapshots=" << selfWork.targetSnapshots << " noEffectKeyBudget=0\n";
+              << " selfTargetSnapshots=" << selfWork.targetSnapshots
+              << " legacyTargetSnapshots=" << legacyWork.targetSnapshots
+              << " legacyTargetLookups=" << legacyWork.admissionLookups << " noEffectKeyBudget=0\n";
     opponent->setEffects({});
     expect_true(opponent->getEffects().empty() && fixture.game->getContext()->getEffectOwnerCount() == 0,
                 "public cleanup must release opponent effects and their context ownership");

@@ -444,10 +444,10 @@ std::shared_ptr<CItem> selectHealingItem(const std::shared_ptr<CCreature> &me,
 
 class TargetEffectAdmission {
   public:
-    explicit TargetEffectAdmission(std::shared_ptr<CCreature> target) : target(target) {}
+    TargetEffectAdmission(std::shared_ptr<CCreature> target, bool enabled) : target(target), enabled(enabled) {}
 
     bool rejects(const std::shared_ptr<CEffect> &effect) const {
-        if (!effect)
+        if (!enabled || !effect)
             return false;
         const auto typeId = effect->getTypeId();
         if (typeId.empty())
@@ -477,6 +477,7 @@ class TargetEffectAdmission {
     }
 
     std::shared_ptr<CCreature> target;
+    bool enabled;
     mutable bool prepared = false;
     mutable std::set<std::string> configuredIds;
 };
@@ -487,8 +488,8 @@ class TargetEffectAdmission {
 // attacking direction: caster's top damage plus flat bonus, mitigated by the
 // opponent's normal resist and armor, with the block dice deliberately excluded
 // so the estimate stays stable). An interaction that also routes a non-buff
-// effect onto the opponent keeps weakening it for the effect's whole duration
-// unless the target already carries its configured type ID. Anonymous templates
+// effect onto the opponent keeps its legacy duration credit. An opted-in controller
+// omits that credit when the target already carries its configured type ID. Anonymous templates
 // retain their duration estimate because casting gives their clones fresh names.
 // Mana cost is intentionally
 // not part of the value: the previous selector maximized mana cost, which made
@@ -726,7 +727,9 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     // Rank affordable, non-buff interactions by how much they weaken the current
     // opponent rather than by mana cost. Ties break toward the cheaper spell, then
     // by name, so the choice is deterministic regardless of container ordering.
-    const TargetEffectAdmission targetEffects(opponent);
+    // Existing encounters retain legacy duration ranking. Content may explicitly opt a controller into
+    // admission-aware estimates; the property uses the existing serialized object-property mechanism.
+    const TargetEffectAdmission targetEffects(opponent, getBoolProperty("discountKnownTargetEffectDuration"));
     auto pred = [me, opponent, &targetEffects](const std::shared_ptr<CInteraction> &a,
                                                const std::shared_ptr<CInteraction> &b) {
         const int wa = weakening_estimate(a, me, opponent, targetEffects);
