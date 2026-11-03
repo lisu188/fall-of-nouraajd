@@ -2279,6 +2279,69 @@ void testCollapsedMinimapPreservesOrderedRasterWinner() {
     harness.game->getContext()->shutdown();
 }
 
+void testMinimapReplacementIdentityRefreshesCollapsedRaster() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 223}});
+    map->setYBounds({{0, 191}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    std::set<std::shared_ptr<CTile>> pointer_order{std::make_shared<CTile>(), std::make_shared<CTile>(),
+                                                   std::make_shared<CTile>()};
+    auto ordered = pointer_order.begin();
+    auto old_grass = *ordered++;
+    auto water = *ordered++;
+    auto new_grass = *ordered;
+    const std::less<std::shared_ptr<CTile>> less;
+    expect_true(pointer_order.size() == 3 && less(old_grass, water) && less(water, new_grass),
+                "replacement fixture retains three distinct tiles in the original raster's total pointer order");
+    old_grass->setTileType("grass");
+    new_grass->setTileType("grass");
+    water->setTileType("water");
+    expect_true(map->addTile(old_grass, 100, 100, 0) && map->addTile(water, 101, 100, 0),
+                "replacement fixture must install the original two overlapping native terrain cells");
+    auto traversal = [&] {
+        std::vector<std::pair<Coords, std::string>> result;
+        map->forTiles(
+            [&](std::shared_ptr<CTile> tile) { result.emplace_back(tile->getCoords(), tile->getTileType()); });
+        return result;
+    };
+    const auto original_traversal = traversal();
+    expect_true(*map->getTiles().rbegin() == water,
+                "the initial ordered raster must paint water after the lower-address grass instance");
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render_pixel = [&] {
+        minimap->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect shared_pixel{57, 66, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &shared_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "replacement collision regression must read its actual isolated renderer pixel");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(render_pixel() == 0x001d5694u, "the initial collapsed water winner must be visibly blue");
+    const auto warm_builds = minimap->getTerrainTextureBuildCount();
+    expect_true(render_pixel() == 0x001d5694u && minimap->getTerrainTextureBuildCount() == warm_builds,
+                "the original unchanged collapsed terrain must reuse its warmed texture");
+    map->removeTile(100, 100, 0);
+    map->removeTile(101, 100, 0);
+    expect_true(map->addTile(new_grass, 100, 100, 0) && map->addTile(water, 101, 100, 0),
+                "replacement fixture must reinstall the same coordinate keys in the same insertion order");
+    expect_true(traversal() == original_traversal,
+                "same-type replacement must preserve the complete fresh coordinate and type traversal sequence");
+    expect_true(*map->getTiles().rbegin() == new_grass,
+                "the replacement grass instance must now paint last under the original ordered raster");
+    const auto refreshed_pixel = render_pixel();
+    expect_true(refreshed_pixel == 0x002d6f37u,
+                "same-type tile replacement must refresh the collapsed raster's changed pointer-order winner");
+    expect_true(minimap->getTerrainTextureBuildCount() == warm_builds + 1,
+                "same-type instance replacement must rebuild the warmed terrain texture exactlyonce");
+    const auto replacement_builds = minimap->getTerrainTextureBuildCount();
+    expect_true(render_pixel() == refreshed_pixel && minimap->getTerrainTextureBuildCount() == replacement_builds,
+                "repeating the unchanged replacement frame must retain its color and reuse the fresh texture");
+    harness.game->getContext()->shutdown();
+}
+
 void testRetainedMinimapTextureDoesNotOutliveItsRenderer() {
     auto harness = make_minimap_harness();
     harness.map->setXBounds({{0, 3}});
@@ -5182,6 +5245,7 @@ int main() {
     test_minimap_bounds_normal_map_renders();
     testMinimapFreshTraversalPreservesTerrainUpdates();
     testCollapsedMinimapPreservesOrderedRasterWinner();
+    testMinimapReplacementIdentityRefreshesCollapsedRaster();
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();
     testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
