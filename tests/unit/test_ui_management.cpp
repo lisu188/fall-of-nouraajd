@@ -1210,6 +1210,141 @@ void testWideInventoryPagingStaysAboveTheActionFooter() {
     }
 }
 
+void testCharacterAbilityPagingStaysAboveTheUnchangedDetails() {
+    for (const bool listFirst : {true, false}) {
+        for (const int scale : {1, 2}) {
+            ManagementHarness h;
+            h.gui->setWidth(1920 * scale);
+            h.gui->setHeight(1080 * scale);
+            h.gui->applyUiPreferences(R"({"uiScale":100,"textScale":100})");
+            auto panel = std::make_shared<CGameCharacterPanel>();
+            panel->setGame(h.game);
+            auto shell = std::make_shared<CLayout>();
+            shell->setRect(58 * scale, 33 * scale, 1804 * scale, 1015 * scale);
+            panel->setLayout(shell);
+            auto list = std::make_shared<CListView>();
+            list->setGame(h.game);
+            list->setPriority(listFirst ? 0 : 1);
+            list->setCollection("interactionsCollection");
+            list->setRows(true);
+            list->setGrouping(false);
+            list->setShowEmpty(false);
+            list->setAllowOversize(true);
+            list->setStringProperty("uiGroup", "2:Abilities");
+            auto listLayout = std::make_shared<CLayout>();
+            listLayout->setX("53%");
+            listLayout->setY("23%");
+            listLayout->setW("45%");
+            listLayout->setH("27%");
+            list->setLayout(listLayout);
+            panel->addChild(list);
+            auto details = std::make_shared<CWidget>();
+            details->setGame(h.game);
+            details->setPriority(listFirst ? 1 : 0);
+            details->setRender("renderAbilityDetails");
+            details->setStringProperty("uiGroup", "3:Ability details");
+            auto detailsLayout = std::make_shared<CLayout>();
+            detailsLayout->setX("53%");
+            detailsLayout->setY("53%");
+            detailsLayout->setW("45%");
+            detailsLayout->setH("36%");
+            details->setLayout(detailsLayout);
+            panel->addChild(details);
+            auto footer = std::make_shared<CButton>();
+            footer->setText("Inspect modifiers");
+            footer->setBoolProperty("uiFooter", true);
+            auto footerLayout = std::make_shared<CLayout>();
+            footerLayout->setX("2%");
+            footerLayout->setY("91%");
+            footerLayout->setW("28%");
+            footerLayout->setH("6%");
+            footer->setLayout(footerLayout);
+            panel->addChild(footer);
+            h.gui->pushChild(panel);
+            for (int index = 0; index < 24; ++index) {
+                auto action = std::make_shared<CInteraction>();
+                action->setGame(h.game);
+                action->setName("pagedAbility" + std::to_string(index));
+                action->setTypeId(action->getName());
+                action->setLabel(action->getName());
+                h.player->addAction(action);
+            }
+            const auto authoredDetails = *detailsLayout->getRect(details);
+            panel->renderShell(h.gui, shell->getRect(panel));
+            list->refresh();
+            const auto actualDetails = detailsLayout->getRect(details);
+            expect_true(actualDetails->x == authoredDetails.x && actualDetails->y == authoredDetails.y &&
+                            actualDetails->w == authoredDetails.w && actualDetails->h == authoredDetails.h,
+                        "reserving the ability pager must not move or shrink the authored details viewport");
+            int visibleControls = 0;
+            for (const auto &child : list->getChildren()) {
+                auto button = vstd::cast<CButton>(child);
+                if (!button || !button->isVisible())
+                    continue;
+                ++visibleControls;
+                const auto buttonRect = button->getLayout()->getRect(button);
+                expect_true(
+                    buttonRect->y + buttonRect->h < actualDetails->y,
+                    "actual character paging controls must not cover ability instruction/detail text at 1080p or 4K");
+            }
+            expect_true(visibleControls == 2, "the overflow fixture must create both real native paging controls");
+            list->pageNext(h.gui);
+            expect_true(list->getViewState().offset > 0,
+                        "every later ability must remain reachable through native paging");
+            expect_true(panel->getAbilityDetails(h.gui) == "Select an ability to read its effects and cost.",
+                        "paging without selecting an ability must keep the native instruction text");
+            const auto warmedHeight = listLayout->getRect(list)->h;
+            for (int frame = 0; frame < 5; ++frame)
+                panel->renderShell(h.gui, shell->getRect(panel));
+            expect_true(listLayout->getRect(list)->h == warmedHeight,
+                        "repeated shell layouts must not progressively consume the list or detail viewport");
+            h.gui->setWidth(800);
+            h.gui->setHeight(600);
+            shell->setRect(24, 18, 752, 564);
+            panel->renderShell(h.gui, shell->getRect(panel));
+            expect_true(list->isVisible() && !details->isVisible(),
+                        "compact character pages must retain their existing separate ability/detail groups");
+            for (const bool compactDetails : {false, true}) {
+                if (compactDetails) {
+                    SDL_Event nextGroup{};
+                    nextGroup.type = SDL_KEYDOWN;
+                    nextGroup.key.keysym.sym = SDLK_RIGHTBRACKET;
+                    expect_true(h.gui->event(&nextGroup),
+                                "the native compact group key must select ability details");
+                    panel->renderShell(h.gui, shell->getRect(panel));
+                    expect_true(!list->isVisible() && details->isVisible(),
+                                "the native compact details page must be selected before its wide transition");
+                }
+                h.gui->setWidth(1920 * scale);
+                h.gui->setHeight(1080 * scale);
+                shell->setRect(58 * scale, 33 * scale, 1804 * scale, 1015 * scale);
+                panel->renderShell(h.gui, shell->getRect(panel));
+                list->refresh();
+                const auto firstWideDetails = detailsLayout->getRect(details);
+                expect_true(firstWideDetails->x == authoredDetails.x && firstWideDetails->y == authoredDetails.y &&
+                                firstWideDetails->w == authoredDetails.w && firstWideDetails->h == authoredDetails.h,
+                            "the first wide pass must restore the authored details without shrinking them");
+                int firstWideControls = 0;
+                for (const auto &child : list->getChildren()) {
+                    auto button = vstd::cast<CButton>(child);
+                    if (!button || !button->isVisible())
+                        continue;
+                    ++firstWideControls;
+                    const auto buttonRect = button->getLayout()->getRect(button);
+                    expect_true(
+                        buttonRect->y + buttonRect->h < firstWideDetails->y,
+                        "the FIRST wide pass must reserve the pager independently of sibling order or compact page");
+                }
+                expect_true(firstWideControls == 2, "both native paging controls must survive the first wide layout");
+                h.gui->setWidth(800);
+                h.gui->setHeight(600);
+                shell->setRect(24, 18, 752, 564);
+                panel->renderShell(h.gui, shell->getRect(panel));
+            }
+        }
+    }
+}
+
 void testDetailOverflowKeepsAVisibleCueAndFrontLoadsRestrictions() {
     ManagementHarness h;
     h.gui->applyUiPreferences(R"({"uiScale":200,"textScale":200})");
@@ -1319,6 +1454,7 @@ int main() {
     testJournalTabsPreserveTheirOwnSelectionSearchAndScroll();
     testCharacterModifierInspectionUsesTheActualCompositionSources();
     testWideInventoryPagingStaysAboveTheActionFooter();
+    testCharacterAbilityPagingStaysAboveTheUnchangedDetails();
     testDetailOverflowKeepsAVisibleCueAndFrontLoadsRestrictions();
     testDetailLayoutPreservesLongUtf8TextAndReusesWarmRendering();
     std::remove(preferencesPath);

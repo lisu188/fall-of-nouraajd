@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CNavigation.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CDetailViewport.h"
@@ -37,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "gui/object/CGameGraphicsObject.h"
+#include "gui/object/CWidget.h"
 #include "handler/CObjectHandler.h"
 #include "object/CInteraction.h"
 #include "object/CPlayer.h"
@@ -508,6 +510,100 @@ void testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability() {
     game->getContext()->shutdown();
 }
 
+void testCharacterPagerReservationKeepsWarmLayoutWorkBounded() {
+    struct CountingAbilityList : CListView {
+        std::size_t refreshes = 0;
+        void refresh() override {
+            ++refreshes;
+            CListView::refresh();
+        }
+    };
+    auto gui = make_headless_gui();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders())
+        game->getObjectHandler()->registerType(name, builder);
+    game->setGui(gui);
+    gui->setGame(game);
+    gui->setWidth(1920);
+    gui->setHeight(1080);
+    gui->applyUiPreferences(R"({"uiScale":100,"textScale":100})");
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    map->setObjects({player});
+    for (int index = 0; index < 24; ++index) {
+        auto action = std::make_shared<CInteraction>();
+        action->setGame(game);
+        action->setName("guardAbility" + std::to_string(index));
+        action->setTypeId(action->getName());
+        action->setLabel(action->getName());
+        player->addAction(action);
+    }
+    auto panel = std::make_shared<CGameCharacterPanel>();
+    panel->setGame(game);
+    auto shell = std::make_shared<CLayout>();
+    shell->setRect(58, 33, 1804, 1015);
+    panel->setLayout(shell);
+    auto list = std::make_shared<CountingAbilityList>();
+    list->setGame(game);
+    list->setCollection("interactionsCollection");
+    list->setRows(true);
+    list->setGrouping(false);
+    list->setShowEmpty(false);
+    list->setAllowOversize(true);
+    list->setStringProperty("uiGroup", "2:Abilities");
+    auto listLayout = std::make_shared<CLayout>();
+    listLayout->setX("53%");
+    listLayout->setY("23%");
+    listLayout->setW("45%");
+    listLayout->setH("27%");
+    list->setLayout(listLayout);
+    panel->addChild(list);
+    auto details = std::make_shared<CWidget>();
+    details->setRender("renderAbilityDetails");
+    details->setStringProperty("uiGroup", "3:Ability details");
+    auto detailsLayout = std::make_shared<CLayout>();
+    detailsLayout->setX("53%");
+    detailsLayout->setY("53%");
+    detailsLayout->setW("45%");
+    detailsLayout->setH("36%");
+    details->setLayout(detailsLayout);
+    panel->addChild(details);
+    auto footer = std::make_shared<CButton>();
+    footer->setText("Inspect modifiers");
+    footer->setBoolProperty("uiFooter", true);
+    auto footerLayout = std::make_shared<CLayout>();
+    footerLayout->setRect(36, 923, 505, 60);
+    footer->setLayout(footerLayout);
+    panel->addChild(footer);
+    gui->pushChild(panel);
+    panel->renderShell(gui, shell->getRect(panel));
+    list->refresh();
+    panel->renderShell(gui, shell->getRect(panel));
+    const auto beforeRefreshes = list->refreshes;
+    const auto beforeTextures = gui->getTextManager()->getTextureLoadCount();
+    const auto listBefore = *listLayout->getRect(list);
+    const auto detailsBefore = *detailsLayout->getRect(details);
+    for (int frame = 0; frame < 25; ++frame)
+        panel->renderShell(gui, shell->getRect(panel));
+    const auto refreshes = list->refreshes - beforeRefreshes;
+    const auto textures = gui->getTextManager()->getTextureLoadCount() - beforeTextures;
+    const auto listAfter = listLayout->getRect(list);
+    const auto detailsAfter = detailsLayout->getRect(details);
+    expect_true(refreshes == 0, "25 warm character layouts must perform zero additional ability proxy refreshes");
+    expect_true(textures == 0, "25 warm character layouts must perform zero additional text texture loads");
+    expect_true(listAfter->x == listBefore.x && listAfter->y == listBefore.y && listAfter->w == listBefore.w &&
+                    listAfter->h == listBefore.h && detailsAfter->y == detailsBefore.y &&
+                    detailsAfter->h == detailsBefore.h,
+                "warm character layout must retain its bounded list and unchanged detail geometry");
+    std::cout << "[character pager layout] frames=25 proxy refreshes=" << refreshes
+              << " refresh budget=0 text loads=" << textures << " text budget=0\n";
+    game->getContext()->shutdown();
+}
+
 void testLoadingReaderReusesWarmTextures() {
     auto gui = make_headless_gui();
     auto reader = std::make_shared<CGameTextPanel>();
@@ -702,6 +798,7 @@ void run_render_context_performance_tests() {
     test_detail_layout_draws_only_visible_cached_paragraphs();
     test_reward_receipt_draws_only_visible_cached_rows();
     testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability();
+    testCharacterPagerReservationKeepsWarmLayoutWorkBounded();
     testLoadingReaderReusesWarmTextures();
     testMovementSamplingReusesOneBoundedRecord();
     testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute();
