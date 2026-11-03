@@ -28024,12 +28024,16 @@ class TestRunnerSuiteTest(unittest.TestCase):
                     "set(_VCPKG_INSTALLED_DIR " + quote(dependency_root) + ")",
                     "set(VCPKG_TARGET_TRIPLET x64-windows)",
                     setup,
-                    'add_test(NAME native_runtime_probe COMMAND "' + command_reference + '" -P '
+                    'add_test(NAME native_runtime_probe COMMAND "'
+                    + command_reference
+                    + '" -P '
                     + quote(root / "unit.cmake")
                     + ")",
                     "set(test_name native_runtime_probe)",
                     unit_environment,
-                    'add_test(NAME performance.performance_guard_tests COMMAND "' + command_reference + '" -P '
+                    'add_test(NAME performance.performance_guard_tests COMMAND "'
+                    + command_reference
+                    + '" -P '
                     + quote(root / "performance.cmake")
                     + ")",
                     performance_environment,
