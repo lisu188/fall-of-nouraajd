@@ -1470,14 +1470,17 @@ def captureAcceptanceStates(game, output_dir, player_class):
 
         runtime = artifact_sets.get_runtime()
         definition = runtime.set_for_combined("ArmorOfTheDamned")
-        for slot_id in list(player.getEquipped()):
-            player.equipItem(slot_id, None)
-        for piece_id in definition["pieces"]:
-            piece = sim.gameInstance.createObject(piece_id)
-            player.addItem(piece)
-            slot_id = next(iter(sim.gameInstance.getSlotConfiguration().getFittingSlots(piece)))
-            player.equipItem(slot_id, piece)
-        sim.pumpEvents(3)  # Drain the ordinary on-equip offers through the global cancel adapter.
+        # Native deferred offers bypass the synchronous popup adapter. Seed only this posed set
+        # without posting offers; restore posting before pumps and the deliberate native previews.
+        with patch.object(game.CGame, "runUiFlowLater", return_value=None):
+            for slot_id in list(player.getEquipped()):
+                player.equipItem(slot_id, None)
+            for piece_id in definition["pieces"]:
+                piece = sim.gameInstance.createObject(piece_id)
+                player.addItem(piece)
+                slot_id = next(iter(sim.gameInstance.getSlotConfiguration().getFittingSlots(piece)))
+                player.equipItem(slot_id, piece)
+        sim.pumpEvents(3)
         before = state()
         flowCaptures(lambda: artifact_sets.maybe_offer_assembly(player), ["management-artifact-assembly"])
         flowCaptures(
