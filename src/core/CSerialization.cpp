@@ -1022,8 +1022,10 @@ std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &objec
         if (!state.effects.writeRecord(object, config))
             return config;
         auto properties = std::make_shared<json>();
+        const auto map = std::dynamic_pointer_cast<CMap>(object);
+        const bool omitEmptyStaticTerrain = map && map->getStaticTerrainData().empty();
         object->meta()->for_all_properties(object, [&](auto property) {
-            if (property->name() != "type")
+            if (property->name() != "type" && !(omitEmptyStaticTerrain && property->name() == "staticTerrainData"))
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<std::any>(property->name()), context);
         });

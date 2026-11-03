@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CNavigation.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
@@ -1184,6 +1185,394 @@ void test_tile_movement_cost_deserialization() {
     auto invalid = game->createObject<CTile>("InvalidCostTile");
     expect_true(invalid && invalid->getMovementCost() == 1,
                 "invalid configured movementCost should clamp to one during deserialization");
+}
+
+json makeNativeStaticTerrainDocument(const std::shared_ptr<CGame> &game) {
+    json palette = json::array();
+    for (const auto &type : {"MountainTile", "GroundTile"}) {
+        auto config = game->getObjectHandler()->getConfig(type);
+        if (!config)
+            throw std::logic_error("Static terrain test requires packaged native tile configuration");
+        palette[palette.size()] = {{"type", type}, {"configuration", *config}};
+    }
+    json raster = {{"version", 1},
+                   {"levels", json::array({{{"area", "tinyMaze"},
+                                            {"level", 0},
+                                            {"width", 5},
+                                            {"height", 5},
+                                            {"palette", palette},
+                                            {"rows", json::array({"00000", "01110", "00010", "01110", "00000"})}}})}};
+    auto data = json::array();
+    for (int index = 0; index < 25; ++index)
+        data[index] = 0;
+    return {{"properties", {{"x", 1}, {"y", 1}, {"z", 0}, {"staticTerrainData", raster.dump()}}},
+            {"tilesets", json::array()},
+            {"layers", json::array({{{"type", "tilelayer"},
+                                     {"width", 5},
+                                     {"height", 5},
+                                     {"properties",
+                                      {{"level", 0},
+                                       {"default", "MountainTile"},
+                                       {"outOfBounds", "MountainTile"},
+                                       {"xBound", 4},
+                                       {"yBound", 4}}},
+                                     {"data", data}}})}};
+}
+
+std::shared_ptr<CMap> loadNativeStaticTerrainDocument(const std::shared_ptr<CGame> &game, const json &document) {
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    CMapLoader::loadFromTmx(map, std::make_shared<const json>(document));
+    return map;
+}
+
+void testStaticTerrainNativeLookupSnapshotAndCanonicalOverlay() {
+    auto game = CGameLoader::loadGame();
+    auto map = loadNativeStaticTerrainDocument(game, makeNativeStaticTerrainDocument(game));
+    const auto before = map->getTiles().size();
+    const auto revision = map->getNavigationRevision();
+    const auto recipes = game->getObjectHandler()->getTileRecipeDiagnostics().applications;
+    auto service = map->getNavigationService();
+    auto snapshot = service->snapshot(map);
+    for (int repeat = 0; repeat < 64; ++repeat) {
+        expect_true(map->canStep(1, 1, 0) && !map->canStep(1, 2, 0) && !map->canStep(5, 1, 0),
+                    "native raster cells must override homogeneous defaults without opening source walls/outside");
+        expect_true(snapshot->canStep(Coords(1, 1, 0)) && !snapshot->canStep(Coords(1, 2, 0)),
+                    "native snapshot fallback must preserve position-dependent static collision");
+        expect_true(map->lookupMovementCost(1, 1, 0) == 1 && snapshot->movementCost(Coords(1, 1, 0)) == 1,
+                    "direct and snapshot scalar costs must agree without creating tiles");
+    }
+    const auto scalar_tiles = map->getTiles().size();
+    const auto scalar_revision = map->getNavigationRevision();
+    const auto scalar_recipes = game->getObjectHandler()->getTileRecipeDiagnostics().applications;
+    std::cout << "STATIC_TERRAIN_WORK "
+              << json{{"repeats", 64},
+                      {"tilesBefore", before},
+                      {"tilesAfter", scalar_tiles},
+                      {"revisionBefore", revision},
+                      {"revisionAfter", scalar_revision},
+                      {"recipesBefore", recipes},
+                      {"recipesAfter", scalar_recipes},
+                      {"tileDelta", scalar_tiles - before},
+                      {"revisionDelta", scalar_revision - revision},
+                      {"recipeDelta", scalar_recipes - recipes}}
+                     .dump()
+              << '\n';
+    expect_true(before == 0 && map->getTiles().size() == before && map->getNavigationRevision() == revision &&
+                    game->getObjectHandler()->getTileRecipeDiagnostics().applications == recipes,
+                "fixed scalar/snapshot work must not materialize tiles, invoke tile recipes or invalidate routing");
+    const auto outside_recipes = game->getObjectHandler()->getTileRecipeDiagnostics().applications;
+    for (int repeat = 0; repeat < 64; ++repeat)
+        expect_true(map->lookupMovementCost(5, 1, 0) == 1 && snapshot->movementCost(Coords(5, 1, 0)) == 1,
+                    "bound palette fallback cost must retain the minimum-one scalar contract outside the raster");
+    const auto outside_after = game->getObjectHandler()->getTileRecipeDiagnostics().applications;
+    std::cout << "STATIC_TERRAIN_OUTSIDE_COST "
+              << json{{"repeats", 64},
+                      {"recipesBefore", outside_recipes},
+                      {"recipesAfter", outside_after},
+                      {"recipeDelta", outside_after - outside_recipes}}
+                     .dump()
+              << '\n';
+    expect_true(outside_after == outside_recipes && map->getTiles().size() == before,
+                "bound palette fallback cost must not construct transient or canonical tiles");
+    const auto path = service->findPath(map, Coords(1, 1, 0), Coords(1, 3, 0));
+    expect_true(path.size() == 6 && std::ranges::find(path, Coords(1, 2, 0)) == path.end(),
+                "real native navigation must follow the six-step bend instead of crossing its masonry");
+    auto floor = map->getTile(1, 1, 0);
+    auto wall = map->getTile(1, 2, 0);
+    expect_true(floor && wall && floor != wall && floor->getTypeId() == "GroundTile" &&
+                    wall->getTypeId() == "MountainTile" && floor->getCoords() == Coords(1, 1, 0) &&
+                    wall->getCoords() == Coords(1, 2, 0) && wall->getGame() == game && wall->getMap() == map,
+                "getTile must materialize coordinate-specific native objects with canonical map ownership");
+    for (int repeat = 0; repeat < 64; ++repeat)
+        expect_true(map->getTile(1, 1, 0) == floor && map->getTile(1, 2, 0) == wall,
+                    "repeated rendering/API lookups must reuse each canonical promoted tile");
+    expect_true(map->getTiles().size() == before + 2, "promotion growth is bounded by distinct queried coordinates");
+    auto before_mutation = service->snapshot(map);
+    wall->setCanStep(true);
+    wall->setMovementCost(7);
+    wall->setStringProperty("staticMutationMarker", "retained");
+    expect_true(!before_mutation->isCurrent() && map->canStep(1, 2, 0) && map->lookupMovementCost(1, 2, 0) == 7,
+                "canonical overlay mutations must invalidate cached routing and override immutable terrain");
+    auto changed = service->snapshot(map);
+    expect_true(changed->canStep(Coords(1, 2, 0)) && changed->movementCost(Coords(1, 2, 0)) == 7,
+                "fresh snapshots must retain canonical tile collision/cost mutations");
+    wall->setMovementCost(0);
+    expect_true(map->lookupMovementCost(1, 2, 0) == 1 && service->snapshot(map)->movementCost(Coords(1, 2, 0)) == 1,
+                "zero overlay cost input must retain the existing native minimum-one contract");
+    wall->setMovementCost(7);
+    auto original_floor = game->getObjectHandler()->getConfig("GroundTile");
+    auto changed_floor = std::make_shared<json>(*original_floor);
+    (*changed_floor)["properties"]["canStep"] = false;
+    game->getObjectHandler()->registerConfig("GroundTile", changed_floor);
+    bool overlay_retained = false;
+    try {
+        overlay_retained = map->canStep(1, 2, 0) && map->lookupMovementCost(1, 2, 0) == 7;
+    } catch (const std::exception &) {
+    }
+    expect_true(overlay_retained,
+                "a canonical materialized override precedes static palette admission for both collision and cost");
+    bool base_refused = false;
+    try {
+        static_cast<void>(map->lookupMovementCost(2, 1, 0));
+    } catch (const std::exception &) {
+        base_refused = true;
+    }
+    expect_true(base_refused, "unmaterialized base terrain still refuses changed palette resources");
+    game->getObjectHandler()->registerConfig("GroundTile", original_floor);
+    auto blocker = std::make_shared<CMapObject>();
+    blocker->setGame(game);
+    blocker->setName("staticRasterActorBlocker");
+    blocker->setCanStep(false);
+    blocker->setPosX(3);
+    blocker->setPosY(2);
+    blocker->setPosZ(0);
+    map->addObject(blocker);
+    expect_true(!map->canStep(3, 2, 0) && !service->snapshot(map)->canStep(Coords(3, 2, 0)),
+                "actual map objects must still block an otherwise open immutable cell");
+    auto outside_tile = map->getTile(5, 1, 0);
+    expect_true(outside_tile && outside_tile->getTypeId() == "MountainTile" &&
+                    outside_tile->getCoords() == Coords(5, 1, 0) && map->getTile(5, 1, 0) == outside_tile &&
+                    map->getTiles().size() == before + 3,
+                "outside materialization must use a canonical fallback tile without indexing outside the raster");
+    auto unbound_config = std::make_shared<json>(*game->getObjectHandler()->getConfig("MountainTile"));
+    game->getObjectHandler()->registerConfig("staticUnboundOutsideTile", unbound_config);
+    map->setOutOfBoundsTiles({{0, "staticUnboundOutsideTile"}});
+    const auto unbound_before = game->getObjectHandler()->getTileRecipeDiagnostics().applications;
+    expect_true(!map->canStep(6, 1, 0) && map->lookupMovementCost(6, 1, 0) == 1,
+                "a fallback id outside the validated palette must retain its native constructor path");
+    expect_true(game->getObjectHandler()->getTileRecipeDiagnostics().applications == unbound_before + 2,
+                "an unbound fallback must not inherit scalar admission from an equal palette configuration");
+    game->getContext()->shutdown();
+}
+
+void testStaticTerrainStrictAdmissionAndLegacyMapCompatibility() {
+    auto game = CGameLoader::loadGame();
+    const auto original = makeNativeStaticTerrainDocument(game);
+    const auto raster = json::parse(original["properties"]["staticTerrainData"].get<std::string>());
+    std::vector<json> malformed;
+    for (int kind = 0; kind < 8; ++kind) {
+        auto changed = raster;
+        auto &level = changed["levels"][0];
+        if (kind == 0)
+            changed["version"] = 2;
+        if (kind == 1)
+            level["width"] = 0;
+        if (kind == 2) {
+            auto duplicate = level;
+            changed["levels"][changed["levels"].size()] = duplicate;
+        }
+        if (kind == 3)
+            level["rows"][1] = "011f0";
+        if (kind == 4)
+            level["palette"][0]["type"] = "missingStaticTerrainTile";
+        if (kind == 5)
+            level["palette"][0]["configuration"]["properties"]["canStep"] = true;
+        if (kind == 6) {
+            level["width"] = 6;
+            level["rows"] = json::array({"000000", "011100", "000100", "011100", "000000"});
+        }
+        if (kind == 7)
+            level["height"] = 65537;
+        auto document = original;
+        document["properties"]["staticTerrainData"] = changed.dump();
+        malformed.push_back(std::move(document));
+    }
+    auto wrong_kind = original;
+    wrong_kind["properties"]["staticTerrainData"] = json::object();
+    malformed.push_back(std::move(wrong_kind));
+    for (const auto &[field, expected] : std::vector<std::pair<std::string, unsigned long long>>{
+             {"version", 1}, {"level", 0}, {"width", 5}, {"height", 5}}) {
+        for (const auto &literal :
+             {std::to_string(4294967296ULL + expected), std::string("18446744073709551615"), std::string("2147483648"),
+              std::string("-2147483649"), std::string("-9223372036854775808")}) {
+            auto changed = raster;
+            auto &parent = field == "version" ? changed : changed["levels"][0];
+            parent[field] = "staticIntegerSentinel";
+            auto text = changed.dump();
+            const auto sentinel = text.find("\"staticIntegerSentinel\"");
+            if (sentinel == std::string::npos)
+                throw std::logic_error("Integer test sentinel missing");
+            text.replace(sentinel, std::string("\"staticIntegerSentinel\"").size(), literal);
+            auto document = original;
+            document["properties"]["staticTerrainData"] = text;
+            malformed.push_back(std::move(document));
+        }
+    }
+    for (const auto &document : malformed) {
+        bool rejected = false;
+        try {
+            loadNativeStaticTerrainDocument(game, document);
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected, "actual native loader must reject malformed/changed/unbounded static terrain");
+    }
+    auto deeply_nested = original;
+    deeply_nested["properties"]["staticTerrainData"] = std::string(17, '[') + "0" + std::string(17, ']');
+    bool rejected_depth = false;
+    try {
+        loadNativeStaticTerrainDocument(game, deeply_nested);
+    } catch (const std::exception &error) {
+        rejected_depth = std::string(error.what()).find("nesting") != std::string::npos;
+    }
+    expect_true(rejected_depth,
+                "descriptor nesting must be rejected by the local preflight before recursive JSON decode");
+    auto document = original;
+    document["properties"].erase("staticTerrainData");
+    auto legacy = loadNativeStaticTerrainDocument(game, document);
+    auto serialized = CSerialization::serializeExpected(legacy);
+    expect_true(!legacy->canStep(1, 1, 0) && serialized && !(*serialized)["properties"].contains("staticTerrainData"),
+                "unopted legacy maps retain homogeneous defaults and their original saved property shape");
+    auto legacy_tile = legacy->getTile(1, 1, 0);
+    for (const int input : {0, -9}) {
+        legacy_tile->setMovementCost(input);
+        expect_true(legacy->lookupMovementCost(1, 1, 0) == 1 && legacy->getMovementCost(1, 1, 0) == 1,
+                    "unopted stored tiles retain the native minimum-one cost contract for zero/negative input");
+    }
+    auto zero_config = std::make_shared<json>(*game->getObjectHandler()->getConfig("GroundTile"));
+    (*zero_config)["properties"]["movementCost"] = 0;
+    game->getObjectHandler()->registerConfig("staticZeroCostTile", zero_config);
+    auto zero_raster = raster;
+    zero_raster["levels"][0]["palette"][1] = {{"type", "staticZeroCostTile"}, {"configuration", *zero_config}};
+    auto zero_document = original;
+    zero_document["properties"]["staticTerrainData"] = zero_raster.dump();
+    auto zero_map = loadNativeStaticTerrainDocument(game, zero_document);
+    expect_true(zero_map->lookupMovementCost(1, 1, 0) == 1 &&
+                    zero_map->getNavigationService()->snapshot(zero_map)->movementCost(Coords(1, 1, 0)) == 1,
+                "a zero palette cost input retains the existing native static-recipe minimum-one contract");
+    auto map = loadNativeStaticTerrainDocument(game, original);
+    auto snapshot = map->getNavigationService()->snapshot(map);
+    auto previous = game->getObjectHandler()->getConfig("GroundTile");
+    auto changed_config = std::make_shared<json>(*previous);
+    (*changed_config)["properties"]["canStep"] = false;
+    game->getObjectHandler()->registerConfig("GroundTile", changed_config);
+    bool rejected = false;
+    try {
+        static_cast<void>(map->canStep(1, 1, 0));
+    } catch (const std::exception &) {
+        rejected = true;
+    }
+    expect_true(rejected && !snapshot->isCurrent(),
+                "changed live palette configuration must invalidate old snapshots and refuse stale scalar terrain");
+    game->getObjectHandler()->registerConfig("GroundTile", previous);
+    expect_true(map->canStep(1, 1, 0), "restoring the exact palette must restore scalar admission");
+    auto foreign_game = CGameLoader::loadGame();
+    foreign_game->getObjectHandler()->registerConfig("GroundTile", changed_config);
+    const auto old_handler = game->getObjectHandler();
+    const auto foreign_handler = foreign_game->getObjectHandler();
+    for (int attempt = 0;
+         attempt < 16 && old_handler->getNavigationConfigRevision() != foreign_handler->getNavigationConfigRevision();
+         ++attempt) {
+        auto lower = old_handler->getNavigationConfigRevision() < foreign_handler->getNavigationConfigRevision()
+                         ? old_handler
+                         : foreign_handler;
+        lower->registerConfig("staticRevisionPadding" + std::to_string(attempt), previous);
+    }
+    expect_true(old_handler->getNavigationConfigRevision() == foreign_handler->getNavigationConfigRevision(),
+                "the native foreign-handler control must use equal numeric configuration revisions");
+    static_cast<void>(map->canStep(1, 1, 0));
+    map->setGame(foreign_game);
+    rejected = false;
+    try {
+        static_cast<void>(map->canStep(1, 1, 0));
+    } catch (const std::exception &) {
+        rejected = true;
+    }
+    map->setGame(game);
+    expect_true(rejected, "equal revisions from a different handler must not authorize stale palette bindings");
+    foreign_game->getContext()->shutdown();
+    game->getContext()->shutdown();
+}
+
+void testStaticTerrainRealSaveReloadPreservesMaterializedMutation() {
+    auto game = CGameLoader::loadGame();
+    const auto document = makeNativeStaticTerrainDocument(game);
+    const auto items = std::filesystem::path(game->getResourcesProvider()->getPath("config/items.json"));
+    expect_true(!items.empty(), "static terrain persistence fixture needs packaged resource roots");
+    if (items.empty())
+        return;
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto map_name = "unit-static-terrain-" + nonce;
+    const auto directory = items.parent_path().parent_path() / "maps" / map_name;
+    std::filesystem::create_directories(directory);
+    const auto map_file = directory / "map.json";
+    {
+        std::ofstream stream(map_file);
+        stream << document.dump();
+    }
+    CGameLoader::startGameWithPlayer(game, map_name, "Warrior");
+    auto map = game->getMap();
+    expect_true(map && map->getMapName() == map_name && map->canStep(1, 1, 0),
+                "save regression must start the actual authored tiny raster map");
+    if (!map || map->getMapName() != map_name) {
+        game->getContext()->shutdown();
+        return;
+    }
+    auto tile = map->getTile(1, 2, 0);
+    tile->setCanStep(true);
+    tile->setMovementCost(7);
+    tile->setStringProperty("staticMutationMarker", "saved");
+    map->getPlayer()->setGold(37);
+    const auto count = map->getTiles().size();
+    const auto slot = "native-static-terrain-" + nonce;
+    const bool saved = CMapLoader::saveWithResult(map, slot);
+    expect_true(saved, "the normal native save envelope must include raster and complete materialized state");
+    if (!saved) {
+        game->getContext()->shutdown();
+        return;
+    }
+    auto restored_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(restored_game, "empty", "Warrior");
+    auto previous = restored_game->getMap();
+    CGameLoader::loadSavedGame(restored_game, slot);
+    auto restored = restored_game->getMap();
+    const bool loaded = restored && restored != previous && restored->getMapName() == map_name;
+    expect_true(loaded, "verified native restore must load the same authored raster descriptor");
+    bool intact = false;
+    if (loaded) {
+        auto actual = restored->getTile(1, 2, 0);
+        intact = actual && actual != tile && actual->getGame() == restored_game && actual->getMap() == restored &&
+                 actual->getCoords() == Coords(1, 2, 0) && actual->canStep() && actual->getMovementCost() == 7 &&
+                 actual->getStringProperty("staticMutationMarker") == "saved" && restored->getTile(1, 2, 0) == actual &&
+                 restored->getPlayer()->getGold() == 37 && restored->getTiles().size() == count &&
+                 restored->canStep(1, 1, 0) && !restored->canStep(2, 2, 0) && !restored->canStep(5, 1, 0);
+    }
+    expect_true(intact, "verified restore preserves canonical tile identity, arbitrary mutation, owner and hero state");
+    const auto invalid_slot = slot + "-changed-raster";
+    bool rejected_change = false;
+    if (loaded && intact) {
+        auto altered = CSerialization::serializeExpected(map);
+        if (altered) {
+            auto raster = json::parse((*altered)["properties"]["staticTerrainData"].get<std::string>());
+            raster["levels"][0]["rows"][1] = "00000";
+            (*altered)["properties"]["staticTerrainData"] = raster.dump();
+            auto envelope = CSaveFormat::buildEnvelope(std::make_shared<json>(std::move(*altered)), map_name);
+            const bool written =
+                envelope && game->getResourcesProvider()->save(CSaveFormat::primaryPath(invalid_slot), *envelope);
+            expect_true(written, "changed descriptor control must reach real saved-map loading");
+            if (written) {
+                CGameLoader::loadSavedGame(restored_game, invalid_slot);
+                rejected_change = restored_game->getMap() == restored && restored->getPlayer()->getGold() == 37 &&
+                                  restored->getTile(1, 2, 0)->getStringProperty("staticMutationMarker") == "saved";
+            }
+        }
+    }
+    expect_true(rejected_change, "a saved raster that differs from authored resources must not replace the active map");
+    if (loaded && intact && rejected_change) {
+        for (const auto &owned_slot : {slot, invalid_slot}) {
+            for (const auto &logical : {CSaveFormat::primaryPath(owned_slot), CSaveFormat::backupPath(owned_slot)}) {
+                const auto actual = game->getResourcesProvider()->getPath(logical);
+                if (!actual.empty())
+                    std::filesystem::remove(actual);
+            }
+        }
+        std::filesystem::remove(map_file);
+        std::filesystem::remove(directory);
+    }
+    restored_game->getContext()->shutdown();
+    game->getContext()->shutdown();
 }
 
 void test_map_movement_cost_default_lookup_without_materializing() {
@@ -4655,6 +5044,12 @@ int main(int argc, char **argv) {
     nativeTestProfile().run("test_map_tiles_bounds_wrapping_and_object_cache",
                             test_map_tiles_bounds_wrapping_and_object_cache);
     nativeTestProfile().run("test_tile_movement_cost_deserialization", test_tile_movement_cost_deserialization);
+    nativeTestProfile().run("testStaticTerrainNativeLookupSnapshotAndCanonicalOverlay",
+                            testStaticTerrainNativeLookupSnapshotAndCanonicalOverlay);
+    nativeTestProfile().run("testStaticTerrainStrictAdmissionAndLegacyMapCompatibility",
+                            testStaticTerrainStrictAdmissionAndLegacyMapCompatibility);
+    nativeTestProfile().run("testStaticTerrainRealSaveReloadPreservesMaterializedMutation",
+                            testStaticTerrainRealSaveReloadPreservesMaterializedMutation);
     nativeTestProfile().run("test_map_movement_cost_default_lookup_without_materializing",
                             test_map_movement_cost_default_lookup_without_materializing);
     nativeTestProfile().run("test_map_navigation_edges_update_revision", test_map_navigation_edges_update_revision);
