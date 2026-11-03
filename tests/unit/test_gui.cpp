@@ -2175,6 +2175,110 @@ void test_minimap_bounds_normal_map_renders() {
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
+void testMinimapFreshTraversalPreservesTerrainUpdates() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 3}, {1, 3}});
+    map->setYBounds({{0, 3}, {1, 3}});
+    map->setDefaultTiles({{0, "GroundTile"}, {1, "GroundTile"}});
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("grass");
+    map->addTile(tile, 2, 2, 0);
+    auto upstairs = std::make_shared<CTile>();
+    upstairs->setTileType("water");
+    map->addTile(upstairs, 2, 2, 1);
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render_pixel = [&] {
+        minimap->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect sample{80, 80, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "fresh minimap regression must read an actual terrain pixel from the isolated renderer");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(render_pixel() == 0x002d6f37u, "native minimap must initially draw the registered grass tile");
+    tile->setTileType("water");
+    expect_true(render_pixel() == 0x001d5694u, "direct native tileType changes must appear on the next minimap frame");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(render_pixel() == 0x00766748u,
+                "empty tileType must continue to use the current native typeId fallback");
+    const auto stable_builds = minimap->getTerrainTextureBuildCount();
+    tile->setCanStep(false);
+    tile->setAnimation("images/tiles/water");
+    expect_true(render_pixel() == 0x00766748u && minimap->getTerrainTextureBuildCount() == stable_builds,
+                "walkability and animation changes must preserve the existing type-based minimap color contract");
+    map->removeTile(2, 2, 0);
+    expect_true(render_pixel() == 0x00564830u, "removed native tiles must reveal the current authored default terrain");
+    auto replacement = std::make_shared<CTile>();
+    replacement->setTileType("grass");
+    map->addTile(replacement, 2, 2, 0);
+    expect_true(render_pixel() == 0x002d6f37u, "actual replacement tiles must appear without a stale cached signature");
+    map->moveTile(replacement, 3, 2, 0);
+    expect_true(render_pixel() == 0x00564830u, "moving a registered native tile must clear its previous minimap cell");
+    map->setDefaultTiles({{0, "WaterTile"}, {1, "GroundTile"}});
+    expect_true(render_pixel() == 0x001d5694u, "changed authored default terrain must refresh uncovered cells");
+    harness.player->setPosZ(1);
+    expect_true(harness.player->getCoords().z == 1 && render_pixel() == 0x001d5694u,
+                "the minimap must freshly read the actual player level and only draw that level's tile");
+    upstairs->setTileType("grass");
+    expect_true(render_pixel() == 0x002d6f37u,
+                "in-place upstairs changes must refresh after an actual level transition");
+    map->setXBounds({});
+    map->setYBounds({});
+    expect_true(render_pixel() != 0 && minimap->getTerrainTextureBuildCount() > stable_builds,
+                "removing metadata bounds must retain the existing native derived-bounds render path");
+    harness.game->getContext()->shutdown();
+}
+
+void testCollapsedMinimapPreservesOrderedRasterWinner() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 223}});
+    map->setYBounds({{0, 191}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    auto grass = std::make_shared<CTile>();
+    auto water = std::make_shared<CTile>();
+    grass->setTileType("grass");
+    water->setTileType("water");
+    map->addTile(grass, 100, 100, 0);
+    map->addTile(water, 101, 100, 0);
+    auto visitor_last = [&] {
+        std::shared_ptr<CTile> last;
+        map->forTiles([&](std::shared_ptr<CTile> tile) { last = std::move(tile); });
+        return last;
+    };
+    auto snapshot = map->getTiles();
+    auto ordered_last = *snapshot.rbegin();
+    if (visitor_last() == ordered_last) {
+        map->removeTile(100, 100, 0);
+        map->removeTile(101, 100, 0);
+        map->addTile(water, 100, 100, 0);
+        map->addTile(grass, 101, 100, 0);
+    }
+    const auto unordered_last = visitor_last();
+    expect_true(unordered_last != ordered_last,
+                "collapsed collision fixture must distinguish native visitor order from the ordered snapshot");
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    Uint32 pixel = 0;
+    const SDL_Rect shared_pixel{57, 66, 1, 1};
+    expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &shared_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                     sizeof(pixel)) == 0,
+                "collapsed native terrain overlap must support actual isolated-renderer pixel readback");
+    const Uint32 expected = ordered_last == grass ? 0x002d6f37u : 0x001d5694u;
+    const Uint32 unordered = unordered_last == grass ? 0x002d6f37u : 0x001d5694u;
+    expect_true((pixel & 0x00ffffffu) == expected && (pixel & 0x00ffffffu) != unordered,
+                "collapsed overlapping cells must retain the original owning-set raster order and last-cell color");
+    const auto builds = minimap->getTerrainTextureBuildCount();
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == builds,
+                "preserving the original collapsed raster must still reuse an unchanged warmed texture");
+    harness.game->getContext()->shutdown();
+}
+
 void testRetainedMinimapTextureDoesNotOutliveItsRenderer() {
     auto harness = make_minimap_harness();
     harness.map->setXBounds({{0, 3}});
@@ -5019,6 +5123,8 @@ int main() {
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    testMinimapFreshTraversalPreservesTerrainUpdates();
+    testCollapsedMinimapPreservesOrderedRasterWinner();
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();
     testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
