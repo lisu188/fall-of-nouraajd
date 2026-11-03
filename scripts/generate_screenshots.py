@@ -601,11 +601,10 @@ def _captureNativePanel(game, sim, panel_name, path):
 
 
 def _prepare_player_for_panels(sim):
-    """Give the player items and (if possible) an active quest for the panels.
+    """Seed representative live state without entering the map's story events.
 
-    The inventory / character / quest panels render live player state, so seed a
-    little inventory and trigger the map's StartEvent to activate a quest. Both
-    are best effort -- a bare player still renders a valid panel.
+    These posed panel previews use explicit inventory and quest fixtures. Entering
+    a StartEvent can await a native reader before the first capture is scheduled.
     """
     player = sim.player
     for item_id in ("Sword", "Scroll", "LeatherArmor"):
@@ -613,18 +612,6 @@ def _prepare_player_for_panels(sim):
             player.addItem(sim.gameInstance.createObject(item_id))
         except Exception:  # noqa: BLE001 - seeding inventory is best effort
             pass
-    try:
-        start_events = [
-            obj for obj in sim.gameMap.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
-        ]
-        if start_events:
-            coords = start_events[0].getCoords()
-            player.moveTo(coords.x, coords.y, coords.z)
-            sim.pumpEvents(5)
-            player.checkQuests()
-            sim.pumpEvents(3)
-    except Exception:  # noqa: BLE001 - activating a quest is best effort
-        pass
     player.addQuest("mainQuest")
 
 

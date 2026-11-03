@@ -379,6 +379,60 @@ class ScreenshotPanelSetupTest(unittest.TestCase):
         panel.setStringProperty.assert_any_call("body", "Follow the road.")
         panel.setCloseable.assert_called_once_with(False)
 
+    def testPanelPreparationDoesNotEnterAStoryReaderBeforeTheFirstCapture(self):
+        items = []
+        quests = []
+        story_entries = []
+        origin = (110, 111, 0)
+        position = [origin]
+
+        def enterStory(x, y, z):
+            position[0] = (x, y, z)
+            story_entries.append(position[0])
+            raise RuntimeError("A native campaign reader now needs dismissal")
+
+        start_event = SimpleNamespace(
+            getTypeId=lambda: "StartEvent",
+            getCoords=lambda: SimpleNamespace(x=109, y=110, z=0),
+        )
+        player = SimpleNamespace(
+            addItem=items.append,
+            addQuest=quests.append,
+            moveTo=enterStory,
+            checkQuests=Mock(),
+        )
+        sim = SimpleNamespace(
+            player=player,
+            gameInstance=SimpleNamespace(createObject=lambda item: item),
+            gameMap=SimpleNamespace(getObjects=lambda: [start_event]),
+            pumpEvents=Mock(),
+        )
+
+        generate_screenshots._prepare_player_for_panels(sim)
+
+        self.assertEqual((origin, []), (position[0], story_entries))
+        self.assertEqual(["Sword", "Scroll", "LeatherArmor"], items)
+        self.assertEqual(["mainQuest"], quests)
+
+    def testPanelPreparationKeepsRepresentativeQuestWhenAnOptionalItemIsUnavailable(self):
+        items = []
+        quests = []
+
+        def createItem(item):
+            if item == "Scroll":
+                raise ValueError("Optional screenshot item unavailable")
+            return item
+
+        sim = SimpleNamespace(
+            player=SimpleNamespace(addItem=items.append, addQuest=quests.append),
+            gameInstance=SimpleNamespace(createObject=createItem),
+        )
+
+        generate_screenshots._prepare_player_for_panels(sim)
+
+        self.assertEqual(["Sword", "LeatherArmor"], items)
+        self.assertEqual(["mainQuest"], quests)
+
     def testNewFrontendModalsCancelDuringMapSetup(self):
         names = (
             "showMessage",
