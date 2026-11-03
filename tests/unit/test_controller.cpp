@@ -55,7 +55,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
+extern "C" PyObject *PyInit__game();
+
 namespace {
+void initializeControllerPythonContent() {
+    auto sys = pybind11::module_::import("sys");
+    sys.attr("path").attr("insert")(0, GAME_CONTROLLER_TEST_RESOURCE_ROOT);
+    pybind11::module_::import("_game");
+    pybind11::module_::import("game");
+    pybind11::module_::import("json");
+}
 
 std::shared_ptr<CCreature> creature_at(int x, int y, int z) {
     auto creature = std::make_shared<CCreature>();
@@ -1315,6 +1324,119 @@ void testMonsterFightControllerRetainsHealEqualToIncomingDamage() {
                 "equal restoration and incoming damage must not reintroduce net-zero chain drinking");
 }
 
+void testHealingItemTiesUseConfiguredIdentityAcrossCreationAndInsertionOrders() {
+    class AttackProbe : public CInteraction {
+      public:
+        int calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+    };
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    int cases = 0;
+    for (int policy : {-1, 0, 1}) {
+        for (bool reverseCreation : {false, true}) {
+            for (bool reverseInsertion : {false, true}) {
+                auto actor = fight_fixture_monster(game, 13, 67);
+                auto opponent = fight_fixture_hitter(game, 2);
+                auto first = game->createObject<CPotion>(reverseCreation ? "LesserLifePotion" : "DarkBeer");
+                auto second = game->createObject<CPotion>(reverseCreation ? "DarkBeer" : "LesserLifePotion");
+                auto dark = reverseCreation ? second : first;
+                auto lesser = reverseCreation ? first : second;
+                expect_true(dark && lesser,
+                            "healing tie fixture requires actual configured DarkBeer and LesserLifePotion");
+                if (!dark || !lesser)
+                    continue;
+                dark->setName("zActualDarkBeer");
+                lesser->setName("aActualLesserLifePotion");
+                actor->addItem(reverseInsertion ? lesser : dark);
+                actor->addItem(reverseInsertion ? dark : lesser);
+                auto attack = std::make_shared<AttackProbe>();
+                attack->setName("tieFallbackAttack");
+                actor->addAction(attack);
+                auto controller = std::make_shared<CMonsterFightController>();
+                if (policy >= 0)
+                    controller->setBoolProperty("discountKnownTargetEffectDuration", policy == 1);
+                const int mana = actor->getMana();
+                std::cout << "healing configured fixture: policy=" << policy << " reverseCreation=" << reverseCreation
+                          << " reverseInsertion=" << reverseInsertion << " hpBefore=" << actor->getHp()
+                          << " hpMax=" << actor->getHpMax() << " stamina=" << actor->getStats()->getStamina()
+                          << " darkPower=" << dark->getPower() << " darkType=" << dark->getType()
+                          << " darkTypeId=" << dark->getTypeId() << " darkName=" << dark->getName()
+                          << " lesserPower=" << lesser->getPower() << " lesserType=" << lesser->getType()
+                          << " lesserTypeId=" << lesser->getTypeId() << " lesserName=" << lesser->getName() << "\n";
+                expect_true(
+                    actor->getHpMax() == 91 && dark->getPower() == 1 && lesser->getPower() == 1 &&
+                        dark->hasTag(CTag::Heal) && lesser->hasTag(CTag::Heal) && dark->getTypeId() == "DarkBeer" &&
+                        lesser->getTypeId() == "LesserLifePotion" && dark->getType() == "LifePotion" &&
+                        lesser->getType() == "LifePotion",
+                    "actual healing tie resources must retain equal power, native class and configured identities");
+                const auto firstType = (*actor->getItems().begin())->getTypeId();
+                expect_true(controller->control(actor, opponent), "equal-power native healing must take one item turn");
+                expect_true(
+                    actor->getItems().size() == 1 && !actor->hasItem(dark) && actor->hasItem(lesser),
+                    "equal-power heals must prefer configured identity independent of allocation and insertion");
+                expect_true(actor->getHp() == 85 && actor->getMana() == mana && attack->calls == 0,
+                            "actual equal-power healing must invoke one unchanged 18-hp heal and no attack");
+                expect_true(controller->hasProperty("discountKnownTargetEffectDuration") == (policy >= 0),
+                            "healing tie selection must not create an absent interaction policy");
+                std::cout << "healing configured tie: policy=" << policy << " reverseCreation=" << reverseCreation
+                          << " reverseInsertion=" << reverseInsertion << " firstInventoryType=" << firstType
+                          << " expected=DarkBeer hp=" << actor->getHp() << " itemCount=" << actor->getItems().size()
+                          << " attackCalls=" << attack->calls << "\n";
+                ++cases;
+            }
+        }
+    }
+    expect_true(cases == 12, "all fixed configured-healing tie variants must execute");
+    game->getContext()->shutdown();
+}
+
+void testEqualResourceHealingTiesUseUniqueNamesInsteadOfContainerOrder() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    int cases = 0;
+    for (bool reverseInsertion : {false, true}) {
+        auto actor = fight_fixture_monster(game, 13, 67);
+        auto opponent = fight_fixture_hitter(game, 2);
+        auto first = game->createObject<CPotion>("DarkBeer");
+        auto second = game->createObject<CPotion>("DarkBeer");
+        expect_true(first && second, "same-resource healing tie fixture requires actual configured potions");
+        if (!first || !second)
+            continue;
+        actor->addItem(reverseInsertion ? second : first);
+        actor->addItem(reverseInsertion ? first : second);
+        const auto inventory = actor->getItems();
+        auto cursor = inventory.begin();
+        auto containerFirst = *cursor++;
+        auto preferred = *cursor;
+        // Deliberately oppose semantic names to the observed container order; the policy must ignore that order.
+        containerFirst->setName("zSameConfiguredHeal");
+        preferred->setName("aSameConfiguredHeal");
+        std::cout << "healing instance fixture: reverseInsertion=" << reverseInsertion << " hpBefore=" << actor->getHp()
+                  << " hpMax=" << actor->getHpMax() << " stamina=" << actor->getStats()->getStamina()
+                  << " firstPower=" << containerFirst->getPower() << " firstType=" << containerFirst->getType()
+                  << " firstTypeId=" << containerFirst->getTypeId() << " firstName=" << containerFirst->getName()
+                  << " preferredPower=" << preferred->getPower() << " preferredType=" << preferred->getType()
+                  << " preferredTypeId=" << preferred->getTypeId() << " preferredName=" << preferred->getName() << "\n";
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(actor, opponent), "same-resource native healing must take one item turn");
+        expect_true(actor->getItems().size() == 1 && actor->hasItem(containerFirst) && !actor->hasItem(preferred),
+                    "equal-resource heals must prefer unique native name independent of container order");
+        expect_true(actor->getHp() == 85 && containerFirst->getTypeId() == "DarkBeer" &&
+                        preferred->getTypeId() == "DarkBeer",
+                    "same-resource tie must preserve actual resource behavior and exact healing");
+        std::cout << "healing instance tie: reverseInsertion=" << reverseInsertion
+                  << " observedFirst=zSameConfiguredHeal expected=aSameConfiguredHeal hp=" << actor->getHp() << "\n";
+        ++cases;
+    }
+    expect_true(cases == 2, "both fixed same-resource container-order variants must execute");
+    game->getContext()->shutdown();
+}
+
 void test_monster_fight_controller_heals_when_next_hit_would_kill() {
     auto game = fight_fixture_game();
     // hpMax 70, hp 10: the expected 25 hp hit is lethal, so healing is the only play
@@ -1499,6 +1621,229 @@ void testEffectCloneFixturePreservesStatsAcrossControllerTurns() {
     expect_true(monster->getMana() == 45 && monster->getEffects().size() == 1,
                 "the following turn should skip the duplicate self-buff and cast the five-mana offensive action");
     game->getContext()->shutdown();
+}
+
+void testTargetEffectDurationDiscountRequiresExplicitControllerOptIn() {
+    class PayloadProbe : public CInteraction {
+      public:
+        int calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> target) override {
+            ++calls;
+            target->hurt(7);
+        }
+    };
+    class SelectionScope {
+      public:
+        SelectionScope() { performance_guard::resetInteractionSelectionProbe(); }
+        ~SelectionScope() { performance_guard::disableInteractionSelectionProbe(); }
+    };
+    for (int policy : {-1, 0, 1}) {
+        auto game = fight_fixture_game();
+        register_effect_and_interaction(game);
+        auto actor = creature_at(0, 0, 0);
+        auto target = creature_at(1, 0, 0);
+        for (const auto &creature : {actor, target}) {
+            creature->setGame(game);
+            auto stats = creature->getBaseStats();
+            stats->setStamina(10);
+            stats->setIntelligence(100);
+            stats->setDmgMin(10);
+            stats->setDmgMax(10);
+            creature->setHp(creature->getHpMax());
+            creature->setMana(creature->getManaMax());
+        }
+        auto active = opponent_debuff(game, 4);
+        active->setTypeId("policyEffect");
+        active->setTimeLeft(2);
+        target->addEffect(active);
+        auto prototype = opponent_debuff(game, 4);
+        prototype->setTypeId("policyEffect");
+        auto repeated = std::make_shared<PayloadProbe>();
+        repeated->setGame(game);
+        repeated->setName("repeatedPayload");
+        repeated->setTypeId("repeatedPayload");
+        repeated->setManaCost(15);
+        repeated->setEffect(prototype);
+        auto direct = std::make_shared<PayloadProbe>();
+        direct->setGame(game);
+        direct->setName("directPayload");
+        direct->setTypeId("directPayload");
+        actor->addAction(repeated);
+        actor->addAction(direct);
+        auto controller = std::make_shared<CMonsterFightController>();
+        if (policy >= 0)
+            controller->setBoolProperty("discountKnownTargetEffectDuration", policy == 1);
+        const bool enabled = policy == 1;
+        const auto hp = target->getHp();
+        const auto mana = actor->getMana();
+        performance_guard::InteractionSelectionWork work;
+        {
+            SelectionScope scope;
+            expect_true(controller->control(actor, target), "both explicit policies must retain a real action");
+            work = performance_guard::interactionSelectionProbeCounts();
+        }
+        expect_true(
+            repeated->calls == (enabled ? 0 : 1) && direct->calls == (enabled ? 1 : 0) &&
+                actor->getMana() == mana - (enabled ? 0 : 15) && target->getHp() == hp - 7,
+            "absent/false policy preserves legacy cast payload and cost; true discounts only rejected duration");
+        expect_true(target->getEffects() == std::set<std::shared_ptr<CEffect>>{active} && active->getTimeLeft() == 2,
+                    "both policies retain actual unique effect ownership and never refresh the rejected clone");
+        expect_true(work.targetSnapshots == (enabled ? 1u : 0u) && work.targetEffectEntries == (enabled ? 1u : 0u) &&
+                        work.admissionLookups == (enabled ? 1u : 0u) && work.weakeningEvaluations == 2,
+                    "disabled policy must do zero target admission work; opt-in snapshots once for the real effect");
+        expect_true(controller->hasProperty("discountKnownTargetEffectDuration") == (policy >= 0),
+                    "observing the absent default must not silently activate or write a controller policy");
+        actor->setEffects({});
+        target->setEffects({});
+        expect_true(game->getContext()->getEffectOwnerCount() == 0,
+                    "the policy fixture must release effect ownership through public cleanup");
+        game->getContext()->shutdown();
+    }
+}
+
+void testTargetEffectDurationPolicyRoundTripsWithoutChangingLegacySnapshots() {
+    auto game = CGameLoader::loadGame();
+    using ObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+    for (int policy : {-1, 0, 1}) {
+        auto controller = game->createObject<CMonsterFightController>();
+        if (policy >= 0)
+            controller->setBoolProperty("discountKnownTargetEffectDuration", policy == 1);
+        auto document = ObjectJson::serialize(controller);
+        const auto &properties = document->at("properties");
+        expect_true(properties.contains("discountKnownTargetEffectDuration") == (policy >= 0),
+                    "legacy controller snapshots must not acquire an implicit policy field");
+        if (policy >= 0)
+            expect_true(properties.at("discountKnownTargetEffectDuration").is_boolean() &&
+                            properties.at("discountKnownTargetEffectDuration").get<bool>() == (policy == 1),
+                        "explicit controller policy must serialize as its actual boolean");
+        auto restored = std::dynamic_pointer_cast<CMonsterFightController>(ObjectJson::deserialize(game, document));
+        expect_true(restored && restored != controller && restored->getGame() == game &&
+                        restored->getBoolProperty("discountKnownTargetEffectDuration") == (policy == 1) &&
+                        restored->hasProperty("discountKnownTargetEffectDuration") == (policy >= 0),
+                    "reload must preserve true/false opt-in and missing legacy default without a save-format change");
+    }
+    game->getContext()->shutdown();
+}
+
+void testMonsterFightControllerDiscountsRejectedTargetEffects() {
+    class DirectActionProbe : public CInteraction {
+      public:
+        int calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> victim) override {
+            ++calls;
+            victim->hurt(7);
+        }
+    };
+    auto verify = [](const std::string &candidateId, const std::string &activeId, const std::string &activeType,
+                     const std::string &activeName, bool duplicate, bool cumulative, bool sharedPrototype = false) {
+        auto game = fight_fixture_game();
+        register_effect_and_interaction(game);
+        auto monster = creature_at(0, 0, 0);
+        auto opponent = creature_at(1, 0, 0);
+        for (const auto &actor : {monster, opponent}) {
+            actor->setGame(game);
+            actor->getBaseStats()->setStamina(10);
+            actor->getBaseStats()->setIntelligence(100);
+            actor->getBaseStats()->setDmgMin(10);
+            actor->getBaseStats()->setDmgMax(10);
+            actor->setHp(actor->getHpMax());
+            actor->setMana(actor->getManaMax());
+        }
+        auto prototype = opponent_debuff(game, 4);
+        prototype->setType("CEffect");
+        prototype->setTypeId(candidateId);
+        prototype->setName("shared");
+        prototype->setCumulative(cumulative);
+        auto active = sharedPrototype ? prototype : opponent_debuff(game, 4);
+        active->setType(activeType);
+        active->setTypeId(activeId);
+        active->setName(activeName);
+        active->setCumulative(cumulative);
+        active->setTimeLeft(2);
+        opponent->addEffect(active);
+        const auto activeNameBefore = active->getName();
+        auto repeated = caster_interaction(game, 15, prototype);
+        repeated->setName("repeatedEffect");
+        repeated->setTypeId("repeatedEffect");
+        auto alternative = std::make_shared<DirectActionProbe>();
+        alternative->setGame(game);
+        alternative->setName("directAlternative");
+        alternative->setTypeId("directAlternative");
+        monster->addAction(repeated);
+        monster->addAction(alternative);
+        const auto mana = monster->getMana();
+        const auto hp = opponent->getHp();
+        auto controller = std::make_shared<CMonsterFightController>();
+        controller->setBoolProperty("discountKnownTargetEffectDuration", true);
+        expect_true(controller->control(monster, opponent), "a valid offensive alternative must remain usable");
+        expect_true(monster->getMana() == mana - (duplicate ? 0 : 15) && alternative->calls == (duplicate ? 1 : 0) &&
+                        opponent->getHp() == hp - (duplicate ? 7 : 0),
+                    "rejected duration credit must lose to a free direct action; a fresh effect keeps its rank");
+        expect_true(opponent->getEffects().contains(active) && active->getTimeLeft() == 2 &&
+                        opponent->getEffects().size() == (duplicate ? 1 : 2),
+                    "ranking must preserve the original effect pointer/time and native fresh-effect admission");
+        if (!duplicate) {
+            const auto effects = opponent->getEffects();
+            std::shared_ptr<CEffect> installed;
+            for (const auto &effect : effects)
+                if (effect != active)
+                    installed = effect;
+            expect_true(installed && installed != prototype && installed->getName() != prototype->getName() &&
+                            installed->getTypeId() == candidateId &&
+                            !CGameObject::sameConfiguredType(installed, active) &&
+                            active->getName() == activeNameBefore,
+                        "actual onAction must install a fresh clone, not rank the prototype as the installed object");
+        }
+        monster->setEffects({});
+        opponent->setEffects({});
+        expect_true(monster->getEffects().empty() && opponent->getEffects().empty() &&
+                        game->getContext()->getEffectOwnerCount() == 0,
+                    "public cleanup must release both actor effect sets and their context ownership");
+    };
+    verify("sameEffect", "sameEffect", "OtherRuntimeType", "differentName", true, false);
+    verify("sameEffect", "sameEffect", "CEffect", "shared", true, true);
+    verify("", "", "CEffect", "shared", false, false);
+    verify("", "", "OtherRuntimeType", "shared", false, false);
+    verify("differentEffect", "sameEffect", "CEffect", "shared", false, false);
+    verify("sameEffect", "", "CEffect", "shared", false, false);
+    verify("", "sameEffect", "CEffect", "shared", false, false);
+    verify("", "", "CEffect", "otherName", false, false);
+    verify("", "", "CEffect", "shared", false, false, true);
+    verify("sameEffect", "sameEffect", "CEffect", "shared", true, false, true);
+
+    auto game = fight_fixture_game();
+    register_effect_and_interaction(game);
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    monster->setMana(monster->getManaMax());
+    opponent->setHp(opponent->getHpMax());
+    auto active = opponent_debuff(game, 4);
+    active->setTypeId("compositeEffect");
+    active->setTimeLeft(2);
+    opponent->addEffect(active);
+    auto composite = std::make_shared<DirectActionProbe>();
+    composite->setGame(game);
+    composite->setName("composite");
+    composite->setTypeId("composite");
+    composite->setManaCost(5);
+    auto duplicate = opponent_debuff(game, 4);
+    duplicate->setTypeId("compositeEffect");
+    composite->setEffect(duplicate);
+    monster->addAction(composite);
+    const auto hp = opponent->getHp();
+    const auto mana = monster->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    controller->setBoolProperty("discountKnownTargetEffectDuration", true);
+    expect_true(controller->control(monster, opponent) && composite->calls == 1 && opponent->getHp() == hp - 7 &&
+                    monster->getMana() == mana - 5,
+                "a duplicate effect must not suppress the direct payload of a composite interaction");
+    expect_true(opponent->getEffects() == std::set<std::shared_ptr<CEffect>>{active} && active->getTimeLeft() == 2,
+                "composite use preserves rejected-effect admission and does not refresh its old duration");
+    monster->setEffects({});
+    opponent->setEffects({});
+    expect_true(monster->getEffects().empty() && opponent->getEffects().empty() &&
+                    game->getContext()->getEffectOwnerCount() == 0,
+                "composite fixture public cleanup must release its effect sets and context ownership");
 }
 
 void test_monster_fight_controller_applies_missing_self_buff() {
@@ -1986,6 +2331,10 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
 } // namespace
 
 int main() {
+    if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
+        std::cerr << "Cannot register the real embedded _game module\n";
+        return 1;
+    }
     pybind11::scoped_interpreter guard{};
 
     test_movement_controller_null_and_no_map_paths();
@@ -2023,6 +2372,9 @@ int main() {
     test_monster_fight_controller_heals_when_next_hit_would_kill();
     testEffectCloneFixturePreservesStatsAcrossControllerTurns();
     test_monster_fight_controller_ranks_interactions_by_weakening();
+    testTargetEffectDurationDiscountRequiresExplicitControllerOptIn();
+    testTargetEffectDurationPolicyRoundTripsWithoutChangingLegacySnapshots();
+    testMonsterFightControllerDiscountsRejectedTargetEffects();
     test_monster_fight_controller_applies_missing_self_buff();
     test_monster_fight_controller_skips_duplicate_self_buff();
     test_monster_fight_controller_heals_self_only_when_hurt();
@@ -2034,6 +2386,10 @@ int main() {
     testHuntPhasesKeepOrdinarySpellAndItemPriority();
     testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
     testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack();
+
+    initializeControllerPythonContent();
+    testHealingItemTiesUseConfiguredIdentityAcrossCreationAndInsertionOrders();
+    testEqualResourceHealingTiesUseUniqueNamesInsteadOfContainerOrder();
 
     return finish_tests();
 }

@@ -1062,6 +1062,196 @@ class HealingSelectionProbeScope {
     HealingSelectionProbeScope &operator=(const HealingSelectionProbeScope &) = delete;
 };
 
+void testOpponentEffectCreditSelectionWorkIsBounded() {
+    constexpr std::size_t actionCount = 32;
+    constexpr std::size_t effectCount = 64;
+    constexpr std::size_t turns = 64;
+    class EffectCreditActionProbe : public CInteraction {
+      public:
+        std::size_t calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+        bool configureEffect(std::shared_ptr<CEffect>) override { return false; }
+    };
+    class SelectionProbeScope {
+      public:
+        SelectionProbeScope() { performance_guard::resetInteractionSelectionProbe(); }
+        ~SelectionProbeScope() { performance_guard::disableInteractionSelectionProbe(); }
+    };
+    auto fixture = make_open_map(2, 1);
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    fixture.game->getObjectHandler()->registerType("CStats", [] { return std::make_shared<CStats>(); });
+    fixture.game->getObjectHandler()->registerType("CEffect", [] { return std::make_shared<CEffect>(); });
+    auto actor = make_actor(fixture, "effectCreditActor", Coords(0, 0, 0), "effectCreditOpponent");
+    auto opponent = make_actor(fixture, "effectCreditOpponent", Coords(1, 0, 0), "effectCreditActor");
+    for (const auto &creature : {actor, opponent}) {
+        auto stats = std::make_shared<CStats>();
+        stats->setMainStat("intelligence");
+        stats->setIntelligence(100);
+        stats->setStamina(10);
+        stats->setDmgMin(10);
+        stats->setDmgMax(10);
+        creature->setBaseStats(stats);
+        creature->setHp(creature->getHpMax());
+        creature->setMana(creature->getManaMax());
+    }
+    for (std::size_t index = 0; index < effectCount; ++index) {
+        auto effect = std::make_shared<CEffect>();
+        effect->setGame(fixture.game);
+        effect->setTypeId("activeEffect" + std::to_string(index));
+        effect->setDuration(4);
+        opponent->addEffect(effect);
+    }
+    std::vector<std::shared_ptr<EffectCreditActionProbe>> probes;
+    for (std::size_t index = 0; index < actionCount; ++index) {
+        auto effect = std::make_shared<CEffect>();
+        effect->setGame(fixture.game);
+        effect->setTypeId((index < actionCount / 2 ? "activeEffect" : "freshEffect") + std::to_string(index));
+        effect->setDuration(4);
+        auto action = std::make_shared<EffectCreditActionProbe>();
+        action->setGame(fixture.game);
+        action->setTypeId("creditAction" + std::to_string(index));
+        action->setEffect(effect);
+        actor->addAction(action);
+        probes.push_back(action);
+    }
+    const auto effects = opponent->getEffects();
+    const auto actions = actor->getInteractions();
+    const auto objects = fixture.map->getObjects();
+    const auto mana = actor->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    performance_guard::InteractionSelectionWork legacyWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "default legacy ranking must retain a usable action");
+        legacyWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t legacyCalls = 0;
+    for (const auto &action : probes) {
+        legacyCalls += action->calls;
+        action->calls = 0;
+    }
+    expect_true(legacyWork.targetSnapshots == 0 && legacyWork.targetEffectEntries == 0 &&
+                    legacyWork.admissionLookups == 0 &&
+                    legacyWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && legacyCalls == turns,
+                "default legacy ranking must preserve a zero target-admission budget and its ordinary action work");
+    expect_true(opponent->getEffects() == effects && actor->getInteractions() == actions &&
+                    fixture.map->getObjects() == objects && actor->getMana() == mana,
+                "default policy work must preserve native effects/actions/registry and owned mana");
+    controller->setBoolProperty("discountKnownTargetEffectDuration", true);
+    performance_guard::InteractionSelectionWork work;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "fixed offensive selection must retain a usable action");
+        work = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t calls = 0;
+    for (std::size_t index = 0; index < probes.size(); ++index) {
+        calls += probes[index]->calls;
+        if (index < actionCount / 2)
+            expect_true(probes[index]->calls == 0, "rejected effects must not displace fresh effect credit");
+    }
+    expect_true(work.targetSnapshots == turns && work.targetEffectEntries == effectCount * turns &&
+                    work.weakeningEvaluations == 2 * (actionCount - 1) * turns &&
+                    work.admissionLookups == work.weakeningEvaluations && calls == turns,
+                "offensive work must take one target snapshot, visit each effect once and rank candidates linearly");
+    expect_true(opponent->getEffects() == effects && actor->getInteractions() == actions &&
+                    fixture.map->getObjects() == objects && actor->getMana() == mana,
+                "the counting-only selection guard must not grow effects/actions/registry or spend mana");
+    actor->setActions({});
+    std::vector<std::shared_ptr<EffectCreditActionProbe>> directProbes;
+    for (std::size_t index = 0; index < actionCount; ++index) {
+        auto action = std::make_shared<EffectCreditActionProbe>();
+        action->setGame(fixture.game);
+        action->setTypeId("directAction" + std::to_string(index));
+        actor->addAction(action);
+        directProbes.push_back(action);
+    }
+    performance_guard::InteractionSelectionWork directWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "pure direct actions must remain usable");
+        directWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t directCalls = 0;
+    for (const auto &action : directProbes)
+        directCalls += action->calls;
+    expect_true(directWork.targetSnapshots == 0 && directWork.targetEffectEntries == 0 &&
+                    directWork.admissionLookups == 0 &&
+                    directWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && directCalls == turns,
+                "pure direct actions must preserve a zero target-effect work budget");
+    actor->setActions({});
+    std::vector<std::shared_ptr<EffectCreditActionProbe>> anonymousProbes;
+    for (std::size_t index = 0; index < actionCount; ++index) {
+        auto effect = std::make_shared<CEffect>();
+        effect->setGame(fixture.game);
+        effect->setName("anonymousEffect" + std::to_string(index));
+        effect->setDuration(4);
+        auto action = std::make_shared<EffectCreditActionProbe>();
+        action->setGame(fixture.game);
+        action->setTypeId("anonymousAction" + std::to_string(index));
+        action->setEffect(effect);
+        actor->addAction(action);
+        anonymousProbes.push_back(action);
+    }
+    performance_guard::InteractionSelectionWork anonymousWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "anonymous effects must retain their duration estimate");
+        anonymousWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t anonymousCalls = 0;
+    for (const auto &action : anonymousProbes)
+        anonymousCalls += action->calls;
+    expect_true(anonymousWork.targetSnapshots == 0 && anonymousWork.targetEffectEntries == 0 &&
+                    anonymousWork.admissionLookups == 0 &&
+                    anonymousWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && anonymousCalls == turns,
+                "anonymous templates must not build target keys from identities replaced by actual cloning");
+    actor->setActions({});
+    auto selfEffect = std::make_shared<CEffect>();
+    selfEffect->setGame(fixture.game);
+    selfEffect->setTypeId("selfEffect");
+    selfEffect->setDuration(4);
+    selfEffect->addTag(CTag::Buff);
+    auto selfAction = std::make_shared<EffectCreditActionProbe>();
+    selfAction->setGame(fixture.game);
+    selfAction->setTypeId("selfAction");
+    selfAction->setEffect(selfEffect);
+    actor->addAction(selfAction);
+    performance_guard::InteractionSelectionWork selfWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "self-only actions must preserve their first pass");
+        selfWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    expect_true(selfWork.targetSnapshots == 0 && selfWork.targetEffectEntries == 0 && selfWork.admissionLookups == 0 &&
+                    selfWork.weakeningEvaluations == 0 && selfAction->calls == turns,
+                "self-only action turns must never prepare opponent effect admission keys");
+    const auto disabled = performance_guard::interactionSelectionProbeCounts();
+    expect_true(disabled.targetSnapshots == 0 && disabled.targetEffectEntries == 0 &&
+                    disabled.weakeningEvaluations == 0 && disabled.admissionLookups == 0,
+                "the scoped selection probe must release all optional counting state");
+    std::cout << "opponent effect credit guard: actions=" << actionCount << " effects=" << effectCount
+              << " turns=" << turns << " snapshots=" << work.targetSnapshots
+              << " effectVisits=" << work.targetEffectEntries << " effectBudget=" << effectCount * turns
+              << " rankCalls=" << work.weakeningEvaluations << " rankBudget=" << 2 * (actionCount - 1) * turns
+              << " lookups=" << work.admissionLookups << " actionCallbacks=" << calls << " callbackBudget=" << turns
+              << " pureTargetSnapshots=" << directWork.targetSnapshots
+              << " anonymousTargetSnapshots=" << anonymousWork.targetSnapshots
+              << " selfTargetSnapshots=" << selfWork.targetSnapshots
+              << " legacyTargetSnapshots=" << legacyWork.targetSnapshots
+              << " legacyTargetLookups=" << legacyWork.admissionLookups << " noEffectKeyBudget=0\n";
+    opponent->setEffects({});
+    expect_true(opponent->getEffects().empty() && fixture.game->getContext()->getEffectOwnerCount() == 0,
+                "public cleanup must release opponent effects and their context ownership");
+    fixture.game->getContext()->shutdown();
+}
+
 void testHealingItemSelectionWorkAndCallbacksAreBounded() {
     constexpr std::size_t inventoryCount = 96;
     constexpr std::size_t turns = 64;
@@ -1146,6 +1336,79 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
     std::cout << "healing item selection guard: inventory=" << inventoryCount << " turns=" << turns
               << " visits=" << visits << " visit budget=" << inventoryCount * turns << " item callbacks=" << itemCalls
               << " callback budget=" << turns << " attack callbacks=" << attack->calls
+              << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
+}
+
+void testEqualPowerHealingTieSelectionKeepsFixedWork() {
+    constexpr std::size_t inventoryCount = 96;
+    constexpr std::size_t turns = 64;
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "healingTieActor", Coords(0, 0, 0), "healingTieOpponent");
+    auto opponent = make_actor(fixture, "healingTieOpponent", Coords(1, 0, 0), "healingTieActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    auto actorStats = std::make_shared<CStats>();
+    actorStats->setMainStat("intelligence");
+    actorStats->setStamina(10);
+    actor->setBaseStats(actorStats);
+    actor->setHp(35);
+    auto opponentStats = std::make_shared<CStats>();
+    opponentStats->setMainStat("intelligence");
+    opponentStats->setStamina(10);
+    opponentStats->setDmgMin(16);
+    opponentStats->setDmgMax(16);
+    opponent->setBaseStats(opponentStats);
+    opponent->setHp(70);
+    auto attack = std::make_shared<CombatActionCountProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("tieAttack");
+    attack->setTypeId("Attack");
+    actor->addAction(attack);
+    std::vector<std::shared_ptr<HealingSelectionPotionProbe>> probes;
+    std::shared_ptr<HealingSelectionPotionProbe> preferred;
+    for (std::size_t index = 0; index < inventoryCount; ++index) {
+        auto item = std::make_shared<HealingSelectionPotionProbe>();
+        item->setGame(fixture.game);
+        item->setName("healingTieItem" + std::to_string(index));
+        item->setTypeId(index % 2 == 0 ? "aConfiguredHeal" : "bConfiguredHeal");
+        item->setPower(2);
+        if (index < 64)
+            item->addTag(CTag::Heal);
+        actor->addItem(item);
+        probes.push_back(item);
+        if (index == 0)
+            preferred = item;
+    }
+    const auto inventory = actor->getItems();
+    const auto actions = actor->getInteractions();
+    const auto effects = actor->getEffects();
+    const auto objects = fixture.map->getObjects();
+    const auto epoch = fixture.map->getRoutingEpoch();
+    const int mana = actor->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    HealingSelectionProbeScope selection;
+    int renderedFrames = 0;
+    auto frameObserver = vstd::event_loop<>::instance()->connectFrameCallback([&](int) { ++renderedFrames; });
+    for (std::size_t turn = 0; turn < turns; ++turn) {
+        expect_true(controller->control(actor, opponent), "equal-power fixed workload must take one healing turn");
+        expect_true(preferred->calls == turn + 1, "each tie turn must invoke the same semantic winner once");
+    }
+    const auto visits = performance_guard::healingItemSelectionProbeCount();
+    std::size_t callbacks = 0;
+    for (const auto &item : probes) {
+        callbacks += item->calls;
+        expect_true(item->calls == (item == preferred ? turns : 0), "unselected equal-power items must stay unused");
+    }
+    expect_true(visits == inventoryCount * turns && callbacks == turns && attack->calls == 0 && renderedFrames == 0,
+                "tie selection must retain one inventory scan, one callback and zero attack/render work per turn");
+    expect_true(actor->getItems() == inventory && actor->getInteractions() == actions &&
+                    actor->getEffects() == effects && fixture.map->getObjects() == objects &&
+                    fixture.map->getRoutingEpoch() == epoch && actor->getHp() == 35 && actor->getMana() == mana &&
+                    opponent->getHp() == 70,
+                "fixed healing ties must not mutate ownership, actions, effects, navigation or resource workload");
+    std::cout << "equal-power healing tie guard: inventory=" << inventoryCount << " turns=" << turns
+              << " visits=" << visits << " visitBudget=" << inventoryCount * turns << " callbacks=" << callbacks
+              << " callbackBudget=" << turns << " attackCallbacks=" << attack->calls
               << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
 }
 
@@ -1873,6 +2136,7 @@ void run_engine_hotspot_performance_tests() {
     testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testHealingItemSelectionWorkAndCallbacksAreBounded();
+    testOpponentEffectCreditSelectionWorkIsBounded();
     testMonsterItemTurnDispatchAndCleanupAreBounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
@@ -1881,4 +2145,5 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testEqualPowerHealingTieSelectionKeepsFixedWork();
 }
