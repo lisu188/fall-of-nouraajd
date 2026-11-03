@@ -1187,6 +1187,10 @@ def compileDialogs(config, quests):
         for option in options:
             if option["properties"].get("action") == "finishHistoryChoices":
                 option["properties"]["condition"] = "canFinishHistoryChoices"
+            elif option["properties"].get("action") == "cityInterlude":
+                option["properties"]["condition"] = "canCityInterlude"
+            elif option["properties"].get("action") == "returnFromInterlude":
+                option["properties"]["condition"] = "canReturnFromInterlude"
         for quest_row in questDialogRows(quests, props, name):
             options.append(
                 definition(
