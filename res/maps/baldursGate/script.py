@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
-
 """Private source-model prototype. Native activation and shipping UI are deliberately closed.
 
 Only json is imported so the pure evaluator can eventually live in a map plugin's load closure.
@@ -422,7 +421,8 @@ def load(self, context):
 
             # Only a real active native effect can satisfy STATE_CHARMED. No dialogue/debug boolean qualifies.
             charmed = any(
-                self.native.hasTag(effect, "cityPoisonCharmed") and self.native.getNumericProperty(effect, "timeLeft") > 0
+                self.native.hasTag(effect, "cityPoisonCharmed")
+                and self.native.getNumericProperty(effect, "timeLeft") > 0
                 for effect in CCreature.getEffects(actor)
                 if isinstance(effect, CEffect)
             )
@@ -611,6 +611,13 @@ def load(self, context):
 
     def clock(obj):
         return world(obj).getObjectByName("cityClock")
+
+    def optionalObjectProperty(owner, key, getter=None):
+        if not hasattr(owner, key):
+            return None
+        if getter is not None:
+            return getter(owner, key)
+        return owner.getObjectProperty(key)
 
     def read(obj, key, default):
         return decodeData(obj.getStringProperty(key) or json.dumps(default))
@@ -910,7 +917,11 @@ def load(self, context):
         required = {}
         for entry in definitions(obj):
             if clock(obj).getBoolProperty("plugin_cityPoisonSourceEnabled") and entry["id"] in (
-                "marekPoison", "lothanderGeas", "jalanthaBook", "chanthalasTome", "divinerPoison"
+                "marekPoison",
+                "lothanderGeas",
+                "jalanthaBook",
+                "chanthalasTome",
+                "divinerPoison",
             ):
                 continue
             effects = []
@@ -987,6 +998,7 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+
     def custody(obj):
         return world(obj).getObjectByName("cityCustody")
 
@@ -1261,7 +1273,7 @@ def load(self, context):
                 requireCurrent()
                 current = game_map.getObjectByName(native_id)
                 requireCurrent()
-                cached = self.getObjectProperty("plugin_cityActor_" + native_id)
+                cached = optionalObjectProperty(self, "plugin_cityActor_" + native_id)
                 requireCurrent()
                 if (
                     actor_game is not game
@@ -1302,7 +1314,7 @@ def load(self, context):
                 actor = game_map.getObjectByName(native_id)
                 requireCurrent()
                 if not actor:
-                    actor = self.getObjectProperty("plugin_cityActor_" + native_id)
+                    actor = optionalObjectProperty(self, "plugin_cityActor_" + native_id)
                     requireCurrent()
                 if actor:
                     requirePatrol(actor, native_id)
@@ -1996,7 +2008,7 @@ def load(self, context):
             self.requireCustodyBinding(binding)
             name = actor.getName()
             registered = binding["map"].getObjectByName(name)
-            retained = self.getObjectProperty("plugin_cityActor_" + name)
+            retained = optionalObjectProperty(self, "plugin_cityActor_" + name)
             departed = actor.getBoolProperty("plugin_cityDeparted")
             self.requireCustodyBinding(binding)
             if registered is not actor and not (registered is None and retained is actor and departed):
@@ -2157,7 +2169,6 @@ def load(self, context):
             if key == "name":
                 staged["name"] = value
             self.requireCustodyStage(binding, actor)
-
 
     @register(context)
     @mapQuest("baldursGate")
@@ -2384,7 +2395,11 @@ def load(self, context):
 
         def canAcceptQuest(self, key):
             if clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled") and key in (
-                "marekPoison", "lothanderGeas", "jalanthaBook", "chanthalasTome", "divinerPoison"
+                "marekPoison",
+                "lothanderGeas",
+                "jalanthaBook",
+                "chanthalasTome",
+                "divinerPoison",
             ):
                 return False
             row = quest(self, key)
@@ -2420,7 +2435,11 @@ def load(self, context):
 
         def canQuestOutcome(self, key, outcome_key):
             if clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled") and key in (
-                "marekPoison", "lothanderGeas", "jalanthaBook", "chanthalasTome", "divinerPoison"
+                "marekPoison",
+                "lothanderGeas",
+                "jalanthaBook",
+                "chanthalasTome",
+                "divinerPoison",
             ):
                 return False
             row = quest(self, key)
@@ -2463,8 +2482,11 @@ def load(self, context):
 
         @resumableHook
         def talk(self):
-            if (clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled") and self.canInteract()
-                and self.actor().getBoolProperty("plugin_cityPoisonManaged")):
+            if (
+                clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled")
+                and self.canInteract()
+                and self.actor().getBoolProperty("plugin_cityPoisonManaged")
+            ):
                 yield from clock(self).poisonDialogueFlow(self.actor())
                 return
             if not self.canInteract(resume_custody=True):
@@ -6071,7 +6093,9 @@ def load(self, context):
         @resumableHook
         def trigger(self, actor, event):
             if event and event.getCause() and event.getCause().isPlayer():
-                if clock(actor).getBoolProperty("plugin_cityPoisonSourceEnabled") and actor.getBoolProperty("plugin_cityPoisonManaged"):
+                if clock(actor).getBoolProperty("plugin_cityPoisonSourceEnabled") and actor.getBoolProperty(
+                    "plugin_cityPoisonManaged"
+                ):
                     dialog = clock(actor).poisonMakeActorDialog(actor)
                 else:
                     dialog = actor.getGame().createObject(actor.getName() + "Dialog")
@@ -6272,7 +6296,9 @@ def load(self, context):
 
         def poisonWriteItemData(self, binding, item, key, value):
             self.poisonRequire(binding)
-            binding["objectClass"].setStringProperty(item, key, CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":")))
+            binding["objectClass"].setStringProperty(
+                item, key, CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":"))
+            )
             self.poisonRequire(binding)
 
         def poisonRegisterAntidoteStock(self, actor, binding=None, data=None):
@@ -6356,7 +6382,9 @@ def load(self, context):
         def poisonOwnedAntidote(self, binding, data):
             native = binding["objectClass"]
             inventory = self.poisonItems(binding, binding["player"])
-            candidates = [item for item in inventory if native.getStringProperty(item, "plugin_citySourceItem") == "POTN47"]
+            candidates = [
+                item for item in inventory if native.getStringProperty(item, "plugin_citySourceItem") == "POTN47"
+            ]
             self.poisonRequire(binding)
             if not candidates:
                 return None
@@ -6386,7 +6414,7 @@ def load(self, context):
                 if registered:
                     holders.append(registered)
                 for prefix in ("plugin_cityCorpse_", "plugin_cityParked_", "plugin_cityCompanion_"):
-                    retained = native.getObjectProperty(self, prefix + name)
+                    retained = optionalObjectProperty(self, prefix + name, native.getObjectProperty)
                     if retained:
                         if native.getGame(retained) is not binding["game"].resolve():
                             raise self.PoisonBindingChanged("Retained source holder belongs to another session")
@@ -6478,7 +6506,9 @@ def load(self, context):
                         or row["sha256"] != proof["sha256"]
                         or proof["producer"] != "prospectiveNativeOwnerOnDestroy"
                     ):
-                        raise self.PoisonBindingChanged("The shared Marek death alias has no genuine source-owner producer")
+                        raise self.PoisonBindingChanged(
+                            "The shared Marek death alias has no genuine source-owner producer"
+                        )
                 dead_marek = bool(aliases)
                 journal_id = 27253 if dead_marek else 31188
                 authored = text.get("journals", {}).get("cureDead" if dead_marek else "cureAlive")
@@ -6767,7 +6797,8 @@ def load(self, context):
             migration = self.poisonMigrationPlan(binding, data)
             if migration["blocked"]:
                 raise SourceGap(
-                    "Existing poison progress is preserved pending explicit migration: " + "; ".join(migration["blocked"])
+                    "Existing poison progress is preserved pending explicit migration: "
+                    + "; ".join(migration["blocked"])
                 )
             self.poisonGraphs()
             definitions = decodeData(binding["definitionText"] or "{}")
@@ -6829,7 +6860,9 @@ def load(self, context):
                 blocked.append("legacy poison outcome flags require a preserved outcome import")
             definitions = decodeData(binding["definitionText"] or "{}")
             owners = self.poisonPartyOwners(binding)
-            owners.extend(actor for actor in binding["mapClass"].getObjects(binding["map"]) if isinstance(actor, CCreature))
+            owners.extend(
+                actor for actor in binding["mapClass"].getObjects(binding["map"]) if isinstance(actor, CCreature)
+            )
             for row in definitions.get("initialActors", []):
                 actor = binding["mapClass"].getObjectByName(binding["map"], row["id"])
                 if not isinstance(actor, CCreature) or not CCreature.isAlive(actor):
@@ -6918,7 +6951,11 @@ def load(self, context):
                     and prior["actor"] is not actor
                 ):
                     raise SourceGap("A registered source owner was replaced within the same live map epoch")
-                poison_live_actors[row["lineage"]] = {"actor": actor, "game": binding["game"], "epoch": binding["epoch"]}
+                poison_live_actors[row["lineage"]] = {
+                    "actor": actor,
+                    "game": binding["game"],
+                    "epoch": binding["epoch"],
+                }
 
         @resumableHook
         def resumeAfterVerifiedLoad(self):
@@ -7384,7 +7421,10 @@ def load(self, context):
                 row["sourceCreature"]: row["canonicalActorId"] for row in read(self, "relocationDefinitions", [])
             }
             for row in read(self, "actorDefinitions", []):
-                if self.getBoolProperty("plugin_cityPoisonSourceEnabled") and row.get("sourceCreature") in CRE_DIALOGUE_BINDINGS:
+                if (
+                    self.getBoolProperty("plugin_cityPoisonSourceEnabled")
+                    and row.get("sourceCreature") in CRE_DIALOGUE_BINDINGS
+                ):
                     continue
                 if row.get("custodyRole"):
                     continue
@@ -7449,10 +7489,10 @@ def load(self, context):
             for row in read(self, "relocationDefinitions", []):
                 name, key = row["canonicalActorId"], row["id"]
                 actor = (
-                    self.getObjectProperty("plugin_cityRelocationActor_" + key)
+                    optionalObjectProperty(self, "plugin_cityRelocationActor_" + key)
                     or game_map.getObjectByName(name)
-                    or self.getObjectProperty("plugin_cityParked_" + name)
-                    or self.getObjectProperty("plugin_cityCorpse_" + name)
+                    or optionalObjectProperty(self, "plugin_cityParked_" + name)
+                    or optionalObjectProperty(self, "plugin_cityCorpse_" + name)
                 )
                 if not actor:
                     continue
@@ -7539,7 +7579,9 @@ def load(self, context):
             parked = read(self, "plugin_cityParkedActors", [])
             active_area = game_map.getStringProperty("activeSimulationRegion")
             for actor in tuple(game_map.getObjects()):
-                if self.getBoolProperty("plugin_cityPoisonSourceEnabled") and actor.getBoolProperty("plugin_cityPoisonManaged"):
+                if self.getBoolProperty("plugin_cityPoisonSourceEnabled") and actor.getBoolProperty(
+                    "plugin_cityPoisonManaged"
+                ):
                     continue
                 if (
                     (not isinstance(actor, CCreature) and not actor.getBoolProperty("sourceCorpse"))

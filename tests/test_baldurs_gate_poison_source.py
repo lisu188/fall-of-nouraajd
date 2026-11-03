@@ -471,6 +471,51 @@ class BaldursGatePoisonSourceTest(unittest.TestCase):
         self.assertEqual("showReader", requests[0]["operation"])
         self.assertTrue(requests[0]["args"][-1])
 
+    def testOptionalHolderSweepUsesPresenceAndRetainsTypedForeignAndCloneRefusals(self):
+        marek = self.create("MAREK1", "AR0115", [406, 344], "AR0115.BCS#spawn0")
+        actual = next(item for item in marek.items if item.getStringProperty("plugin_citySourceItem") == "POTN47")
+        marek.items.remove(actual)
+        self.player.items.append(actual)
+        binding = self.clock.poisonCapture()
+        data = self.clock.poisonRead(binding)
+        token = actual.getStringProperty("plugin_cityPoisonCreation")
+        native = binding["objectClass"]
+        original = native.getObjectProperty
+
+        def strict_object(owner, key):
+            if key not in owner.properties:
+                raise IndexError("vstd::meta: property not found: " + key)
+            value = original(owner, key)
+            if value is not None and not isinstance(value, NativeObject):
+                raise RuntimeError("bad any_cast")
+            return value
+
+        before = deepcopy(self.state())
+        with patch.object(native, "getObjectProperty", staticmethod(strict_object)):
+            self.assertEqual([actual], self.clock.poisonIssuedInstances(binding, data, token))
+            key = "plugin_cityParked_" + marek.getName()
+            holder = Creature()
+            holder.game = self.fixture.game
+            clone = self.fixture.createObject(actual.getTypeId())
+            clone.properties = deepcopy(actual.properties)
+            holder.items.append(clone)
+            self.clock.setObjectProperty(key, holder)
+            with self.assertRaisesRegex(self.clock.PoisonBindingChanged, "distinct actual owned instances"):
+                self.clock.poisonOwnedAntidote(binding, data)
+            holder.game = object()
+            with self.assertRaisesRegex(self.clock.PoisonBindingChanged, "another session"):
+                self.clock.poisonIssuedInstances(binding, data, token)
+            self.clock.properties.pop(key)
+            self.clock.setNumericProperty(key, 17)
+            with self.assertRaisesRegex(RuntimeError, "bad any_cast"):
+                self.clock.poisonIssuedInstances(binding, data, token)
+        self.assertEqual(before, self.state())
+        self.assertEqual(19, self.player.getNumericProperty("exp"))
+        self.assertEqual(0, self.player.getNumericProperty("plugin_cityBdmarek"))
+        self.assertEqual(
+            [10, 0, 0], json.loads(actual.getStringProperty("plugin_cityCharges").removeprefix("city-json:"))
+        )
+
     def testTurnAcquisitionCompletesRealQuestLogWithAuditedAliveJournal(self):
         self.player.setNumericProperty("plugin_cityBdmarek", 1)
         self.assertTrue(self.clock.observePoisonAcquisition())

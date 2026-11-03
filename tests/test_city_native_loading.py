@@ -14,6 +14,67 @@ from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
 class CityNativeLoadingRuntimeTest(unittest.TestCase):
     runChild = PythonCallbackLifecycleTest.runChild
 
+    def testOptionalCityReferencesRespectActualNativeMissingPropertyContract(self):
+        output = self.runChild("""
+            import json
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior')
+                loop.run()
+                world = instance.getMap()
+                assert world.getStringProperty('mapName') == 'baldursGate'
+                clock = world.getObjectByName('cityClock')
+                assert clock is not None
+                probe = instance.createObject('CGameObject')
+                assert not hasattr(probe, 'optionalNativeReference')
+                try:
+                    game.CGameObject.getObjectProperty(probe, 'optionalNativeReference')
+                except IndexError as error:
+                    assert 'property not found' in str(error)
+                    print('actual native absent object getter throws IndexError', flush=True)
+                else:
+                    raise AssertionError('native absent object getter contract changed')
+                probe.setObjectProperty('optionalNativeReference', None)
+                assert hasattr(probe, 'optionalNativeReference')
+                assert game.CGameObject.getObjectProperty(probe, 'optionalNativeReference') is None
+                probe.setNumericProperty('wrongNativeReference', 17)
+                assert hasattr(probe, 'wrongNativeReference')
+                try:
+                    game.CGameObject.getObjectProperty(probe, 'wrongNativeReference')
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError('present wrong native type was hidden')
+                # A fresh optional row is absent in both phases even if initialization cached Narlen.
+                original_definitions = clock.getStringProperty('relocationDefinitions')
+                rows = json.loads(original_definitions.removeprefix('city-json:'))
+                probe_id = 'optionalNativeProbe'
+                probe_cache = 'plugin_cityRelocationActor_' + probe_id
+                assert all(row['id'] != probe_id for row in rows)
+                assert not hasattr(clock, probe_cache)
+                rows.append(dict(id=probe_id, canonicalActorId='optionalNativeMissingActor', sourceCreature='NARLEN', scenes=[]))
+                clock.setStringProperty('relocationDefinitions', 'city-json:' + json.dumps(rows))
+                try:
+                    # Genuine registered city clock and actual production method; no replacement owner or map.
+                    clock.relocateActors()
+                    assert not hasattr(clock, probe_cache)
+                    row = next(row for row in rows if row['id'] == 'narlen')
+                    narlen = clock.getObjectProperty('plugin_cityRelocationActor_narlen')
+                    assert isinstance(narlen, game.CCreature)
+                    assert narlen.getName() == row['canonicalActorId']
+                    assert narlen.getGame() is instance
+                    assert narlen.getBoolProperty('plugin_cityRelocationManaged')
+                    clock.relocateActors()
+                    assert clock.getObjectProperty('plugin_cityRelocationActor_narlen') is narlen
+                finally:
+                    clock.setStringProperty('relocationDefinitions', original_definitions)
+                print('actual city clock relocation/native property cases passed', flush=True)
+            finally:
+                instance.getContext().shutdown()
+            """)
+        self.assertIn("actual native absent object getter throws IndexError", output)
+        self.assertIn("actual city clock relocation/native property cases passed", output)
+
     def testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback(self):
         output = self.runChild("""
             import time

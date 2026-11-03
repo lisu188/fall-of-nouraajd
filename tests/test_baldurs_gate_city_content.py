@@ -340,6 +340,54 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+    def testOptionalRelocationReferencesUseNativePresenceBeforeTypedObjectReads(self):
+        original = ModelObject.getObjectProperty
+
+        def strict_object(owner, key):
+            if key not in owner.properties:
+                raise IndexError("vstd::meta: property not found: " + key)
+            value = original(owner, key)
+            if value is not None and not isinstance(value, ModelObject):
+                raise RuntimeError("bad any_cast")
+            return value
+
+        for location in ("absent", "live", "cached", "parked", "corpse", "wrongType"):
+            with self.subTest(location=location):
+                model = CityModel()
+                name = "optionalCanonical"
+                actor = model.actor(name, "AR0100", sourceCreature="NARLEN")
+                model.clock.setStringProperty(
+                    "relocationDefinitions",
+                    json.dumps(
+                        [
+                            {
+                                "id": "narlen",
+                                "canonicalActorId": actor.getName(),
+                                "sourceCreature": "NARLEN",
+                                "scenes": [],
+                            }
+                        ]
+                    ),
+                )
+                cache = "plugin_cityRelocationActor_narlen"
+                if location != "live":
+                    model.game_map.removeObject(actor)
+                if location in ("cached", "parked", "corpse"):
+                    key = cache if location == "cached" else "plugin_city" + location.title() + "_" + actor.getName()
+                    model.clock.setObjectProperty(key, actor)
+                if location == "wrongType":
+                    model.clock.setStringProperty(cache, "wrong primitive type")
+                with patch.object(ModelObject, "getObjectProperty", strict_object):
+                    if location == "wrongType":
+                        with self.assertRaisesRegex(RuntimeError, "bad any_cast"):
+                            model.clock.relocateActors()
+                    else:
+                        model.clock.relocateActors()
+                        if location == "absent":
+                            self.assertFalse(hasattr(model.clock, cache))
+                        else:
+                            self.assertIs(actor, model.clock.getObjectProperty(cache))
+
     def testCityModelKeepsLateResourceImportsBoundToItsNativeShapedApi(self):
         model = CityModel()
         other = CityModel()
