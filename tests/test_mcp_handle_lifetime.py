@@ -542,6 +542,98 @@ class McpHandleLifetimeTest(unittest.TestCase):
         self.assertEqual({"released": 0}, self.callTool("engine_release_handles", {"handles": [handle]}, second))
         self.assertEqual({"released": 1}, self.callTool("engine_release_handles", {"handles": [handle]}, first))
 
+    def walkthroughClient(self):
+        names = {"_mcp_tool", "_mcp_engine_call", "_mcp_handle_call"}
+        tree = ast.parse(self.runnerSourcePath().read_text(encoding="utf-8"))
+        owner = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest")
+        methods = [node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name in names]
+        self.assertEqual(names, {node.name for node in methods})
+        namespace = {"MCP_STDIO_TOOL_TIMEOUT_SECONDS": 31}
+        module = ast.fix_missing_locations(ast.Module(body=methods, type_ignores=[]))
+        exec(compile(module, str(self.runnerSourcePath()), "exec"), namespace)
+        return type("StructuredWalkthroughClient", (), {name: namespace[name] for name in names})()
+
+    def testWalkthroughEngineRequestsOmitUnusedTextWithoutMutatingCallerArguments(self):
+        client = self.walkthroughClient()
+        expected = {"result": {"nested": [17, None]}}
+        client._call_tool = Mock(return_value=expected)
+        session = {"proc": object(), "next_request_id": 7}
+        for tool in ("engine_call", "engine_handle_call"):
+            arguments = {"name": "probe", "args": [1], "include_handle_methods": True}
+            original = json.loads(json.dumps(arguments))
+            self.assertIs(expected, client._mcp_tool(session, tool, arguments, timeout=19))
+            call = client._call_tool.call_args
+            self.assertIs(session["proc"], call.args[0])
+            self.assertEqual(tool, call.args[2])
+            self.assertEqual({**original, "include_text_content": False}, call.args[3])
+            self.assertEqual({"timeout": 19}, call.kwargs)
+            self.assertEqual(original, arguments)
+        self.assertEqual([7, 8], [call.args[1] for call in client._call_tool.call_args_list])
+        self.assertEqual(9, session["next_request_id"])
+
+    def testWalkthroughOtherToolsAndFailuresRetainTheirOriginalCalls(self):
+        client = self.walkthroughClient()
+        client._call_tool = Mock(return_value={"released": 0})
+        session = {"proc": object(), "next_request_id": 12}
+        arguments = {"handles": ["h_1"]}
+        self.assertEqual({"released": 0}, client._mcp_tool(session, "engine_release_handles", arguments))
+        self.assertIs(arguments, client._call_tool.call_args.args[3])
+        self.assertEqual({"timeout": 31}, client._call_tool.call_args.kwargs)
+        failure = RuntimeError("original native tool failure")
+        client._call_tool.side_effect = failure
+        with self.assertRaises(RuntimeError) as raised:
+            client._mcp_engine_call(session, "probe", args=[1], kwargs={"key": 2}, timeout=23)
+        self.assertIs(failure, raised.exception)
+        call = client._call_tool.call_args
+        self.assertEqual(13, call.args[1])
+        self.assertEqual("engine_call", call.args[2])
+        self.assertEqual([1], call.args[3]["args"])
+        self.assertEqual({"key": 2}, call.args[3]["kwargs"])
+        self.assertEqual({"timeout": 23}, call.kwargs)
+        self.assertEqual(14, session["next_request_id"])
+
+    def testWalkthroughFixedWireWorkPreservesStructuredResultsMetadataAndActions(self):
+        client = self.walkthroughClient()
+        obj = CGameObject()
+        action = Mock(return_value=obj)
+        self.server.exports["probe"].callable_obj = action
+        session = {"proc": object(), "next_request_id": 3}
+        responses = []
+
+        def invoke(proc, request_id, name, arguments, timeout):
+            response = self.server._call_tool(
+                {"name": name, "arguments": arguments}, transport="stdio", session_id=None
+            )
+            self.assertFalse(response["isError"], response)
+            responses.append(response)
+            return response["structuredContent"]
+
+        client._call_tool = invoke
+        with patch.object(self.server, "_python_methods_for", wraps=self.server._python_methods_for) as inspected:
+            defaults = [self.server._engine_call({"name": "probe"}) for _ in range(32)]
+            self.assertEqual(32, inspected.call_count)
+            inspected.reset_mock()
+            with patch.object(mcp.json, "dumps", wraps=mcp.json.dumps) as encoded:
+                actual = [client._mcp_engine_call(session, "probe") for _ in range(32)]
+            self.assertEqual(32, inspected.call_count)
+            compatibility_encodes = sum(
+                any(call.args[0] is response["structuredContent"] for response in responses)
+                for call in encoded.call_args_list
+            )
+            self.assertEqual(
+                0, compatibility_encodes, "Structured walkthroughs must not encode unused compatibility text"
+            )
+        self.assertEqual([response["structuredContent"]["result"] for response in defaults], actual)
+        self.assertTrue(all(response["content"] == [] for response in responses))
+        self.assertEqual(64, action.call_count)
+        self.assertEqual(35, session["next_request_id"])
+        full_bytes = sum(len(json.dumps(response)) for response in defaults)
+        structured_bytes = sum(len(json.dumps(response)) for response in responses)
+        self.assertLess(structured_bytes * 5, full_bytes * 3)
+        handle = actual[0]["__handle__"]
+        self.assertEqual("probe", client._mcp_handle_call(session, handle, "getName"))
+        self.assertIs(obj, self.server.handles[handle])
+
     def testFixedTextlessWireWorkKeepsActionsAndReflectionExactlyEqual(self):
         class CGameObject:
             def getName(self):
