@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CInteraction.h"
+#include "core/CNativeCombatFacts.h"
 #include "core/CGame.h"
 #include "core/CPythonOverrides.h"
 #include <algorithm>
@@ -37,7 +38,11 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
     vstd::logger::debug(first->to_string(), "used", this->to_string(), "against",
                         second ? second->to_string() : "<no target>");
 
+    CNativeCombatScope combatScope(first->getGame());
     first->takeMana(paid_cost);
+    if (offensive) {
+        CNativeCombatFacts(first, second).attempt(ptr<CInteraction>());
+    }
 
     this->performAction(first, second);
 
@@ -68,6 +73,7 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
             first->addMana(refund);
         }
     }
+    combatScope.finish();
 }
 
 int CInteraction::getCommittedManaRefund(std::shared_ptr<CCreature> caster) {
@@ -81,6 +87,10 @@ int CInteraction::getCommittedManaRefund(std::shared_ptr<CCreature> caster) {
 int CInteraction::getManaCost() const { return manaCost; }
 
 void CInteraction::setManaCost(int value) { manaCost = value; }
+
+bool CInteraction::getOffensive() const { return offensive; }
+
+void CInteraction::setOffensive(bool value) { offensive = value; }
 
 bool CInteraction::getSelfTarget() const { return selfTarget; }
 

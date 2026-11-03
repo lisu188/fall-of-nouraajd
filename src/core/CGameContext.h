@@ -73,9 +73,15 @@ class CMapSessionStore {
     std::unordered_map<std::string, Coords> returnCoordinates;
 };
 
+struct CNativeCombatBatch;
+class CNativeCombatScope;
+class CNativeCombatFacts;
+
 class CGameContext {
     friend class CGame;
     friend class CCreature;
+    friend class CNativeCombatScope;
+    friend class CNativeCombatFacts;
 
   public:
     using TransitionGeneration = std::uint64_t;
@@ -225,4 +231,6 @@ class CGameContext {
     std::atomic<TransitionGeneration> transitionGeneration = 0;
     std::shared_ptr<vstd::task_group> tasks = std::make_shared<vstd::task_group>();
     std::shared_ptr<ShutdownState> shutdownState;
+    // Transient owner-thread operation batch; excluded from reflection/save state.
+    std::shared_ptr<CNativeCombatBatch> nativeCombatBatch;
 };

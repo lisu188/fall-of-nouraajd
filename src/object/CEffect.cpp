@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CEffect.h"
+#include "core/CNativeCombatFacts.h"
 #include "CCreature.h"
 #include "core/CPythonOverrides.h"
 
@@ -39,8 +40,10 @@ void CEffect::apply(std::shared_ptr<CCreature> creature) {
     if (timeLeft <= 0) {
         return;
     }
+    CNativeCombatScope combatScope(victim ? victim->getGame() : nullptr);
     onEffect();
     timeLeft--;
+    combatScope.finish();
 }
 
 std::shared_ptr<CStats> CEffect::getBonus() { return bonus; }
@@ -60,6 +63,20 @@ void CEffect::onEffect() {
         PY_SAFE(override(); return;)
     }
 }
+
+void CEffect::hurtVictim(std::shared_ptr<CDamage> damage) {
+    if (victim) {
+        victim->hurtFromProducer(caster, std::move(damage), ptr<CEffect>());
+    }
+}
+
+void CEffect::hurtVictim(int damage) {
+    auto packet = std::make_shared<CDamage>();
+    packet->setNormal(damage);
+    hurtVictim(packet);
+}
+
+void CEffect::hurtVictim(float damage) { hurtVictim(int(round(damage))); }
 
 void CEffect::setCaster(std::shared_ptr<CCreature> value) { caster = value; }
 

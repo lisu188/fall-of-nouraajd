@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -125,7 +125,7 @@ def load(self, context):
     @register(context)
     class MelfsAcidArrowEffect(CEffect):
         def onEffect(self):
-            self.getVictim().hurt(2 + self.getCaster().getLevel() // 2)
+            self.hurtVictim(2 + self.getCaster().getLevel() // 2)
 
     @register(context)
     class CloudkillEffect(CEffect):

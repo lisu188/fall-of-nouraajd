@@ -172,6 +172,7 @@ using creature_state_type = std::tuple<std::string, int, int, std::vector<effect
 
 struct effect_application_result {
     bool died = false;
+    bool interrupted = false;
     std::shared_ptr<CCreature> caster;
 };
 
@@ -580,8 +581,32 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
         return result;
     }
 
+    const auto receiverGame = cr->getGame();
+    const auto receiverMap = cr->getMap();
+    const bool guardReceiver = receiverMap && receiverMap->getBoolProperty("nativeCombatFacts");
+    const auto receiverContext = guardReceiver && receiverGame ? receiverGame->getContext() : nullptr;
+    const auto receiverGeneration = receiverContext ? receiverContext->captureTransitionGeneration() : 0;
+    const auto receiverInvalid = [&] {
+        if (!guardReceiver) {
+            return false;
+        }
+        const bool current = receiverGame && receiverContext && receiverContext->isActive() &&
+                             receiverContext->isTransitionGenerationCurrent(receiverGeneration) &&
+                             receiverGame->getContext() == receiverContext && receiverGame->getMap() == receiverMap &&
+                             cr->getGame() == receiverGame && cr->getMap() == receiverMap &&
+                             receiverMap->getBoolProperty("nativeCombatFacts") &&
+                             receiverMap->getObjectByName(cr->getName()) == cr;
+        result.interrupted = !current;
+        return !current;
+    };
+    if (receiverInvalid()) {
+        return result;
+    }
     auto effects = cr->getEffects();
     for (const auto &effect : effects) {
+        if (receiverInvalid()) {
+            return result;
+        }
         if (canApply && !canApply()) {
             return result;
         }
@@ -595,6 +620,9 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
                 return result;
             }
             cr->removeEffect(effect);
+            if (receiverInvalid()) {
+                return result;
+            }
         }
     }
 
@@ -617,6 +645,9 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
     std::sort(orderedEffects.begin(), orderedEffects.end(),
               [](const auto &left, const auto &right) { return left.first < right.first; });
     for (const auto &entry : orderedEffects) {
+        if (receiverInvalid()) {
+            return result;
+        }
         if (canApply && !canApply()) {
             return result;
         }
@@ -626,7 +657,13 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
         if (canApply && !canApply()) {
             break;
         }
+        if (receiverInvalid()) {
+            return result;
+        }
         effect->apply(cr);
+        if (receiverInvalid()) {
+            return result;
+        }
         if (was_alive && !cr->isAlive()) {
             result.died = true;
             result.caster = effect->getCaster();
@@ -885,6 +922,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 auto effect_result = apply_effects_with_result(attacker, effectContext);
+                if (effect_result.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -952,6 +993,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 const auto effects = apply_effects_with_result(actor, effectContext);
+                if (effects.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -1043,6 +1088,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 co_return finish_result();
             }
             auto effect_result = apply_effects_with_result(actor, effectContext);
+            if (effect_result.interrupted) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
             if (nativeAdmission && !contextIsCurrent()) {
                 cancel_fight(result, attacker, actor);
                 co_return finish_result();

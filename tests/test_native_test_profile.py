@@ -84,6 +84,18 @@ ADDITIONAL_CASES = {
         "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
         "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
         "testSyncScriptWaitReleasesTheFinalGameOwner",
+        "testCommittedOffensiveInteractionRetainsActualAggressor",
+        "testNativeCombatRollDistinguishesZeroHitFromMissAndPreservesDice",
+        "testNativeDamagePacketAndEffectCasterDoNotInferHitsFromHp",
+        "testNativeUseActionRetainsMissAndReversedArmorCause",
+        "testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation",
+        "testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies",
+        "testCombatBatchNestingAbandonmentAndFactCapacity",
+        "testNativeEffectRunnerStopsAfterFirstPulseObserverInvalidatesReceiver",
+        "testNativeEffectRunnerOptOutRetainsBothTicks",
+        "testNativeEffectRunnerCancelsOpponentAndAllyActionTails",
+        "testNativePublishingNestedActionsAreNonrecursiveBoundedAndRecoverable",
+        "testNativeCombatScopeDepthLimitAndThrowingObserverRecovery",
     ),
     "map": (
         "testNewSessionClearsQuitLatch",
@@ -521,6 +533,32 @@ class NativeTestProfileSourceTest(unittest.TestCase):
             with mock.patch.dict(os.environ, {"GAME_NATIVE_TEST_PROFILE_FIXTURE": str(missing)}):
                 with self.assertRaisesRegex(AssertionError, "Configured native profiling fixture is unavailable"):
                     MissingFixture.setUpClass()
+
+    def testNativeCombatCasesUseTheNormalMetadataFirstProfileRegistry(self):
+        expected = ADDITIONAL_CASES["handler"][-12:]
+        headers = (
+            "native_combat_attempt_regression.h",
+            "native_combat_facts_regression.h",
+            "native_combat_boundary_regression.h",
+            "native_combat_effect_runner_regression.h",
+        )
+        definitions = []
+        for header in headers:
+            source = (ROOT / ("tests/unit/" + header)).read_text(encoding="utf-8")
+            definitions.extend(re.findall(r"^void (test\w+)\(\) \{", source, re.MULTILINE))
+        self.assertEqual(12, len(definitions))
+        self.assertEqual(12, len(set(definitions)))
+        self.assertEqual(set(expected), set(definitions))
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        main = handler[handler.rindex("int main() {") :]
+        registrations = re.findall(r'nativeTestProfile\(\)\.run\("(test\w+)",\s*(test\w+)\);', main)
+        registered = tuple(name for name, callback in registrations if name in definitions and name == callback)
+        self.assertEqual(expected, registered)
+        self.assertEqual("testGameplayMetadataIsAvailableBeforePluginLoading", registrations[0][0])
+        tail = main.split("testSyncScriptWaitReleasesTheFinalGameOwner);", 1)[1]
+        expected_tail = "".join(f'nativeTestProfile().run("{name}", {name});' for name in expected)
+        expected_tail += "return finish_tests();}"
+        self.assertEqual(re.sub(r"\s+", "", expected_tail), re.sub(r"\s+", "", tail))
 
     def testEveryExistingCaseKeepsItsOrderAndMetadataComesFirst(self):
         for suite, (count, digest) in BASELINE_CASES.items():

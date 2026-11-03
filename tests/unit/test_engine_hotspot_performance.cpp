@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CNativeCombatFacts.h"
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
@@ -1848,6 +1849,80 @@ void testEquipmentTailChecksKeepFixedWork() {
               << " factories=" << factories << "\n";
     context->shutdown();
 }
+void testNativeCombatFactWorkRemainsIndexedAndBounded() {
+    auto fixture = make_open_map(8, 8);
+    auto attacker = make_actor(fixture, "unitFactAttacker", Coords(0, 0, 0), "");
+    auto victim = make_actor(fixture, "unitFactVictim", Coords(1, 0, 0), "");
+    add_object(fixture, attacker);
+    add_object(fixture, victim);
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(fixture.game);
+    constexpr int PASSES = 128;
+    constexpr int LISTENERS = 8;
+    int matching = 0;
+    int unrelated = 0;
+    for (int i = 0; i < LISTENERS; ++i) {
+        for (const auto &kind : {"onCombatAttempt", "onCombatRoll", "onCombatPacket"}) {
+            auto trigger = std::make_shared<CCustomTrigger>(victim->getName(), kind, [&](auto, auto) { ++matching; });
+            trigger->setName(std::string("nativeFactGuard_") + kind + "_" + std::to_string(i));
+            fixture.map->getEventHandler()->registerTrigger(trigger);
+        }
+    }
+    // Unrelated listeners cannot turn the producer into a whole-map broadcast.
+    for (int i = 0; i < 1024; ++i) {
+        fixture.map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+            "otherActor" + std::to_string(i), "onCombatPacket", [&](auto, auto) { ++unrelated; }));
+    }
+    int registered = 0;
+    for (const auto &trigger : fixture.map->getEventHandler()->getTriggers()) {
+        if (trigger->getObject() == victim->getName() &&
+            (trigger->getEvent() == "onCombatAttempt" || trigger->getEvent() == "onCombatRoll" ||
+             trigger->getEvent() == "onCombatPacket")) {
+            ++registered;
+        }
+    }
+    expect_true(registered == LISTENERS * 3, "all 24 differently named native listeners must really be registered");
+    const auto generation = fixture.game->getContext()->captureTransitionGeneration();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto registry = fixture.map->getObjects();
+    DamageValue damage;
+    damage.normal = 7;
+    const auto run = [&] {
+        for (int i = 0; i < PASSES; ++i) {
+            CNativeCombatScope operation(fixture.game);
+            CNativeCombatFacts facts(attacker, victim);
+            facts.attempt(action);
+            facts.roll(i % 2 == 0, 0);
+            facts.packet(damage, 10, 10);
+            operation.finish();
+        }
+    };
+    run();
+    expect_true(matching == 0 && unrelated == 0, "disabled maps have a zero combat callback budget");
+    fixture.map->setBoolProperty("nativeCombatFacts", true);
+    performance_guard::resetMapTileTraversalProbe();
+    performance_guard::resetMapCoordinateLookupProbe();
+    run();
+    const auto tile_work = performance_guard::mapTileTraversalWork();
+    const auto coordinate_work = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapTileTraversalProbe();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(matching == PASSES * LISTENERS * 3 && unrelated == 0,
+                "three facts per producer invoke only the eight indexed listeners for this victim");
+    expect_true(tile_work.snapshots == 0 && tile_work.snapshotReferences == 0 && tile_work.directVisits == 0 &&
+                    coordinate_work == 0,
+                "fact publication performs no tile traversal or spatial scan");
+    expect_true(fixture.map->getObjects() == registry && fixture.map->getNavigationRevision() == revision &&
+                    fixture.map->getTurn() == turn && fixture.game->getMapBindingEpoch() == epoch &&
+                    fixture.game->getContext()->isTransitionGenerationCurrent(generation),
+                "observation cannot advance the map, alter ownership or invalidate navigation");
+    std::cout << "native combat facts guard: passes=" << PASSES << " listeners=" << LISTENERS
+              << " callbacks=" << matching << " unrelated=" << unrelated << " tiles=" << tile_work.directVisits
+              << " coordinateProbes=" << coordinate_work << "\n";
+    fixture.game->getContext()->shutdown();
+}
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -1881,4 +1956,5 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testNativeCombatFactWorkRemainsIndexedAndBounded();
 }

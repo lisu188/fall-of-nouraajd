@@ -29,7 +29,8 @@
     "properties": {
       "animation": "images/interactions/attack",
       "label": "Standard Attack",
-      "description": "Attack one enemy. A successful attack roll also activates your equipped weapon effect, even if the enemy blocks or resists the damage."
+      "description": "Attack one enemy. A successful attack roll also activates your equipped weapon effect, even if the enemy blocks or resists the damage.",
+      "offensive": true
     }
   },
   "Backstab": {
@@ -175,7 +176,8 @@
       "animation": "images/interactions/magicmissile",
       "label": "Magic Missile",
       "manaCost": 5,
-      "description": "Deal Physical damage to one enemy with a number of damage rolls that increases with your level."
+      "description": "Deal Physical damage to one enemy with a number of damage rolls that increases with your level.",
+      "offensive": true
     }
   },
   "Mutilation": {
@@ -475,7 +477,8 @@
       },
       "label": "Melf's Acid Arrow",
       "manaCost": 12,
-      "description": "Deal Physical damage immediately and over the next 3 turns. Damage increases with your level."
+      "description": "Deal Physical damage immediately and over the next 3 turns. Damage increases with your level.",
+      "offensive": true
     }
   },
   "MirrorImage": {
