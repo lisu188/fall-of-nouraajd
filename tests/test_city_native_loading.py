@@ -253,7 +253,7 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 loop.run()
                 player = instance.getMap().getPlayer()
                 owned = instance.createObject('Dagger')
-                owned.setName('loadDiagnosticOwnedDagger')
+                owned.setStringProperty('name', 'loadDiagnosticOwnedDagger')
                 player.addItem(owned)
                 point = tuple(player.getNumericProperty(k) for k in ('posx', 'posy', 'posz'))
                 turn = instance.getMap().getTurn()
