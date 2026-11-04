@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CAsync.h"
 #include "CCreature.h"
+#include "core/CNativeCombatFacts.h"
 #include <algorithm>
 #include <tuple>
 #include <vector>
@@ -474,7 +475,44 @@ void CCreature::hurt(std::shared_ptr<CDamage> damage) {
     vstd::logger::debug(getType(), "took damage:", JSONIFY(damage));
 }
 
-int CCreature::getDmg(bool allowCrit) {
+int CCreature::getDmg(bool allowCrit) { return rollDamage(allowCrit).damage; }
+
+int CCreature::getDmgFor(std::shared_ptr<CCreature> victim, bool allowCrit) {
+    CNativeCombatFacts facts(ptr<CCreature>(), victim);
+    const auto roll = rollDamage(allowCrit);
+    facts.roll(roll.connected, roll.damage);
+    return roll.damage;
+}
+
+void CCreature::hurtFrom(std::shared_ptr<CCreature> cause, int damage) {
+    auto packet = std::make_shared<CDamage>();
+    packet->setNormal(damage);
+    hurtFrom(std::move(cause), packet);
+}
+
+void CCreature::hurtFrom(std::shared_ptr<CCreature> cause, float damage) {
+    hurtFrom(std::move(cause), int(round(damage)));
+}
+
+void CCreature::hurtFrom(std::shared_ptr<CCreature> cause, std::shared_ptr<CDamage> damage) {
+    hurtFromProducer(std::move(cause), std::move(damage), nullptr);
+}
+
+void CCreature::hurtFromProducer(std::shared_ptr<CCreature> cause, std::shared_ptr<CDamage> damage,
+                                 std::shared_ptr<CGameObject> producer) {
+    CNativeCombatFacts facts(cause, ptr<CCreature>());
+    if (!facts.enabled()) {
+        hurt(damage);
+        return;
+    }
+    const auto packet = damage->value();
+    const int before = getHp();
+    // Preserve the legacy damage path, including all five block dice, exactly once.
+    hurt(damage);
+    facts.packet(packet, before, getHp(), std::move(producer));
+}
+
+CCreature::AttackRoll CCreature::rollDamage(bool allowCrit) {
     auto stats = getStats();
     // critDice is rolled unconditionally so the RNG stream stays identical whether or not
     // crit is allowed; allowCrit only gates whether a rolled crit is applied.
@@ -490,10 +528,10 @@ int CCreature::getDmg(bool allowCrit) {
             dmg *= 2;
             vstd::logger::debug("Critical!");
         }
-        return dmg;
+        return {dmg, true};
     } else {
         vstd::logger::debug("Missed!");
-        return 0;
+        return {0, false};
     }
 }
 
@@ -1108,12 +1146,14 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
     if (action->getManaCost() < 0 || getMana() < action->getManaCost()) {
         return;
     }
+    CNativeCombatScope combatScope(getGame());
     action->onAction(this->ptr<CCreature>(), creature);
     if (creature->getArmor()) {
         if (creature->getArmor()->getInteraction()) {
             creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
         }
     }
+    combatScope.finish();
 }
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {

@@ -40,6 +40,10 @@ class CEffect : public CGameObject {
 
     void apply(std::shared_ptr<CCreature> creature);
 
+    void hurtVictim(std::shared_ptr<CDamage> damage);
+    void hurtVictim(int damage);
+    void hurtVictim(float damage);
+
     std::shared_ptr<CStats> getBonus();
 
     void setBonus(std::shared_ptr<CStats> value);

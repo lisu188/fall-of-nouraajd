@@ -48,7 +48,7 @@ class EnemyRolesTest(unittest.TestCase):
                 "setBoolProperty",
                 "getObjectProperty",
                 "setObjectProperty",
-                "getDmg",
+                "getDmgFor",
                 "getWeapon",
                 "isAlive",
                 "getGame",
@@ -68,7 +68,7 @@ class EnemyRolesTest(unittest.TestCase):
         self.actor.getNumericProperty.side_effect = lambda name: self.properties.get(name, 0)
         self.actor.getObjectProperty.side_effect = lambda name: self.object_properties[name]
         self.actor.setObjectProperty.side_effect = lambda name, value: self.object_properties.__setitem__(name, value)
-        self.actor.getDmg.return_value = 11
+        self.actor.getDmgFor.return_value = 11
         self.actor.getWeapon.return_value = None
         self.actor.isAlive.return_value = True
         self.target = Mock()
@@ -93,8 +93,8 @@ class EnemyRolesTest(unittest.TestCase):
         for class_name in SIGNATURES:
             with self.subTest(class_name=class_name):
                 self.properties.clear()
-                self.actor.getDmg.reset_mock()
-                self.target.hurt.reset_mock()
+                self.actor.getDmgFor.reset_mock()
+                self.target.hurtFrom.reset_mock()
                 action, effect, _ = self.makeSignature(class_name)
                 action.performAction(self.actor, self.target)
                 saved = json.loads(json.dumps(self.properties))
@@ -103,8 +103,8 @@ class EnemyRolesTest(unittest.TestCase):
                 action.performAction(self.actor, self.target)
                 self.assertTrue(self.properties["enemyRoleUsed"])
                 self.assertTrue(self.properties["enemyRoleEffectApplied"])
-                self.actor.getDmg.assert_called_once_with()
-                self.target.hurt.assert_called_once()
+                self.actor.getDmgFor.assert_called_once_with(self.target)
+                self.target.hurtFrom.assert_called_once()
                 action.setObjectProperty.assert_called_once_with("roleEffect", None)
                 self.assertIsNone(action.getObjectProperty("roleEffect"))
                 effect.setCaster.assert_called_once_with(self.actor)
@@ -121,32 +121,39 @@ class EnemyRolesTest(unittest.TestCase):
         ):
             with self.subTest(class_name=class_name, roll=roll):
                 self.properties.clear()
-                self.actor.getDmg.return_value = roll
-                self.actor.getDmg.reset_mock()
-                self.target.hurt.reset_mock()
+                self.actor.getDmgFor.return_value = roll
+                self.actor.getDmgFor.reset_mock()
+                self.target.hurtFrom.reset_mock()
                 action, _, packet = self.makeSignature(class_name)
                 action.performAction(self.actor, self.target)
                 channels = dict(call.args for call in packet.setNumericProperty.call_args_list)
                 if class_name == "EnemyRitualHex" and roll < 10:
                     self.assertEqual({}, channels)
-                    self.target.hurt.assert_called_once_with(roll)
+                    self.target.hurtFrom.assert_called_once_with(self.actor, roll)
                 else:
                     self.assertEqual({"normal": roll - 1, channel: 1}, channels)
                     self.assertEqual(roll, sum(channels.values()))
-                    self.target.hurt.assert_called_once_with(packet)
-                self.actor.getDmg.assert_called_once_with()
+                    self.target.hurtFrom.assert_called_once_with(self.actor, packet)
+                self.actor.getDmgFor.assert_called_once_with(self.target)
                 self.assertFalse(self.properties["enemyRoleArcaneAttack"])
                 self.assertEqual("", self.properties["enemyRoleDamageChannel"])
                 self.assertEqual(0, self.properties["enemyRoleDamageMinimum"])
                 self.actor.getGame.assert_not_called()
+
+    def testDefaultAttackUsesTheActualVictimAndCauseAwareDamageApi(self):
+        self.assertTrue(hasattr(self.actor, "getDmgFor"), "The double must expose the current victim-aware native API")
+        self.attack.performAction(self.actor, self.target)
+        self.actor.getDmgFor.assert_called_once_with(self.target)
+        self.target.hurtFrom.assert_called_once_with(self.actor, 11)
+        self.target.hurt.assert_not_called()
 
     def testDefaultAttackRetainsItsDamageAndConfiguredWeaponProcSequence(self):
         trace = []
         weapon, proc = Mock(), Mock()
         weapon.getInteraction.return_value = proc
         self.actor.getWeapon.side_effect = lambda: trace.append("weapon") or weapon
-        self.actor.getDmg.side_effect = lambda: trace.append("roll") or 11
-        self.target.hurt.side_effect = lambda damage: trace.append(("hurt", damage))
+        self.actor.getDmgFor.side_effect = lambda victim: trace.append("roll") or 11
+        self.target.hurtFrom.side_effect = lambda cause, damage: trace.append(("hurt", damage))
         proc.onAction.side_effect = lambda first, second: trace.append("proc")
         self.attack.performAction(self.actor, self.target)
         self.assertEqual(["roll", ("hurt", 11), "weapon", "proc"], trace)
@@ -158,24 +165,24 @@ class EnemyRolesTest(unittest.TestCase):
         for roll in (9, 10):
             with self.subTest(roll=roll):
                 self.properties.clear()
-                self.actor.getDmg.return_value = roll
-                self.actor.getDmg.reset_mock()
-                self.target.hurt.reset_mock()
+                self.actor.getDmgFor.return_value = roll
+                self.actor.getDmgFor.reset_mock()
+                self.target.hurtFrom.reset_mock()
                 weapon, proc = Mock(), Mock()
                 weapon.getInteraction.return_value = proc
                 self.actor.getWeapon.return_value = weapon
                 action, _, packet = self.makeSignature("EnemyRitualHex")
                 action.performAction(self.actor, self.target)
-                self.actor.getDmg.assert_called_once_with()
+                self.actor.getDmgFor.assert_called_once_with(self.target)
                 proc.onAction.assert_called_once_with(self.actor, self.target)
                 if roll == 9:
                     packet.setNumericProperty.assert_not_called()
-                    self.target.hurt.assert_called_once_with(9)
+                    self.target.hurtFrom.assert_called_once_with(self.actor, 9)
                 else:
                     self.assertEqual(
                         {"normal": 9, "shadow": 1}, dict(call.args for call in packet.setNumericProperty.call_args_list)
                     )
-                    self.target.hurt.assert_called_once_with(packet)
+                    self.target.hurtFrom.assert_called_once_with(self.actor, packet)
                 self.assertEqual(0, self.properties["enemyRoleDamageMinimum"])
 
     def testArcaneHookRetainsWeaponProcAndDoesNotLeakToAnotherAttack(self):
@@ -186,24 +193,24 @@ class EnemyRolesTest(unittest.TestCase):
         action.performAction(self.actor, self.target)
         proc.onAction.assert_called_once_with(self.actor, self.target)
         self.assertFalse(self.properties["enemyRoleArcaneAttack"])
-        self.target.hurt.reset_mock()
+        self.target.hurtFrom.reset_mock()
         self.attack.performAction(self.actor, self.target)
-        self.target.hurt.assert_called_once_with(11)
+        self.target.hurtFrom.assert_called_once_with(self.actor, 11)
         self.assertEqual(2, proc.onAction.call_count)
         self.assertIs(packet, self.object_properties["enemyRoleDamagePacket"])
         other = Mock()
         other.getBoolProperty.return_value = False
-        other.getDmg.return_value = 7
+        other.getDmgFor.return_value = 7
         other.getWeapon.return_value = None
         self.attack.performAction(other, self.target)
-        self.target.hurt.assert_called_with(7)
+        self.target.hurtFrom.assert_called_with(other, 7)
         other.getObjectProperty.assert_not_called()
 
     def testDamagePacketHookRejectsChannelsOutsideFrostAndShadow(self):
         self.properties["enemyRoleArcaneAttack"] = True
         self.properties["enemyRoleDamageChannel"] = "fire"
         self.attack.performAction(self.actor, self.target)
-        self.target.hurt.assert_called_once_with(11)
+        self.target.hurtFrom.assert_called_once_with(self.actor, 11)
         self.actor.getObjectProperty.assert_not_called()
         self.assertFalse(self.properties["enemyRoleArcaneAttack"])
         self.assertEqual("", self.properties["enemyRoleDamageChannel"])
@@ -214,15 +221,15 @@ class EnemyRolesTest(unittest.TestCase):
                 self.properties.clear()
                 self.object_properties.clear()
                 self.wards.update(normalResist=ward, shadowResist=ward)
-                self.actor.getDmg.reset_mock()
-                self.target.hurt.reset_mock()
+                self.actor.getDmgFor.reset_mock()
+                self.target.hurtFrom.reset_mock()
                 weapon, proc = Mock(), Mock()
                 weapon.getInteraction.return_value = proc
                 self.actor.getWeapon.return_value = weapon
                 action, effect, packet = self.makeSignature("EnemyRitualHex")
                 action.performAction(self.actor, self.target)
-                self.actor.getDmg.assert_called_once_with()
-                self.target.hurt.assert_called_once_with(11)
+                self.actor.getDmgFor.assert_called_once_with(self.target)
+                self.target.hurtFrom.assert_called_once_with(self.actor, 11)
                 proc.onAction.assert_called_once_with(self.actor, self.target)
                 packet.setNumericProperty.assert_not_called()
                 self.assertNotIn("enemyRoleDamagePacket", self.object_properties)
@@ -232,15 +239,15 @@ class EnemyRolesTest(unittest.TestCase):
                 effect.setVictim.assert_called_once_with(self.target)
 
     def testMissesDoNotConsumeBlockDiceOrWeaponProcAndAlwaysClearHook(self):
-        self.actor.getDmg.return_value = 0
+        self.actor.getDmgFor.return_value = 0
         for class_name in SIGNATURES:
             with self.subTest(class_name=class_name):
                 self.properties.clear()
-                self.target.hurt.reset_mock()
+                self.target.hurtFrom.reset_mock()
                 self.actor.getWeapon.reset_mock()
                 action, _, packet = self.makeSignature(class_name)
                 action.performAction(self.actor, self.target)
-                self.target.hurt.assert_not_called()
+                self.target.hurtFrom.assert_not_called()
                 self.actor.getWeapon.assert_not_called()
                 packet.setNumericProperty.assert_not_called()
                 self.assertFalse(self.properties.get("enemyRoleArcaneAttack", False))
@@ -263,6 +270,7 @@ class EnemyRolesTest(unittest.TestCase):
 
     def testRoleEffectsHaveNoTickDamage(self):
         self.registered["EnemyRoleEffect"]().onEffect()
+        self.target.hurtFrom.assert_not_called()
         self.target.hurt.assert_not_called()
 
     def testRolePluginCallsUseThePublishedNativeObjectApi(self):

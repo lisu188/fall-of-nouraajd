@@ -50,7 +50,7 @@ def load(self, context):
                 first.setBoolProperty("enemyRoleArcaneAttack", False)
                 first.setStringProperty("enemyRoleDamageChannel", "")
                 first.setNumericProperty("enemyRoleDamageMinimum", 0)
-            dmg = first.getDmg()
+            dmg = first.getDmgFor(second)
             if arcane:
                 first.setNumericProperty("enemyRoleAttackBudget", dmg)
             if dmg:
@@ -58,9 +58,9 @@ def load(self, context):
                     damage = first.getObjectProperty("enemyRoleDamagePacket")
                     damage.setNumericProperty("normal", dmg - 1)
                     damage.setNumericProperty(channel, 1)
-                    second.hurt(damage)
+                    second.hurtFrom(first, damage)
                 else:
-                    second.hurt(dmg)
+                    second.hurtFrom(first, dmg)
                 weapon = first.getWeapon()
                 if weapon:
                     inter = weapon.getInteraction()
@@ -139,7 +139,7 @@ def load(self, context):
             dmg = 0
             for _ in range(first.getLevel() // 2 + 1):
                 dmg += randint(1, 4) % 4 + 1
-            second.hurt(dmg)
+            second.hurtFrom(first, dmg)
 
     @register(context)
     class ShadowBolt(CInteraction):

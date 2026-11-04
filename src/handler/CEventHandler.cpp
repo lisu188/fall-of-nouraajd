@@ -23,6 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 
 std::string CGameEvent::CType::onEnter = "onEnter";
+std::string CGameEvent::CType::onCombatAttempt = "onCombatAttempt";
+std::string CGameEvent::CType::onCombatRoll = "onCombatRoll";
+std::string CGameEvent::CType::onCombatPacket = "onCombatPacket";
 std::string CGameEvent::CType::onTurn = "onTurn";
 std::string CGameEvent::CType::onCreate = "onCreate";
 std::string CGameEvent::CType::onDestroy = "onDestroy";
@@ -119,6 +122,34 @@ void dispatchObjectEvent(const std::shared_ptr<CMapObject> &object, const std::s
     }
 }
 } // namespace
+
+bool CEventHandler::combatEvent(std::shared_ptr<CMapObject> object, const std::string &kind,
+                                const std::function<std::shared_ptr<CGameEvent>()> &makeEvent,
+                                const std::function<bool()> &current) const {
+    if (!object || !current() ||
+        (kind != CGameEvent::CType::onCombatAttempt && kind != CGameEvent::CType::onCombatRoll &&
+         kind != CGameEvent::CType::onCombatPacket)) {
+        return false;
+    }
+    const auto range = triggers.equal_range(std::make_pair(object->getName(), kind));
+    std::vector<std::shared_ptr<CTrigger>> snapshot;
+    for (auto it = range.first; it != range.second; ++it) {
+        snapshot.push_back(it->second);
+    }
+    for (const auto &trigger : snapshot) {
+        if (!current()) {
+            return false;
+        }
+        if (trigger) {
+            // Each listener receives a copy of the immutable native capture.
+            trigger->trigger(object, makeEvent());
+        }
+        if (!current()) {
+            return false;
+        }
+    }
+    return current();
+}
 
 void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
     if (!object || !event) {
