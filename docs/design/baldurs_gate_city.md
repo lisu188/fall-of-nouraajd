@@ -19,6 +19,25 @@ python scripts/build_baldurs_gate_source_fixture.py --game-root "C:\Program File
 
 The general auditor retains its existing Candlekeep invocation. Use `--scope city --area AR0800` with `scripts/audit_candlekeep_source.py` to audit the bounded city dependency closure. Audit output belongs outside the original installation and outside resource configuration directories.
 
+## Disabled poison source foundation
+
+The city builder stages seven retained poison dialogue graphs, including TENYA2: 84 states, 135 transitions and
+219 authored state/reply mappings. `scripts/build_baldurs_gate_city_poison.py` validates that exact inventory and
+adds separate source-mode dialogs, actor factories and finite action positions to the existing city resources.
+`plugin_cityPoisonSourceEnabled` remains false. All existing dialog definitions retain their previous contents.
+
+The map-local implementation binds conversations and saved continuations to actual actor instances. It implements
+ordered fees, rewards and item transfers; separately created NPC ownership; prospective death witnesses; delayed
+actions; and the acquisition/cure consumer with distinct 650 kill XP, 1,500 scroll-delivery XP and 10,000 cure XP.
+The city separately opts into native `sourceKillXp` settlement on fresh entry and verified load. It never adds a
+second kill reward from Python. The source-only callback tests use doubles and do not establish native gameplay.
+
+Source-mode activation remains pending actual routes and the unfinished SHOUT listeners, charm producer, BOOK08
+conversion, warning/fatal scheduler, outside-history producers, progressed-save migration and source slot priority.
+Unlinked branches remain in the inventory without a claim of natural reachability. Unsupported SHOUT continuations
+are refused before mutation. These holds and the original-versus-EE differences remain acceptance requirements;
+staging these graphs does not close their ledger obligations.
+
 ## Opt-in regional simulation
 
 `CMap.activeSimulationRegion` is a serialized string. An empty value preserves the existing all-object simulation. With a nonempty value, objects with a matching `simulationRegion` receive turn hooks, controller planning, movement commits and controller turn-end callbacks. The actual map player, objects with no region and objects with `alwaysSimulate=true` remain active.
@@ -41,11 +60,11 @@ The city additionally enables `plugin_cityFixedLoot`: defeated NPCs transfer onl
 
 The map generator aggregates factual source collision metadata into native cells, places individually identified objects, and records any placement adjustment. Source actor schedules, locks, traps, ownership, stock and door states must have an implemented outcome or an explicit unresolved ledger obligation. Merely drawing a container or offering a generic conversation does not satisfy that obligation.
 
-The city starts with an explicit native level-five profile and a recorded history selection. History is not played campaign progress. Quests use composed native statistics: Intelligence plus local standing for reaction; Agility 12, 16 or 18 for audited lock/theft tiers; Strength 12 or 14 for source-permitted forcing. Source prohibitions and unavoidable detection take precedence. Native combat experience and item effects require documented conversions; unsupported source effects must remain visible acceptance gaps.
+The city starts with a recorded native hero profile and history selection. The existing hero and experience grant determine its actual level and composed stats. History is not played campaign progress. Quests use composed native statistics: Intelligence plus local standing for reaction; Agility 12, 16 or 18 for audited lock/theft tiers; Strength 12 or 14 for source-permitted forcing. Source prohibitions and unavoidable detection take precedence. Native combat experience and item effects require documented conversions; unsupported source effects must remain visible acceptance gaps.
 
 First-visit and later-return states share one serialized map. Deaths, actual possessions, containers, locks, followers, stock, clocks and optional quests must survive transitions and reloads. Outside errands are labelled text-choice excursions; the city interlude applies only after its prerequisites. Completing the finale records the city storyline without completing unrelated optional quests.
 
-Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. The local C: disk guard currently blocks large native builds and captures; CI can provide compilation and automated checks, but cannot substitute for missing original-source reconciliation or owner acceptance.
+Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. Check local capacity against the 90 percent disk guard before native builds or captures. Prefer CI for heavy compilation and automated checks; these cannot substitute for missing original-source reconciliation or owner acceptance.
 
 ## Generated district content
 
@@ -70,6 +89,57 @@ python scripts/build_baldurs_gate_city_ledger.py --check
 
 Its strict `--require-mapped` and `--require-acceptance` modes are expected to fail until all declared obligations and evidence are complete. No generated row has accepted native gameplay status. The ledger rejects invented receipts, missing source fingerprints and stale input mappings.
 
+### Poison-chain source inventory
+
+`tests/fixtures/baldurs_gate_city_poison_dialogue.json` records the supporting EE
+graphs for Marek, Lothander, the Diviner, the priestess, Jalantha and Chanthalas:
+72 states and 112 transitions, including false and unlinked entries. It also
+records nine selected script blocks, four item headers, two item abilities,
+eleven inline effects and eight explicit unresolved frontiers. All 218 additional
+ledger obligations remain planned, with native, original-game and owner
+acceptance pending. These records retain source identities and fingerprints;
+original binaries, dialogue prose and full script dumps stay outside Git.
+
+`tests/fixtures/baldurs_gate_city_poison_followup.json` preserves 41 additional
+supporting-EE source records: TENYA2's 12 states and 23 transitions, BDMAREK's
+header, ability and two effects, and two GTIMES constants. Every record adds a
+required planned ledger obligation; the preceding 218 poison records and all
+older ledger rows remain unchanged. These additions award no native, original
+game, coverage or owner acceptance.
+
+TENYA2 supplies body-item alternatives through BOYBODY and MISC54. Seven terminal
+transitions give the item to LastTalkedToBy and depart; those transitions occur
+on eight syntactic paths. A separate transition creates MISC54 on the actor and
+turns hostile. The retained graph does not establish external entry into its
+unlinked state. PUMBERL's conditioned summon, the separate Tenya/Tenya2 death
+identities, actual ownership and the starting-history bridge remain pending.
+
+PoisonParty and PoisonParty2 are distinct GLOBAL timers, initialized respectively
+to ONE_DAY = 7200 and TEN_DAYS = 72000 before Lothander's later agreement choice.
+The selected warning block rearms only PoisonParty. Their durations are not
+summed; source scheduling and conversion to this engine's clock remain pending.
+BDMAREK's declared ability owns opcode 215 and opcode 142 effects. That table
+contains no opcode 309. This selected payload does not establish exclusive
+manual drinking, absence of automatic cure, or the complete producer chain;
+42 BALDUR blocks and newly encountered resource identifiers remain unfollowed.
+No original dialogue prose, binary payload or full script dump is committed.
+
+The development auditor can additionally decode bounded ITM V1 inline effect
+fields with `--item-effects`; existing invocations retain their previous output
+and resource-discovery behavior. For example:
+
+```powershell
+python scripts/audit_candlekeep_source.py --game-root "C:\Program Files (x86)\GOG Galaxy\Games\Baldur's Gate - Enhanced Edition" --scope city --item-effects --output-dir build/city-source-audit
+```
+
+The opt-in decoder bounds each item to 16 abilities, 64 unique effects and 128
+effect references, and validates those limits before legacy table expansion.
+It records raw fields, order, offsets and hashes. Effect execution, native stat
+conversion and original-edition behavior remain separate work; resource fields
+can also name variables and are never followed by this decoder. In particular,
+POTN47's EE variable effect establishes a possible producer, while its relation
+to other cure paths and the classic guide's retrieval behavior remains unresolved.
+
 Focused development checks are separate from native acceptance:
 
 ```powershell
@@ -79,7 +149,7 @@ python test.py --suite mcp-branches --branch-group baldursGate
 
 The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
 
-Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. Recheck capacity before large local builds or captures; historical cleanup evidence does not replace a current capacity check. The 90 percent guard remains in force.
 
 City structured metadata uses a `city-json:` text prefix to preserve its string type through native loading,
 cloning and saves. The runtime accepts protected and legacy plain JSON text and protects subsequent state writes.
@@ -127,3 +197,69 @@ override remains an item/effect boundary. Script scheduling, event consumption,
 geometry, live actor ownership and original-versus-EE reconciliation remain pending.
 These tests/audits grant no native execution, gameplay, original parity, acceptance
 or ledger credit; all corresponding closure acceptance flags remain false.
+
+
+### Item movement and per-instance restrictions
+
+Known source ITM flags and CRE/STO instance flags remain separate. `plugin_cityItemFlags` preserves the known
+item-header bits; the existing `plugin_citySourceFlags` on materialized possessions continues to record instance
+bits. An item without the ITM movable/droppable bit (`0x4`) is immovable. The generated item template records that
+restriction, and source materialization combines it with instance undroppable (`0x8`) into
+`plugin_cityUndroppable`. Instance unstealable (`0x2`), stolen (`0x4`), identified (`0x1`), quantities and charges keep
+their existing meanings. Missing header evidence retains the existing fallback policy.
+
+This projection is local to city source items. Existing native city fixed-loot settlement already skips an actual
+undroppable possession before removing or granting it; the city's theft, companion-transfer and selling paths also
+check that value. The item stays with its actual owner. No weapon is deleted, no stock is reduced, and no natural-
+weapon blacklist or global loot policy is introduced. Known immovable templates are also ineligible for sale.
+Classic BG1's separate unsellable bit (`0x800`) remains respected; its critical bit (`0x1`) alone does not prevent sale.
+
+For example, retained CARRIO1 has header flags 32, which lack movement permission, and CARRIO's instance flags 0 add no
+extra restriction. Its actual Attack item must remain owned instead of becoming loot or a theft/sale choice. The
+retained crawler's authored 420 XP stays unchanged. This uses supporting EE base facts and format documentation;
+original patched BG1 parity remains open.
+
+The primary definitions are [ITM flags](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm#Header_Flags)
+and [CRE item flags](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/cre_v1.htm#CREV1_0_Item). The pinned
+[GemRB inventory implementation](https://github.com/gemrb/gemrb/blob/e76cad7a6190b65292b223a92cf219e0c7a39047/gemrb/core/Inventory.cpp#L137)
+corroborates deriving undroppable from missing movement permission. Reimplementation code is supporting evidence.
+
+Already-initialized saved items require a separately reviewed migration; no retrospective deletion or source-stock
+reseed is authorized here. Source callback tests and JSON property round trips are distinct from native defeat,
+native save/reload and real MCP evidence, which remain required before gameplay acceptance.
+
+
+### Poison journal clues
+
+The opt-in poison source path presents readable objectives and hints for the active poison/geas tasks and completed
+Diviner reading. These getters use existing quest stages and heard-clue flags; they do not progress a quest, pay a fee,
+change a timer or grant a reward. Default-off legacy text, the completed cure's genuine branch journal and both geas
+outcome descriptions remain unchanged.
+
+Before Lothander's offer is accepted, the hint directs the player back to him. Agreeing to help introduces the Diviner
+in the market square. The correct Diviner answer names Jalantha Mistmyr at the Water Queen's House; its automatic
+continuation records `DivinerAsked=1`. Only Lothander's later directions (`DivinerAsked=2`) introduce the Blade and
+Stars Inn. His completed scroll-return or priest-death outcome supplies the later Marek lead. No temple or inn clue is
+shown before the corresponding information has been heard.
+
+The completed reading records its actual 50-gold fee and no experience. Wrong-question alternatives retain their
+source differences: the treasure answer sets `LothanderMove=9`, while the profit answer does not. Neither invents the
+correct geas answer or completes the Diviner task. Their existing effects and one-reading-per-day rule are untouched.
+
+Tests execute those dialogue paths through the source model, compare repeated reads against all active/completed quest
+collections and serialized state, and keep the disabled/dead-player legacy path available. They supply no native GUI,
+MCP, save/reload or fresh visual acceptance; updated staged views must be captured and inspected separately.
+
+
+## Partial BOOK08 native use conversion
+
+The disabled `plugin_cityBook08NativeConversionEnabled` component also requires poison source mode. It maps source Wisdom+1 to permanent owned `baseStats.intelligence`+1, using current composed stats only to verify the result. It accepts one identified carried actual BOOK08 with a valid raw charge triple `[0,0,0]` or explicit `[1,0,0]`. For the retained zero triple, a documented map-local ordinary-load conversion derives one effective use; the unchanged stored triple and policy are retained in the same-instance receipt. This follows pinned GemRB ordinary-load charge sanitization and the documented single-use tome, without claiming patched original BG1 loader equivalence. It never recharges a spent item, awards on acquisition, or rewrites source fixtures. The callback reserves the use, adds the owned base bonus, removes the exact item and completes a saved receipt. Disabled/unidentified/malformed/shared items grant nothing; consumed items or existing receipts cannot grant twice. Interrupted pending receipts remain quarantined. Giving the unused tome to Jalantha retains its actual ownership and grants no statistic; using it first removes her required book condition.
+
+Fresh configured BOOK08 objects use the existing scroll Python wrapper through the map-local `BaldursGateUnderstandingTome(CScrollBase)` class. Its inherited engine disposal policy is false; its own successful callback removes the exact item. The default scroll text action is never called. Existing saved plain `CItem` instances require a reviewed migration; they are not silently replaced. The source ability-pending marker stays true: blue lighting, EFF_M08 audio and unread notice11338 are not implemented, and original Wisdom/cap/usability behavior remains an original-versus-EE acceptance question. The authored use notice describes the native Intelligence outcome. Source checks are not native use/save, MCP, exhaustive-parity or owner acceptance.
+
+Focused native component checks transfer Chanthalas's original zero-charge book by identity, call the actual player's
+`useItem`, and verify unchanged resources, owned base Intelligence 5 to 6 and composed Intelligence 15 to 16 with the
+existing Wanderer race and a real equipment bonus. Independent disabled/identified and enabled/unidentified refusals
+retain the item. Spent state and an unspent registered subclass survive actual save/reload; the saved receipt prevents
+a repeat award. These use fresh private resource copies with both opt-ins enabled before map creation. Their explicit
+inventory transfer, identification and equipment setup are unit fixtures, not played acquisition or MCP/UI acceptance.

@@ -1667,6 +1667,78 @@ class GameplayBranchDriverTest(unittest.TestCase):
         driver.step.assert_not_called()
         self.assertEqual(1, sum(call.args[1] == "setTarget" for call in driver._rawCall.call_args_list))
 
+    def testNavigateCoordsAcceptsOnlyATargetReachedWithinTheExactNativeTickLimit(self):
+        for distance, budget, reached in ((1, 1, True), (3, 3, True), (2, 1, False)):
+            with self.subTest(distance=distance, budget=budget, reached=reached):
+                driver = self.driver()
+                position = [0, 0, 0]
+                target = (distance, 0, 0)
+                controller = {"__handle__": "controller"}
+                driver.coords = lambda handle=None: tuple(position)
+                driver._coordinateHandle = lambda coords: {"__handle__": "point", "coords": tuple(coords)}
+
+                def rawCall(owner, method, *args):
+                    if method == "getController":
+                        self.assertEqual(driver.player, owner)
+                        return controller
+                    if method == "setTarget":
+                        self.assertEqual(controller, owner)
+                        self.assertEqual(driver.player, args[0])
+                        self.assertEqual(target, args[1]["coords"])
+                        return None
+                    if method == "getNavigationNeighbors":
+                        self.assertEqual(driver.game_map, owner)
+                        return []
+                    self.fail(("Unexpected coordinate navigation API", owner, method, args))
+
+                def advance():
+                    position[0] += 1
+
+                driver._rawCall.side_effect = rawCall
+                driver.tick = Mock(side_effect=advance)
+                driver.snapshot = Mock(side_effect=lambda: {"coords": tuple(position)})
+                if reached:
+                    driver.navigateCoords(target, limit=budget)
+                    self.assertEqual(target, driver.coords())
+                    driver.snapshot.assert_not_called()
+                else:
+                    with self.assertRaisesRegex(AssertionError, "Native route budget exhausted"):
+                        driver.navigateCoords(target, limit=budget)
+                    self.assertNotEqual(target, driver.coords())
+                    driver.snapshot.assert_called_once()
+                self.assertEqual(budget, driver.tick.call_count, "The exact tick limit must not be extended")
+                self.assertEqual(budget, driver.steps)
+                self.assertEqual(1, sum(call.args[1] == "setTarget" for call in driver._rawCall.call_args_list))
+
+    def testNavigateCoordsKeepsFinalTickMapAndAuthoredPortalTransitions(self):
+        for map_changed in (False, True):
+            with self.subTest(map_changed=map_changed):
+                driver = self.driver()
+                position = [0, 0, 0]
+                driver.coords = lambda handle=None: tuple(position)
+                driver._coordinateHandle = lambda coords: {"__handle__": "point", "coords": tuple(coords)}
+                controller = {"__handle__": "controller"}
+                driver._rawCall.side_effect = lambda owner, method, *args: (
+                    controller if method == "getController" else None
+                )
+
+                def advance():
+                    position[:] = [10, 0, 1]
+                    if map_changed:
+                        driver.map_name = "destination"
+
+                driver.tick = Mock(side_effect=advance)
+                driver._traversedTarget = Mock(return_value=True)
+                driver.snapshot = Mock()
+                driver.navigateCoords((1, 0, 0), limit=1)
+                self.assertEqual(1, driver.tick.call_count)
+                self.assertEqual(1, driver.steps)
+                driver.snapshot.assert_not_called()
+                if map_changed:
+                    driver._traversedTarget.assert_not_called()
+                else:
+                    driver._traversedTarget.assert_called_once_with((1, 0, 0), (10, 0, 1))
+
     def testDiagonalConnectorCombatRestorationCannotCountAsActualTraversal(self):
         from tests.castle_walkthrough import authoredMap
 

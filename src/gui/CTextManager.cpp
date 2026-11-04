@@ -46,6 +46,8 @@ SDL_Texture *CTextManager::getTexture(const std::string &text, int width, const 
         _textures.clear();
         return nullptr;
     }
+    if (text.empty())
+        return nullptr;
     if (gui->isHighContrast())
         color = {255, 255, 255, 255};
     const auto normalizedRole =

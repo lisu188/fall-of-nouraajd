@@ -13,7 +13,7 @@ import re
 import unittest
 
 from scripts.build_baldurs_gate_city import decodeCityData
-from tests.test_ui_dialogue import custodyScriptedActorFacts
+from tests.test_ui_dialogue import custodyScriptedActorFacts, poisonSourceContentFacts
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
@@ -302,7 +302,25 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
             for name, resource in self.config.items()
             if "sourceSpawnFact" in resource.get("properties", {})
         }
-        self.assertEqual(set(blueprints), {record["id"] for record in definitions})
+        poison = poisonSourceContentFacts(
+            self.config,
+            self.source,
+            self.document,
+            readJson(FIXTURES / "baldurs_gate_city_poison_dialogue.json"),
+            readJson(FIXTURES / "baldurs_gate_city_poison_followup.json"),
+        )
+        self.assertEqual(set(blueprints), {record["id"] for record in definitions} | poison["scriptedFactoryIds"])
+        for name in poison["scriptedFactoryIds"]:
+            properties = blueprints[name]
+            fact = facts[properties["sourceSpawnFact"]]
+            self.assertEqual(("MAREK1", ["AR0115"]), (fact["creature"], fact["areas"]))
+            self.assertEqual(
+                (fact["creature"], fact["areas"]), (properties["sourceCreature"], [properties["sourceArea"]])
+            )
+            self.assertNotIn(name, self.objects)
+            self.assertNotIn(name, {record["id"] for record in definitions})
+            creature = self.source["creatures"][properties["sourceCreature"]]
+            self.assertEqual(self.canonicalInventory(creature["items"]), decodeCityData(properties["sourceInventory"]))
         cells = set(self.objects.values())
         for record in definitions:
             name, area_id = record["id"], record["sourceArea"]
@@ -719,8 +737,15 @@ class BaldursGateCityGeometryTest(unittest.TestCase):
         )
         source_actor_count += sum(record["scopeClassification"] == "city" for record in self.source["campaignNpcs"])
         actor_templates = decodeCityData(restored["config"]["cityClock"]["properties"]["actorDefinitions"])
+        poison = poisonSourceContentFacts(
+            restored["config"],
+            self.source,
+            restored["map"],
+            readJson(FIXTURES / "baldurs_gate_city_poison_dialogue.json"),
+            readJson(FIXTURES / "baldurs_gate_city_poison_followup.json"),
+        )
         self.assertEqual(
-            source_actor_count + len(actor_templates),
+            source_actor_count + len(actor_templates) + len(poison["addedActorIds"]),
             sum("sourceActor" in obj.get("properties", {}) for obj in restored["config"].values()),
         )
         self.assertEqual(

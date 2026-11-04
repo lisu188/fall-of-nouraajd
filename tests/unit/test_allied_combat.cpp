@@ -460,6 +460,106 @@ void testFixedCityLootTransfersGoldAndEquippedPossessionsOnce() {
                 "repeating defeated-creature cleanup must not duplicate source gold, items or experience");
 }
 
+void testSourceKillExperiencePolicyIsOptInAndAwardsExactlyOnce() {
+    struct Case {
+        bool enabled;
+        bool hasSourceXp;
+        int sourceXp;
+        int heroLevel;
+    };
+    const std::vector<Case> cases = {{true, true, 650, 1},  {true, true, 650, 6}, {true, true, 0, 1},
+                                     {false, true, 650, 1}, {true, false, 0, 1},  {true, true, -1, 1},
+                                     {false, false, 0, 6}};
+    for (const auto &test : cases) {
+        Fixture fixture;
+        fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+        fixture.map->setBoolProperty("plugin_citySourceKillXp", test.enabled);
+        fixture.hero->setLevel(test.heroLevel);
+        auto enemy = fixture.actor("sourceXpOwner");
+        enemy->setLevel(3);
+        enemy->setSw(0);
+        if (test.hasSourceXp) {
+            enemy->setNumericProperty("sourceKillXp", test.sourceXp);
+        }
+        const int scaledXp = static_cast<int>(250 * std::pow(2.0, enemy->getScale() - fixture.hero->getLevel()));
+        const int expectedXp = test.enabled && test.hasSourceXp && test.sourceXp >= 0 ? test.sourceXp : scaledXp;
+        const int before = fixture.hero->getExp();
+        enemy->setHp(0);
+        CPlaytestTrace::configure(true, "", 128, true);
+        CFightHandler::defeatedCreature(fixture.hero, enemy);
+        const int after = fixture.hero->getExp();
+        CFightHandler::defeatedCreature(fixture.hero, enemy);
+        int experienceEvents = 0;
+        int rewardEvents = 0;
+        int tracedXp = 0;
+        for (const auto &line : CPlaytestTrace::drain()) {
+            const auto record = json::parse(line);
+            const auto event = record.value("event", std::string());
+            if (event == "experience_changed") {
+                ++experienceEvents;
+                tracedXp += record.at("delta").get<int>();
+            } else if (event == "reward_granted") {
+                ++rewardEvents;
+            }
+        }
+        CPlaytestTrace::configure(false);
+        std::cout << "SOURCE_XP_MATRIX enabled=" << test.enabled << " has=" << test.hasSourceXp
+                  << " source=" << test.sourceXp << " level=" << test.heroLevel << " expected=" << expectedXp
+                  << " actual=" << after - before << " repeat=" << fixture.hero->getExp() - after << "\n";
+        expect_true(after == before + expectedXp && fixture.hero->getExp() == after,
+                    "source XP replaces scaling exactly once, including zero, without a compensating award");
+        expect_true(experienceEvents == (expectedXp == 0 ? 0 : 1) && tracedXp == expectedXp && rewardEvents == 1,
+                    "one native defeat must own one XP transaction and one reward settlement");
+        expect_true(!fixture.map->getObjectByName(enemy->getName()),
+                    "source XP must retain normal dead-actor removal and duplicate-defeat protection");
+    }
+}
+
+void testNativeAllySourceKillExperienceBelongsToHero() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+    fixture.map->setBoolProperty("plugin_citySourceKillXp", true);
+    auto ally = fixture.actor("sourceXpAlly", true, 0, 20);
+    auto enemy = fixture.actor("sourceXpEnemy");
+    enemy->setNumericProperty("sourceKillXp", 650);
+    enemy->setHp(1);
+    auto controller = std::make_shared<CountingMonsterController>();
+    ally->setFightController(controller);
+    auto attack = std::make_shared<NativeAttackProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("sourceXpNativeAttack");
+    attack->setTypeId("Attack");
+    ally->addAction(attack);
+    const int heroBefore = fixture.hero->getExp();
+    const int allyBefore = ally->getExp();
+    const auto result = CFightHandler::fightManyWithAlliesResult(fixture.hero, {enemy}, {ally});
+    std::cout << "SOURCE_XP_ALLY expected=650 actual=" << fixture.hero->getExp() - heroBefore
+              << " ally=" << ally->getExp() - allyBefore << "\n";
+    expect_true(result.outcome == CFightOutcome::AttackerVictory && controller->actions == 1 && attack->calls == 1,
+                "the source XP regression must execute a real native allied attack");
+    expect_true(fixture.hero->getExp() == heroBefore + 650 && ally->getExp() == allyBefore,
+                "an allied source kill must award the hero exactly 650 XP without paying the ally too");
+    CFightHandler::defeatedCreature(fixture.hero, enemy);
+    expect_true(fixture.hero->getExp() == heroBefore + 650 && ally->getExp() == allyBefore,
+                "repeated source kill cleanup must not pay either participant again");
+}
+
+void testSourceKillExperiencePolicyPreservesPlayerDefeatScaling() {
+    Fixture fixture;
+    fixture.map->setBoolProperty("plugin_cityFixedLoot", true);
+    fixture.map->setBoolProperty("plugin_citySourceKillXp", true);
+    fixture.hero->setNumericProperty("sourceKillXp", 650);
+    auto enemy = fixture.actor("playerDefeatXpWinner");
+    const int expectedXp = static_cast<int>(250 * std::pow(2.0, fixture.hero->getScale() - enemy->getLevel()));
+    const int before = enemy->getExp();
+    fixture.hero->setHp(0);
+    CFightHandler::defeatedCreature(enemy, fixture.hero);
+    std::cout << "SOURCE_XP_PLAYER expected=" << expectedXp << " actual=" << enemy->getExp() - before
+              << " recovered=" << fixture.hero->isAlive() << "\n";
+    expect_true(enemy->getExp() == before + expectedXp && fixture.hero->isAlive(),
+                "the opt-in source NPC policy must preserve native player defeat scaling and recovery");
+}
+
 void testAllyEffectsCountAsEncounterProgress() {
     Fixture fixture;
     auto ally = fixture.actor("effectAlly", true);
@@ -1054,6 +1154,7 @@ int main() {
         return 1;
     }
     pybind11::scoped_interpreter interpreter{};
+    std::cout << "EMBEDDED_PYTHON_VERSION " << Py_GetVersion() << "\n";
     initializeAlliedCombatPythonContent();
     testNativeAllyActsAndHeroOwnsRewards();
     testRegisteredPythonAllyActsAndHeroOwnsRewards();
@@ -1065,6 +1166,9 @@ int main() {
     testCancelledAndStaleAlliedEncountersEndControllers();
     testAllyEffectsCountAsEncounterProgress();
     testFixedCityLootTransfersGoldAndEquippedPossessionsOnce();
+    testSourceKillExperiencePolicyIsOptInAndAwardsExactlyOnce();
+    testNativeAllySourceKillExperienceBelongsToHero();
+    testSourceKillExperiencePolicyPreservesPlayerDefeatScaling();
     testCombatCleanupExceptionsEndEveryControllerOnce();
     testCombatCleanupPreservesPrimaryFailureAndCancellation();
     testCombatOwnsPartialControllerStartsAndPreservesTheirFailure();

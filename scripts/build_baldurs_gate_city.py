@@ -14,16 +14,21 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_source.json"
 QUESTS = ROOT / "tests/fixtures/baldurs_gate_city_quests.json"
 CUSTODY_SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_prison_source.json"
+POISON_DIALOGUE = ROOT / "tests/fixtures/baldurs_gate_city_poison_dialogue.json"
+POISON_FOLLOWUP = ROOT / "tests/fixtures/baldurs_gate_city_poison_followup.json"
+POISON_TEXT = ROOT / "tests/fixtures/baldurs_gate_city_poison_semantic.json"
 try:
     from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from scripts.build_baldurs_gate_city_relocations import buildRelocations
     from scripts.build_baldurs_gate_city_regions import buildRegions
     from scripts.build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
+    from scripts.build_baldurs_gate_city_poison import preparePoisonSource
 except ModuleNotFoundError:
     from build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from build_baldurs_gate_city_relocations import buildRelocations
     from build_baldurs_gate_city_regions import buildRegions
     from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
+    from build_baldurs_gate_city_poison import preparePoisonSource
 
 LANDMARKS = {
     "AR0002": "Temple of Helm",
@@ -192,6 +197,9 @@ def definition(class_id, **properties):
 def nativeItem(source_id, item):
     """Native gear conversion; source-specific abilities remain explicit, unaudited obligations."""
     item_type = item.get("item_type", 0)
+    item_flags = item.get("flags")
+    item_flags_known = type(item_flags) is int and 0 <= item_flags <= 0xFFFFFFFF
+    immovable = item_flags_known and not bool(item_flags & 4)
     enchantment = min(5, max(0, item.get("enchantment", 0)))
     equipped_effect_count = item.get("equipped_effect_count")
     equipped_effects_known = type(equipped_effect_count) is int and 0 <= equipped_effect_count <= 65535
@@ -228,7 +236,7 @@ def nativeItem(source_id, item):
         "description": "A city possession converted to native item rules. Its source identity and ownership persist.",
         "plugin_citySourceItem": source_id,
         "plugin_cityItemType": item_type,
-        "plugin_cityTradeable": not bool(item.get("flags", 0) & 2048),
+        "plugin_cityTradeable": not bool(item.get("flags", 0) & 2048) and not immovable,
         "plugin_cityValue": max(0, item.get("price", item.get("base_value", 1))),
         "plugin_citySourceFlags": item.get("flags", 0),
         "plugin_cityLore": item.get("lore", 0),
@@ -244,6 +252,14 @@ def nativeItem(source_id, item):
         ),
         "tags": ["cursed"] if item.get("flags", 0) & 16 else [],
     }
+    if item_flags_known:
+        props.update(
+            plugin_cityItemFlags=item_flags,
+            plugin_cityItemImmovable=immovable,
+            plugin_cityUndroppable=immovable,
+        )
+    if source_id == "BOOK08":
+        class_id = "BaldursGateUnderstandingTome"
     if bonus:
         props["bonus"] = definition("CStats", **bonus)
     if item.get("flags", 0) & 2 and class_id in {"CWeapon", "CSmallWeapon"}:
@@ -1137,6 +1153,15 @@ def compileCity(source, quests=None):
         ],
         "sourceParityEstablished": False,
     }
+    geometry["poisonSourcePortConfigured"] = preparePoisonSource(
+        document,
+        config,
+        source,
+        json.loads(POISON_DIALOGUE.read_text(encoding="utf-8")),
+        json.loads(POISON_FOLLOWUP.read_text(encoding="utf-8")),
+        json.loads(POISON_TEXT.read_text(encoding="utf-8")),
+        usablePosition,
+    )
     protectCityDefinitions(config)
     return document, config, geometry
 
@@ -1187,6 +1212,10 @@ def compileDialogs(config, quests):
         for option in options:
             if option["properties"].get("action") == "finishHistoryChoices":
                 option["properties"]["condition"] = "canFinishHistoryChoices"
+            elif option["properties"].get("action") == "cityInterlude":
+                option["properties"]["condition"] = "canCityInterlude"
+            elif option["properties"].get("action") == "returnFromInterlude":
+                option["properties"]["condition"] = "canReturnFromInterlude"
         for quest_row in questDialogRows(quests, props, name):
             options.append(
                 definition(

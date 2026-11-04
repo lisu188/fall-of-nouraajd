@@ -1023,6 +1023,8 @@ class GameplayBranchDriver:
                 self.steps += 1
             if self.map_name != world:
                 return
+            if arrival == target:
+                return
             if arrival != before and self._traversedTarget(target, arrival):
                 return
             unchanged = unchanged + 1 if arrival == before else 0

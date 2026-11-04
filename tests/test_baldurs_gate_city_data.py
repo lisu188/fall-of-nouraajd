@@ -129,6 +129,116 @@ class BaldursGateCityDataTest(unittest.TestCase):
                 retained = NativeMetadataSlot(encoded).getStringProperty(key)
                 self.assertIsInstance(builder.decodeCityData(retained), expected_type)
 
+    def sourceFlagScenario(self, item_flags=32, instance_flags=0, known=True):
+        model = CityModel()
+        facts = {"flags": item_flags, "item_type": 0, "stack_size": 1, "ability_count": 1}
+        if not known:
+            del facts["flags"]
+        model.resources["cityItemCarrio1"] = builder.nativeItem("CARRIO1", facts)
+        initialize = inspect.getclosurevars(type(model.clock).initializeActor).nonlocals["initializeInventory"]
+        make_item = inspect.getclosurevars(initialize).nonlocals["makeSourceItem"]
+        row = {"item": "CARRIO1", "flags": instance_flags, "charges": [0, 0, 0], "expiration": 0}
+        item = make_item(model.clock, row)
+        model.resources["flagOwner"] = {"class": "CCreature", "properties": {"label": "Flag owner"}}
+        owner = model.createObject("flagOwner")
+        owner.addItem(item)
+        model.game_map.addObject(owner)
+        return model, owner, item, row
+
+    def testSourceNaturalWeaponRetainsHeaderRestrictionAndActualOwner(self):
+        source = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf8"))
+        facts = source["items"]["CARRIO1"]
+        row = source["creatures"]["CARRIO"]["items"][0]
+        self.assertEqual(32, facts["flags"])
+        self.assertEqual(0, row["flags"])
+        self.assertEqual(420, source["creatures"]["CARRIO"]["kill_xp"])
+        props = builder.nativeItem("CARRIO1", facts)["properties"]
+        self.assertEqual(32, props.get("plugin_cityItemFlags"))
+        self.assertTrue(props.get("plugin_cityItemImmovable"))
+        self.assertTrue(props.get("plugin_cityUndroppable"))
+        self.assertFalse(props["plugin_cityTradeable"])
+        model, owner, item, original = self.sourceFlagScenario()
+        self.assertTrue(item.getBoolProperty("plugin_cityUndroppable"))
+        self.assertIs(item, owner.getItems()[0])
+        self.assertEqual(1, len(owner.getItems()))
+        self.assertEqual([0, 0, 0], builder.decodeCityData(item.getStringProperty("plugin_cityCharges")))
+        self.assertEqual(0, item.getNumericProperty("plugin_citySourceFlags"))
+        self.assertEqual(32, item.getNumericProperty("plugin_cityItemFlags"))
+        self.assertEqual({"item": "CARRIO1", "flags": 0, "charges": [0, 0, 0], "expiration": 0}, original)
+        self.assertFalse(model.dialog(owner).canPickpocket())
+
+    def testSourceItemAndInstanceFlagsComposeWithoutReplacingEither(self):
+        for header, instance, undroppable, unstealable in (
+            (32, 0, True, False),
+            (36, 0, False, False),
+            (36, 2, False, True),
+            (36, 8, True, False),
+            (36, 10, True, True),
+            (32, 4, True, False),
+        ):
+            with self.subTest(header=header, instance=instance):
+                model, owner, item, row = self.sourceFlagScenario(header, instance)
+                self.assertEqual(undroppable, item.getBoolProperty("plugin_cityUndroppable"))
+                self.assertEqual(unstealable, item.getBoolProperty("plugin_cityUnstealable"))
+                self.assertEqual(header, item.getNumericProperty("plugin_cityItemFlags"))
+                self.assertEqual(instance, item.getNumericProperty("plugin_citySourceFlags"))
+                self.assertEqual(instance, row["flags"])
+                self.assertEqual(bool(instance & 4), item.getBoolProperty("plugin_cityStolen"))
+                self.assertEqual(not bool(instance & 1), item.getBoolProperty("plugin_cityUnidentified"))
+                self.assertIs(item, owner.getItems()[0])
+
+    def testSourceItemMovementPermissionControlsExistingTheftEligibility(self):
+        for flags, expected in ((32, False), (36, True), (40, False), (44, True)):
+            with self.subTest(flags=flags):
+                model, owner, item, _ = self.sourceFlagScenario(flags)
+                self.assertTrue(model.dialog(owner).canInteract())
+                self.assertEqual(expected, model.dialog(owner).canPickpocket())
+                self.assertIs(item, owner.getItems()[0])
+
+    def testClassicCriticalAndUnsellableFlagsRemainEditionSpecific(self):
+        for flags, tradeable, undroppable in (
+            (5, True, False),
+            (2052, False, False),
+            (32, False, True),
+            (36, True, False),
+        ):
+            with self.subTest(flags=flags):
+                props = builder.nativeItem("TEST", {"flags": flags})["properties"]
+                self.assertEqual(tradeable, props["plugin_cityTradeable"])
+                self.assertEqual(undroppable, props.get("plugin_cityUndroppable", False))
+
+    def testUnknownItemHeaderDoesNotInventAnImmovabilityRestriction(self):
+        props = builder.nativeItem("UNKNOWN", {})["properties"]
+        self.assertNotIn("plugin_cityItemFlags", props)
+        self.assertNotIn("plugin_cityItemImmovable", props)
+        self.assertTrue(props["plugin_cityTradeable"])
+        model, owner, item, _ = self.sourceFlagScenario(known=False)
+        self.assertFalse(item.getBoolProperty("plugin_cityUndroppable"))
+        self.assertTrue(model.dialog(owner).canPickpocket())
+        self.assertIs(item, owner.getItems()[0])
+        _, _, restricted, _ = self.sourceFlagScenario(instance_flags=8, known=False)
+        self.assertTrue(restricted.getBoolProperty("plugin_cityUndroppable"))
+
+    def testSerializedItemProjectionKeepsTheExistingUndroppableFilterInput(self):
+        _, owner, item, _ = self.sourceFlagScenario()
+        restored = json.loads(json.dumps(item.properties))
+        self.assertTrue(restored["plugin_cityUndroppable"])
+        self.assertEqual(32, restored["plugin_cityItemFlags"])
+        self.assertEqual(0, restored["plugin_citySourceFlags"])
+        self.assertIs(item, owner.getItems()[0])
+
+    def testAuthoredNaturalWeaponTemplateCarriesEffectiveRestriction(self):
+        config = json.loads((ROOT / "res/maps/baldursGate/config.json").read_text(encoding="utf8"))
+        props = config["cityItemCarrio1"]["properties"]
+        self.assertEqual(32, props.get("plugin_cityItemFlags"))
+        self.assertTrue(props.get("plugin_cityUndroppable"))
+        self.assertFalse(props["plugin_cityTradeable"])
+        actor = config["cityAr0226Actor8"]["properties"]
+        self.assertEqual(420, actor["sourceKillXp"])
+        rows = builder.decodeCityData(actor["sourceInventory"])
+        self.assertEqual(["CARRIO1"], [row["item"] for row in rows])
+        self.assertEqual(0, rows[0]["flags"])
+
 
 if __name__ == "__main__":
     unittest.main()

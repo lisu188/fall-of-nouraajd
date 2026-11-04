@@ -38,7 +38,24 @@ class PalaceListenerClosureEvidenceTest(unittest.TestCase):
             name: audit.sourceTextFingerprint((PROJECT / "scripts" / name).read_bytes())
             for name in self.evidence["sourceHelpers"]
         }
-        self.assertEqual(self.evidence["sourceHelpers"], actual)
+        self.assertEqual(review.reviewedDeliveryHelpers(self.evidence), actual)
+
+    def testDeliverySuccessorsPreserveTheHistoricalAuditIdentity(self):
+        before = deepcopy(self.evidence)
+        expected = review.reviewedDeliveryHelpers(self.evidence)
+        self.assertEqual(before, self.evidence)
+        self.assertEqual(set(before["sourceHelpers"]), set(expected))
+        changed = {name for name in expected if expected[name] != before["sourceHelpers"][name]}
+        self.assertEqual({"audit_candlekeep_source.py", "build_baldurs_gate_source_fixture.py"}, changed)
+        self.assertEqual(review.REVIEWED_EVIDENCE_SHA256, audit.digest(self.payload))
+
+    def testDeliverySuccessorsRejectChangedHistoricalHelperPins(self):
+        for name in review.REVIEWED_HELPER_DELIVERY_SUCCESSORS:
+            with self.subTest(helper=name):
+                value = deepcopy(self.evidence)
+                value["sourceHelpers"][name]["sha256"] = "0" * 64
+                with self.assertRaisesRegex(ValueError, "Historical helper audit identity"):
+                    review.reviewedDeliveryHelpers(value)
 
     def testReviewedClosure(self):
         result = review.validateReview(self.payload, self.fixtures)
