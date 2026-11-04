@@ -591,6 +591,47 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         )
         self.assertEqual(1, source.count("    testNativeCombatFactWorkRemainsIndexedAndBounded();"))
 
+    def testNativeParticipantInvalidationDetachesAssignedPlayersWithoutRespawn(self):
+        source = (ROOT / "tests/unit/native_combat_boundary_regression.h").read_text(encoding="utf-8")
+        helper = source.split("void invalidateNativeContinuationParticipant(", 1)[1].split(
+            "\nvoid runReversedEffectParticipantContinuationRegression()", 1
+        )[0]
+        for token in (
+            "std::dynamic_pointer_cast<CPlayer>(participant)",
+            "const auto assigned = map->getAssignedPlayer();",
+            "const auto detached = map->detachPlayer();",
+            "assigned == player && detached == player",
+            "map->getAssignedPlayer() == nullptr",
+            "map->getObjectByName(name) == nullptr",
+            "participant->getHp() == hp",
+            "participant->getMana() == mana",
+        ):
+            self.assertIn(token, helper)
+        self.assertIn("} else {\n        map->removeObject(participant);\n    }", helper)
+        self.assertNotIn("setPermanentPlayerDeath", helper)
+        self.assertNotIn("advanceTransitionGeneration", helper)
+        self.assertNotIn("setHp", helper)
+
+    def testNativeParticipantFixtureVerifiesRealForeignAndReplacementOwnership(self):
+        source = (ROOT / "tests/unit/native_combat_boundary_regression.h").read_text(encoding="utf-8")
+        helper = source.split("void invalidateNativeContinuationParticipant(", 1)[1].split(
+            "\nvoid runReversedEffectParticipantContinuationRegression()", 1
+        )[0]
+        for token in (
+            "foreign->getMap()->attachPlayer(player, coords);",
+            "foreign->getMap()->getAssignedPlayer() == player",
+            "foreign->getMap()->getObjectByName(name) == participant",
+            "std::static_pointer_cast<CCreature>(add_test_player(game))",
+            "replacement != participant",
+            "map->getObjectByName(name) == replacement",
+            "map->getAssignedPlayer() == replacement",
+            "map->getObjectByName(name) != participant",
+        ):
+            self.assertIn(token, helper)
+        self.assertEqual(1, source.count("void runReversedEffectParticipantContinuationRegression()"))
+        self.assertEqual(1, source.count("void runActionObserverParticipantRegistrationRegression()"))
+        self.assertEqual(1, source.count("void runRegisteredLethalActionStillSettlesRegression()"))
+
     def testNativeCombatCasesUseTheNormalMetadataFirstProfileRegistry(self):
         expected = ADDITIONAL_CASES["handler"][-12:]
         headers = (

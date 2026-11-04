@@ -201,15 +201,47 @@ void invalidateNativeContinuationParticipant(const std::string &mode, const std:
                                              const std::shared_ptr<CCreature> &participant,
                                              std::shared_ptr<CCreature> &replacement) {
     auto map = game->getMap();
-    const int x = participant->getPosX();
-    const int y = participant->getPosY();
-    map->removeObject(participant);
+    const auto name = participant->getName();
+    const auto coords = participant->getCoords();
+    const int hp = participant->getHp();
+    const int mana = participant->getMana();
+    const auto player = std::dynamic_pointer_cast<CPlayer>(participant);
+    if (player) {
+        // onDestroy respawns assigned players; detach exercises actual registration loss without death.
+        const auto assigned = map->getAssignedPlayer();
+        const auto detached = map->detachPlayer();
+        expect_true(assigned == player && detached == player,
+                    "the invalidation fixture must detach the actual assigned player");
+        expect_true(map->getAssignedPlayer() == nullptr,
+                    "detaching the invalidated player must clear the old map assignment");
+    } else {
+        map->removeObject(participant);
+    }
+    expect_true(map->getObjectByName(name) == nullptr,
+                "the invalidation fixture must remove the original registry entry before transfer or replacement");
     if (mode == "transfer") {
         participant->setGame(foreign);
-        foreign->getMap()->addObject(participant);
+        if (player) {
+            foreign->getMap()->attachPlayer(player, coords);
+        } else {
+            foreign->getMap()->addObject(participant);
+        }
+        expect_true(participant->getGame() == foreign && participant->getMap() == foreign->getMap() &&
+                        foreign->getMap()->getObjectByName(name) == participant &&
+                        (!player || foreign->getMap()->getAssignedPlayer() == player),
+                    "transfer must register the original participant with its actual foreign owner");
     } else if (mode == "replacement") {
-        replacement = add_test_creature(game, participant->getName(), x, y);
+        replacement = player ? std::static_pointer_cast<CCreature>(add_test_player(game))
+                             : add_test_creature(game, name, coords.x, coords.y);
+        replacement->relocateWithoutMoveHooks(coords);
+        expect_true(replacement != participant && replacement->getName() == name &&
+                        map->getObjectByName(name) == replacement && replacement->getGame() == game &&
+                        replacement->getMap() == map && (!player || map->getAssignedPlayer() == replacement),
+                    "replacement must register a distinct original-name participant and the actual player assignment");
     }
+    expect_true(map->getObjectByName(name) != participant && participant->getHp() == hp &&
+                    participant->getMana() == mana,
+                "actual invalidation must preserve committed HP and mana without respawn or stale registration");
 }
 
 void runReversedEffectParticipantContinuationRegression() {
