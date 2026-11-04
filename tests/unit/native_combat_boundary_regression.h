@@ -17,6 +17,175 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+class NativeEncounterPulseProbe : public CEffect {
+  public:
+    int ticks = 0;
+    void onEffect() override {
+        ++ticks;
+        hurtVictim(1);
+    }
+};
+
+class NativeEncounterPulseActionProbe : public CInteraction {
+  public:
+    std::shared_ptr<NativeEncounterPulseProbe> pulse;
+    void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override {
+        pulse->setCaster(first);
+        pulse->setVictim(second);
+        pulse->setDuration(1);
+        pulse->apply(second);
+    }
+};
+
+class NativeEncounterUseActionProbe : public NoProgressFightController {
+  public:
+    std::shared_ptr<CInteraction> action;
+    int controls = 0;
+    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        ++controls;
+        if (controls == 1) {
+            me->useAction(action, opponent);
+        }
+        return true;
+    }
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return controls > 1; }
+};
+
+void runFactOnlyEncounterGenerationContinuationRegression() {
+    for (bool lethal : {false, true}) {
+        auto game = load_empty_game();
+        auto map = game->getMap();
+        auto attacker = add_test_creature(game, "unitFactOnlyAttacker");
+        auto opponent = add_test_creature(game, "unitFactOnlyOpponent", 1, 0);
+        attacker->getBaseStats()->setAgility(100);
+        attacker->getBaseStats()->setBlock(0);
+        opponent->getBaseStats()->setBlock(0);
+        opponent->getBaseStats()->setNormalResist(0);
+        opponent->setHp(lethal ? 1 : 10);
+        auto pulse = std::make_shared<NativeEncounterPulseProbe>();
+        pulse->setGame(game);
+        auto action = std::make_shared<NativeEncounterPulseActionProbe>();
+        action->setGame(game);
+        action->setName("unitFactOnlyPulseAction");
+        action->setManaCost(3);
+        action->setOffensive(true);
+        action->pulse = pulse;
+        attacker->addAction(action);
+        attacker->setMana(3);
+        auto attacker_control = std::make_shared<NativeEncounterUseActionProbe>();
+        attacker_control->action = action;
+        attacker->setFightController(attacker_control);
+        auto reply = std::make_shared<NativeArmorPacketProbe>();
+        reply->setGame(game);
+        reply->setName("unitFactOnlyReply");
+        opponent->addAction(reply);
+        auto opponent_control = std::make_shared<NativeEncounterUseActionProbe>();
+        opponent_control->action = reply;
+        opponent->setFightController(opponent_control);
+        auto loot = add_unit_loot(game, opponent, "unitFactOnlyOwnedLoot");
+        const int attacker_exp = attacker->getExp();
+        const int attacker_gold = attacker->getGold();
+        int callbacks = 0;
+        const auto generation = game->getContext()->captureTransitionGeneration();
+        auto hook =
+            std::make_shared<CCustomTrigger>(opponent->getName(), "onCombatPacket", [&](auto object, auto event) {
+                auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+                expect_true(object == opponent && caused && caused->getCause() == attacker &&
+                                event->getObjectProperty("combatProducer") == pulse && pulse->ticks == 1 &&
+                                pulse->getTimeLeft() == 0 && attacker->getMana() == 0,
+                            "the actual completed effect pulse must publish its real producer and committed payment");
+                ++callbacks;
+                game->getContext()->advanceTransitionGeneration();
+            });
+        hook->setName("unitFactOnlyGenerationObserver");
+        map->getEventHandler()->registerTrigger(hook);
+        map->setBoolProperty("nativeCombatFacts", true);
+        expect_true(!map->getBoolProperty("guardNativeEncounterSaves") &&
+                        !map->getBoolProperty("plugin_cityAlliedCombat"),
+                    "the regression must opt into facts without native save admission or configured allies");
+        const auto result = CFightHandler::fightManyResult(attacker, {opponent});
+        expect_true(result.outcome == CFightOutcome::Cancelled && callbacks == 1 &&
+                        !game->getContext()->isTransitionGenerationCurrent(generation) &&
+                        attacker_control->controls == 1 && opponent_control->controls == 0 && attacker->getHp() == 10 &&
+                        attacker->getMana() == 0 && opponent->getHp() == (lethal ? 0 : 9),
+                    "fact-only encounter invalidation must retain committed damage and stop later controller work");
+        expect_true(map->getObjectByName(opponent->getName()) == opponent && opponent->getItems().count(loot) == 1 &&
+                        attacker->countItems("unitFactOnlyOwnedLoot") == 0 && attacker->getExp() == attacker_exp &&
+                        attacker->getGold() == attacker_gold,
+                    "stale encounter continuation must not remove a dead receiver or settle its rewards");
+    }
+}
+
+void runEffectObserverSelectedOpponentContinuationRegression() {
+    for (bool save_guard : {false, true}) {
+        for (const auto &mode : {"removal", "transfer", "replacement"}) {
+            auto game = load_empty_game();
+            auto foreign = load_empty_game();
+            auto map = game->getMap();
+            auto attacker = add_test_creature(game, "unitSelectedTargetAttacker");
+            auto selected = add_test_creature(game, "unitSelectedTargetCaster", 1, 0);
+            attacker->getBaseStats()->setAgility(100);
+            attacker->getBaseStats()->setBlock(0);
+            attacker->getBaseStats()->setNormalResist(0);
+            selected->getBaseStats()->setBlock(0);
+            auto pulse = std::make_shared<NativeEncounterPulseProbe>();
+            pulse->setGame(game);
+            pulse->setName("unitSelectedTargetPulse");
+            pulse->setTypeId("unitSelectedTargetPulse");
+            pulse->setCumulative(true);
+            pulse->setDuration(1);
+            pulse->setCaster(selected);
+            pulse->setVictim(attacker);
+            attacker->addEffect(pulse);
+            auto action = std::make_shared<NativeArmorPacketProbe>();
+            action->setGame(game);
+            action->setName("unitSelectedTargetAttack");
+            attacker->addAction(action);
+            auto controller = std::make_shared<NativeEncounterUseActionProbe>();
+            controller->action = action;
+            attacker->setFightController(controller);
+            auto loot = add_unit_loot(game, selected, "unitSelectedTargetOwnedLoot");
+            const int exp = attacker->getExp();
+            const int gold = attacker->getGold();
+            const auto generation = game->getContext()->captureTransitionGeneration();
+            int callbacks = 0;
+            std::shared_ptr<CCreature> replacement;
+            auto hook =
+                std::make_shared<CCustomTrigger>(attacker->getName(), "onCombatPacket", [&](auto object, auto event) {
+                    auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+                    expect_true(object == attacker && caused && caused->getCause() == selected &&
+                                    event->getObjectProperty("combatProducer") == pulse && attacker->getHp() == 9,
+                                "the original attacker effect must publish its actual selected-opponent caster");
+                    ++callbacks;
+                    map->removeObject(selected);
+                    if (std::string(mode) == "transfer") {
+                        selected->setGame(foreign);
+                        foreign->getMap()->addObject(selected);
+                    } else if (std::string(mode) == "replacement") {
+                        replacement = add_test_creature(game, selected->getName(), 1, 0);
+                    }
+                });
+            hook->setName("unitSelectedTargetInvalidator");
+            map->getEventHandler()->registerTrigger(hook);
+            map->setBoolProperty("guardNativeEncounterSaves", save_guard);
+            map->setBoolProperty("nativeCombatFacts", true);
+            const auto result = CFightHandler::fightManyResult(attacker, {selected});
+            expect_true(result.outcome == CFightOutcome::Cancelled && callbacks == 1 && controller->controls == 0 &&
+                            action->performed == 0 && pulse->ticks == 1 && pulse->getTimeLeft() == 0 &&
+                            attacker->getHp() == 9 && selected->getHp() == 10 &&
+                            map->getObjectByName(attacker->getName()) == attacker &&
+                            game->getContext()->isTransitionGenerationCurrent(generation),
+                        "a removed, transferred or replaced selected target cannot reach the next attack controller");
+            expect_true(!replacement || replacement->getHp() == 10,
+                        "the same-name replacement must remain outside the old encounter");
+            expect_true(attacker->getExp() == exp && attacker->getGold() == gold &&
+                            selected->getItems().count(loot) == 1 &&
+                            attacker->countItems("unitSelectedTargetOwnedLoot") == 0,
+                        "selected-target invalidation cannot grant stale defeat rewards");
+        }
+    }
+}
+
 void testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation() {
     for (const auto &mode : {"generation", "removal", "transfer", "shutdown"}) {
         auto game = load_empty_game();
@@ -88,6 +257,8 @@ void testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation() {
                         armor_action->performed == 1,
                     "invalidation stops later listeners and facts; no old damage or proc runs after the observer");
     }
+    runFactOnlyEncounterGenerationContinuationRegression();
+    runEffectObserverSelectedOpponentContinuationRegression();
 }
 
 void testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies() {

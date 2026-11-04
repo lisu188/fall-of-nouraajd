@@ -765,6 +765,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     }
     CFightHandler::resetCombatHistory(encounterMap);
     const bool alliedEncounter = !allies.empty();
+    const bool factEncounter = encounterMap && encounterMap->getBoolProperty("nativeCombatFacts");
     std::weak_ptr<CGame> encounterGame = attacker->getGame();
     auto game = encounterGame.lock();
     std::weak_ptr<CGameContext> encounterContext = game ? game->getContext() : nullptr;
@@ -774,15 +775,18 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         if (nativeAdmission && !nativeAdmission->isCurrent()) {
             return false;
         }
-        if (!alliedEncounter) {
+        if (!alliedEncounter && !factEncounter) {
             return true;
         }
         auto owner = encounterGame.lock();
         auto context = encounterContext.lock();
-        return owner && context && context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
+        return owner && context &&
+               (!factEncounter || (context->isActive() && owner->getContext() == context &&
+                                   encounterMap->getBoolProperty("nativeCombatFacts"))) &&
+               context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
     };
     std::function<bool()> effectContext;
-    if (nativeAdmission) {
+    if (nativeAdmission || factEncounter) {
         effectContext = contextIsCurrent;
     }
     const auto status = [&](const std::string &message, bool initiative = true) {
@@ -923,6 +927,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 }
                 auto effect_result = apply_effects_with_result(attacker, effectContext);
                 if (effect_result.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                if (factEncounter && (!contextIsCurrent() || !is_active_participant(encounterMap, current))) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
                 }
