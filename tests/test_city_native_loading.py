@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 import textwrap
 from types import SimpleNamespace
@@ -91,8 +92,20 @@ def book08RuntimeFixture(root):
         raise AssertionError("BOOK08 component tests require the disabled shipping defaults")
     properties["plugin_cityPoisonSourceEnabled"] = True
     properties["plugin_cityBook08NativeConversionEnabled"] = True
-    with tempfile.TemporaryDirectory(prefix="book08-native-fixture-", dir=resources) as temporary:
-        private = Path(temporary).resolve(strict=True)
+    private = Path(tempfile.mkdtemp(prefix="book08-native-fixture-", dir=resources))
+
+    def requireOwnedPrivate():
+        if (
+            private.parent != resources
+            or not private.name.startswith("book08-native-fixture-")
+            or private.is_symlink()
+            or not private.is_dir()
+            or private.resolve(strict=True) != private
+        ):
+            raise AssertionError("BOOK08 fixture retention and cleanup require the original owned directory")
+
+    requireOwnedPrivate()
+    try:
         for relative, source in files.items():
             target = private / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -104,14 +117,34 @@ def book08RuntimeFixture(root):
         )
         with patch.dict(os.environ, GAME_BUILD_DIR=str(private), GAME_BUILD_CONFIG=""):
             yield private
+    except BaseException:
+        requireOwnedPrivate()
+        print(f"Retained failed BOOK08 native fixture: {private}", file=sys.stderr, flush=True)
+        raise
+    else:
+        requireOwnedPrivate()
+        shutil.rmtree(private)
 
 
 class CityNativeLoadingRuntimeTest(unittest.TestCase):
     runChild = PythonCallbackLifecycleTest.runChild
 
-    def runBook08Child(self, code, *, return_stderr=False):
+    def runBook08Child(self, code, *, return_stderr=False, expected_marker=None):
         with book08RuntimeFixture(ROOT):
-            return self.runChild(code, return_stderr=return_stderr)
+            result = self.runChild(code, return_stderr=return_stderr)
+            if expected_marker is not None:
+                self.assertTrue(return_stderr, "BOOK08 parent acceptance requires diagnostic stderr")
+                output, errors = result
+                self.assertIn(expected_marker, output)
+                self.assertNotIn("Traceback", errors)
+                self.assertNotIn("PoisonBindingChanged", errors)
+                self.assertNotIn("Python callback failed", errors)
+                self.assertNotIn("IndexError", errors)
+                for line in output.splitlines():
+                    if line.startswith("book08-native-"):
+                        self.assertLess(len(line), 8192)
+                        print(line, flush=True)
+            return result
 
     def testCityQuestHintNativeDispatchReadsNonvirtualBackingTextOnce(self):
         output, errors = self.runChild(
@@ -511,7 +544,7 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
         )
 
     def testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce(self):
-        output, errors = self.runBook08Child(
+        self.runBook08Child(
             """
             import json
             import os
@@ -698,19 +731,11 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 instance.getContext().shutdown()
             """,
             return_stderr=True,
+            expected_marker="book08-native-use-once passed",
         )
-        self.assertIn("book08-native-use-once passed", output)
-        self.assertNotIn("Traceback", errors)
-        self.assertNotIn("PoisonBindingChanged", errors)
-        self.assertNotIn("Python callback failed", errors)
-        self.assertNotIn("IndexError", errors)
-        for line in output.splitlines():
-            if line.startswith("book08-native-"):
-                self.assertLess(len(line), 8192)
-                print(line, flush=True)
 
     def testBook08SpentStateSurvivesNativeSaveReload(self):
-        output, errors = self.runBook08Child(
+        self.runBook08Child(
             """
             import json
             import os
@@ -932,28 +957,13 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 if restored is not None:
                     restored.getContext().shutdown()
                 instance.getContext().shutdown()
-                if completed:
-                    owned_save = fixture_root / 'save'
-                    assert owned_save.resolve(strict=True) == owned_save and owned_save.is_dir()
-                    for suffix in ('.json', '.json.bak'):
-                        owned_path = owned_save / (slot + suffix)
-                        assert not owned_path.is_symlink() and owned_path.resolve().parent == owned_save
-                        owned_path.unlink(missing_ok=True)
             """,
             return_stderr=True,
+            expected_marker="book08-native-spent-save-reload passed",
         )
-        self.assertIn("book08-native-spent-save-reload passed", output)
-        self.assertNotIn("Traceback", errors)
-        self.assertNotIn("PoisonBindingChanged", errors)
-        self.assertNotIn("Python callback failed", errors)
-        self.assertNotIn("IndexError", errors)
-        for line in output.splitlines():
-            if line.startswith("book08-native-"):
-                self.assertLess(len(line), 8192)
-                print(line, flush=True)
 
     def testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses(self):
-        output, errors = self.runBook08Child(
+        self.runBook08Child(
             """
             import json
             import os
@@ -1185,25 +1195,10 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 if restored is not None:
                     restored.getContext().shutdown()
                 instance.getContext().shutdown()
-                if completed:
-                    owned_save = fixture_root / 'save'
-                    assert owned_save.resolve(strict=True) == owned_save and owned_save.is_dir()
-                    for suffix in ('.json', '.json.bak'):
-                        owned_path = owned_save / (slot + suffix)
-                        assert not owned_path.is_symlink() and owned_path.resolve().parent == owned_save
-                        owned_path.unlink(missing_ok=True)
             """,
             return_stderr=True,
+            expected_marker="book08-native-unspent-save-reload-use passed",
         )
-        self.assertIn("book08-native-unspent-save-reload-use passed", output)
-        self.assertNotIn("Traceback", errors)
-        self.assertNotIn("PoisonBindingChanged", errors)
-        self.assertNotIn("Python callback failed", errors)
-        self.assertNotIn("IndexError", errors)
-        for line in output.splitlines():
-            if line.startswith("book08-native-"):
-                self.assertLess(len(line), 8192)
-                print(line, flush=True)
 
     def runBook08HandInOrder(self, order):
         """Native components in the existing private initial-config fixture; no public source activation."""
@@ -1428,22 +1423,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             finally:
                 for current in reversed(instances):
                     current.getContext().shutdown()
-                if completed:
-                    owned_save = fixture_root / 'save'
-                    assert owned_save.resolve(strict=True) == owned_save and owned_save.is_dir()
-                    for suffix in ('.json', '.json.bak'):
-                        owned_path = owned_save / (slot + suffix)
-                        assert not owned_path.is_symlink() and owned_path.resolve().parent == owned_save
-                        owned_path.unlink(missing_ok=True)
             """)
-        output, errors = self.runBook08Child(code, return_stderr=True)
-        self.assertIn("book08-native-" + order + " passed", output)
-        for error in ("Traceback", "PoisonBindingChanged", "Python callback failed", "IndexError"):
-            self.assertNotIn(error, errors)
-        for line in output.splitlines():
-            if line.startswith("book08-native-"):
-                self.assertLess(len(line), 8192)
-                print(line, flush=True)
+        self.runBook08Child(code, return_stderr=True, expected_marker="book08-native-" + order + " passed")
 
     def testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave(self):
         self.runBook08HandInOrder("useBeforeHandIn")
@@ -1453,6 +1434,230 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
 
 
 class CityNativeLoadingSourceTest(unittest.TestCase):
+    def book08ParentAcceptanceFixture(self, method_name, marker, mode):
+        from contextlib import redirect_stderr, redirect_stdout
+        import io
+
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_bytes()
+        with tempfile.TemporaryDirectory(prefix="nouraajd-book08-parent-source-") as temporary:
+            root = Path(temporary).resolve(strict=True)
+            build = root / "cmake-build-release"
+            for name in ("config", "maps/baldursGate", "plugins"):
+                (build / name).mkdir(parents=True, exist_ok=True)
+            (root / "play.py").write_bytes(play_source)
+            config = {
+                "cityClock": {
+                    "properties": {
+                        "plugin_cityPoisonSourceEnabled": False,
+                        "plugin_cityBook08NativeConversionEnabled": False,
+                    }
+                }
+            }
+            (build / "maps/baldursGate/config.json").write_bytes(json.dumps(config).encode())
+            (build / "_game.cpython-fixture.so").write_bytes(b"synthetic module; never import")
+            original = {path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            case = CityNativeLoadingRuntimeTest(method_name)
+            observed = {}
+
+            def child(code, **kwargs):
+                self.assertEqual({"return_stderr": True}, kwargs, "Keep the shared30-second native child contract")
+                observed["private"] = private = Path(os.environ["GAME_BUILD_DIR"])
+                observed["save"] = private / "save/parent-evidence.json"
+                observed["backup"] = private / "save/parent-evidence.json.bak"
+                observed["save"].write_bytes(b"unique zero-exit parent-rejected save")
+                observed["backup"].write_bytes(b"unique zero-exit parent-rejected backup")
+                output = marker + "\n"
+                errors = "Python callback failed" if mode == "callback" else ""
+                if mode == "missing-marker":
+                    output = "child exited without the required completion marker\n"
+                elif mode == "long-line":
+                    output += "book08-native-" + "x" * 8192 + "\n"
+                return output, errors
+
+            diagnostics = io.StringIO()
+            with patch.dict(globals(), {"ROOT": root}), patch.dict(
+                os.environ, GAME_BUILD_DIR=str(build), GAME_BUILD_CONFIG=""
+            ), patch.object(case, "runChild", side_effect=child) as runner, redirect_stderr(
+                diagnostics
+            ), redirect_stdout(
+                io.StringIO()
+            ):
+                environment = {key: os.environ[key] for key in ("GAME_BUILD_DIR", "GAME_BUILD_CONFIG")}
+                if mode == "accepted":
+                    getattr(case, method_name)()
+                else:
+                    with self.assertRaises(AssertionError):
+                        getattr(case, method_name)()
+                self.assertEqual(environment, {key: os.environ[key] for key in environment})
+            runner.assert_called_once()
+            private = observed["private"]
+            self.assertEqual(build.resolve(strict=True), private.parent)
+            if mode == "accepted":
+                self.assertFalse(private.exists(), "Only parent-accepted components may clean their fixture")
+                self.assertEqual("", diagnostics.getvalue())
+            else:
+                self.assertTrue(private.is_dir(), "Parent-rejected zero-exit child must retain its owned fixture")
+                self.assertEqual(b"unique zero-exit parent-rejected save", observed["save"].read_bytes())
+                self.assertEqual(b"unique zero-exit parent-rejected backup", observed["backup"].read_bytes())
+                self.assertIn(f"Retained failed BOOK08 native fixture: {private}\n", diagnostics.getvalue())
+            self.assertEqual(
+                original,
+                {
+                    path.relative_to(root): path.read_bytes()
+                    for path in root.rglob("*")
+                    if path.is_file() and not path.is_relative_to(private)
+                },
+            )
+
+    def testBook08AllFiveParentCallbackRejectionsRetainOwnedFixtureAndSave(self):
+        for method, marker in (
+            ("testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce", "book08-native-use-once passed"),
+            ("testBook08SpentStateSurvivesNativeSaveReload", "book08-native-spent-save-reload passed"),
+            (
+                "testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
+                "book08-native-unspent-save-reload-use passed",
+            ),
+            ("testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave", "book08-native-useBeforeHandIn passed"),
+            ("testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave", "book08-native-handInBeforeUse passed"),
+        ):
+            with self.subTest(method=method):
+                self.book08ParentAcceptanceFixture(method, marker, "callback")
+
+    def testBook08ParentMarkerAndLineFailuresRetainButAcceptedResultCleans(self):
+        for mode in ("missing-marker", "long-line", "accepted"):
+            with self.subTest(mode=mode):
+                self.book08ParentAcceptanceFixture(
+                    "testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave",
+                    "book08-native-useBeforeHandIn passed",
+                    mode,
+                )
+
+    def testBook08AllFiveCapturedProgramsKeepSavesUntilParentAcceptance(self):
+        import io
+        from contextlib import redirect_stdout
+
+        for method, marker in (
+            ("testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce", "book08-native-use-once passed"),
+            ("testBook08SpentStateSurvivesNativeSaveReload", "book08-native-spent-save-reload passed"),
+            (
+                "testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
+                "book08-native-unspent-save-reload-use passed",
+            ),
+            ("testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave", "book08-native-useBeforeHandIn passed"),
+            ("testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave", "book08-native-handInBeforeUse passed"),
+        ):
+            with self.subTest(method=method):
+                case = CityNativeLoadingRuntimeTest(method)
+                programs = []
+
+                def capture(program, **kwargs):
+                    programs.append((program, kwargs))
+                    return marker, ""
+
+                with patch.object(case, "runBook08Child", side_effect=capture), redirect_stdout(io.StringIO()):
+                    getattr(case, method)()
+                self.assertEqual(1, len(programs))
+                program, kwargs = programs[0]
+                tree = ast.parse(textwrap.dedent(program))
+                calls = [ast.unparse(node.func) for node in ast.walk(tree) if isinstance(node, ast.Call)]
+                self.assertTrue(any(call.endswith(".shutdown") for call in calls), "Retain native context shutdown")
+                self.assertFalse(
+                    any(call.endswith((".unlink", ".rmdir", ".rmtree")) for call in calls),
+                    "Child saves must survive until parent acceptance and owned fixture cleanup",
+                )
+                self.assertEqual({"return_stderr": True, "expected_marker": marker}, kwargs)
+
+    def testBook08RuntimeFixtureRetainsActualFailedSaveAndReportsOwnedPath(self):
+        from contextlib import redirect_stderr
+        import io
+        import subprocess
+
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        for failure in (AssertionError("native child failed"), subprocess.TimeoutExpired(["synthetic-child"], 30)):
+            with self.subTest(failure=type(failure).__name__), tempfile.TemporaryDirectory(
+                prefix="nouraajd-book08-failed-source-"
+            ) as temporary:
+                root = Path(temporary).resolve(strict=True)
+                build = root / "cmake-build-release"
+                for directory in ("config", "maps/baldursGate", "plugins"):
+                    (build / directory).mkdir(parents=True, exist_ok=True)
+                (root / "play.py").write_text(
+                    "raise AssertionError('discovery must never import play')\n" + play_source, encoding="utf8"
+                )
+                config = {
+                    "cityClock": {
+                        "properties": {
+                            "plugin_cityPoisonSourceEnabled": False,
+                            "plugin_cityBook08NativeConversionEnabled": False,
+                        }
+                    }
+                }
+                (build / "maps/baldursGate/config.json").write_text(json.dumps(config), encoding="utf8")
+                (build / "_game.cpython-fixture.so").write_bytes(b"synthetic extension; never load")
+                source_before = {
+                    path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
+                }
+                with patch.dict(os.environ, GAME_BUILD_DIR=str(build), GAME_BUILD_CONFIG=""):
+                    environment_before = {key: os.environ.get(key) for key in ("GAME_BUILD_DIR", "GAME_BUILD_CONFIG")}
+                    diagnostics = io.StringIO()
+                    with redirect_stderr(diagnostics), self.assertRaises(type(failure)) as caught:
+                        with book08RuntimeFixture(root) as private:
+                            failed_save = private / "save/failed-book-order.json"
+                            failed_backup = private / "save/failed-book-order.json.bak"
+                            failed_save.write_bytes(b'{"failedState":"unique-native-save"}')
+                            failed_backup.write_bytes(b"unique-before-save-backup")
+                            raise failure
+                    self.assertIs(failure, caught.exception)
+                    self.assertEqual(environment_before, {key: os.environ.get(key) for key in environment_before})
+                self.assertEqual(build.resolve(strict=True), private.parent)
+                self.assertTrue(private.is_dir(), "A failed native child must retain its unique fixture and save")
+                self.assertFalse(private.is_symlink())
+                self.assertEqual(private.resolve(strict=True), private)
+                self.assertEqual(b'{"failedState":"unique-native-save"}', failed_save.read_bytes())
+                self.assertEqual(b"unique-before-save-backup", failed_backup.read_bytes())
+                self.assertIn(f"Retained failed BOOK08 native fixture: {private}\n", diagnostics.getvalue())
+                self.assertEqual(
+                    source_before,
+                    {
+                        path.relative_to(root): path.read_bytes()
+                        for path in root.rglob("*")
+                        if path.is_file() and not path.is_relative_to(private)
+                    },
+                )
+
+    def testBook08RuntimeFixtureRejectsAnUnownedDirectoryBeforeCopyOrCleanup(self):
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-book08-owned-source-") as temporary:
+            root = Path(temporary).resolve(strict=True)
+            build = root / "cmake-build-release"
+            for directory in ("config", "maps/baldursGate", "plugins"):
+                (build / directory).mkdir(parents=True, exist_ok=True)
+            (root / "play.py").write_text(play_source, encoding="utf8")
+            config = {
+                "cityClock": {
+                    "properties": {
+                        "plugin_cityPoisonSourceEnabled": False,
+                        "plugin_cityBook08NativeConversionEnabled": False,
+                    }
+                }
+            }
+            (build / "maps/baldursGate/config.json").write_text(json.dumps(config), encoding="utf8")
+            (build / "_game.cpython-fixture.so").write_bytes(b"synthetic extension; never load")
+            unrelated = root / "unrelated-owned-test-fixture"
+            unrelated.mkdir()
+            marker = unrelated / "preserve.txt"
+            marker.write_bytes(b"unrelated disposable test marker")
+            before = {path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            with patch.dict(os.environ, GAME_BUILD_DIR=str(build), GAME_BUILD_CONFIG=""), patch.object(
+                tempfile, "mkdtemp", return_value=str(unrelated)
+            ):
+                with self.assertRaisesRegex(AssertionError, "original owned directory"):
+                    with book08RuntimeFixture(root):
+                        pass
+            self.assertEqual(
+                before, {path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            )
+
     def book08NativeOrderProgram(self, method_name, order):
         self.assertTrue(hasattr(CityNativeLoadingRuntimeTest, method_name), "Native order coverage must be registered")
         case = CityNativeLoadingRuntimeTest(method_name)
@@ -1466,7 +1671,11 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
             getattr(case, method_name)()
         self.assertEqual(1, len(programs), "Each component case retains one bounded native child")
         program, kwargs = programs[0]
-        self.assertEqual({"return_stderr": True}, kwargs, "Preserve the shared30-second child deadline")
+        self.assertEqual(
+            {"return_stderr": True, "expected_marker": "book08-native-" + order + " passed"},
+            kwargs,
+            "Preserve the shared30-second child deadline and validate inside the fixture",
+        )
         tree = ast.parse(program)
         self.assertIsInstance(tree.body[0], ast.Assign)
         self.assertEqual(order, ast.literal_eval(tree.body[0].value))
