@@ -1849,6 +1849,63 @@ void testEquipmentTailChecksKeepFixedWork() {
               << " factories=" << factories << "\n";
     context->shutdown();
 }
+void testMapTileTraversalProbeCountsActualSnapshotsAndVisits() {
+    constexpr int WIDTH = 4;
+    constexpr int HEIGHT = 3;
+    constexpr std::size_t TILES = WIDTH * HEIGHT;
+    auto fixture = make_open_map(WIDTH, HEIGHT);
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    performance_guard::resetMapTileTraversalProbe();
+    performance_guard::disableMapTileTraversalProbe();
+    const auto disabled_snapshot = fixture.map->getTiles();
+    std::set<std::shared_ptr<CTile>> disabled_visits;
+    fixture.map->forTiles([&](auto tile) { disabled_visits.insert(tile); });
+    const auto disabled = performance_guard::mapTileTraversalWork();
+    expect_true(disabled_snapshot.size() == TILES && disabled_visits == disabled_snapshot && disabled.snapshots == 0 &&
+                    disabled.snapshotReferences == 0 && disabled.directVisits == 0,
+                "disabled tile probes preserve the real snapshot and traversal without recording work");
+
+    performance_guard::resetMapTileTraversalProbe();
+    const auto snapshot = fixture.map->getTiles();
+    const auto repeated = fixture.map->getTiles();
+    std::set<std::shared_ptr<CTile>> visits;
+    fixture.map->forTiles([&](auto tile) { visits.insert(tile); });
+    int filtered_visits = 0;
+    fixture.map->forTiles([&](auto) { ++filtered_visits; }, [](auto tile) { return tile->getCoords().x == 0; });
+    const auto enabled = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(snapshot == disabled_snapshot && repeated == snapshot && visits == snapshot &&
+                    filtered_visits == HEIGHT && enabled.snapshots == 2 && enabled.snapshotReferences == TILES * 2 &&
+                    enabled.directVisits == TILES + HEIGHT,
+                "enabled probes count actual snapshot references and accepted direct callback visits exactly");
+
+    fixture.map->getTiles();
+    fixture.map->forTiles([](auto) {});
+    const auto stopped = performance_guard::mapTileTraversalWork();
+    expect_true(stopped.snapshots == enabled.snapshots && stopped.snapshotReferences == enabled.snapshotReferences &&
+                    stopped.directVisits == enabled.directVisits,
+                "disabled probes stop recording subsequent real tile work");
+    performance_guard::resetMapTileTraversalProbe();
+    const auto reset = performance_guard::mapTileTraversalWork();
+    auto empty_map = std::make_shared<CMap>();
+    const auto empty_snapshot = empty_map->getTiles();
+    empty_map->forTiles([](auto) {});
+    const auto empty = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(reset.snapshots == 0 && reset.snapshotReferences == 0 && reset.directVisits == 0 &&
+                    empty_snapshot.empty() && empty.snapshots == 1 && empty.snapshotReferences == 0 &&
+                    empty.directVisits == 0,
+                "reset clears previous work and even an empty snapshot counts as a real request");
+    expect_true(fixture.map->getNavigationRevision() == revision && fixture.map->getTurn() == turn &&
+                    fixture.game->getMapBindingEpoch() == epoch,
+                "tile instrumentation adds no navigation, turn or map-binding publication");
+    std::cout << "tile traversal probe guard: tiles=" << TILES << " snapshots=" << enabled.snapshots
+              << " references=" << enabled.snapshotReferences << " directVisits=" << enabled.directVisits << "\n";
+    fixture.game->getContext()->shutdown();
+}
+
 void testNativeCombatFactWorkRemainsIndexedAndBounded() {
     auto fixture = make_open_map(8, 8);
     auto attacker = make_actor(fixture, "unitFactAttacker", Coords(0, 0, 0), "");
@@ -1956,5 +2013,6 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testMapTileTraversalProbeCountsActualSnapshotsAndVisits();
     testNativeCombatFactWorkRemainsIndexedAndBounded();
 }

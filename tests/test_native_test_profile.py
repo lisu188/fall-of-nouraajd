@@ -534,6 +534,63 @@ class NativeTestProfileSourceTest(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError, "Configured native profiling fixture is unavailable"):
                     MissingFixture.setUpClass()
 
+    def testNativeMapImplementsTheCombatFactTileWorkProbe(self):
+        header = (ROOT / "src/core/CMap.h").read_text(encoding="utf-8")
+        source = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        for field in ("snapshots", "snapshotReferences", "directVisits"):
+            self.assertRegex(header, rf"std::size_t {field} = 0;")
+        for declaration in (
+            "void resetMapTileTraversalProbe();",
+            "MapTileTraversalWork mapTileTraversalWork();",
+            "void disableMapTileTraversalProbe();",
+        ):
+            self.assertEqual(1, header.count(declaration))
+        for definition in (
+            "void performance_guard::resetMapTileTraversalProbe()",
+            "performance_guard::MapTileTraversalWork performance_guard::mapTileTraversalWork()",
+            "void performance_guard::disableMapTileTraversalProbe()",
+        ):
+            self.assertEqual(1, source.count(definition))
+        self.assertIn("std::atomic_bool mapTileTraversalProbeEnabled{false};", source)
+        snapshot = source.split("std::set<std::shared_ptr<CTile>> CMap::getTiles() {", 1)[1].split("\n}\n", 1)[0]
+        direct = source.split("void CMap::forTiles(", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("mapTileTraversalProbeEnabled.load(std::memory_order_relaxed)", snapshot)
+        self.assertIn("mapTileSnapshotCounter.fetch_add(1, std::memory_order_relaxed);", snapshot)
+        self.assertIn("mapTileSnapshotReferenceCounter.fetch_add(result.size(), std::memory_order_relaxed);", snapshot)
+        self.assertIn("mapTileTraversalProbeEnabled.load(std::memory_order_relaxed)", direct)
+        self.assertIn("mapDirectTileVisitCounter.fetch_add(1, std::memory_order_relaxed);", direct)
+        self.assertLess(direct.index("mapDirectTileVisitCounter.fetch_add"), direct.index("func(tile);"))
+
+    def testTileWorkPositiveControlPreservesTheNativeCombatFactBudget(self):
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        name = "testMapTileTraversalProbeCountsActualSnapshotsAndVisits"
+        self.assertIn(f"void {name}() {{", source)
+        self.assertEqual(1, source.count(f"    {name}();"))
+        positive = source.split(f"void {name}() {{", 1)[1].split("\n}\n", 1)[0]
+        positive = " ".join(positive.split())
+        for assertion in (
+            "disabled.snapshots == 0 && disabled.snapshotReferences == 0 && disabled.directVisits == 0",
+            "enabled.snapshots == 2 && enabled.snapshotReferences == TILES * 2",
+            "enabled.directVisits == TILES + HEIGHT",
+            "stopped.directVisits == enabled.directVisits",
+            "empty.snapshots == 1 && empty.snapshotReferences == 0",
+            "fixture.map->getNavigationRevision() == revision",
+        ):
+            self.assertIn(assertion, positive)
+        signature = "void testNativeCombatFactWorkRemainsIndexedAndBounded() {"
+        combat = signature + source.split(signature, 1)[1].split("\n} // namespace", 1)[0]
+        self.assertEqual(
+            "517772def2561d4eb8c796b391fffe4a9d74bcbdbad38382a77dcfb3457e73ed",
+            hashlib.sha256(combat.encode()).hexdigest(),
+        )
+        self.assertIn("constexpr int PASSES = 128;", combat)
+        self.assertIn("constexpr int LISTENERS = 8;", combat)
+        self.assertIn("matching == PASSES * LISTENERS * 3 && unrelated == 0", combat)
+        self.assertIn(
+            "tile_work.snapshots == 0 && tile_work.snapshotReferences == 0 && tile_work.directVisits == 0", combat
+        )
+        self.assertEqual(1, source.count("    testNativeCombatFactWorkRemainsIndexedAndBounded();"))
+
     def testNativeCombatCasesUseTheNormalMetadataFirstProfileRegistry(self):
         expected = ADDITIONAL_CASES["handler"][-12:]
         headers = (
