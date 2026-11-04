@@ -532,8 +532,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             def sameObjects(actual, expected):
                 return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
             stat_keys = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
-                         'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
-                         'shadowResist', 'damage')
+                'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                'shadowResist', 'damage')
             def stats(value):
                 return {key: numeric(value, key) for key in stat_keys}
             def resources(owner):
@@ -731,8 +731,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             def sameObjects(actual, expected):
                 return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
             stat_keys = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
-                         'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
-                         'shadowResist', 'damage')
+                'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                'shadowResist', 'damage')
             def stats(value):
                 return {key: numeric(value, key) for key in stat_keys}
             def resources(owner):
@@ -974,8 +974,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             def sameObjects(actual, expected):
                 return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
             stat_keys = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
-                         'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
-                         'shadowResist', 'damage')
+                'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                'shadowResist', 'damage')
             def stats(value):
                 return {key: numeric(value, key) for key in stat_keys}
             def resources(owner):
