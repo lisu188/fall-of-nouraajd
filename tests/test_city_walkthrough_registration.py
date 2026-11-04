@@ -187,6 +187,8 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         self.assertEqual(
             {
                 "CityNativeLoadingRuntimeTest.testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce",
+                "CityNativeLoadingRuntimeTest.testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave",
+                "CityNativeLoadingRuntimeTest.testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave",
                 "CityNativeLoadingRuntimeTest.testBook08SpentStateSurvivesNativeSaveReload",
                 "CityNativeLoadingRuntimeTest.testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
                 "CityNativeLoadingRuntimeTest.testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback",
