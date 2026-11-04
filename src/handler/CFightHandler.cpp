@@ -785,6 +785,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                                    encounterMap->getBoolProperty("nativeCombatFacts"))) &&
                context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
     };
+    const auto factParticipantsRegistered = [&](const std::shared_ptr<CCreature> &actor,
+                                                const std::shared_ptr<CCreature> &target) {
+        auto owner = encounterGame.lock();
+        const auto registered = [&](const std::shared_ptr<CCreature> &participant) {
+            return participant && participant->getGame() == owner && is_registered_on_map(encounterMap, participant);
+        };
+        return owner && contextIsCurrent() && registered(attacker) && registered(actor) && registered(target);
+    };
     std::function<bool()> effectContext;
     if (nativeAdmission || factEncounter) {
         effectContext = contextIsCurrent;
@@ -953,6 +961,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                         co_return finish_result();
                     }
                     co_await attackerController->controlAsync(attacker, current);
+                    if (factEncounter && !factParticipantsRegistered(attacker, current)) {
+                        cancel_fight(result, attacker, current);
+                        co_return finish_result();
+                    }
                     if (!contextIsCurrent() || attackerController->isCancelled(attacker, current)) {
                         cancel_fight(result, attacker, current);
                         co_return finish_result();
@@ -1005,6 +1017,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
                 }
+                if (factEncounter && !factParticipantsRegistered(actor, actor)) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -1027,6 +1043,11 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 if (!controller || dynamic_cast<CPlayerFightController *>(controller.get()) || !target) {
                     continue;
                 }
+                if (factEncounter &&
+                    (!factParticipantsRegistered(actor, target) || !is_active_participant(encounterMap, attacker))) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 if (!is_active_participant(encounterMap, actor) || !is_active_participant(encounterMap, target)) {
                     continue;
                 }
@@ -1036,6 +1057,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 co_await controller->controlAsync(actor, target);
+                if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                     cancel_fight(result, attacker, target);
                     co_return finish_result();
@@ -1100,6 +1125,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 cancel_fight(result, attacker, actor);
                 co_return finish_result();
             }
+            if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
             if (nativeAdmission && !contextIsCurrent()) {
                 cancel_fight(result, attacker, actor);
                 co_return finish_result();
@@ -1120,11 +1149,20 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
             }
             if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
                 if (auto controller = actor->getFightController()) {
+                    if (factEncounter && (!is_active_participant(encounterMap, attacker) ||
+                                          !is_active_participant(encounterMap, target))) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     if (nativeAdmission && !contextIsCurrent()) {
                         cancel_fight(result, attacker, target);
                         co_return finish_result();
                     }
                     co_await controller->controlAsync(actor, target);
+                    if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                         cancel_fight(result, attacker, actor);
                         co_return finish_result();

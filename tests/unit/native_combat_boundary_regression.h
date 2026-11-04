@@ -186,6 +186,258 @@ void runEffectObserverSelectedOpponentContinuationRegression() {
     }
 }
 
+class NativeContinuationTargetProbe : public NativeEncounterUseActionProbe {
+  public:
+    std::shared_ptr<CCreature> preferred;
+    std::shared_ptr<CCreature> selectOpponent(std::shared_ptr<CCreature>,
+                                              const std::vector<std::shared_ptr<CCreature>> &,
+                                              std::shared_ptr<CCreature>) override {
+        return preferred;
+    }
+};
+
+void invalidateNativeContinuationParticipant(const std::string &mode, const std::shared_ptr<CGame> &game,
+                                             const std::shared_ptr<CGame> &foreign,
+                                             const std::shared_ptr<CCreature> &participant,
+                                             std::shared_ptr<CCreature> &replacement) {
+    auto map = game->getMap();
+    const int x = participant->getPosX();
+    const int y = participant->getPosY();
+    map->removeObject(participant);
+    if (mode == "transfer") {
+        participant->setGame(foreign);
+        foreign->getMap()->addObject(participant);
+    } else if (mode == "replacement") {
+        replacement = add_test_creature(game, participant->getName(), x, y);
+    }
+}
+
+void runReversedEffectParticipantContinuationRegression() {
+    for (bool save_guard : {false, true}) {
+        for (int role : {0, 1, 2}) {
+            for (const auto &mode : {"removal", "transfer", "replacement"}) {
+                auto game = load_empty_game();
+                auto foreign = load_empty_game();
+                auto map = game->getMap();
+                std::shared_ptr<CCreature> hero = add_test_player(game);
+                auto opponent = add_test_creature(game, "unitReverseOpponent", 1, 0);
+                auto ally = role == 0 ? std::shared_ptr<CCreature>() : add_test_creature(game, "unitReverseAlly", 2, 0);
+                hero->setAffiliation("unitReverseHeroSide");
+                opponent->setAffiliation("unitReverseEnemySide");
+                if (ally) {
+                    ally->setAffiliation("unitReverseHeroSide");
+                }
+                auto receiver = role == 2 ? ally : opponent;
+                auto invalidated = role == 1 ? ally : hero;
+                auto caster = role == 2 ? opponent : invalidated;
+                std::vector<std::shared_ptr<CCreature>> actors{hero, opponent};
+                if (ally) {
+                    actors.push_back(ally);
+                }
+                std::vector<int> experience;
+                std::vector<int> gold;
+                for (const auto &actor : actors) {
+                    actor->setHp(10);
+                    actor->getBaseStats()->setAgility(actor == receiver ? 100 : 0);
+                    actor->getBaseStats()->setBlock(0);
+                    actor->getBaseStats()->setNormalResist(0);
+                    actor->setFightController(std::make_shared<NoProgressFightController>());
+                    experience.push_back(actor->getExp());
+                    gold.push_back(actor->getGold());
+                }
+                auto pulse = std::make_shared<NativeEncounterPulseProbe>();
+                pulse->setGame(game);
+                pulse->setName("unitReversePulse");
+                pulse->setTypeId("unitReversePulse");
+                pulse->setCumulative(true);
+                pulse->setDuration(1);
+                pulse->setCaster(caster);
+                pulse->setVictim(receiver);
+                receiver->addEffect(pulse);
+                auto action = std::make_shared<NativeArmorPacketProbe>();
+                action->setGame(game);
+                action->setName("unitReverseStaleAction");
+                receiver->addAction(action);
+                auto controller = std::make_shared<NativeContinuationTargetProbe>();
+                controller->action = action;
+                controller->preferred = role == 2 ? opponent : invalidated;
+                receiver->setFightController(controller);
+                auto loot = add_unit_loot(game, invalidated, "unitReverseOwnedLoot");
+                const auto generation = game->getContext()->captureTransitionGeneration();
+                int callbacks = 0;
+                std::shared_ptr<CCreature> replacement;
+                auto hook = std::make_shared<CCustomTrigger>(
+                    receiver->getName(), "onCombatPacket", [&](auto object, auto event) {
+                        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+                        expect_true(object == receiver && caused && caused->getCause() == caster &&
+                                        event->getObjectProperty("combatProducer") == pulse && receiver->getHp() == 9,
+                                    "the completed reverse-role pulse must expose its real receiver and caster");
+                        ++callbacks;
+                        invalidateNativeContinuationParticipant(mode, game, foreign, invalidated, replacement);
+                    });
+                hook->setName("unitReverseParticipantObserver");
+                map->getEventHandler()->registerTrigger(hook);
+                map->setBoolProperty("guardNativeEncounterSaves", save_guard);
+                map->setBoolProperty("nativeCombatFacts", true);
+                const auto result = ally ? CFightHandler::fightManyWithAlliesResult(hero, {opponent}, {ally})
+                                         : CFightHandler::fightManyResult(hero, {opponent});
+                expect_true(result.outcome == CFightOutcome::Cancelled && callbacks == 1 && controller->controls == 0 &&
+                                action->performed == 0 && pulse->ticks == 1 && pulse->getTimeLeft() == 0 &&
+                                receiver->getHp() == 9 && invalidated->getHp() == 10 &&
+                                game->getContext()->isTransitionGenerationCurrent(generation),
+                            "opponent hero/ally targets and ally hero anchors cannot continue after effect removal");
+                expect_true(!replacement || replacement->getHp() == 10,
+                            "a same-name replacement cannot receive an old participant's action");
+                expect_true(invalidated->getItems().count(loot) == 1,
+                            "effect observer invalidation must retain the original owned loot");
+                for (std::size_t index = 0; index < actors.size(); ++index) {
+                    expect_true(actors[index]->getExp() == experience[index] && actors[index]->getGold() == gold[index],
+                                "an invalid effect continuation cannot settle any participant's rewards");
+                }
+            }
+        }
+    }
+}
+
+void runActionObserverParticipantRegistrationRegression() {
+    for (bool save_guard : {false, true}) {
+        for (int role : {0, 1, 2}) {
+            for (int changed_role : {0, 1, 2}) {
+                if (role == 0 && changed_role == 2) {
+                    continue;
+                }
+                for (const auto &mode : {"removal", "transfer", "replacement"}) {
+                    auto game = load_empty_game();
+                    auto foreign = load_empty_game();
+                    auto map = game->getMap();
+                    std::shared_ptr<CCreature> hero = add_test_player(game);
+                    auto opponent = add_test_creature(game, "unitActionRegistrationOpponent", 1, 0);
+                    auto ally = role == 0 ? std::shared_ptr<CCreature>()
+                                          : add_test_creature(game, "unitActionRegistrationAlly", 2, 0);
+                    hero->setAffiliation("unitActionRegistrationHeroSide");
+                    opponent->setAffiliation("unitActionRegistrationEnemySide");
+                    if (ally) {
+                        ally->setAffiliation("unitActionRegistrationHeroSide");
+                    }
+                    auto actor = role == 0 ? hero : (role == 1 ? ally : opponent);
+                    auto target = role == 2 ? ally : opponent;
+                    auto invalidated = changed_role == 0 ? actor : (changed_role == 1 ? target : hero);
+                    std::vector<std::shared_ptr<CCreature>> actors{hero, opponent};
+                    if (ally) {
+                        actors.push_back(ally);
+                    }
+                    std::vector<int> experience;
+                    std::vector<int> gold;
+                    for (const auto &participant : actors) {
+                        participant->setHp(10);
+                        participant->getBaseStats()->setAgility(participant == actor ? 100 : 0);
+                        participant->getBaseStats()->setBlock(0);
+                        participant->getBaseStats()->setNormalResist(0);
+                        participant->setFightController(std::make_shared<NoProgressFightController>());
+                        experience.push_back(participant->getExp());
+                        gold.push_back(participant->getGold());
+                    }
+                    auto action = std::make_shared<NativeArmorPacketProbe>();
+                    action->setGame(game);
+                    action->setName("unitActionRegistrationCommittedAction");
+                    action->setManaCost(3);
+                    action->setOffensive(true);
+                    actor->setMana(3);
+                    actor->addAction(action);
+                    auto controller = std::make_shared<NativeContinuationTargetProbe>();
+                    controller->action = action;
+                    controller->preferred = target;
+                    actor->setFightController(controller);
+                    auto loot = add_unit_loot(game, invalidated, "unitActionRegistrationOwnedLoot");
+                    const auto generation = game->getContext()->captureTransitionGeneration();
+                    int callbacks = 0;
+                    std::shared_ptr<CCreature> replacement;
+                    auto hook = std::make_shared<CCustomTrigger>(
+                        target->getName(), "onCombatPacket", [&](auto object, auto event) {
+                            auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+                            expect_true(object == target && caused && caused->getCause() == actor &&
+                                            action->performed == 1 && actor->getMana() == 0 && target->getHp() == 9,
+                                        "action registration changes must follow real committed damage and payment");
+                            ++callbacks;
+                            invalidateNativeContinuationParticipant(mode, game, foreign, invalidated, replacement);
+                        });
+                    hook->setName("unitActionRegistrationObserver");
+                    map->getEventHandler()->registerTrigger(hook);
+                    map->setBoolProperty("guardNativeEncounterSaves", save_guard);
+                    map->setBoolProperty("nativeCombatFacts", true);
+                    const auto result = ally ? CFightHandler::fightManyWithAlliesResult(hero, {opponent}, {ally})
+                                             : CFightHandler::fightManyResult(hero, {opponent});
+                    expect_true(result.outcome == CFightOutcome::Cancelled && callbacks == 1 &&
+                                    controller->controls == 1 && action->performed == 1 && actor->getMana() == 0 &&
+                                    target->getHp() == 9 && invalidated->getItems().count(loot) == 1 &&
+                                    game->getContext()->isTransitionGenerationCurrent(generation),
+                                "post-action actor, target or hero-anchor invalidation must stop stale settlement");
+                    expect_true(!replacement || replacement->getHp() == 10,
+                                "the replacement must not inherit committed damage from the old participant");
+                    for (std::size_t index = 0; index < actors.size(); ++index) {
+                        expect_true(actors[index]->getExp() == experience[index] &&
+                                        actors[index]->getGold() == gold[index],
+                                    "an invalid action continuation cannot settle any participant's rewards");
+                    }
+                }
+            }
+        }
+    }
+}
+
+void runRegisteredLethalActionStillSettlesRegression() {
+    int legacy_experience = 0;
+    int legacy_gold = 0;
+    for (bool enabled : {false, true}) {
+        auto game = load_empty_game();
+        auto map = game->getMap();
+        std::shared_ptr<CCreature> hero = add_test_player(game);
+        auto opponent = add_test_creature(game, "unitRegisteredLethalOpponent", 1, 0);
+        hero->getBaseStats()->setAgility(100);
+        hero->getBaseStats()->setBlock(0);
+        opponent->getBaseStats()->setBlock(0);
+        opponent->getBaseStats()->setNormalResist(0);
+        hero->setHp(10);
+        opponent->setHp(1);
+        opponent->addGold(7);
+        const int owned_gold = opponent->getGold();
+        auto loot = add_unit_loot(game, opponent, "unitRegisteredLethalLoot");
+        auto action = std::make_shared<NativeArmorPacketProbe>();
+        action->setGame(game);
+        action->setName("unitRegisteredLethalAction");
+        hero->addAction(action);
+        auto controller = std::make_shared<NativeEncounterUseActionProbe>();
+        controller->action = action;
+        hero->setFightController(controller);
+        opponent->setFightController(std::make_shared<NoProgressFightController>());
+        const int experience = hero->getExp();
+        const int gold = hero->getGold();
+        int callbacks = 0;
+        auto hook = std::make_shared<CCustomTrigger>(opponent->getName(), "onCombatPacket", [&](auto, auto) {
+            ++callbacks;
+            expect_true(opponent->getHp() == 0 && map->getObjectByName(opponent->getName()) == opponent,
+                        "lethal damage is committed while the victim is still the registered original instance");
+        });
+        hook->setName("unitRegisteredLethalObserver");
+        map->getEventHandler()->registerTrigger(hook);
+        map->setBoolProperty("plugin_cityFixedLoot", true);
+        map->setBoolProperty("nativeCombatFacts", enabled);
+        const auto result = CFightHandler::fightManyResult(hero, {opponent});
+        expect_true(result.outcome == CFightOutcome::AttackerVictory && action->performed == 1 &&
+                        controller->controls == 1 && callbacks == (enabled ? 1 : 0) &&
+                        map->getObjectByName(opponent->getName()) == nullptr && hero->getItems().count(loot) == 1 &&
+                        hero->getExp() > experience && hero->getGold() - gold == owned_gold,
+                    "registered lethal targets must retain ordinary defeat, XP, owned-gold and item settlement");
+        if (!enabled) {
+            legacy_experience = hero->getExp() - experience;
+            legacy_gold = hero->getGold() - gold;
+        } else {
+            expect_true(hero->getExp() - experience == legacy_experience && hero->getGold() - gold == legacy_gold,
+                        "fact opt-in cannot change ordinary registered lethal reward deltas");
+        }
+    }
+}
+
 void testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation() {
     for (const auto &mode : {"generation", "removal", "transfer", "shutdown"}) {
         auto game = load_empty_game();
@@ -259,6 +511,9 @@ void testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation() {
     }
     runFactOnlyEncounterGenerationContinuationRegression();
     runEffectObserverSelectedOpponentContinuationRegression();
+    runReversedEffectParticipantContinuationRegression();
+    runActionObserverParticipantRegistrationRegression();
+    runRegisteredLethalActionStillSettlesRegression();
 }
 
 void testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies() {
