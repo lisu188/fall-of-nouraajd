@@ -1614,7 +1614,6 @@ def book08DisabledSnapshot(d, name):
     )
     d.test.assertEqual("BOOK08", d.call(book, "getStringProperty", "plugin_citySourceItem"))
     d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
-    d.test.assertFalse(d.call(book, "isDisposable"), "The registered native scroll wrapper must own use disposal")
     d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityBook08Consumed"))
     d.test.assertEqual(
         1, sum(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in items.values())
@@ -1679,7 +1678,6 @@ def book08DisabledUse(d):
         "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
     )
     d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
-    d.test.assertFalse(d.call(book, "isDisposable"))
     d.test.assertNotIn(selected, before_player)
     d.test.assertFalse(
         any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in before_player.values())

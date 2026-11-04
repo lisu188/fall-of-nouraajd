@@ -16,11 +16,66 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def book08McpExports(self):
+        tree = ast.parse((ROOT / "mcp.py").read_text(encoding="utf-8"))
+        names = {}
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id in {
+                        "MCP_ALLOWED_HANDLE_METHODS",
+                        "MCP_ALLOWED_EXPORTS",
+                    }:
+                        names[target.id] = ast.literal_eval(node.value)
+        self.assertEqual({"MCP_ALLOWED_HANDLE_METHODS", "MCP_ALLOWED_EXPORTS"}, set(names))
+        return names
+
+    def testBook08PublicRouteUsesOnlyActuallyExportedMcpHandleAndModuleMethods(self):
+        import inspect
+
+        exports = self.book08McpExports()
+        methods = exports["MCP_ALLOWED_HANDLE_METHODS"]
+        base = methods["CGameObject"]
+        item = base | methods.get("CMapObject", set()) | methods.get("CItem", set())
+        creature = base | methods.get("CMapObject", set()) | methods["CCreature"]
+        self.assertNotIn("isDisposable", item, "An unexported disposal hook cannot serve as a public MCP assertion")
+        for name in ("book08StatsSnapshot", "book08DisabledSnapshot", "book08DisabledUse"):
+            with self.subTest(function=name):
+                tree = ast.parse(inspect.getsource(getattr(routes, name)))
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                        continue
+                    if node.func.attr == "properties":
+                        self.assertIn("jsonify", exports["MCP_ALLOWED_EXPORTS"])
+                    if node.func.attr != "call":
+                        continue
+                    self.assertGreaterEqual(len(node.args), 2)
+                    self.assertIsInstance(node.args[1], ast.Constant)
+                    method = node.args[1].value
+                    owner = node.args[0]
+                    if isinstance(owner, ast.Name) and owner.id in {"book", "item", "carried"}:
+                        allowed = item
+                    elif isinstance(owner, ast.Name) and owner.id in {"base", "clock"}:
+                        allowed = base
+                    else:
+                        allowed = creature
+                    self.assertIn(
+                        method, allowed, ("Public MCP method is not exported for this receiver", name, method)
+                    )
+
+    def testBook08ItemDoubleRejectsUnexportedHooksLikeTheRealMcpServer(self):
+        driver = self.book08DisabledDriver()
+        with self.assertRaisesRegex(AssertionError, "MCP item method is not exported"):
+            driver.call(driver.book, "isDisposable")
+        self.assertFalse(driver.call(driver.book, "getBoolProperty", "plugin_cityBook08Consumed"))
+
     def book08DisabledDriver(self, mutation=None):
         """Native-shaped source double; only the registered MCP route can provide gameplay evidence."""
         from copy import deepcopy
 
         test = self
+        methods = self.book08McpExports()["MCP_ALLOWED_HANDLE_METHODS"]
+        item_methods = methods["CGameObject"] | methods.get("CMapObject", set()) | methods.get("CItem", set())
 
         class Driver:
             game_map, player = "map", "player"
@@ -118,6 +173,8 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 self.events.append(("contact", name))
 
             def call(self, owner, method, *args):
+                if isinstance(owner, dict):
+                    test.assertIn(method, item_methods, "MCP item method is not exported")
                 if method == "getItems":
                     return list(self.player_items if owner == self.player else self.owner_items)
                 if method == "getEquipped":
@@ -133,8 +190,6 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     return "CItem" if mutation == "wrongNativeType" else "BaldursGateUnderstandingTome"
                 if method == "getTypeId":
                     return owner["type"]
-                if method == "isDisposable":
-                    return False
                 if method == "getBoolProperty":
                     key = args[0]
                     if owner == "cityClock":
