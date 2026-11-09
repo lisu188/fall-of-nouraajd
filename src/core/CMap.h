@@ -70,6 +70,7 @@ class CMap : public CGameObject {
 
     friend class CMapLoader;
     friend class CGameContext;
+    friend class CGameObject;
     friend class CFightHandler;
     friend class CCombatParticipantGuard;
     friend class CSceneManager;
@@ -323,6 +324,18 @@ class CMap : public CGameObject {
                                            CMovementPresentation presentation = {});
 
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+    struct ObjectSnapshot;
+    struct SimulationSnapshot;
+    class SimulationCursor;
+    std::shared_ptr<const ObjectSnapshot> objectSnapshot;
+    std::shared_ptr<const SimulationSnapshot> simulationSnapshot;
+    std::uint64_t simulationSelectionRevision = 0;
+    std::shared_ptr<const ObjectSnapshot> getObjectSnapshot();
+    std::shared_ptr<const SimulationSnapshot> getSimulationSnapshot();
+    SimulationCursor simulationObjects();
+    void invalidateObjectSnapshot();
+    void invalidateSimulationSelection();
+
     // TODO: cleanup and after load initialization
     std::unordered_multimap<Coords, std::string> mapObjectsCache;
 
@@ -407,6 +420,19 @@ class CMap : public CGameObject {
 };
 
 namespace performance_guard {
+struct MapTurnSelectionWork {
+    std::size_t objectSnapshotBuilds = 0;
+    std::size_t objectSnapshotEntries = 0;
+    std::size_t selectionBuilds = 0;
+    std::size_t candidateVisits = 0;
+    std::size_t fallbackVisits = 0;
+    std::size_t simulationChecks = 0;
+};
+
+void resetMapTurnSelectionProbe();
+MapTurnSelectionWork mapTurnSelectionProbeStats();
+void disableMapTurnSelectionProbe();
+
 void resetMapCoordinateLookupProbe();
 std::size_t mapCoordinateLookupProbeCount();
 void disableMapCoordinateLookupProbe();

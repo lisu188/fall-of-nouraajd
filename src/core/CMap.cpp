@@ -59,6 +59,7 @@ class MovementPresentationCleanup {
 
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
 std::atomic_size_t mapCoordinateLookupProbeCounter{0};
+thread_local std::optional<performance_guard::MapTurnSelectionWork> mapTurnSelectionWork;
 
 void recordCoordinateLookupProbe() {
     if (mapCoordinateLookupProbeEnabled.load(std::memory_order_relaxed)) {
@@ -78,6 +79,59 @@ int normalize_wrapped_axis(int value, int max_value) {
     return static_cast<int>(normalized);
 }
 } // namespace
+
+struct CMap::ObjectSnapshot {
+    std::vector<std::shared_ptr<CMapObject>> objects;
+};
+
+struct CMap::SimulationSnapshot {
+    std::shared_ptr<const ObjectSnapshot> objects;
+    std::vector<std::size_t> activeIndices;
+    std::uint64_t revision = 0;
+};
+
+class CMap::SimulationCursor {
+  public:
+    SimulationCursor(CMap &map, std::shared_ptr<const SimulationSnapshot> snapshot)
+        : map(map), snapshot(std::move(snapshot)) {}
+
+    std::size_t capacity() const { return snapshot->activeIndices.size(); }
+
+    std::shared_ptr<CMapObject> next() {
+        if (snapshot->revision != map.simulationSelectionRevision) {
+            // Callbacks may activate dormant entries. Recheck only the original unvisited suffix;
+            // additions belong to the next phase, while removed entries still belong to this snapshot.
+            scanRemainder = true;
+        }
+        if (scanRemainder) {
+            if (nextPosition == snapshot->objects->objects.size()) {
+                return nullptr;
+            }
+            if (mapTurnSelectionWork) {
+                ++mapTurnSelectionWork->candidateVisits;
+                ++mapTurnSelectionWork->fallbackVisits;
+            }
+            return snapshot->objects->objects[nextPosition++];
+        }
+        if (activeOffset == snapshot->activeIndices.size()) {
+            nextPosition = snapshot->objects->objects.size();
+            return nullptr;
+        }
+        const auto index = snapshot->activeIndices[activeOffset++];
+        nextPosition = index + 1;
+        if (mapTurnSelectionWork) {
+            ++mapTurnSelectionWork->candidateVisits;
+        }
+        return snapshot->objects->objects[index];
+    }
+
+  private:
+    CMap &map;
+    std::shared_ptr<const SimulationSnapshot> snapshot;
+    std::size_t nextPosition = 0;
+    std::size_t activeOffset = 0;
+    bool scanRemainder = false;
+};
 
 CMap::CMap() : saveAdmissionState(CGameContext::makeSaveAdmissionState()) {}
 
@@ -231,6 +285,7 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
         for (auto object : getObjects()) {
             if (object && object->getName() == "player") {
                 player = vstd::cast<CPlayer>(object);
+                invalidateSimulationSelection();
                 if (player) {
                     if (!std::dynamic_pointer_cast<CPlayerController>(player->getController())) {
                         player->setController(getGame()->createObject<CPlayerController>());
@@ -258,6 +313,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     player->setFightController(getGame()->createObject<CPlayerFightController>());
     resetDefeatedPlayerForAssignment(player);
     this->player = player;
+    invalidateSimulationSelection();
     registerPlayerTriggers();
     addObject(player);
     player->moveTo(entryx, entryy, entryz);
@@ -279,6 +335,7 @@ vstd::task<void> CMap::setPlayerAsync(std::shared_ptr<CPlayer> player) {
         player->setFightController(map->getGame()->createObject<CPlayerFightController>());
         map->resetDefeatedPlayerForAssignment(player);
         map->player = player;
+        map->invalidateSimulationSelection();
         map->registerPlayerTriggers();
         if (map->getObjectByName("player") == player) {
             co_await finishPlayerCreationAsync(map, player, map->getEntry());
@@ -314,6 +371,7 @@ std::shared_ptr<CPlayer> CMap::detachPlayer() {
     }
     resetDefeatedPlayerForAssignment(nullptr);
     player.reset();
+    invalidateSimulationSelection();
     return detachedPlayer ? detachedPlayer : canonicalPlayer;
 }
 
@@ -340,6 +398,7 @@ void CMap::attachPlayer(std::shared_ptr<CPlayer> player, Coords coords) {
     player->setFightController(getGame()->createObject<CPlayerFightController>());
     resetDefeatedPlayerForAssignment(player);
     this->player = player;
+    invalidateSimulationSelection();
     registerPlayerTriggers();
 
     const auto target = normalizeCoords(coords);
@@ -380,6 +439,7 @@ vstd::task<void> CMap::attachPlayerAsync(std::shared_ptr<CPlayer> player, Coords
         player->setFightController(map->getGame()->createObject<CPlayerFightController>());
         map->resetDefeatedPlayerForAssignment(player);
         map->player = player;
+        map->invalidateSimulationSelection();
         player->cancelMove();
         player->relocateWithoutMoveHooks(map->normalizeCoords(coords));
         map->registerPlayerTriggers();
@@ -430,6 +490,7 @@ bool CMap::restorePlayerAfterLoad(std::string &error) {
         }
         defeatedPlayer->setOwningMap(this->ptr<CMap>());
         player = defeatedPlayer;
+        invalidateSimulationSelection();
         registerPlayerTriggers();
         return true;
     }
@@ -450,6 +511,7 @@ bool CMap::restorePlayerAfterLoad(std::string &error) {
         restoredPlayer->setFightController(getGame()->createObject<CPlayerFightController>());
     }
     player = restoredPlayer;
+    invalidateSimulationSelection();
     registerPlayerTriggers();
     return true;
 }
@@ -635,6 +697,14 @@ std::size_t CMap::unregisterNavigationEdgesForObject(const std::string &sourceOb
 }
 
 std::size_t CMap::getObjectCacheEntryCountForTesting() const { return mapObjectsCache.size(); }
+
+void performance_guard::resetMapTurnSelectionProbe() { mapTurnSelectionWork.emplace(); }
+
+performance_guard::MapTurnSelectionWork performance_guard::mapTurnSelectionProbeStats() {
+    return mapTurnSelectionWork.value_or(MapTurnSelectionWork{});
+}
+
+void performance_guard::disableMapTurnSelectionProbe() { mapTurnSelectionWork.reset(); }
 
 void performance_guard::resetMapCoordinateLookupProbe() {
     mapCoordinateLookupProbeCounter.store(0, std::memory_order_relaxed);
@@ -861,6 +931,7 @@ bool CMap::addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) 
         return false;
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
+    invalidateObjectSnapshot();
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
     if (!mapObject->getCanStep())
@@ -898,6 +969,7 @@ vstd::task<void> CMap::removeObjectAsync(std::shared_ptr<CMapObject> mapObject) 
         }
         const auto registeredName = registered->first;
         map->mapObjects.erase(registered);
+        map->invalidateObjectSnapshot();
         vstd::erase_if(map->mapObjectsCache, [&registeredName](auto entry) { return entry.second == registeredName; });
         map->bumpNavigationRevision();
         if (!object->getCanStep()) {
@@ -972,6 +1044,7 @@ bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObjec
     const auto registeredName = map_object_it->first;
     const auto coords = mapObject->getCoords();
     mapObjects.erase(map_object_it);
+    invalidateObjectSnapshot();
     vstd::erase_if(mapObjectsCache, [&registeredName](auto it) { return it.second == registeredName; });
     mapObject->clearOwningMap(this->ptr<CMap>());
     bumpNavigationRevision();
@@ -1007,10 +1080,68 @@ bool CMap::isMoving() { return moving; }
 
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
-    auto clone = mapObjects;
-    for (std::shared_ptr<CMapObject> object : clone | std::views::values | std::views::filter(predicate)) {
-        func(object);
+    const auto snapshot = getObjectSnapshot();
+    for (const auto &object : snapshot->objects) {
+        if (predicate(object)) {
+            func(object);
+        }
     }
+}
+
+std::shared_ptr<const CMap::ObjectSnapshot> CMap::getObjectSnapshot() {
+    std::lock_guard lock(navigationMutex);
+    if (!objectSnapshot) {
+        auto snapshot = std::make_shared<ObjectSnapshot>();
+        snapshot->objects.reserve(mapObjects.size());
+        for (const auto &object : mapObjects | std::views::values) {
+            snapshot->objects.push_back(object);
+        }
+        if (mapTurnSelectionWork) {
+            ++mapTurnSelectionWork->objectSnapshotBuilds;
+            mapTurnSelectionWork->objectSnapshotEntries += snapshot->objects.size();
+        }
+        objectSnapshot = std::move(snapshot);
+    }
+    return objectSnapshot;
+}
+
+std::shared_ptr<const CMap::SimulationSnapshot> CMap::getSimulationSnapshot() {
+    if (simulationSnapshot) {
+        return simulationSnapshot;
+    }
+    auto snapshot = std::make_shared<SimulationSnapshot>();
+    snapshot->objects = getObjectSnapshot();
+    snapshot->revision = simulationSelectionRevision;
+    if (mapTurnSelectionWork) {
+        ++mapTurnSelectionWork->selectionBuilds;
+    }
+    for (std::size_t index = 0; index < snapshot->objects->objects.size(); ++index) {
+        const auto &object = snapshot->objects->objects[index];
+        const auto &properties = static_cast<const CGameObject &>(*object).dynamic_props();
+        const bool liveProperties =
+            (!properties.contains("simulationRegion") && object->hasProperty("simulationRegion")) ||
+            (!properties.contains("alwaysSimulate") && object->hasProperty("alwaysSimulate"));
+        // Retained foreign entries and computed getters can change without notifying this map.
+        if (object->owningMap.lock().get() != this || liveProperties || isSimulationActive(object)) {
+            snapshot->activeIndices.push_back(index);
+        }
+    }
+    if (snapshot->revision == simulationSelectionRevision) {
+        simulationSnapshot = snapshot;
+    }
+    return snapshot;
+}
+
+CMap::SimulationCursor CMap::simulationObjects() { return SimulationCursor(*this, getSimulationSnapshot()); }
+
+void CMap::invalidateObjectSnapshot() {
+    objectSnapshot.reset();
+    invalidateSimulationSelection();
+}
+
+void CMap::invalidateSimulationSelection() {
+    ++simulationSelectionRevision;
+    simulationSnapshot.reset();
 }
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
@@ -1103,8 +1234,8 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         };
 
         game.reset();
-        const auto turnObjects = map->mapObjects;
-        for (const auto &object : turnObjects | std::views::values) {
+        auto turnObjects = map->simulationObjects();
+        while (auto object = turnObjects.next()) {
             if (!canApplyDeferredMoveWork()) {
                 finishInterruptedRegionTurn();
                 co_return;
@@ -1147,9 +1278,14 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         std::vector<vstd::task_handle<Coords>> pending;
         vstd::task_group standalone_plans;
         std::vector<std::shared_ptr<CCreature>> actors;
-        actors.reserve(map->mapObjects.size());
-        for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
-            actors.push_back(vstd::cast<CCreature>(object));
+        {
+            auto actorObjects = map->simulationObjects();
+            actors.reserve(actorObjects.capacity());
+            while (auto object = actorObjects.next()) {
+                if (pred(object)) {
+                    actors.push_back(vstd::cast<CCreature>(object));
+                }
+            }
         }
         for (auto creature : actors) {
             if (!canApplyDeferredMoveWork()) {
@@ -1282,16 +1418,17 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
         }
 
-        map->forObjects(
-            [](std::shared_ptr<CMapObject> object) {
-                if (auto creature = vstd::cast<CCreature>(object)) {
+        {
+            auto endingObjects = map->simulationObjects();
+            while (auto object = endingObjects.next()) {
+                if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
+                    break;
+                }
+                if (auto creature = vstd::cast<CCreature>(object); creature && map->isSimulationActive(object)) {
                     creature->getController()->onTurnEnded(creature);
                 }
-            },
-            [map, expectedSimulationRegionRevision](std::shared_ptr<CMapObject> object) {
-                return map->simulationRegionRevision == expectedSimulationRegionRevision &&
-                       vstd::castable<CCreature>(object) && map->isSimulationActive(object);
-            });
+            }
+        }
 
         if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
             for (const auto &planned : plannedCreatures) {
@@ -1369,10 +1506,14 @@ void CMap::setActiveSimulationRegion(std::string region) {
     }
     activeSimulationRegion = std::move(region);
     ++simulationRegionRevision;
+    invalidateSimulationSelection();
     recordDirectPropertyChanged("activeSimulationRegion");
 }
 
 bool CMap::isSimulationActive(const std::shared_ptr<CMapObject> &object) const {
+    if (mapTurnSelectionWork) {
+        ++mapTurnSelectionWork->simulationChecks;
+    }
     if (!object) {
         return false;
     }
@@ -1437,6 +1578,7 @@ void CMap::setObjectsChecked(std::set<std::shared_ptr<CMapObject>> objects) {
 
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
     std::lock_guard lock(navigationMutex);
+    invalidateObjectSnapshot();
     auto map = this->ptr<CMap>();
     for (const auto &[name, object] : mapObjects) {
         if (object) {
