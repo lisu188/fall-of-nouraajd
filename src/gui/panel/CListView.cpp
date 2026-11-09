@@ -40,6 +40,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 namespace {
+class CollectionScope {
+  public:
+    explicit CollectionScope(std::size_t &depth) : depth(depth) { ++depth; }
+    ~CollectionScope() { --depth; }
+    CollectionScope(const CollectionScope &) = delete;
+    CollectionScope &operator=(const CollectionScope &) = delete;
+
+  private:
+    std::size_t &depth;
+};
+
 std::string listObjectLabel(const std::shared_ptr<CGameObject> &object) {
     if (!object)
         return "Empty";
@@ -111,8 +122,9 @@ bool CListView::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL
         }
         return true;
     }
-    auto items = calculateIndices(gui);
-    const int count = getItemTypesCount(gui);
+    const auto index = calculateIndices(gui);
+    const auto &items = index->items;
+    const int count = index->typeCount;
     if (!count)
         return key != SDLK_ESCAPE;
     int next = std::max(0, focusedIndex);
@@ -309,8 +321,7 @@ void CListView::updateRowPaging(const std::shared_ptr<CGui> &gui, int itemCount)
     nextPageButton->setEnabled(shift < getMaxShift(gui, itemCount));
 }
 
-int CListView::shiftIndex(const std::shared_ptr<CGui> &gui, int arg) {
-    const int itemTypeCount = getItemTypesCount(gui);
+int CListView::shiftIndex(const std::shared_ptr<CGui> &gui, int arg, int itemTypeCount) {
     clampShift(gui, itemTypeCount);
     if (!isOversizedForCount(gui, itemTypeCount)) {
         return arg;
@@ -324,34 +335,76 @@ int CListView::getRightArrowIndex(const std::shared_ptr<CGui> &gui) { return get
 
 int CListView::getLeftArrowIndex(const std::shared_ptr<CGui> &gui) { return getSizeX(gui) * (getSizeY(gui) - 1); }
 
-// TODO: maybe return collection pointer to avoid copying
-std::unordered_multimap<int, std::shared_ptr<CGameObject>>
-CListView::calculateIndices(const std::shared_ptr<CGui> &gui) {
-    if (grouping) {
-        collection_pointer collection = invokeCollection(gui);
-        vstd::list<std::shared_ptr<CGameObject>> &container = *collection;
-        auto reduced = vstd::functional::map_reduce<std::string>(container, [](auto ob) { return ob->getTypeId(); });
+void CListView::invalidateCollectionIndex() {
+    ++indexRevision;
+    collectionIndex.reset();
+}
 
-        std::unordered_multimap<int, std::shared_ptr<CGameObject>> indices;
+bool CListView::collectionIndexIsCurrent(const std::shared_ptr<const CollectionIndex> &index,
+                                         const std::shared_ptr<CGui> &gui) {
+    if (!index || !gui || index->revision != indexRevision || index->gui.lock() != gui ||
+        !canInvokeParentCallback(gui, index->parent.lock()) || index->parent.lock() != getParent())
+        return false;
+    const auto game = gui->getGame();
+    const auto map = game ? game->getMap() : nullptr;
+    return index->game.lock() == game && index->map.lock() == map &&
+           index->player.lock() == (map ? map->getAssignedPlayer() : nullptr);
+}
 
-        int i = -1;
-
-        for (const auto &it : (reduced)) {
-            i++;
-            for (const auto &it2 : it.second) {
-                indices.insert(std::make_pair(i, it2));
-            }
-        }
-        return indices;
-    } else {
-        std::unordered_multimap<int, std::shared_ptr<CGameObject>> indices;
-        int i = -1;
-        collection_pointer sharedPtr = invokeCollection(gui);
-        for (const auto &it : (*sharedPtr)) {
-            indices.insert(std::make_pair(++i, it));
-        }
-        return indices;
+std::shared_ptr<const CListView::CollectionIndex> CListView::calculateIndices(const std::shared_ptr<CGui> &gui) {
+    static const auto empty = std::make_shared<const CollectionIndex>();
+    if (collectionBuildDepth != 0)
+        return empty;
+    CollectionScope collecting(collectionBuildDepth);
+    if (collectionRefreshDepth == 0)
+        refreshSubscriptions();
+    const auto parent = getParent();
+    if (!canInvokeParentCallback(gui, parent) || collection.empty()) {
+        invalidateCollectionIndex();
+        return empty;
     }
+    const bool subscribed =
+        !refreshSubscriptionTarget.expired() &&
+        (!subscribedRefreshEvent.empty() || subscribedRefreshOnPropertyChanged ||
+         std::any_of(subscribedRefreshProperties.begin(), subscribedRefreshProperties.end(),
+                     [this](const auto &name) { return !name.empty() && shouldRefreshForProperty(name); }));
+    const bool retain = collectionRefreshDepth != 0 || subscribed;
+    if (retain && collectionIndexIsCurrent(collectionIndex, gui))
+        return collectionIndex;
+    if (!retain)
+        collectionIndex.reset();
+
+    auto index = std::make_shared<CollectionIndex>();
+    index->revision = indexRevision;
+    index->parent = parent;
+    index->gui = gui;
+    const auto game = gui->getGame();
+    const auto map = game ? game->getMap() : nullptr;
+    index->game = game;
+    index->map = map;
+    index->player = map ? map->getAssignedPlayer() : nullptr;
+    const auto values = invokeCollection(gui);
+    if (!values || !collectionIndexIsCurrent(index, gui))
+        return empty;
+
+    ++indexBuildCount;
+    indexedItemVisits += values->size();
+    index->items.reserve(values->size());
+    if (grouping) {
+        auto reduced = vstd::functional::map_reduce<std::string>(
+            *values, [](const auto &object) { return object ? object->getTypeId() : std::string(); });
+        for (const auto &[type, objects] : reduced) {
+            for (const auto &object : objects)
+                index->items.emplace(index->typeCount, object);
+            ++index->typeCount;
+        }
+    } else {
+        for (const auto &object : *values)
+            index->items.emplace(index->typeCount++, object);
+    }
+    if (retain)
+        collectionIndex = index;
+    return index;
 }
 
 std::shared_ptr<SDL_Rect> CListView::calculateIndexPosition(const std::shared_ptr<CGui> &gui,
@@ -366,15 +419,7 @@ bool CListView::isOversized(const std::shared_ptr<CGui> &gui) {
     return isOversizedForCount(gui, itemTypeCount);
 }
 
-int CListView::getItemTypesCount(const std::shared_ptr<CGui> &gui) {
-    auto map = calculateIndices(gui);
-    std::set<int> indices;
-    for (const auto &it : map) {
-        indices.insert(it.first);
-    }
-    auto size = indices.size();
-    return size;
-}
+int CListView::getItemTypesCount(const std::shared_ptr<CGui> &gui) { return calculateIndices(gui)->typeCount; }
 
 // TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeX(std::shared_ptr<CGui> gui) {
@@ -567,7 +612,10 @@ bool CListView::canInvokeParentCallback(const std::shared_ptr<CGui> &gui,
 
 bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index,
                                     std::shared_ptr<CGameObject> &object, bool allowEmptyCell) {
-    const int itemTypeCount = getItemTypesCount(gui);
+    const auto snapshot = calculateIndices(gui);
+    if (!collectionIndexIsCurrent(snapshot, gui))
+        return false;
+    const int itemTypeCount = snapshot->typeCount;
     clampShift(gui, itemTypeCount);
     const int safeTileSize = getCellSize(gui);
     if (x < 0 || y < 0) {
@@ -578,8 +626,8 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
     if (xIndex < 0 || yIndex < 0 || xIndex >= getSizeX(gui) || yIndex >= getSizeY(gui)) {
         return false;
     }
-    index = shiftIndex(gui, xIndex + (yIndex * getSizeX(gui)));
-    auto indexedCollection = calculateIndices(gui);
+    index = shiftIndex(gui, xIndex + (yIndex * getSizeX(gui)), itemTypeCount);
+    const auto &indexedCollection = snapshot->items;
     if (!vstd::ctn(indexedCollection, index)) {
         if (allowEmptyCell && showEmpty && !isOversizedForCount(gui, itemTypeCount)) {
             object = nullptr;
@@ -621,7 +669,11 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
     if (!isAttachedToGui(gui) || !gui->getGame()) {
         return return_val;
     }
-    const int itemTypeCount = getItemTypesCount(gui);
+    const auto snapshot = calculateIndices(gui);
+    if (!collectionIndexIsCurrent(snapshot, gui))
+        return return_val;
+    const auto &indexedCollection = snapshot->items;
+    const int itemTypeCount = snapshot->typeCount;
     clampShift(gui, itemTypeCount);
     int i = getSizeX(gui) * y + x;
     const bool oversized = isOversizedForCount(gui, itemTypeCount);
@@ -632,8 +684,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
         return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/right")
                                  ->withCallback(getArrowCallback(false)));
     } else {
-        auto indexedCollection = calculateIndices(gui);
-        int itemIndex = shiftIndex(gui, i);
+        int itemIndex = shiftIndex(gui, i, itemTypeCount);
 
         bool isItemPresent = vstd::ctn(indexedCollection, itemIndex) && indexedCollection.find(itemIndex)->second;
 
@@ -686,7 +737,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
             return_val.push_back(label);
         }
     }
-    return return_val;
+    return collectionIndexIsCurrent(snapshot, gui) ? return_val : std::list<std::shared_ptr<CGameGraphicsObject>>{};
 }
 
 void CListView::addCountBox(const std::shared_ptr<CGui> &gui, int count,
@@ -712,7 +763,7 @@ void CListView::addSelectionBox(const std::shared_ptr<CGui> &gui,
 }
 
 void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
-                        std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection,
+                        const std::unordered_multimap<int, std::shared_ptr<CGameObject>> &indexedCollection,
                         int itemIndex) const {
     std::weak_ptr<CListView> weakSelf = const_cast<CListView *>(this)->ptr<CListView>();
     auto object = indexedCollection.find(itemIndex)->second;
@@ -792,7 +843,12 @@ void CListView::addItemBox(const std::shared_ptr<CGui> &gui,
 
 std::string CListView::getCollection() { return collection; }
 
-void CListView::setCollection(std::string collection) { CListView::collection = collection; }
+void CListView::setCollection(std::string collection) {
+    if (CListView::collection != collection) {
+        CListView::collection = std::move(collection);
+        invalidateCollectionIndex();
+    }
+}
 
 std::string CListView::getCallback() { return callback; }
 
@@ -868,10 +924,22 @@ void CListView::initialize() {
 
 void CListView::refresh() {
     refreshSubscriptions();
+    invalidateCollectionIndex();
+    CollectionScope refreshing(collectionRefreshDepth);
+    const auto before = proxyRefreshCount;
     CProxyTargetGraphicsObject::refresh();
-    refreshAll();
+    if (proxyRefreshCount == before)
+        refreshAll();
     if (auto gui = getGui())
         updateRowPaging(gui, getItemTypesCount(gui));
+}
+
+void CListView::refreshAll() {
+    refreshSubscriptions();
+    invalidateCollectionIndex();
+    ++proxyRefreshCount;
+    CollectionScope refreshing(collectionRefreshDepth);
+    CProxyTargetGraphicsObject::refreshAll();
 }
 
 void CListView::restoreViewState(const ViewState &state) {
@@ -935,6 +1003,7 @@ void CListView::refreshSubscriptions() {
         return;
     }
 
+    invalidateCollectionIndex();
     disconnectRefreshSubscriptions();
     refreshSubscriptionTarget = refreshTarget;
     subscribedRefreshEvent = refreshEvent;
@@ -1008,6 +1077,7 @@ bool CListView::isCollidingRefreshProperty(const std::string &propertyName) {
 }
 
 void CListView::refreshFromSubscription() {
+    invalidateCollectionIndex();
     if (refreshFromSubscriptionQueued) {
         return;
     }
@@ -1088,4 +1158,9 @@ void CListView::setShowEmpty(bool _showEmpty) { showEmpty = _showEmpty; }
 
 bool CListView::getGrouping() { return grouping; }
 
-void CListView::setGrouping(bool _grouping) { grouping = _grouping; }
+void CListView::setGrouping(bool _grouping) {
+    if (grouping != _grouping) {
+        grouping = _grouping;
+        invalidateCollectionIndex();
+    }
+}
