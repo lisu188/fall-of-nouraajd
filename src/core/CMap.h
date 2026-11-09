@@ -269,6 +269,12 @@ class CMap : public CGameObject {
 
     std::uint64_t getNavigationRevision() const;
 
+    std::uint64_t getTerrainRevision(int level) const;
+
+    void terrainChanged(std::optional<int> level = std::nullopt);
+
+    void terrainTileChanged(const CTile *tile, std::optional<int> previousLevel = std::nullopt);
+
     std::uint64_t getRoutingEpoch() const;
     std::recursive_mutex &getNavigationMutex() const;
     std::shared_ptr<CNavigationService> getNavigationService();
@@ -353,6 +359,9 @@ class CMap : public CGameObject {
     std::uint64_t simulationRegionRevision = 0;
     std::string combatHistory;
     std::uint64_t navigationRevision = 0;
+    std::uint64_t terrainRevision = 1;
+    std::uint64_t terrainConfigurationRevision = 1;
+    std::unordered_map<int, std::uint64_t> terrainLevelRevisions;
     mutable std::recursive_mutex navigationMutex;
     mutable std::uint64_t routingEpoch = 1;
     mutable std::uint64_t routingConfigRevision = 0;

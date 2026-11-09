@@ -41,7 +41,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <limits>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
+#include <tuple>
+#include <vector>
 
 namespace {
 constexpr SDL_Color MINIMAP_BACKGROUND{7, 9, 10, 255};
@@ -85,8 +88,6 @@ struct MinimapScale {
 };
 
 bool z_matches(Coords coords, int z) { return coords.z == z; }
-
-void hash_combine(std::size_t &seed, std::size_t value) { seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2); }
 
 SDL_Color tile_color(const std::string &tileType) {
     if (tileType == "GrassTile" || tileType == "grass") {
@@ -160,7 +161,8 @@ bool bounds_within_limits(const LevelBounds &bounds) {
     return width > 0 && height > 0 && width <= MAX_MINIMAP_LEVEL_EXTENT && height <= MAX_MINIMAP_LEVEL_EXTENT;
 }
 
-std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, int z) {
+std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, int z,
+                                            std::span<const std::weak_ptr<CMapObject>> objects) {
     const auto xBounds = map->getXBounds();
     const auto yBounds = map->getYBounds();
     if (vstd::ctn(xBounds, z) && vstd::ctn(yBounds, z)) {
@@ -181,7 +183,8 @@ std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, in
             include_coords(bounds, hasBounds, tile->getCoords());
         }
     });
-    for (const auto &object : map->getObjects()) {
+    for (const auto &entry : objects) {
+        const auto object = entry.lock();
         if (object && z_matches(object->getCoords(), z)) {
             include_coords(bounds, hasBounds, object->getCoords());
         }
@@ -284,31 +287,9 @@ template <typename T> void draw_terrain(T *target, const std::shared_ptr<CMap> &
     }
 }
 
-std::size_t terrain_signature(const std::shared_ptr<CMap> &map, int z, const LevelBounds &bounds, int width,
-                              int height) {
-    std::size_t seed = 0;
-    const std::hash<int> intHash;
-    const std::hash<std::string> stringHash;
-    hash_combine(seed, intHash(z));
-    hash_combine(seed, intHash(bounds.minX));
-    hash_combine(seed, intHash(bounds.minY));
-    hash_combine(seed, intHash(bounds.maxX));
-    hash_combine(seed, intHash(bounds.maxY));
-    hash_combine(seed, intHash(width));
-    hash_combine(seed, intHash(height));
-    hash_combine(seed, stringHash(default_tile_type(map, z)));
-    map->forTiles([&](std::shared_ptr<CTile> tile) {
-        if (!tile || !z_matches(tile->getCoords(), z)) {
-            return;
-        }
-        const auto coords = tile->getCoords();
-        hash_combine(seed, intHash(coords.x));
-        hash_combine(seed, intHash(coords.y));
-        hash_combine(seed, intHash(coords.z));
-        hash_combine(seed, stringHash(tile_type(tile)));
-        hash_combine(seed, std::hash<const CTile *>{}(tile.get()));
-    });
-    return seed;
+std::tuple<std::uint64_t, int, int, int, int, int, int, int>
+terrain_signature(const std::shared_ptr<CMap> &map, int z, const LevelBounds &bounds, int width, int height) {
+    return {map->getTerrainRevision(z), z, bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, width, height};
 }
 
 fn::sdl::TexturePtr build_terrain_texture(SDL_Renderer *renderer, const std::shared_ptr<CMap> &map, int z,
@@ -377,6 +358,21 @@ void draw_viewport(SDL_Renderer *renderer, const std::shared_ptr<CGui> &gui, con
 }
 } // namespace
 
+struct CMinimapGraphicsObject::ViewCache {
+    std::weak_ptr<CMap> map;
+    std::vector<std::weak_ptr<CMapObject>> objects;
+    std::uint64_t objectRevision = 0;
+    std::uint64_t boundsTerrainRevision = 0;
+    int level = 0;
+    Coords playerCoords{};
+    std::optional<LevelBounds> bounds;
+    bool boundsInitialized = false;
+};
+
+CMinimapGraphicsObject::CMinimapGraphicsObject() : viewCache(std::make_unique<ViewCache>()) {}
+
+CMinimapGraphicsObject::~CMinimapGraphicsObject() = default;
+
 void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int) {
     auto game = gui->getGame();
     if (!game) {
@@ -401,17 +397,41 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     if (expanded)
         rect = CUtil::rect(rect->x, rect->y, rect->w, std::max(1, rect->h - UiTheme::scaled(gui, 112)));
     const Coords playerCoords = player->getCoords();
-    const auto maybeBounds = get_level_bounds(map, playerCoords.z);
+    auto &cache = *viewCache;
+    const auto objectRevision = map->getNavigationRevision();
+    const auto terrainRevision = map->getTerrainRevision(playerCoords.z);
+    if (cache.map.lock() != map || cache.level != playerCoords.z || cache.objectRevision != objectRevision) {
+        cache.objects.clear();
+        for (const auto &object : map->getObjects()) {
+            if (object && z_matches(object->getCoords(), playerCoords.z))
+                cache.objects.emplace_back(object);
+        }
+        ++objectSnapshotBuildCount;
+        cache.map = map;
+        cache.level = playerCoords.z;
+        cache.objectRevision = objectRevision;
+        cache.boundsInitialized = false;
+    }
+    if (!cache.boundsInitialized || cache.boundsTerrainRevision != terrainRevision ||
+        cache.playerCoords != playerCoords) {
+        cache.bounds = get_level_bounds(map, playerCoords.z, cache.objects);
+        cache.boundsTerrainRevision = terrainRevision;
+        cache.playerCoords = playerCoords;
+        cache.boundsInitialized = true;
+    }
+    const auto &maybeBounds = cache.bounds;
     if (!maybeBounds) {
         fill_rect(renderer, rect, MINIMAP_BACKGROUND);
         return;
     }
     const auto scale = make_scale(rect, *maybeBounds);
     const auto signature = terrain_signature(map, playerCoords.z, *maybeBounds, rect->w, rect->h);
-    if (!terrainTexture || terrainTexture.get_deleter().owner.lock() != gui || terrainSignature != signature) {
+    if (!terrainTexture || terrainTexture.get_deleter().owner.lock() != gui || terrainMap.lock() != map ||
+        terrainSignature != signature) {
         auto texture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds);
         terrainTexture = fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{gui});
         ++terrainTextureBuildCount;
+        terrainMap = map;
         terrainSignature = signature;
     }
     if (terrainTexture) {
@@ -421,7 +441,8 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
         draw_terrain(renderer, map, playerCoords.z, scale);
     }
 
-    for (const auto &object : map->getObjects()) {
+    for (const auto &entry : cache.objects) {
+        const auto object = entry.lock();
         if (!object || object == player || !z_matches(object->getCoords(), playerCoords.z)) {
             continue;
         }

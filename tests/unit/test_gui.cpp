@@ -2199,6 +2199,11 @@ void testMinimapFreshTraversalPreservesTerrainUpdates() {
         return pixel & 0x00ffffffu;
     };
     expect_true(render_pixel() == 0x002d6f37u, "native minimap must initially draw the registered grass tile");
+    const auto initial_builds = minimap->getTerrainTextureBuildCount();
+    upstairs->setTileType("road");
+    expect_true(render_pixel() == 0x002d6f37u && minimap->getTerrainTextureBuildCount() == initial_builds,
+                "terrain edits on another elevation must preserve the current level's cached terrain");
+    upstairs->setTileType("water");
     tile->setTileType("water");
     expect_true(render_pixel() == 0x001d5694u, "direct native tileType changes must appear on the next minimap frame");
     tile->setTileType("");
@@ -2230,6 +2235,123 @@ void testMinimapFreshTraversalPreservesTerrainUpdates() {
     map->setYBounds({});
     expect_true(render_pixel() != 0 && minimap->getTerrainTextureBuildCount() > stable_builds,
                 "removing metadata bounds must retain the existing native derived-bounds render path");
+    harness.game->getContext()->shutdown();
+}
+
+void testMinimapTerrainRevisionTracksNormalizedTileMutations() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 9}, {1, 9}});
+    map->setYBounds({{0, 5}, {1, 5}});
+    map->setWrapX({{0, 1}, {1, 1}});
+    auto make_tile = [] {
+        auto tile = std::make_shared<CTile>();
+        tile->setPosx(11);
+        tile->setPosy(2);
+        tile->setTileType("grass");
+        return tile;
+    };
+    auto tile = make_tile();
+    map->setTiles({tile});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render = [&] { minimap->renderObject(harness.gui, rect, 0); };
+    render();
+    const auto original_revision = map->getTerrainRevision(0);
+    const auto original_builds = minimap->getTerrainTextureBuildCount();
+    tile->setPosx(1);
+    render();
+    expect_true(tile->getPosx() == 1 && map->getTerrainRevision(0) > original_revision &&
+                    minimap->getTerrainTextureBuildCount() == original_builds + 1,
+                "canonicalizing raw tile coordinates within one normalized cell must refresh the terrain");
+
+    tile = make_tile();
+    map->setTiles({tile});
+    map->setXBounds({{0, 7}, {1, 7}});
+    expect_true(!map->hasRegisteredTile(tile.get()) && map->getTiles().contains(tile),
+                "the normalization fixture must retain a tile under neither its raw nor current normalized key");
+    render();
+    auto expect_refresh = [&](auto mutation, const char *message) {
+        const auto revision = map->getTerrainRevision(0);
+        const auto builds = minimap->getTerrainTextureBuildCount();
+        mutation();
+        render();
+        expect_true(map->getTerrainRevision(0) > revision && minimap->getTerrainTextureBuildCount() == builds + 1,
+                    message);
+    };
+    expect_refresh([&] { tile->setTileType("water"); },
+                   "a retained tile's type mutation must refresh after normalization changes");
+    expect_refresh(
+        [&] {
+            tile->setTileType("");
+            tile->setTypeId("RoadTile");
+        },
+        "a retained tile's typeId fallback must refresh after normalization changes");
+    expect_refresh([&] { tile->setPosx(12); }, "a retained tile's direct x mutation must refresh its old raster");
+    expect_refresh([&] { tile->setPosy(3); }, "a retained tile's direct y mutation must refresh its old raster");
+    const auto other_level = map->getTerrainRevision(1);
+    expect_refresh([&] { tile->setPosz(1); }, "a retained tile's level mutation must clear its previous terrain");
+    expect_true(map->getTerrainRevision(1) > other_level,
+                "a retained tile's direct level mutation must also invalidate its destination elevation");
+
+    const auto unchanged = map->getTerrainRevision(1);
+    tile->setPosx(12);
+    tile->setPosy(3);
+    tile->setPosz(1);
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(map->getTerrainRevision(1) == unchanged,
+                "unchanged native tile setters must preserve terrain revisions");
+    map->setTiles({});
+    const auto detached_revision = map->getTerrainRevision(1);
+    tile->setGame(harness.game);
+    tile->setTileType("water");
+    tile->setPosx(4);
+    tile->setTypeId("GroundTile");
+    expect_true(map->getTerrainRevision(1) == detached_revision,
+                "detached tiles must not invalidate the active map through their fallback game association");
+    harness.game->getContext()->shutdown();
+}
+
+void testMinimapMarkerSnapshotTracksMembershipAndElevation() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 3}, {1, 3}});
+    map->setYBounds({{0, 3}, {1, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render = [&] { minimap->renderObject(harness.gui, rect, 0); };
+    render();
+    const auto initial_snapshots = minimap->getObjectSnapshotBuildCount();
+    const auto initial_terrain = minimap->getTerrainTextureBuildCount();
+    auto marker = std::make_shared<CMapObject>();
+    marker->setName("minimapMarkerRevision");
+    marker->setPosX(2);
+    marker->setPosY(2);
+    map->addObject(marker);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 1 &&
+                    minimap->getTerrainTextureBuildCount() == initial_terrain,
+                "adding a marker must refresh membership while retaining unchanged terrain");
+    marker->setPosZ(1);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 2,
+                "moving a marker to another elevation must invalidate the current level's membership");
+    marker->setPosZ(0);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 3,
+                "returning a marker to the current elevation must rebuild its filtered snapshot");
+    const std::weak_ptr<CMapObject> removed = marker;
+    map->setObjects({harness.player});
+    marker.reset();
+    drain_event_loop();
+    expect_true(removed.expired(), "a cached minimap marker must not retain a removed map object");
+    render();
+    const auto removed_snapshots = minimap->getObjectSnapshotBuildCount();
+    render();
+    expect_true(removed_snapshots == initial_snapshots + 4 &&
+                    minimap->getObjectSnapshotBuildCount() == removed_snapshots,
+                "marker removal must rebuild once and preserve the next unchanged snapshot");
     harness.game->getContext()->shutdown();
 }
 
@@ -5187,6 +5309,8 @@ int main() {
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
     testMinimapFreshTraversalPreservesTerrainUpdates();
+    testMinimapTerrainRevisionTracksNormalizedTileMutations();
+    testMinimapMarkerSnapshotTracksMembershipAndElevation();
     testCollapsedMinimapPreservesOrderedRasterWinner();
     testMinimapReplacementIdentityRefreshesCollapsedRaster();
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();

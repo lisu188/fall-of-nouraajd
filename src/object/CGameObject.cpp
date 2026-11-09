@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CPythonOverrides.h"
 #include "gui/CAnimation.h"
+#include "object/CTile.h"
 
 #include <any>
 #include <map>
@@ -247,6 +248,8 @@ std::shared_ptr<CGame> CGameObject::getGame() { return game.lock(); }
 void CGameObject::setGame(std::shared_ptr<CGame> map) { this->game = map; }
 
 void CGameObject::setOwningMap(std::shared_ptr<CMap> map) { this->owningMap = std::move(map); }
+
+std::shared_ptr<CMap> CGameObject::getOwningMap() const { return owningMap.lock(); }
 
 void CGameObject::clearOwningMap(const std::shared_ptr<CMap> &expectedMap) {
     auto map = owningMap.lock();
@@ -474,6 +477,14 @@ void CGameObject::invalidateCachedPropertyState(const std::set<std::string> &nam
 
 bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }
 
-void CGameObject::setTypeId(std::string _typeId) { typeId = _typeId; }
+void CGameObject::setTypeId(std::string _typeId) {
+    if (typeId == _typeId)
+        return;
+    typeId = std::move(_typeId);
+    if (auto tile = dynamic_cast<CTile *>(this); tile && tile->getTileType().empty()) {
+        if (auto map = getOwningMap())
+            map->terrainTileChanged(tile);
+    }
+}
 
 std::string CGameObject::getTypeId() { return typeId; }

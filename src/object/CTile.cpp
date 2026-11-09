@@ -67,7 +67,11 @@ void CTile::setPosx(int value) {
         map->moveTile(ptr<CTile>(), value, posy, posz);
         return;
     }
-    posx = value;
+    if (posx != value) {
+        posx = value;
+        if (auto owner = getOwningMap())
+            owner->terrainTileChanged(this);
+    }
 }
 
 int CTile::getPosy() const { return posy; }
@@ -78,7 +82,11 @@ void CTile::setPosy(int value) {
         map->moveTile(ptr<CTile>(), posx, value, posz);
         return;
     }
-    posy = value;
+    if (posy != value) {
+        posy = value;
+        if (auto owner = getOwningMap())
+            owner->terrainTileChanged(this);
+    }
 }
 
 int CTile::getPosz() const { return posz; }
@@ -89,7 +97,12 @@ void CTile::setPosz(int value) {
         map->moveTile(ptr<CTile>(), posx, posy, value);
         return;
     }
-    posz = value;
+    if (posz != value) {
+        const auto previousLevel = posz;
+        posz = value;
+        if (auto owner = getOwningMap())
+            owner->terrainTileChanged(this, previousLevel);
+    }
 }
 
 int CTile::getMovementCost() const { return std::max(1, movementCost); }
@@ -115,4 +128,10 @@ void CTile::setXYZ(int x, int y, int z) {
 
 const std::string &CTile::getTileType() const { return tileType; }
 
-void CTile::setTileType(const std::string &tileType) { CTile::tileType = tileType; }
+void CTile::setTileType(const std::string &tileType) {
+    if (CTile::tileType == tileType)
+        return;
+    CTile::tileType = tileType;
+    if (auto map = getOwningMap())
+        map->terrainTileChanged(this);
+}

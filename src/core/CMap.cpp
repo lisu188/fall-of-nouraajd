@@ -137,6 +137,7 @@ void CMap::setDefaultTiles(std::map<int, std::string> tiles) {
     if (defaultTiles == tiles)
         return;
     defaultTiles = std::move(tiles);
+    terrainChanged();
     routingChanged();
 }
 
@@ -177,6 +178,7 @@ void CMap::updateCoordinateNormalization(IntMap &setting, IntMap values) {
     }
     if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
         navigationDomainCanonical = false;
+    terrainChanged();
     routingChanged();
 }
 
@@ -465,6 +467,38 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
 
 std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
 
+std::uint64_t CMap::getTerrainRevision(int level) const {
+    std::lock_guard lock(navigationMutex);
+    auto found = terrainLevelRevisions.find(level);
+    return found == terrainLevelRevisions.end() ? terrainConfigurationRevision
+                                                : std::max(terrainConfigurationRevision, found->second);
+}
+
+void CMap::terrainChanged(std::optional<int> level) {
+    std::lock_guard lock(navigationMutex);
+    if (level)
+        terrainLevelRevisions[*level] = ++terrainRevision;
+    else
+        terrainConfigurationRevision = ++terrainRevision;
+}
+
+void CMap::terrainTileChanged(const CTile *tile, std::optional<int> previousLevel) {
+    if (!tile)
+        return;
+    std::lock_guard lock(navigationMutex);
+    const Coords coords(tile->getPosx(), tile->getPosy(), tile->getPosz());
+    const auto matches = [this, tile](Coords position) {
+        const auto found = tiles.find(position);
+        return found != tiles.end() && found->second.get() == tile;
+    };
+    if (matches(coords) || matches(normalizeCoords(coords)) ||
+        std::ranges::any_of(tiles, [tile](const auto &entry) { return entry.second.get() == tile; })) {
+        terrainChanged(coords.z);
+        if (previousLevel && *previousLevel != coords.z)
+            terrainChanged(*previousLevel);
+    }
+}
+
 std::recursive_mutex &CMap::getNavigationMutex() const { return navigationMutex; }
 
 std::uint64_t CMap::getRoutingEpoch() const {
@@ -681,7 +715,8 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     if (!tile) {
         return;
     }
-    Coords coords = normalizeCoords(tile->getCoords());
+    const auto original = tile->getCoords();
+    Coords coords = normalizeCoords(original);
     Coords target = normalizeCoords(Coords(x, y, z));
     auto source = tiles.find(coords);
     if (source == tiles.end() || source->second != tile) {
@@ -690,6 +725,8 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     if (coords == target) {
         tile->setOwningMap(this->ptr<CMap>());
         tile->setXYZ(target.x, target.y, target.z);
+        if (original != target)
+            terrainChanged(target.z);
         return;
     }
     if (!tiles.emplace(target, tile).second) {
@@ -700,6 +737,9 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     includeNavigationTile(target);
     tile->setOwningMap(this->ptr<CMap>());
     tile->setXYZ(target.x, target.y, target.z);
+    terrainChanged(coords.z);
+    if (target.z != coords.z)
+        terrainChanged(target.z);
     bumpNavigationRevision();
     routingChanged(coords);
     routingChanged(target);
@@ -720,6 +760,7 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     tile->setXYZ(coords.x, coords.y, coords.z);
     tiles.insert(std::make_pair(coords, tile));
     includeNavigationTile(coords);
+    terrainChanged(coords.z);
     bumpNavigationRevision();
     routingChanged(coords);
     recordDirectPropertyChanged("tiles");
@@ -747,6 +788,7 @@ std::size_t CMap::installTiles(std::span<const std::shared_ptr<CTile>> newTiles)
         includeNavigationTile(coords);
     }
     if (!tiles.empty()) {
+        terrainChanged();
         bumpNavigationRevision();
         routingChanged();
         recordDirectPropertyChanged("tiles");
@@ -761,6 +803,7 @@ void CMap::removeTile(int x, int y, int z) {
     if (it != this->tiles.end()) {
         auto tile = it->second;
         this->tiles.erase(it);
+        terrainChanged(coords.z);
         if (tile) {
             tile->clearOwningMap(this->ptr<CMap>());
         }
@@ -1433,6 +1476,7 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
         tiles[coords] = ob;
         includeNavigationTile(coords);
     }
+    terrainChanged();
     bumpNavigationRevision();
     routingChanged();
     recordDirectPropertyChanged("tiles");

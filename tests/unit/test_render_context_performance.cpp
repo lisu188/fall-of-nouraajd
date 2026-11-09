@@ -690,7 +690,7 @@ void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
     game->getContext()->shutdown();
 }
 
-void testMinimapFreshTraversalDoesNotCopyTileSets() {
+void testMinimapTerrainRevisionAvoidsUnchangedCollectionWork() {
     constexpr std::size_t tileCount = 1024;
     constexpr std::size_t frames = 64;
     auto game = std::make_shared<CGame>();
@@ -750,6 +750,7 @@ void testMinimapFreshTraversalDoesNotCopyTileSets() {
     for (int warm = 0; warm < 3; ++warm)
         minimap->renderObject(gui, rect, 0);
     const auto builds = minimap->getTerrainTextureBuildCount();
+    const auto object_snapshots = minimap->getObjectSnapshotBuildCount();
     const auto turn = map->getTurn();
     const auto coords = player->getCoords();
     const int hp = player->getHp();
@@ -762,8 +763,8 @@ void testMinimapFreshTraversalDoesNotCopyTileSets() {
     const auto copies = gui->getRenderContext().getStats();
     expect_true(warm.snapshots == 0 && warm.snapshotReferences == 0,
                 "64warm minimap frames must allocate zero owning tile-set snapshots or copied tile references");
-    expect_true(warm.directVisits == frames * tileCount,
-                "each warm minimap signature must still freshly visit every native tile exactlyonce");
+    expect_true(warm.directVisits == 0 && minimap->getObjectSnapshotBuildCount() == object_snapshots,
+                "unchanged minimap frames must neither visit tiles nor rebuild marker snapshots");
     expect_true(minimap->getTerrainTextureBuildCount() == builds && copies.successfulCopies == frames &&
                     copies.attemptedCopies == frames && copies.failedCopies == 0,
                 "unchanged minimap terrain must reuse its texture for all64actual native copies");
@@ -774,8 +775,8 @@ void testMinimapFreshTraversalDoesNotCopyTileSets() {
     minimap->renderObject(gui, rect, 0);
     const auto derived = performance_guard::mapTileTraversalWork();
     performance_guard::disableMapTileTraversalProbe();
-    expect_true(derived.snapshots == 0 && derived.snapshotReferences == 0 && derived.directVisits == 2 * tileCount,
-                "derived bounds plus fresh terrain signature must visit twice without copying a tile collection");
+    expect_true(derived.snapshots == 0 && derived.snapshotReferences == 0 && derived.directVisits == 0,
+                "unchanged derived bounds must reuse their revision without visiting tile collections");
     auto changed = map->getTile(2, 2, 0);
     changed->setTileType("water");
     const auto before_change = minimap->getTerrainTextureBuildCount();
@@ -784,14 +785,13 @@ void testMinimapFreshTraversalDoesNotCopyTileSets() {
     const auto refreshed = performance_guard::mapTileTraversalWork();
     performance_guard::disableMapTileTraversalProbe();
     expect_true(refreshed.snapshots == 1 && refreshed.snapshotReferences == tileCount &&
-                    refreshed.directVisits == 2 * tileCount &&
-                    minimap->getTerrainTextureBuildCount() == before_change + 1,
-                "in-place terrain mutation must freshly derive bounds and hash, retaining one ordered raster snapshot");
+                    refreshed.directVisits == tileCount && minimap->getTerrainTextureBuildCount() == before_change + 1,
+                "in-place terrain mutation must derive bounds once and retain the ordered raster snapshot");
     expect_true(map->getTurn() == turn && player->getCoords() == coords && player->getHp() == hp && !map->isMoving(),
                 "minimap work measurement must preserve gameplay turns, player state and movement");
-    std::cout << "[minimap fresh traversal] tiles=" << tileCount << " frames=" << frames
+    std::cout << "[minimap terrain revision] tiles=" << tileCount << " frames=" << frames
               << " warm snapshots=" << warm.snapshots << " snapshot references=" << warm.snapshotReferences
-              << " snapshot budget=0 fresh visits=" << warm.directVisits << " visit budget=" << frames * tileCount
+              << " snapshot budget=0 fresh visits=" << warm.directVisits << " visit budget=0"
               << " cached copies=" << copies.successfulCopies << " builds=0 derived visits=" << derived.directVisits
               << " changed visits=" << refreshed.directVisits << '\n';
     game->getContext()->shutdown();
@@ -813,5 +813,5 @@ void run_render_context_performance_tests() {
     testLoadingReaderReusesWarmTextures();
     testMovementSamplingReusesOneBoundedRecord();
     testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute();
-    testMinimapFreshTraversalDoesNotCopyTileSets();
+    testMinimapTerrainRevisionAvoidsUnchangedCollectionWork();
 }
