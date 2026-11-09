@@ -107,6 +107,21 @@ struct GuiOwnerReadyProbe {
     bool operator()(std::shared_ptr<CListView> &) & { return true; }
 };
 
+template <typename Result> struct GuiOwnerResultProbe {
+    Result operator()(std::shared_ptr<CListView> &) & { return {}; }
+};
+
+struct GuiBooleanReferenceResult {
+    friend bool &operator||(bool, GuiBooleanReferenceResult) {
+        static bool ready = true;
+        return ready;
+    }
+};
+
+struct GuiNonBooleanLogicalResult {
+    friend int operator||(bool, GuiNonBooleanLogicalResult) { return 1; }
+};
+
 struct GuiOwnerCallbackProbe {
     void operator()(std::shared_ptr<CListView> &) & {}
 };
@@ -117,6 +132,10 @@ struct GuiRvalueOwnerCallbackProbe {
 
 struct GuiNonDefaultResult {
     explicit GuiNonDefaultResult(int) {}
+};
+
+struct GuiValueInitializedResult {
+    const int value;
 };
 
 template <typename Predicate, typename Reader>
@@ -139,11 +158,18 @@ static_assert(!CanAwaitGuiReady<GuiInvalidReadyProbe, GuiReaderProbe>);
 static_assert(!CanAwaitGuiReady<GuiRvalueReadyProbe, GuiReaderProbe>);
 static_assert(!CanAwaitGuiReady<GuiReadyProbe, GuiRvalueReaderProbe>);
 static_assert(CanScheduleGuiReady<CListView, GuiOwnerReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::optional<int>>, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::shared_ptr<int>>, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<GuiBooleanReferenceResult>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::string>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerResultProbe<GuiNonBooleanLogicalResult>, GuiOwnerCallbackProbe>);
 static_assert(!CanScheduleGuiReady<CListView, GuiReadyProbe, GuiOwnerCallbackProbe>);
 static_assert(!CanScheduleGuiReady<CListView, GuiOwnerReadyProbe, GuiRvalueOwnerCallbackProbe>);
 static_assert(!CanScheduleGuiReady<CGameObject, GuiOwnerReadyProbe, GuiOwnerCallbackProbe>);
 static_assert(CanRunGuiTask<void>);
 static_assert(CanRunGuiTask<int>);
+static_assert(!std::default_initializable<GuiValueInitializedResult>);
+static_assert(CanRunGuiTask<GuiValueInitializedResult>);
 static_assert(!CanRunGuiTask<GuiNonDefaultResult>);
 
 template <typename T, auto Destroy>
@@ -163,9 +189,31 @@ struct SdlResourceProbe {
     int releases = 0;
 };
 
+struct SdlReferenceResourceDeleter {
+    void operator()(SdlResourceProbe *&resource) const { ++resource->releases; }
+};
+
+struct SdlRvalueResourceDeleter {
+    void operator()(SdlResourceProbe *) &&;
+};
+
+struct SdlRvaluePointerDeleter {
+    void operator()(SdlResourceProbe *&&) const;
+};
+
+static_assert(HasSdlResourceDeleter<SdlResourceProbe, SdlReferenceResourceDeleter{}>);
+static_assert(!HasSdlResourceDeleter<SdlResourceProbe, SdlRvalueResourceDeleter{}>);
+static_assert(!HasSdlResourceDeleter<SdlResourceProbe, SdlRvaluePointerDeleter{}>);
+
 void releaseSdlResourceProbe(SdlResourceProbe *resource) { ++resource->releases; }
 
 void testSdlResourceDeletersPreserveOwnershipTransfers() {
+    using ReferenceDeleter = fn::sdl::ResourceDeleter<SdlResourceProbe, SdlReferenceResourceDeleter{}>;
+    SdlResourceProbe referenced;
+    ReferenceDeleter{}(nullptr);
+    ReferenceDeleter{}(&referenced);
+    expect_true(referenced.releases == 1, "an SDL deleter must invoke its stored callable with a pointer lvalue");
+
     using ProbeDeleter = fn::sdl::ResourceDeleter<SdlResourceProbe, releaseSdlResourceProbe>;
     using ProbePtr = std::unique_ptr<SdlResourceProbe, ProbeDeleter>;
     SdlResourceProbe first, second;

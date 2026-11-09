@@ -29,6 +29,11 @@ concept ReadyPredicate = requires(Predicate &ready, Args... args) {
     { std::invoke(ready, args...) } -> std::convertible_to<bool>;
 };
 
+template <typename Predicate, typename T>
+concept OwnerReadyPredicate = requires(Predicate &ready, std::shared_ptr<T> &owner) {
+    requires std::same_as<std::remove_cvref_t<decltype(false || std::invoke(ready, owner))>, bool>;
+};
+
 inline std::shared_ptr<CGame> gameFor(const std::shared_ptr<CGameGraphicsObject> &owner) {
     auto gui = owner->getGui();
     return gui && gui->getGame() ? gui->getGame() : owner->getGame();
@@ -43,7 +48,7 @@ vstd::task_handle<T> spawn(const std::shared_ptr<CGameGraphicsObject> &owner, vs
 }
 
 template <typename T>
-    requires(std::is_void_v<T> || std::default_initializable<T>)
+    requires(std::is_void_v<T> || requires { T{}; })
 T run(const std::shared_ptr<CGameGraphicsObject> &owner, vstd::task<T> task) {
     try {
         return game_async::wait(spawn(owner, std::move(task)));
@@ -72,7 +77,7 @@ vstd::task<std::invoke_result_t<Reader &>> until(Predicate ready, Reader read) {
 }
 
 template <typename T, typename Predicate, typename Callback>
-    requires std::derived_from<T, CGameGraphicsObject> && ReadyPredicate<Predicate, std::shared_ptr<T> &> &&
+    requires std::derived_from<T, CGameGraphicsObject> && OwnerReadyPredicate<Predicate, T> &&
              std::invocable<Callback &, std::shared_ptr<T> &>
 vstd::task<void> whenReady(std::weak_ptr<T> owner, Predicate ready, Callback callback) {
     co_await vstd::until(vstd::event_loop<>::instance(), [owner, ready = std::move(ready)]() mutable {

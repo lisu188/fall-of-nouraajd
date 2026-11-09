@@ -23,7 +23,9 @@ class CGui;
 
 namespace fn::sdl {
 template <typename T, auto Destroy>
-    requires std::invocable<decltype(Destroy), T *> && std::same_as<std::invoke_result_t<decltype(Destroy), T *>, void>
+    requires requires(T *resource) {
+        { std::invoke(Destroy, resource) } -> std::same_as<void>;
+    }
 struct ResourceDeleter {
     void operator()(T *resource) const noexcept {
         if (resource) {
