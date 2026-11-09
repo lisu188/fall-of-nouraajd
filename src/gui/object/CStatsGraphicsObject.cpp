@@ -25,6 +25,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CUiTheme.h"
 #include "gui/CLayout.h"
 
+CStatsGraphicsUtil::Resources CStatsGraphicsUtil::captureResources(const std::shared_ptr<CCreature> &creature) {
+    if (!creature) {
+        return {};
+    }
+    const auto stats = creature->getStats();
+    Resources result;
+    result.hp = creature->getHp();
+    result.hpMax = stats->getStamina() * 7;
+    result.mana = creature->getMana();
+    result.manaMax = stats->getMainValue() * 7;
+    if (result.hp > result.hpMax) {
+        result.hpRatio = 100;
+    } else if (result.hpMax <= 0) {
+        result.hpRatio = result.hp > 0 ? 100 : 0;
+    } else if (result.hp < 0) {
+        result.hpRatio = 0;
+    } else {
+        result.hpRatio = static_cast<float>(result.hp) / static_cast<float>(result.hpMax) * 100.0;
+    }
+    if (result.mana > result.manaMax || result.manaMax == 0) {
+        result.manaRatio = 100;
+    } else if (result.mana < 0) {
+        result.manaRatio = 0;
+    } else {
+        result.manaRatio = static_cast<float>(result.mana) / static_cast<float>(result.manaMax) * 100.0;
+    }
+    return result;
+}
+
 void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreature> creature, int x, int y, int w,
                                    int h, bool showNumeric, bool showExp) {
     if (!creature) {
@@ -32,17 +61,18 @@ void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CC
     }
 
     showExp = showExp && creature->isPlayer();
-    const bool showMana = creature->getManaMax() > 0;
+    const auto resources = captureResources(creature);
+    const bool showMana = resources.manaMax > 0;
     const int barCount = 1 + (showMana ? 1 : 0) + (showExp ? 1 : 0);
 
-    drawBar(gui, creature->getHpRatio(), 0, barCount, {125, 51, 57, 255}, x, y, w, h);
+    drawBar(gui, resources.hpRatio, 0, barCount, {125, 51, 57, 255}, x, y, w, h);
     if (showNumeric) {
-        drawValues(gui, "HP", creature->getHp(), creature->getHpMax(), 0, barCount, x, y, w, h);
+        drawValues(gui, "HP", resources.hp, resources.hpMax, 0, barCount, x, y, w, h);
     }
     if (showMana) {
-        drawBar(gui, creature->getManaRatio(), 1, barCount, {43, 78, 115, 255}, x, y, w, h);
+        drawBar(gui, resources.manaRatio, 1, barCount, {43, 78, 115, 255}, x, y, w, h);
         if (showNumeric) {
-            drawValues(gui, "MP", creature->getMana(), creature->getManaMax(), 1, barCount, x, y, w, h);
+            drawValues(gui, "MP", resources.mana, resources.manaMax, 1, barCount, x, y, w, h);
         }
     }
     if (showExp) {
@@ -67,9 +97,10 @@ void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_p
                                             UiTheme::scaled(gui, 16));
             getLayout()->setRuntimeRect(0, 0, gui->getWidth(), height);
             const int width = gui->getWidth() / 3;
+            const auto resourceStats = CStatsGraphicsUtil::captureResources(cret);
             const std::vector<std::tuple<std::string, int, int, int, SDL_Color>> resources{
-                {"HP", cret->getHp(), cret->getHpMax(), cret->getHpRatio(), {125, 51, 57, 255}},
-                {"MP", cret->getMana(), cret->getManaMax(), cret->getManaRatio(), {43, 78, 115, 255}},
+                {"HP", resourceStats.hp, resourceStats.hpMax, resourceStats.hpRatio, {125, 51, 57, 255}},
+                {"MP", resourceStats.mana, resourceStats.manaMax, resourceStats.manaRatio, {43, 78, 115, 255}},
                 {"XP", cret->getExp(), cret->getExpForNextLevel(), cret->getExpRatio(), {97, 81, 48, 255}}};
             for (size_t index = 0; index < resources.size(); ++index) {
                 const auto &[label, current, maximum, ratio, color] = resources[index];

@@ -419,3 +419,9 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     bool npc = false;
 };
+
+namespace performance_guard {
+void resetStatCompositionProbe();
+std::size_t statCompositionProbeCount();
+void disableStatCompositionProbe();
+} // namespace performance_guard
