@@ -67,11 +67,7 @@ void CTile::setPosx(int value) {
         map->moveTile(ptr<CTile>(), value, posy, posz);
         return;
     }
-    if (posx != value) {
-        posx = value;
-        if (auto owner = getOwningMap())
-            owner->terrainTileChanged(this);
-    }
+    setXYZ(value, posy, posz);
 }
 
 int CTile::getPosy() const { return posy; }
@@ -82,11 +78,7 @@ void CTile::setPosy(int value) {
         map->moveTile(ptr<CTile>(), posx, value, posz);
         return;
     }
-    if (posy != value) {
-        posy = value;
-        if (auto owner = getOwningMap())
-            owner->terrainTileChanged(this);
-    }
+    setXYZ(posx, value, posz);
 }
 
 int CTile::getPosz() const { return posz; }
@@ -97,12 +89,7 @@ void CTile::setPosz(int value) {
         map->moveTile(ptr<CTile>(), posx, posy, value);
         return;
     }
-    if (posz != value) {
-        const auto previousLevel = posz;
-        posz = value;
-        if (auto owner = getOwningMap())
-            owner->terrainTileChanged(this, previousLevel);
-    }
+    setXYZ(posx, posy, value);
 }
 
 int CTile::getMovementCost() const { return std::max(1, movementCost); }
@@ -121,9 +108,13 @@ void CTile::setMovementCost(int value) {
 }
 
 void CTile::setXYZ(int x, int y, int z) {
+    if (posx == x && posy == y && posz == z)
+        return;
+    const auto previousLevel = posz;
     posx = x;
     posy = y;
     posz = z;
+    notifyTerrainChanged(previousLevel);
 }
 
 const std::string &CTile::getTileType() const { return tileType; }
@@ -132,6 +123,53 @@ void CTile::setTileType(const std::string &tileType) {
     if (CTile::tileType == tileType)
         return;
     CTile::tileType = tileType;
-    if (auto map = getOwningMap())
-        map->terrainTileChanged(this);
+    notifyTerrainChanged();
+}
+
+void CTile::addTerrainObserver(const std::shared_ptr<CMap> &map) {
+    if (!map)
+        return;
+    removeTerrainObserver(nullptr);
+    if (terrainObserver.lock() == map)
+        return;
+    if (terrainObserver.expired()) {
+        terrainObserver = map;
+        return;
+    }
+    if (!additionalTerrainObservers)
+        additionalTerrainObservers = std::make_unique<std::vector<std::weak_ptr<CMap>>>();
+    if (std::ranges::none_of(*additionalTerrainObservers, [&map](const auto &entry) { return entry.lock() == map; }))
+        additionalTerrainObservers->emplace_back(map);
+}
+
+void CTile::removeTerrainObserver(const CMap *map) {
+    if (const auto owner = terrainObserver.lock(); !owner || owner.get() == map)
+        terrainObserver.reset();
+    if (!additionalTerrainObservers)
+        return;
+    std::erase_if(*additionalTerrainObservers, [map](const auto &entry) {
+        const auto owner = entry.lock();
+        return !owner || owner.get() == map;
+    });
+    if (terrainObserver.expired() && !additionalTerrainObservers->empty()) {
+        terrainObserver = additionalTerrainObservers->back();
+        additionalTerrainObservers->pop_back();
+    }
+    if (additionalTerrainObservers->empty())
+        additionalTerrainObservers.reset();
+}
+
+void CTile::notifyTerrainChanged(std::optional<int> previousLevel) {
+    removeTerrainObserver(nullptr);
+    const auto notify = [this, previousLevel](const std::weak_ptr<CMap> &observer) {
+        if (auto map = observer.lock()) {
+            map->terrainChanged(posz);
+            if (previousLevel && *previousLevel != posz)
+                map->terrainChanged(*previousLevel);
+        }
+    };
+    notify(terrainObserver);
+    if (additionalTerrainObservers)
+        for (const auto &observer : *additionalTerrainObservers)
+            notify(observer);
 }

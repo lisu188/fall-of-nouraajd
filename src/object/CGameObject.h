@@ -251,8 +251,6 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
   protected:
     void recordDirectPropertyChanged(const std::string &name);
 
-    std::shared_ptr<CMap> getOwningMap() const;
-
   private:
     void dispatchDeferred(vstd::move_only_function<void()> callback);
 

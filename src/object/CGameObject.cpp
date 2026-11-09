@@ -249,8 +249,6 @@ void CGameObject::setGame(std::shared_ptr<CGame> map) { this->game = map; }
 
 void CGameObject::setOwningMap(std::shared_ptr<CMap> map) { this->owningMap = std::move(map); }
 
-std::shared_ptr<CMap> CGameObject::getOwningMap() const { return owningMap.lock(); }
-
 void CGameObject::clearOwningMap(const std::shared_ptr<CMap> &expectedMap) {
     auto map = owningMap.lock();
     if (!map || (expectedMap && map != expectedMap)) {
@@ -481,10 +479,8 @@ void CGameObject::setTypeId(std::string _typeId) {
     if (typeId == _typeId)
         return;
     typeId = std::move(_typeId);
-    if (auto tile = dynamic_cast<CTile *>(this); tile && tile->getTileType().empty()) {
-        if (auto map = getOwningMap())
-            map->terrainTileChanged(tile);
-    }
+    if (auto tile = dynamic_cast<CTile *>(this); tile && tile->getTileType().empty())
+        tile->notifyTerrainChanged();
 }
 
 std::string CGameObject::getTypeId() { return typeId; }
