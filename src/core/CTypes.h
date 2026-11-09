@@ -35,12 +35,15 @@ class CTypes {
 
     static void registerCodec(std::type_index type, std::shared_ptr<const CSerializerBase> codec);
 
-    template <typename T, typename Encode, typename Decode>
+    template <fn::JsonCodecValue T, typename Encode, typename Decode>
+        requires fn::JsonEncoderFor<Encode, T> && fn::JsonDecoderFor<Decode, T>
     static void registerJsonCodec(Encode encode, Decode decode) {
         registerCodec(typeid(T), std::make_shared<CTypedJsonCodec<T>>(std::move(encode), std::move(decode)));
     }
 
-    template <typename T, typename Encode, typename Decode> static void registerJsonType(Encode encode, Decode decode) {
+    template <fn::JsonCodecValue T, typename Encode, typename Decode>
+        requires fn::JsonEncoderFor<Encode, T> && fn::JsonDecoderFor<Decode, T>
+    static void registerJsonType(Encode encode, Decode decode) {
         registerJsonCodec<T>(std::move(encode), std::move(decode));
         register_custom_setter<T>();
     }
