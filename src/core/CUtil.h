@@ -131,7 +131,7 @@ class CUtil {
         std::set<std::string> retValue;
         for (const auto &entry : std::filesystem::directory_iterator(dir)) {
             auto path = entry.path().string();
-            if (pred(path)) {
+            if (std::invoke(pred, path)) {
                 retValue.insert(std::move(path));
             }
         }
@@ -156,7 +156,7 @@ template <> std::string str(Coords coords);
 }
 
 template <fn::SdlNullableCallable F> auto sdl_safe(F f) {
-    auto return_value = f();
+    auto return_value = std::invoke(f);
     if (!return_value) {
         vstd::logger::error(SDL_GetError());
     }
@@ -164,14 +164,14 @@ template <fn::SdlNullableCallable F> auto sdl_safe(F f) {
 }
 
 template <fn::SdlStatusCallable F> auto sdl_safe(F f) {
-    auto return_value = f();
+    auto return_value = std::invoke(f);
     if (return_value == -1) {
         vstd::logger::error(SDL_GetError());
     }
     return return_value;
 }
 
-template <fn::SdlVoidCallable F> void sdl_safe(F f) { f(); }
+template <fn::SdlVoidCallable F> void sdl_safe(F f) { std::invoke(f); }
 
 #define SDL_SAFE(x) sdl_safe([&]() { return x; })
 #define JSONIFY(x) serializationValueOrThrow(CSerialization::serializeExpected(x)).dump()

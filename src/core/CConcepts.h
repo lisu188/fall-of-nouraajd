@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGlobal.h"
 
+#include <cstdint>
+
 class CGameEvent;
 
 class CGame;
@@ -66,6 +68,8 @@ concept PriorityCostNode = requires(const clean_t<T> &node) {
 
 template <typename T>
 concept JsonObjectPointer = requires(T object, const std::string &property) {
+    { object == nullptr } -> std::convertible_to<bool>;
+    { object->is_object() } -> std::convertible_to<bool>;
     { object->count(property) } -> std::convertible_to<std::size_t>;
     { object->size() } -> std::convertible_to<std::size_t>;
     { (*object)[property].is_string() } -> std::convertible_to<bool>;
@@ -73,7 +77,9 @@ concept JsonObjectPointer = requires(T object, const std::string &property) {
 };
 
 template <typename T>
-concept JsonMapPointer = JsonObjectPointer<T> && requires(T object) { object->items(); };
+concept JsonMapPointer = JsonObjectPointer<T> && requires(T object) {
+    { object->items() } -> std::ranges::input_range;
+};
 
 template <typename T>
 concept JsonDumpPointer = requires(T value, int indent) {
@@ -82,12 +88,13 @@ concept JsonDumpPointer = requires(T value, int indent) {
 
 template <typename Range>
 concept TaggablePointerRange =
-    std::ranges::input_range<Range> && requires(std::ranges::range_reference_t<Range> value, CTag tag) {
+    std::ranges::input_range<Range> &&
+    requires(const std::remove_reference_t<std::ranges::range_reference_t<Range>> &value, CTag tag) {
         { value->hasTag(tag) } -> std::convertible_to<bool>;
     };
 
 template <typename F>
-concept FilePredicate = std::predicate<F, std::string>;
+concept FilePredicate = std::predicate<F &, std::string &>;
 
 template <typename F>
 concept PathPassability = std::predicate<const clean_t<F> &, const Coords &>;
@@ -112,7 +119,7 @@ concept PathDistance =
 template <typename F>
 concept PathStepCost =
     std::invocable<const clean_t<F> &, const Coords &, const Coords &> &&
-    std::convertible_to<std::invoke_result_t<const clean_t<F> &, const Coords &, const Coords &>, int>;
+    std::convertible_to<std::invoke_result_t<const clean_t<F> &, const Coords &, const Coords &>, std::int64_t>;
 
 template <typename F>
 concept SdlStatusCallable = std::invocable<F &> && std::same_as<std::invoke_result_t<F &>, int>;
@@ -120,19 +127,23 @@ concept SdlStatusCallable = std::invocable<F &> && std::same_as<std::invoke_resu
 template <typename F>
 concept SdlVoidCallable = std::invocable<F &> && std::same_as<std::invoke_result_t<F &>, void>;
 
-template <typename F>
-concept SdlNullableCallable = std::invocable<F &> && !SdlStatusCallable<F> && !SdlVoidCallable<F>;
-
 template <typename T>
 concept SdlResourcePointer = std::is_pointer_v<clean_t<T>> && requires(clean_t<T> value) {
     { value == nullptr } -> std::convertible_to<bool>;
 };
 
 template <typename F>
-concept AnimationCallback = std::is_invocable_r_v<bool, F, std::shared_ptr<CGui>, SDL_EventType, int, int, int>;
+concept SdlNullableCallable = std::invocable<F &> && SdlResourcePointer<std::invoke_result_t<F &>>;
 
 template <typename F>
-concept TriggerCallback = std::is_invocable_r_v<void, F, std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>>;
+concept AnimationCallback =
+    std::is_copy_constructible_v<std::decay_t<F>> &&
+    std::is_invocable_r_v<bool, std::decay_t<F> &, std::shared_ptr<CGui>, SDL_EventType, int, int, int>;
+
+template <typename F>
+concept TriggerCallback =
+    std::is_copy_constructible_v<std::decay_t<F>> && std::is_move_constructible_v<std::decay_t<F>> &&
+    std::is_invocable_r_v<void, std::decay_t<F> &, std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>>;
 
 template <typename T>
 concept PythonCallback = std::same_as<clean_t<T>, pybind11::object> || std::invocable<T &>;

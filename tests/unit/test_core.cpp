@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
+#include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/CSdlResources.h"
@@ -47,10 +48,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
+#include "object/CTrigger.h"
 #include "handler/CEventHandler.h"
 #include "test_harness.h"
 #include "native_crash_diagnostics.h"
 #include "stat_composition_fixture.h"
+#include "core_concept_contracts.h"
 #include "vutil.h"
 
 #include <pybind11/embed.h>
@@ -719,6 +722,36 @@ void test_sdl_raii_alias_owns_surface() {
     Uint8 a = 0;
     SDL_GetRGBA(color, surface->format, &r, &g, &b, &a);
     expect_true(r == 1 && g == 2 && b == 3 && a == 4, "SurfacePtr should provide raw non-owning access via get");
+}
+
+void testCoreConceptContracts() {
+    int animationCalls = 0;
+    auto animation = std::make_shared<CAnimation>();
+    animation->withCallback(core_concept_contracts::LvalueAnimation{&animationCalls});
+    expect_true(animation->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0) && animationCalls == 1,
+                "animation callbacks must invoke their stored lvalue target");
+
+    int triggerCalls = 0;
+    CCustomTrigger trigger("", "", core_concept_contracts::LvalueTrigger{&triggerCalls});
+    auto copiedTrigger = trigger;
+    trigger.trigger(nullptr, nullptr);
+    copiedTrigger.trigger(nullptr, nullptr);
+    expect_true(triggerCalls == 2, "trigger callbacks must stay copyable and preserve ignored return values");
+
+    const auto directory = std::filesystem::current_path().string();
+    expect_true(CUtil::findFiles(directory, core_concept_contracts::LvalueFilePredicate{}).empty(),
+                "file predicates must receive named paths through an lvalue callable");
+    expect_true(CUtil::findFiles(directory, &std::string::empty).empty(),
+                "file predicates must support member pointers through std::invoke");
+
+    int statusCalls = 0;
+    expect_true(sdl_safe([&] { return ++statusCalls; }) == 1 && statusCalls == 1,
+                "SDL status callbacks must retain their integer result and run once");
+    int voidCalls = 0;
+    sdl_safe([&] { ++voidCalls; });
+    expect_true(voidCalls == 1, "SDL void callbacks must run once");
+    SDL_Surface surface{};
+    expect_true(sdl_safe([&] { return &surface; }) == &surface, "SDL nullable callbacks must preserve pointers");
 }
 
 void test_tag_round_trip_and_ordering() {
@@ -4678,6 +4711,7 @@ int main() {
     runDiagnosedCase("test_json_parse_expected_success_and_failure", test_json_parse_expected_success_and_failure);
     runDiagnosedCase("test_json_parse_dump_and_type_helpers", test_json_parse_dump_and_type_helpers);
     runDiagnosedCase("test_sdl_raii_alias_owns_surface", test_sdl_raii_alias_owns_surface);
+    runDiagnosedCase("testCoreConceptContracts", testCoreConceptContracts);
     runDiagnosedCase("test_direction_mapping", test_direction_mapping);
     runDiagnosedCase("test_rect_bounds_inclusion", test_rect_bounds_inclusion);
     runDiagnosedCase("test_tag_round_trip_and_ordering", test_tag_round_trip_and_ordering);

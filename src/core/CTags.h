@@ -70,7 +70,9 @@ class CTags {
 
     static std::string_view toString(CTag tag);
 
-    template <fn::TaggablePointerRange Range> static bool isTagPresent(const Range &range, CTag tag) {
+    template <typename Range>
+        requires fn::TaggablePointerRange<const Range>
+    static bool isTagPresent(const Range &range, CTag tag) {
         for (const auto &value : range) {
             if (value->hasTag(tag)) {
                 return true;
