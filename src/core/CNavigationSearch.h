@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <cstdint>
 #include <memory_resource>
+#include <stop_token>
 
 class CNavigationBudget;
 class CNavigationSnapshot;
@@ -31,6 +32,7 @@ struct CNavigationSearchLimits {
     std::size_t maxRecords = 1'000'000;
     std::size_t maxExpansions = 1'000'000;
     std::size_t maxPathLength = 100'000;
+    std::stop_token stopToken;
 };
 
 struct CNavigationSearchStatistics {

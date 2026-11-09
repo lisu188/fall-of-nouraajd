@@ -4,6 +4,7 @@ Copyright (C) 2026 Andrzej Lis
 SPDX-License-Identifier: GPL-3.0-or-later
 */
 #include "core/CGame.h"
+#include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CJsonUtil.h"
 #include "core/CController.h"
@@ -111,9 +112,21 @@ struct NavigationHarness {
 
     ~NavigationHarness() { game->getContext()->shutdown(); }
 
+    void waitForPlanning(const std::shared_ptr<CMapGraphicsObject> &world) {
+        const auto loop = vstd::event_loop<>::instance();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (world->isTravelling() && !map->isMoving() && std::chrono::steady_clock::now() < deadline) {
+            loop->runReady();
+            game_async::waitForProgress(loop->hasReadyWork());
+        }
+        expect_true(!world->isTravelling() || map->isMoving(),
+                    "worker planning must finish before movement assertions");
+    }
+
     void finishMovement(const std::shared_ptr<CMapGraphicsObject> &world) {
         auto loop = vstd::event_loop<>::instance();
         for (int frames = 0; frames < 128 && (world->isTravelling() || map->isMoving()); ++frames) {
+            waitForPlanning(world);
             world->renderObject(gui, world->getLayout()->getRect(world), static_cast<int>(frameTime));
             frameTime += 75;
             loop->runFrame();
@@ -269,7 +282,7 @@ void testOpeningPanelStopsAutomaticTravelAfterCurrentStep() {
     h.gui->pushChild(world);
     const auto turn = h.map->getTurn();
     world->startTravel(h.gui, Coords(6, 0, 0));
-    vstd::event_loop<>::instance()->runUntilIdle();
+    h.waitForPlanning(world);
     expect_true(world->isTravelling() && h.map->isMoving() && h.player->getCoords() == Coords(1, 0, 0),
                 "panel cancellation must exercise a real route with a committed animation in flight");
     auto panel = h.panel();
@@ -291,13 +304,13 @@ void testManualMovementAndWaitReplaceAutomaticTravelAtStepBoundary() {
     h.gui->pushChild(world);
     const auto turn = h.map->getTurn();
     world->startTravel(h.gui, Coords(6, 0, 0));
-    vstd::event_loop<>::instance()->runUntilIdle();
+    h.waitForPlanning(world);
     keyEvent(h.gui, SDLK_DOWN);
     h.finishMovement(world);
     expect_true(h.player->getCoords() == Coords(1, 1, 0) && h.map->getTurn() == turn + 2,
                 "manual movement replaces an automatic route after its already committed step");
     world->startTravel(h.gui, Coords(6, 1, 0));
-    vstd::event_loop<>::instance()->runUntilIdle();
+    h.waitForPlanning(world);
     keyEvent(h.gui, SDLK_SPACE);
     h.finishMovement(world);
     expect_true(h.player->getCoords() == Coords(2, 1, 0) && h.map->getTurn() == turn + 4,

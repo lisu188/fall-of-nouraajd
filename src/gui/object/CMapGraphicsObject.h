@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <stop_token>
 #include <unordered_map>
 #include <vector>
 
@@ -120,6 +121,7 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
         std::optional<std::pair<bool, Coords::Direction>> arrivalFootprint;
     };
     std::optional<TravelOrder> pendingOrder;
+    std::optional<std::stop_source> pendingSearch;
     std::vector<Motion> motions;
     bool motionBatchStarted = false;
     bool travelling = false;

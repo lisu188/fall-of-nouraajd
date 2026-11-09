@@ -243,80 +243,121 @@ struct CNpcRandomController::NpcRoute {
 };
 
 vstd::task<Coords> CNpcRandomController::controlAsync(std::shared_ptr<CCreature> creature) {
-    if (!creature || !creature->getMap()) {
-        interrupt(creature);
-        co_return creature ? creature->getCoords() : ZERO;
-    }
-    auto deferredContext = capture_deferred_creature_context(creature);
-    std::shared_ptr<CMap> map;
-    if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-        interrupt(creature);
-        co_return deferredContext.fallback;
-    }
-    if (route) {
-        if (currentStep >= route->steps.size()) {
-            interrupt(creature);
-            co_return creature->getCoords();
+    return [](std::shared_ptr<CNpcRandomController> self, std::shared_ptr<CCreature> creature) -> vstd::task<Coords> {
+        const auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread())
+            co_await vstd::post(loop);
+        auto &route = self->route;
+        auto &currentStep = self->currentStep;
+        if (!creature || !creature->getMap()) {
+            self->interrupt(creature);
+            co_return creature ? creature->getCoords() : ZERO;
         }
-        const auto expectedOrigin = currentStep ? route->steps[currentStep - 1] : route->origin;
-        const auto context = route->context.lock();
-        const bool staleContext =
-            route->hadContext && (!context || !context->isTransitionGenerationCurrent(route->generation) ||
-                                  !creature->getGame() || creature->getGame()->getContext() != context);
-        if (staleContext || route->creature.lock() != creature || route->map.lock() != map ||
-            (route->wasRegistered && map->getObjectByName(creature->getName()) != creature) ||
-            creature->getCoords() != expectedOrigin ||
-            (route->wasInstalled && creature->getController() != route->installedController.lock())) {
-            interrupt(creature);
-            co_return creature->getCoords();
+        auto deferredContext = capture_deferred_creature_context(creature);
+        std::shared_ptr<CMap> map;
+        if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
+            self->interrupt(creature);
+            co_return deferredContext.fallback;
         }
-        const auto next = map->normalizeCoords(route->steps[currentStep]);
-        if (creature_can_follow_step(map, creature, next))
-            co_return next;
-        interrupt(creature);
-        co_return creature->getCoords();
-    }
-
-    for (int i = 0; i < 10; i++) {
-        const auto dx = vstd::rand(-5, 5);
-        const auto dy = vstd::rand(-5, 5);
-        const auto candidate = map->normalizeCoords(creature->getCoords() + Coords(dx, dy, 0));
-        if (!map->canStep(candidate))
-            continue;
-        auto result = map->getNavigationService()->findPathResult(map, creature->getCoords(), candidate);
-        if (result.status == CNavigationSearchStatus::Found && !result.path.empty() &&
-            result.path.front() != creature->getCoords()) {
-            try {
-                auto budget = result.allocationBudget;
-                route = std::allocate_shared<NpcRoute>(CNavigationAllocator<NpcRoute>(budget), budget);
-                route->steps = std::move(result.path);
-                route->creature = creature;
-                route->map = map;
-                route->context = deferredContext.context;
-                route->generation = deferredContext.generation;
-                route->hadContext = deferredContext.hadContext;
-                route->wasRegistered = deferredContext.wasRegistered;
-                const auto installedController = creature->getController();
-                route->wasInstalled = installedController.get() == this;
-                if (route->wasInstalled)
-                    route->installedController = installedController;
-                route->origin = creature->getCoords();
-                currentStep = 0;
-            } catch (const std::bad_alloc &) {
-                interrupt(creature);
+        if (route) {
+            if (currentStep >= route->steps.size()) {
+                self->interrupt(creature);
+                co_return creature->getCoords();
             }
+            const auto expectedOrigin = currentStep ? route->steps[currentStep - 1] : route->origin;
+            const auto context = route->context.lock();
+            const bool staleContext =
+                route->hadContext && (!context || !context->isTransitionGenerationCurrent(route->generation) ||
+                                      !creature->getGame() || creature->getGame()->getContext() != context);
+            if (staleContext || route->creature.lock() != creature || route->map.lock() != map ||
+                (route->wasRegistered && map->getObjectByName(creature->getName()) != creature) ||
+                creature->getCoords() != expectedOrigin ||
+                (route->wasInstalled && creature->getController() != route->installedController.lock())) {
+                self->interrupt(creature);
+                co_return creature->getCoords();
+            }
+            const auto next = map->normalizeCoords(route->steps[currentStep]);
+            if (creature_can_follow_step(map, creature, next))
+                co_return next;
+            self->interrupt(creature);
+            co_return creature->getCoords();
         }
-        break;
-    }
 
-    if (route) {
-        const auto next = map->normalizeCoords(route->steps[currentStep]);
-        if (creature_can_follow_step(map, creature, next))
-            co_return next;
-        interrupt(creature);
-    }
+        for (int i = 0; i < 10; i++) {
+            const auto dx = vstd::rand(-5, 5);
+            const auto dy = vstd::rand(-5, 5);
+            const auto candidate = map->normalizeCoords(creature->getCoords() + Coords(dx, dy, 0));
+            if (!map->canStep(candidate))
+                continue;
+            const auto origin = creature->getCoords();
+            const auto epoch = map->getRoutingEpoch();
+            const auto bindingEpoch = creature->getGame() ? creature->getGame()->getMapBindingEpoch() : 0;
+            const auto installedController = creature->getController();
+            const bool wasInstalled = installedController == self;
+            const auto request = ++self->requestSerial;
+            if (self->pendingSearch)
+                self->pendingSearch->request_stop();
+            self->pendingSearch.emplace();
+            auto cancellation = *self->pendingSearch;
+            const auto stop = co_await vstd::thisTaskStopToken();
+            std::stop_callback cancelSearch(stop, [cancellation]() mutable { cancellation.request_stop(); });
+            const auto service = map->getNavigationService();
+            auto result = co_await vstd::work(game_async::workerPool(),
+                                              [service, map, origin, candidate, token = cancellation.get_token()] {
+                                                  return service->findPathResult(map, origin, candidate, token, true);
+                                              });
+            if (!loop->isMainThread())
+                co_await vstd::post(loop);
+            if (self->requestSerial != request)
+                co_return creature->getCoords();
+            self->pendingSearch.reset();
+            std::shared_ptr<CCreature> resolvedCreature;
+            std::shared_ptr<CMap> resolvedMap;
+            const auto currentGame = creature->getGame();
+            if (stop.stop_requested() || cancellation.stop_requested() ||
+                !resolve_deferred_creature_context(deferredContext, resolvedCreature, resolvedMap) ||
+                resolvedCreature != creature || resolvedMap != map || creature->getMap() != map ||
+                creature->getCoords() != origin || currentGame != deferredContext.game.lock() ||
+                (wasInstalled && creature->getController() != installedController) || map->getRoutingEpoch() != epoch ||
+                (currentGame && (currentGame->getMap() != map || currentGame->getMapBindingEpoch() != bindingEpoch ||
+                                 currentGame->getContext() != deferredContext.context.lock()))) {
+                self->interrupt(creature);
+                co_return creature->getCoords();
+            }
+            if (result.status == CNavigationSearchStatus::Found && !result.path.empty() &&
+                result.path.front() != creature->getCoords()) {
+                try {
+                    auto budget = result.allocationBudget;
+                    route = std::allocate_shared<NpcRoute>(CNavigationAllocator<NpcRoute>(budget), budget);
+                    route->steps = std::move(result.path);
+                    route->creature = creature;
+                    route->map = map;
+                    route->context = deferredContext.context;
+                    route->generation = deferredContext.generation;
+                    route->hadContext = deferredContext.hadContext;
+                    route->wasRegistered = deferredContext.wasRegistered;
+                    const auto installedController = creature->getController();
+                    route->wasInstalled = installedController == self;
+                    if (route->wasInstalled)
+                        route->installedController = installedController;
+                    route->origin = creature->getCoords();
+                    currentStep = 0;
+                } catch (const std::bad_alloc &) {
+                    self->interrupt(creature);
+                }
+            }
+            break;
+        }
 
-    co_return creature->getCoords();
+        if (route) {
+            const auto next = map->normalizeCoords(route->steps[currentStep]);
+            if (creature_can_follow_step(map, creature, next))
+                co_return next;
+            self->interrupt(creature);
+        }
+
+        co_return creature->getCoords();
+    }(ptr<CNpcRandomController>(), std::move(creature));
 }
 
 void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) {
@@ -326,6 +367,11 @@ void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature> creature, 
 }
 
 void CNpcRandomController::interrupt(std::shared_ptr<CCreature>) {
+    ++requestSerial;
+    if (pendingSearch) {
+        pendingSearch->request_stop();
+        pendingSearch.reset();
+    }
     route.reset();
     currentStep = 0;
 }
@@ -758,13 +804,74 @@ void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _targe
         return;
     }
     target = normalized;
-    auto result = calculatePath(player);
+    installPath(player, normalized, calculatePath(player));
+}
+
+vstd::task<bool> CPlayerController::setTargetAsync(std::shared_ptr<CPlayer> player, Coords destination,
+                                                   std::stop_token callerStop) {
+    return [](std::shared_ptr<CPlayerController> self, std::shared_ptr<CPlayer> player, Coords destination,
+              std::stop_token callerStop) -> vstd::task<bool> {
+        const auto loop = vstd::event_loop<>::instance();
+        if (!loop->isMainThread())
+            co_await vstd::post(loop);
+        const auto stop = co_await vstd::thisTaskStopToken();
+        if (stop.stop_requested() || callerStop.stop_requested() || self->movementSuspended)
+            co_return false;
+        self->clearPath();
+        if (!player || !player->getMap())
+            co_return false;
+        const auto map = player->getMap();
+        const auto normalized = map->normalizeCoords(destination);
+        if (!map->isWithinBounds(normalized))
+            co_return false;
+        const auto deferredContext = capture_deferred_creature_context(player);
+        const auto installedController = player->getController();
+        const auto origin = player->getCoords();
+        const auto epoch = map->getRoutingEpoch();
+        const auto bindingEpoch = player->getGame() ? player->getGame()->getMapBindingEpoch() : 0;
+        const auto request = self->requestSerial;
+        const auto service = map->getNavigationService();
+        self->pendingSearch.emplace();
+        auto cancellation = *self->pendingSearch;
+        std::stop_callback cancelSearch(stop, [cancellation]() mutable { cancellation.request_stop(); });
+        std::stop_callback cancelCaller(callerStop, [cancellation]() mutable { cancellation.request_stop(); });
+        auto result = co_await vstd::work(game_async::workerPool(),
+                                          [service, map, origin, normalized, token = cancellation.get_token()] {
+                                              return service->findPathResult(map, origin, normalized, token, true);
+                                          });
+        if (!loop->isMainThread())
+            co_await vstd::post(loop);
+        if (self->requestSerial != request)
+            co_return false;
+        self->pendingSearch.reset();
+        std::shared_ptr<CCreature> resolvedPlayer;
+        std::shared_ptr<CMap> resolvedMap;
+        const auto currentGame = player->getGame();
+        if (stop.stop_requested() || cancellation.stop_requested() || self->movementSuspended ||
+            !resolve_deferred_creature_context(deferredContext, resolvedPlayer, resolvedMap) ||
+            resolvedPlayer != player || resolvedMap != map || player->getMap() != map ||
+            player->getCoords() != origin || currentGame != deferredContext.game.lock() ||
+            player->getController() != installedController || map->getRoutingEpoch() != epoch ||
+            (currentGame && (currentGame->getMap() != map || currentGame->getMapBindingEpoch() != bindingEpoch ||
+                             currentGame->getContext() != deferredContext.context.lock()))) {
+            self->clearPath();
+            co_return false;
+        }
+        self->installPath(player, normalized, std::move(result));
+        co_return self->route != nullptr;
+    }(ptr<CPlayerController>(), std::move(player), destination, callerStop);
+}
+
+void CPlayerController::installPath(std::shared_ptr<CPlayer> player, Coords normalized,
+                                    CNavigationSearchResult result) {
+    const auto map = player->getMap();
     if (result.status != CNavigationSearchStatus::Found || result.path.empty() || result.path.back() != normalized ||
         result.path.front() == player->getCoords()) {
         target.reset();
         return;
     }
     try {
+        target = normalized;
         auto budget = result.allocationBudget;
         route = std::allocate_shared<PlayerRoute>(CNavigationAllocator<PlayerRoute>(budget), budget);
         route->steps = std::move(result.path);
@@ -853,6 +960,10 @@ bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
 
 void CPlayerController::clearPath() {
     ++requestSerial;
+    if (pendingSearch) {
+        pendingSearch->request_stop();
+        pendingSearch.reset();
+    }
     target.reset();
     route.reset();
     currentStep = 0;

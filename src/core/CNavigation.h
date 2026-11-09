@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory_resource>
 #include <mutex>
 #include <span>
+#include <stop_token>
 
 class CMap;
 class CMapObject;
@@ -135,8 +136,10 @@ class CNavigationService : public std::enable_shared_from_this<CNavigationServic
     std::shared_ptr<CNavigationBudget> budget() const;
     std::shared_ptr<CNavigationSnapshot> snapshot(const std::shared_ptr<CMap> &map);
     std::vector<Coords> findPath(const std::shared_ptr<CMap> &map, Coords start, Coords goal);
-    CNavigationSearchResult findPathResult(const std::shared_ptr<CMap> &map, Coords start, Coords goal);
+    CNavigationSearchResult findPathResult(const std::shared_ptr<CMap> &map, Coords start, Coords goal,
+                                           std::stop_token stop = {}, bool waitForWorkspace = false);
     std::size_t searchCount() const;
+    std::size_t ownerThreadSearchCount() const;
     CNavigationFlowStatistics flowStatistics() const;
     void trimCaches();
     void clearSessionCaches();
