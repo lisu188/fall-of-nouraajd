@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -406,6 +407,107 @@ class AndroidPortScaffoldTest(unittest.TestCase):
                         self.assertIn("Android NDK", completed.stderr)
                         self.assertFalse(dependencies.exists(), "Reject incompatible NDK before dependency setup")
                         self.assertFalse(download_log.exists(), "Reject incompatible NDK before network access")
+
+    def testAndroidBootstrapChecksOutTheManifestBaseline(self):
+        if os.name != "posix" or shutil.which("bash") is None or shutil.which("git") is None:
+            self.skipTest("Android registry checkout requires POSIX shell and Git")
+        bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
+        checkout = bootstrap[bootstrap.index('\nVCPKG_ROOT="') : bootstrap.index('\nif [[ ! -x "${VCPKG_ROOT}/vcpkg"')]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-android-registry-") as temporary:
+            project = Path(temporary)
+            registry = project / "registry"
+
+            def git(*arguments):
+                return subprocess.run(
+                    ["git", "-C", str(registry), *arguments],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=10,
+                ).stdout.strip()
+
+            registry.mkdir()
+            git("init")
+            git("config", "user.name", "Registry fixture")
+            git("config", "user.email", "registry@example.invalid")
+            versions = registry / "versions/baseline.json"
+            versions.parent.mkdir()
+            versions.write_text('{"default":{"pybind11":{"baseline":"3.0.1"}}}\n', encoding="utf-8")
+            git("add", ".")
+            git("commit", "-m", "Original registry")
+            original = git("rev-parse", "HEAD")
+            git("tag", "-a", "2026.05.25", "-m", "Fallback registry")
+            versions.write_text('{"default":{"pybind11":{"baseline":"3.1.0"}}}\n', encoding="utf-8")
+            git("add", ".")
+            git("commit", "-m", "Manifest registry")
+            baseline = git("rev-parse", "HEAD")
+            environment = os.environ | {
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": f"url.{registry.as_uri()}.insteadOf",
+                "GIT_CONFIG_VALUE_0": "https://github.com/microsoft/vcpkg.git",
+                "GIT_ALLOW_PROTOCOL": "file",
+            }
+            environment.pop("GAME_ANDROID_VCPKG_REF", None)
+            for name, manifest_baseline, override, expected in (
+                ("baseline", baseline, None, baseline),
+                ("fallback", None, None, original),
+                ("override", baseline, "2026.05.25", original),
+            ):
+                with self.subTest(case=name):
+                    case = project / name
+                    case.mkdir()
+                    manifest = {"builtin-baseline": manifest_baseline} if manifest_baseline else {}
+                    (case / "vcpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
+                    selected_environment = environment | {"REPO_ROOT": str(case), "DEPS_ROOT": str(case / "deps")}
+                    if override:
+                        selected_environment["GAME_ANDROID_VCPKG_REF"] = override
+                    script = (
+                        'set -euo pipefail\nVCPKG_REF="${GAME_ANDROID_VCPKG_REF:-2026.05.25}"\n'
+                        + checkout
+                        + '\ngit -C "${VCPKG_ROOT}" rev-parse HEAD\n'
+                    )
+                    for attempt in range(2):
+                        completed = subprocess.run(
+                            ["bash", "-c", script],
+                            env=selected_environment,
+                            capture_output=True,
+                            text=True,
+                            timeout=15,
+                        )
+                        self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+                        self.assertEqual(expected, completed.stdout.splitlines()[-1], f"{name} attempt {attempt}")
+                        selected = case / "deps/vcpkg/versions/baseline.json"
+                        expected_version = "3.1.0" if expected == baseline else "3.0.1"
+                        self.assertEqual(
+                            expected_version, json.loads(selected.read_text())["default"]["pybind11"]["baseline"]
+                        )
+            mismatch = project / "baseline/deps/vcpkg"
+            selected_environment = environment | {
+                "REPO_ROOT": str(project / "baseline"),
+                "DEPS_ROOT": str(project / "baseline/deps"),
+            }
+            subprocess.run(
+                ["git", "-C", str(mismatch), "fetch", "--depth", "1", "origin", "2026.05.25"],
+                env=selected_environment,
+                capture_output=True,
+                check=True,
+                timeout=10,
+            )
+            subprocess.run(
+                ["git", "-C", str(mismatch), "checkout", "--detach", "FETCH_HEAD"],
+                capture_output=True,
+                check=True,
+                timeout=10,
+            )
+            completed = subprocess.run(
+                ["bash", "-c", script],
+                env=selected_environment,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            self.assertEqual(7, completed.returncode, completed.stdout + completed.stderr)
+            self.assertIn("Existing", completed.stderr)
 
     def test_dependency_bootstrap_pins_python_and_dynamic_sdl(self):
         bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
