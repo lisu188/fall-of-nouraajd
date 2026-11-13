@@ -196,7 +196,7 @@ jobs:
       - name: Upload current Linux MCP runtime
         id: mcp-runtime-upload
         if: needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-runtime-linux-${{ github.sha }}
           path: test/mcp-branch-runtime-linux.tar.gz
@@ -913,7 +913,7 @@ jobs:
           --archive test/mcp-branch-runtime-windows.tar.gz --head "${{ github.sha }}"
       - name: Upload current Windows MCP runtime
         id: mcp-runtime-upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-runtime-windows-${{ github.sha }}
           path: test/mcp-branch-runtime-windows.tar.gz
