@@ -63,7 +63,7 @@ jobs:
           python3 scripts/mcp_branch_shards.py matrix --github-output "${GITHUB_OUTPUT}"
           --catalog-output test/mcp-branch-catalog.json
       - name: Upload authored branch obligations and pending blockers
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-catalog-${{ github.sha }}
           path: test/mcp-branch-catalog.json
@@ -196,7 +196,7 @@ jobs:
       - name: Upload current Linux MCP runtime
         id: mcp-runtime-upload
         if: needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-runtime-linux-${{ github.sha }}
           path: test/mcp-branch-runtime-linux.tar.gz
@@ -275,7 +275,7 @@ jobs:
         run: cmake --build cmake-build-gcc15-release --target package -j"$(nproc)"
       - name: publish
         if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fall-of-nouraajd-linux
           path: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
@@ -293,7 +293,7 @@ jobs:
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload compile diagnostics
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: build-metrics-linux
           path: test/build-metrics/
@@ -372,7 +372,7 @@ jobs:
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: linux-coverage-report
           path: |
@@ -913,7 +913,7 @@ jobs:
           --archive test/mcp-branch-runtime-windows.tar.gz --head "${{ github.sha }}"
       - name: Upload current Windows MCP runtime
         id: mcp-runtime-upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-runtime-windows-${{ github.sha }}
           path: test/mcp-branch-runtime-windows.tar.gz
@@ -963,7 +963,7 @@ jobs:
           if not errorlevel 1 sccache --show-stats
       - name: publish
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fall-of-nouraajd-windows
           path: cmake-build-clangcl20-release/fall-of-nouraajd-*.zip
@@ -976,7 +976,7 @@ jobs:
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload compile diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: build-metrics-windows
           path: test/build-metrics/
@@ -1034,7 +1034,7 @@ jobs:
           --shard-index ${{ matrix.shard }} --shard-count ${{ matrix.count }}
       - name: Upload branch traces and timings
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branches-linux-${{ matrix.shard }}-${{ github.sha }}
           path: test/mcp-branches-linux-${{ matrix.shard }}
@@ -1090,7 +1090,7 @@ jobs:
           if errorlevel 1 exit /b 1
       - name: Upload branch traces and timings
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branches-windows-${{ matrix.shard }}-${{ github.sha }}
           path: test/mcp-branches-windows-${{ matrix.shard }}
@@ -1143,7 +1143,7 @@ jobs:
           --output test/mcp-branch-timings-windows.json
       - name: Publish measured branch timings for review
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-measured-timings-${{ github.sha }}
           path: test/mcp-branch-timings-*.json
