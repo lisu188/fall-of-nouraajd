@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,17 +36,17 @@ def load(self, context):
     @register(context)
     class EndlessPainEffect(CEffect):
         def onEffect(self):
-            self.getVictim().hurt(self.getCaster().getDmg() * 15 // 100)
+            self.hurtVictim(self.getCaster().getDmgFor(self.getVictim()) * 15 // 100)
 
     @register(context)
     class AbyssalShadowsEffect(CEffect):
         def onEffect(self):
             dmg = spell_damage(self.getVictim())
             if self.getTimeLeft() > 1:
-                dmg.setNumericProperty("shadow", self.getCaster().getDmg() * 45 // 100)
+                dmg.setNumericProperty("shadow", self.getCaster().getDmgFor(self.getVictim()) * 45 // 100)
             else:
-                dmg.setNumericProperty("shadow", self.getCaster().getDmg())
-            self.getVictim().hurt(dmg)
+                dmg.setNumericProperty("shadow", self.getCaster().getDmgFor(self.getVictim()))
+            self.hurtVictim(dmg)
 
     @register(context)
     class ArmorOfEndlessWinterEffect(CEffect):
@@ -56,17 +56,17 @@ def load(self, context):
     @register(context)
     class MutilationEffect(CEffect):
         def onEffect(self):
-            self.getVictim().hurt(self.getCaster().getStats().getNumericProperty("agility") // 4)
+            self.hurtVictim(self.getCaster().getStats().getNumericProperty("agility") // 4)
 
     @register(context)
     class LethalPoisonEffect(CEffect):
         def onEffect(self):
-            self.getVictim().hurt(self.getCaster().getDmg() * 4 // 6)
+            self.hurtVictim(self.getCaster().getDmgFor(self.getVictim()) * 4 // 6)
 
     @register(context)
     class BloodlashEffect(CEffect):
         def onEffect(self):
-            self.getVictim().hurt(int(self.getCaster().getDmg() * 0.75))
+            self.hurtVictim(int(self.getCaster().getDmgFor(self.getVictim()) * 0.75))
 
     @register(context)
     class ChloroformEffect(CEffect):
@@ -92,7 +92,7 @@ def load(self, context):
                 base += 2 + clues * 2
             damage = spell_damage(self.getVictim())
             damage.setNumericProperty("fire", base)
-            victim.hurt(damage)
+            self.hurtVictim(damage)
 
     @register(context)
     class SanctifiedWardEffect(CEffect):
@@ -118,21 +118,21 @@ def load(self, context):
                 "normal",
                 max(1, caster.getStats().getNumericProperty("agility") // 3 + caster.getLevel() // 2 + routes),
             )
-            self.getVictim().hurt(damage)
+            self.hurtVictim(damage)
 
     # Baldur's Gate inspired repertoire.
 
     @register(context)
     class MelfsAcidArrowEffect(CEffect):
         def onEffect(self):
-            self.getVictim().hurt(2 + self.getCaster().getLevel() // 2)
+            self.hurtVictim(2 + self.getCaster().getLevel() // 2)
 
     @register(context)
     class CloudkillEffect(CEffect):
         def onEffect(self):
             damage = spell_damage(self.getVictim())
             damage.setNumericProperty("shadow", 3 + self.getCaster().getLevel())
-            self.getVictim().hurt(damage)
+            self.hurtVictim(damage)
 
     @register(context)
     class HoldPersonEffect(CEffect):

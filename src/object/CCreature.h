@@ -137,6 +137,12 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     int getDmg(bool allowCrit = true);
 
+    int getDmgFor(std::shared_ptr<CCreature> victim, bool allowCrit = true);
+
+    void hurtFrom(std::shared_ptr<CCreature> cause, std::shared_ptr<CDamage> damage);
+    void hurtFrom(std::shared_ptr<CCreature> cause, int damage);
+    void hurtFrom(std::shared_ptr<CCreature> cause, float damage);
+
     int getScale();
 
     bool isAlive();
@@ -405,6 +411,15 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     std::shared_ptr<CStats> baseStats = std::make_shared<CStats>();
     std::shared_ptr<CStats> levelStats = std::make_shared<CStats>();
+
+    friend class CEffect;
+    struct AttackRoll {
+        int damage;
+        bool connected;
+    };
+    AttackRoll rollDamage(bool allowCrit);
+    void hurtFromProducer(std::shared_ptr<CCreature> cause, std::shared_ptr<CDamage> damage,
+                          std::shared_ptr<CGameObject> producer);
 
     void takeDamage(int i);
 

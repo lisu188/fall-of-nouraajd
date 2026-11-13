@@ -30,7 +30,8 @@ class CInteraction : public CGameObject {
 
     V_META(CInteraction, CGameObject, V_PROPERTY(CInteraction, std::shared_ptr<CEffect>, effect, getEffect, setEffect),
            V_PROPERTY(CInteraction, int, manaCost, getManaCost, setManaCost),
-           V_PROPERTY(CInteraction, bool, selfTarget, getSelfTarget, setSelfTarget))
+           V_PROPERTY(CInteraction, bool, selfTarget, getSelfTarget, setSelfTarget),
+           V_PROPERTY(CInteraction, bool, offensive, getOffensive, setOffensive))
 
   public:
     CInteraction();
@@ -57,6 +58,9 @@ class CInteraction : public CGameObject {
 
     void setSelfTarget(bool value);
 
+    bool getOffensive() const;
+    void setOffensive(bool value);
+
     // Effect target routing (EPIC_06/STORY_01/SUBSTORY_02): true when this
     // interaction's effect applies to the caster rather than the opponent. An
     // explicit selfTarget routes to the caster; otherwise a legacy Buff-tagged effect
@@ -68,5 +72,6 @@ class CInteraction : public CGameObject {
   private:
     int manaCost = 0;
     bool selfTarget = false;
+    bool offensive = false;
     std::shared_ptr<CEffect> effect;
 };
