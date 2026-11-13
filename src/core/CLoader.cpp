@@ -871,6 +871,62 @@ std::vector<std::string> build_tile_types(const json &tileset) {
     return tileTypes;
 }
 
+class LoadStageDiagnostics {
+  public:
+    enum class Candidate { None, Primary, Backup };
+    enum class Outcome { Pending, Failure, Success, Superseded, Rejected };
+
+    LoadStageDiagnostics() noexcept {
+        const char *flag = std::getenv("GAME_LOAD_STAGE_DIAGNOSTICS");
+        enabled = flag && flag[0] == '1' && flag[1] == '\0';
+        if (enabled)
+            started = std::chrono::steady_clock::now();
+    }
+
+    ~LoadStageDiagnostics() noexcept {
+        if (outcome == Outcome::Pending)
+            outcome = Outcome::Failure;
+        emit("terminal", outcome == Outcome::Success);
+    }
+
+    void select(Candidate value) noexcept { candidate = value; }
+    void finish(Outcome value) noexcept { outcome = value; }
+
+    void mark(const char *stage, bool success = true) noexcept {
+        if (records < MAX_RECORDS - 1)
+            emit(stage, success);
+    }
+
+  private:
+    static constexpr std::size_t MAX_RECORDS = 48;
+    bool enabled = false;
+    Candidate candidate = Candidate::None;
+    Outcome outcome = Outcome::Pending;
+    std::size_t records = 0;
+    std::chrono::steady_clock::time_point started{};
+
+    void emit(const char *stage, bool success) noexcept {
+        if (!enabled || records >= MAX_RECORDS)
+            return;
+        const char *candidateLabel = candidate == Candidate::Primary  ? "primary"
+                                     : candidate == Candidate::Backup ? "backup"
+                                                                      : "none";
+        const char *outcomeLabel = outcome == Outcome::Pending      ? "pending"
+                                   : outcome == Outcome::Success    ? "success"
+                                   : outcome == Outcome::Superseded ? "superseded"
+                                   : outcome == Outcome::Rejected   ? "rejected"
+                                                                    : "failure";
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+        std::fprintf(stderr,
+                     "{\"diagnostic\":\"load-stage\",\"candidate\":\"%s\",\"stage\":\"%s\","
+                     "\"elapsedMicroseconds\":%lld,\"sequence\":%zu,\"success\":%s,\"outcome\":\"%s\"}\n",
+                     candidateLabel, stage, static_cast<long long>(elapsed), ++records, success ? "true" : "false",
+                     outcomeLabel);
+        std::fflush(stderr);
+    }
+};
+
 class SaveStageDiagnostics {
   public:
     SaveStageDiagnostics() noexcept {
@@ -1028,7 +1084,7 @@ bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_
 
 std::expected<std::shared_ptr<CMap>, std::string>
 restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::DecodedDocument &saveDocument,
-                      const std::string &slotName, bool &superseded) {
+                      const std::string &slotName, bool &superseded, LoadStageDiagnostics *diagnostics) {
     if (!game) {
         return std::unexpected("cannot restore save without a game");
     }
@@ -1052,6 +1108,8 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
     try {
         if (!isCurrent())
             return std::unexpected("saved map load was superseded");
+        if (diagnostics)
+            diagnostics->mark("resources.begin");
         {
             CScopedGameMap scopedMap(game, nullptr, isCurrent);
             const auto resourcesCurrent = [&] {
@@ -1073,32 +1131,51 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
             // Dependency resources must not leave another map's asset scope selected.
             activate_map_scope(game, saveDocument.mapName);
         }
+        if (diagnostics)
+            diagnostics->mark("resources.end");
         if (!isCurrent() || !ownsScene()) {
             superseded = true;
             return std::unexpected("saved map load changed the active scene");
         }
         std::shared_ptr<CMap> map;
+        if (diagnostics)
+            diagnostics->mark("snapshot.construct.begin");
         {
             const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
             CScopedObjectConfig scopedSaveConfig(handler, saveConfigKey, saveDocument.snapshot);
             CSerialization::StrictScope strict(saveConfigKey);
             map = handler->createObject<CMap>(game, saveConfigKey, strict);
         }
+        if (diagnostics)
+            diagnostics->mark("snapshot.construct.end");
         if (!isCurrent() || !ownsScene()) {
             superseded = true;
             return std::unexpected("saved map construction was superseded");
         }
         std::string rehydrateError;
-        if (!rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError))
+        if (diagnostics)
+            diagnostics->mark("rehydrate.begin");
+        if (!rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError)) {
+            if (diagnostics)
+                diagnostics->mark("rehydrate.end", false);
             return std::unexpected(rehydrateError);
+        }
+        if (diagnostics)
+            diagnostics->mark("rehydrate.end");
         if (!isCurrent() || !ownsScene()) {
             superseded = true;
             return std::unexpected("saved map rehydration was superseded");
         }
+        if (diagnostics)
+            diagnostics->mark("registrations.commit.begin");
         if (!registrations.commit() || !isCurrent() || !ownsScene()) {
+            if (diagnostics)
+                diagnostics->mark("registrations.commit.end", false);
             superseded = true;
             return std::unexpected("saved map registration commit was superseded");
         }
+        if (diagnostics)
+            diagnostics->mark("registrations.commit.end");
         resourceScope.commit();
         return map;
     } catch (const std::exception &exception) {
@@ -1109,22 +1186,35 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
 
 std::expected<std::shared_ptr<CMap>, std::string> load_save_candidate(const std::shared_ptr<CGame> &game,
                                                                       const std::string &slotName,
-                                                                      const std::string &path, bool &superseded) {
+                                                                      const std::string &path, bool &superseded,
+                                                                      LoadStageDiagnostics *diagnostics) {
+    if (diagnostics)
+        diagnostics->mark("readParse.begin");
     auto raw = game->getResourcesProvider()->loadJson(path);
+    if (diagnostics)
+        diagnostics->mark("readParse.end", static_cast<bool>(raw));
     if (!raw) {
         return std::unexpected("save file could not be read or parsed");
     }
+    if (diagnostics)
+        diagnostics->mark("decode.begin");
     auto decoded = CSaveFormat::decodeDocument(raw);
+    if (diagnostics)
+        diagnostics->mark("decode.end", decoded.has_value());
     if (!decoded) {
         return std::unexpected(decoded.error());
     }
     if (decoded->encoding == CSaveFormat::Encoding::Legacy) {
         vstd::logger::info("Migrating legacy save in memory:", slotName, path);
     }
-    return restore_save_document(game, *decoded, slotName, superseded);
+    auto result = restore_save_document(game, *decoded, slotName, superseded, diagnostics);
+    if (diagnostics && superseded)
+        diagnostics->finish(LoadStageDiagnostics::Outcome::Superseded);
+    return result;
 }
 
-std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &game, const std::string &name) {
+std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                 LoadStageDiagnostics *diagnostics = nullptr) {
     if (!CSaveFormat::isValidSlotName(name)) {
         vstd::logger::warning("Rejected invalid save slot name during load:", name);
         return std::nullopt;
@@ -1136,14 +1226,22 @@ std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &g
     const auto ownsScene = [&] {
         return context->isTransitionGenerationCurrent(generation) && game->getMap() == previousMap;
     };
-    if (!ownsScene())
+    if (!ownsScene()) {
+        if (diagnostics)
+            diagnostics->finish(LoadStageDiagnostics::Outcome::Superseded);
         return std::nullopt;
+    }
 
     const auto primaryPath = CSaveFormat::primaryPath(name);
     bool superseded = false;
-    auto primary = load_save_candidate(game, name, primaryPath, superseded);
-    if (!ownsScene())
+    if (diagnostics)
+        diagnostics->select(LoadStageDiagnostics::Candidate::Primary);
+    auto primary = load_save_candidate(game, name, primaryPath, superseded, diagnostics);
+    if (!ownsScene()) {
+        if (diagnostics)
+            diagnostics->finish(LoadStageDiagnostics::Outcome::Superseded);
         return std::nullopt;
+    }
     if (primary) {
         return SaveLoadResult{*primary, primaryPath, false};
     }
@@ -1153,9 +1251,14 @@ std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &g
         return std::nullopt;
 
     const auto backupPath = CSaveFormat::backupPath(name);
-    auto backup = load_save_candidate(game, name, backupPath, superseded);
-    if (!ownsScene())
+    if (diagnostics)
+        diagnostics->select(LoadStageDiagnostics::Candidate::Backup);
+    auto backup = load_save_candidate(game, name, backupPath, superseded, diagnostics);
+    if (!ownsScene()) {
+        if (diagnostics)
+            diagnostics->finish(LoadStageDiagnostics::Outcome::Superseded);
         return std::nullopt;
+    }
     if (backup) {
         vstd::logger::warning("Recovered save slot from backup:", name, backupPath);
         return SaveLoadResult{*backup, backupPath, true};
@@ -2042,6 +2145,7 @@ vstd::task<void> CGameLoader::startRandomGameWithPlayerAsync(std::weak_ptr<CGame
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
+    LoadStageDiagnostics diagnostics;
     if (!game) {
         return;
     }
@@ -2049,21 +2153,31 @@ void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::s
     const auto generation = context->captureTransitionGeneration();
     auto admission = context->tryBeginVerifiedRestore();
     if (!admission) {
+        diagnostics.finish(LoadStageDiagnostics::Outcome::Rejected);
         vstd::logger::warning("Rejected save load while a native operation or snapshot owns the session:", save);
         return;
     }
-    if (auto loaded = try_load_saved_map(game, save)) {
+    if (auto loaded = try_load_saved_map(game, save, &diagnostics)) {
         const auto receiverName = authoredVerifiedLoadResumeReceiver(game, loaded->map);
         const auto receiver = loaded->map->getObjectByName(receiverName);
+        diagnostics.mark("install.begin");
         vstd::event_loop<>::instance()->resetQuit();
         game->setMap(loaded->map);
         repair_recovered_backup(game, *loaded, save);
+        diagnostics.mark("install.end");
+        diagnostics.mark("verifiedCommit.begin");
         if (!admission->commit(loaded->map)) {
+            diagnostics.mark("verifiedCommit.end", false);
+            diagnostics.finish(LoadStageDiagnostics::Outcome::Superseded);
             vstd::logger::warning("Verified save installation was superseded; save quarantine was retained:", save);
             return;
         }
         admission.reset();
+        diagnostics.mark("verifiedCommit.end");
+        diagnostics.mark("resume.queue.begin");
         queueVerifiedLoadResume(game, context, loaded->map, receiver, receiverName, generation);
+        diagnostics.mark("resume.queue.end");
+        diagnostics.finish(LoadStageDiagnostics::Outcome::Success);
         return;
     }
     vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);
