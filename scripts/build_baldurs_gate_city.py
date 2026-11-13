@@ -791,11 +791,8 @@ def compileCity(source, quests=None):
                 )
             if actor["creature"] == "TAMOKO":
                 for text, action, condition in (
-                    ("Hear Tamoko's warning.", "hearTamokoWarning", "canTamokoFirstMeeting"),
-                    ("Decline Tamoko's first approach.", "declineTamokoFirstMeeting", "canTamokoFirstMeeting"),
-                    ("Discuss Tamoko's request.", "discussTamokoRequest", "canTamokoSecondMeeting"),
-                    ("Agree to Tamoko's request.", "acceptTamokoRequest", "canFinishTamokoSecondMeeting"),
-                    ("Refuse Tamoko's request.", "refuseTamokoRequest", "canFinishTamokoSecondMeeting"),
+                    ("Discuss Tamoko's first meeting.", "discussTamokoFirstMeeting", "canTamokoFirstMeeting"),
+                    ("Continue Tamoko's request.", "discussTamokoSecondMeeting", "canTamokoSecondMeeting"),
                 ):
                     utilities.append(
                         definition("CDialogOption", text=text, action=action, condition=condition, nextStateId="ENTRY")
@@ -881,6 +878,8 @@ def compileCity(source, quests=None):
                         )
                     )
             options = options[:1] + authored + utilities + options[1:]
+            if name == "cityAr0800ScriptActorTamoko" and actor["creature"] == "TAMOKO":
+                options = [option for option in options if option["properties"].get("action") != "talk"]
             for number, option in enumerate(options):
                 option["properties"]["number"] = number
             config[name + "Dialog"] = definition(
@@ -1005,6 +1004,18 @@ def compileCity(source, quests=None):
     )
     place("cityCustody", usablePosition("AR0800", [3560, 1380], reserve=True))
     config["cityCustodyQuest"] = definition("BaldursGateCustodyQuest", description="The Flaming Fist pursuit")
+    for source_id, qid, description in (
+        (27461, "cityTamokoWarningJournalQuest", "Tamoko's warning"),
+        (27462, "cityTamokoRefusalJournalQuest", "Tamoko's rejected request"),
+        (27463, "cityTamokoInformedJournalQuest", "Tamoko's information"),
+    ):
+        config[qid] = definition(
+            "BaldursGateTamokoJournalQuest",
+            description=description,
+            sourceJournalId=source_id,
+            sourceJournalRawFlags=92,
+            sourceDialogue="TAMOKO",
+        )
     entry = usablePosition("AR0800", [3500, 1350], reserve=True)
     config["cityStart"] = definition(
         "BaldursGateStart", canStep=True, animation="images/misc/signpost", alwaysSimulate=True

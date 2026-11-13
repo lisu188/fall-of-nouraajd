@@ -572,11 +572,11 @@ class QuestRoute:
         self.ensurePhase(row.get("phase", 5))
         if key == "cythandriaDiary":
             self.tamokoMeetings()
-            name = self.actorName([{"creature": "TAMOKO", "area": "AR1100"}])
-            self.contact(name)
-            self.d.choose(name + "Dialog", "acceptTamokoRequest")
-            self.d.test.assertEqual("active", state(self.d, key))
-            self.d.test.assertTrue(self.d.flag("plugin_cityFlag_tamokoMove2"))
+            self.d.test.assertEqual(
+                "accept", self.d.string("plugin_cityTamokoSecondChoice"), "An earlier source refusal cannot be bypassed"
+            )
+            self.d.test.assertEqual("active", state(self.d, key), "Only the informed terminal may admit the diary lead")
+            self.d.test.assertIn("cityCythandriaDiaryQuest", self.d.questNames())
             return
         self.conditions(row.get("acceptConditions", {}))
         name = self.actorName(row["givers"])
@@ -590,15 +590,25 @@ class QuestRoute:
         if not self.d.flag("plugin_cityFlag_tamokoMove1"):
             name = self.actorName([{"creature": "TAMOKO", "area": "AR0800"}])
             self.contact(name)
-            self.d.choose(name + "Dialog", "declineTamokoFirstMeeting" if self.tamoko_refuse else "hearTamokoWarning")
-            self.d.test.assertEqual(
-                "refuse" if self.tamoko_refuse else "listen", self.d.string("plugin_cityTamokoFirstChoice")
+            choices = (
+                ("rejectSpy", "rejectFamily", "askRelative")
+                if self.tamoko_refuse
+                else ("hearInformation", "defendGorion", "askRelative")
             )
-        if not self.d.flag("plugin_cityFlag_tamokoDiscussed"):
+            tamokoEarlyNativeChoice(self.d, name, "first", choices, 7)
+        if not self.d.flag("plugin_cityFlag_tamokoMove2"):
             name = self.actorName([{"creature": "TAMOKO", "area": "AR1100"}])
             self.contact(name)
-            self.d.choose(name + "Dialog", "discussTamokoRequest")
-            self.d.test.assertTrue(self.d.flag("plugin_cityFlag_tamokoDiscussed"))
+            choices = (
+                ("threaten",)
+                if self.tamoko_refuse
+                else ("promise", "askHow", "askDivinity", "askLove", "trySpare", "thankForLead")
+            )
+            tamokoEarlyNativeChoice(self.d, name, "second", choices, 12 if self.tamoko_refuse else 18)
+        self.d.test.assertEqual(
+            "refuse" if self.tamoko_refuse else "accept", self.d.string("plugin_cityTamokoSecondChoice")
+        )
+        self.d.test.assertTrue(self.d.flag("plugin_cityFlag_tamokoMove2"))
 
     def narlenLookout(self, *, warn):
         self.accept("narlenLookout")
@@ -727,15 +737,7 @@ class QuestRoute:
                 self.settle(*found)
             elif flag in {"tamokoDiscussed", "tamokoMove1", "tamokoMove2"}:
                 self.tamokoMeetings()
-                if flag == "tamokoMove2":
-                    if self.tamoko_refuse:
-                        name = self.actorName([{"creature": "TAMOKO", "area": "AR1100"}])
-                        self.contact(name)
-                        self.d.choose(name + "Dialog", "refuseTamokoRequest")
-                        self.d.test.assertEqual("refuse", self.d.string("plugin_cityTamokoSecondChoice"))
-                        self.d.test.assertTrue(self.d.flag("plugin_cityFlag_tamokoMove2"))
-                    else:
-                        self.accept("cythandriaDiary")
+                self.d.test.assertTrue(self.d.flag("plugin_cityFlag_" + flag))
             elif flag == "narlenWarning":
                 self.narlenLookout(warn=True)
             else:
@@ -891,7 +893,11 @@ class QuestRoute:
             before = resources(self.d)
             standing = self.d.number("plugin_cityStanding")
             action = "quest" + upperFirst(key) + upperFirst(outcome["id"])
-            self.d.choose(name + "Dialog", action)
+            if key == "tamokoMercy":
+                choices = ("appealChoice", "notEnemy", "philosophy") if outcome["id"] == "complete" else ("threaten",)
+                tamokoFinalNativeChoice(self.d, name, choices, outcome_key=outcome["id"])
+            else:
+                self.d.choose(name + "Dialog", action)
             effects = outcome.get("effects", {})
             self.d.test.assertEqual(before[0] + effects.get("gold", 0), self.d.gold())
             self.d.test.assertEqual(before[1] + effects.get("xp", 0), resources(self.d)[1])
@@ -906,6 +912,448 @@ class QuestRoute:
             self.pending_outcomes.remove(goal)
             if not already_pending:
                 self.pending.remove(key)
+
+
+TAMOKO_JOURNAL_ENTRIES = (
+    (
+        27461,
+        "cityTamokoWarningJournalQuest",
+        "Tamoko's warning",
+        "Tamoko suspects that Eltan's healer is worsening his illness.",
+        "Find Tamoko near the Flaming Fist headquarters to hear the rest.",
+    ),
+    (
+        27462,
+        "cityTamokoRefusalJournalQuest",
+        "Tamoko's rejected request",
+        "You would not promise to let Sarevok live.",
+        "Tamoko departed after you rejected her condition.",
+    ),
+    (
+        27463,
+        "cityTamokoInformedJournalQuest",
+        "Tamoko's information",
+        "You promised to try to spare Sarevok. Tamoko linked him to the assassins and the Iron Throne.",
+        "Look for Slythe and Krystin in the Undercellar and Cythandria at the Iron Throne; she also revealed your shared Bhaal lineage.",
+    ),
+)
+
+
+def tamokoJournalSnapshot(d):
+    gui = d.enableIsolatedGui()
+    panel = d.call(d.game, "createObject", "questPanel")
+    d.test.assertEqual("CGameQuestPanel", d.call(panel, "getType"))
+    text = d.call(panel, "getText", gui)
+    d.test.assertIs(type(text), str)
+    active = d.call(d.player, "getQuests")
+    completed = d.call(d.player, "getCompletedQuests")
+    source_ids = read(d, d.game_map, "plugin_cityCustodyJournal", [])
+    observed = []
+    for number, quest_id, description, objective, hint in TAMOKO_JOURNAL_ENTRIES:
+        owned = [quest for quest in active if d.call(quest, "getTypeId") == quest_id]
+        d.test.assertLessEqual(len(owned), 1, "A source journal entry must not be cloned")
+        d.test.assertFalse(
+            [quest for quest in completed if d.call(quest, "getTypeId") == quest_id],
+            "Informational source entries must not become rewarded completed quests",
+        )
+        d.test.assertEqual(number in source_ids, bool(owned), "The private source journal and visible entry disagree")
+        if owned:
+            entry = owned[0]
+            d.test.assertIs(
+                d.call(entry, "isCompleted"), False, "Source information must remain an unrewarded active note"
+            )
+            d.test.assertEqual(number, d.call(entry, "getNumericProperty", "sourceJournalId"))
+            d.test.assertEqual(92, d.call(entry, "getNumericProperty", "sourceJournalRawFlags"))
+            d.test.assertEqual("TAMOKO", d.call(entry, "getStringProperty", "sourceDialogue"))
+            d.test.assertEqual(description, d.call(entry, "getStringProperty", "description"))
+            d.test.assertEqual(objective, d.call(entry, "getObjective"))
+            d.test.assertEqual("No reward.", d.call(entry, "getReward"))
+            d.test.assertEqual(hint, d.call(entry, "getHint"))
+            d.test.assertEqual(1, d.call(entry, "getNumericProperty", "questJournalVersion"))
+            d.test.assertEqual("baldursGate", d.call(entry, "getStringProperty", "questJournalOrigin"))
+            d.test.assertFalse(d.call(entry, "getBoolProperty", "questJournalCompleted"))
+            for field, expected in (("Objective", objective), ("Reward", "No reward."), ("Hint", hint)):
+                d.test.assertEqual(expected, d.call(entry, "getStringProperty", "questJournal" + field))
+            d.test.assertIn(description, text, "The native journal panel omitted its source entry")
+            d.test.assertIn(objective, text)
+            d.test.assertIn(hint, text)
+            observed.append((number, quest_id, description, objective))
+        else:
+            d.test.assertNotIn(description, text, "The native journal panel retained an erased source entry")
+    return tuple(observed)
+
+
+def tamokoEarlyActor(d, name):
+    registry = d.object("cityClock")
+    bindings = [
+        row
+        for row in read(d, registry, "relocationDefinitions", [])
+        if row["canonicalActorId"] == name and row["sourceCreature"] == "TAMOKO"
+    ]
+    d.test.assertEqual(1, len(bindings), "The early meeting needs one canonical source relocation owner")
+    retained = d.call(registry, "getObjectProperty", "plugin_cityRelocationActor_" + bindings[0]["id"])
+    d.test.assertIsNotNone(retained, "The same source actor must remain under its native relocation owner")
+    placed = d.object(name, required=False)
+    if placed is not None:
+        d.test.assertEqual(retained, placed, "A same-name actor replaced the canonical Tamoko")
+    d.test.assertEqual(name, d.call(retained, "getName"))
+    d.test.assertEqual("TAMOKO", d.call(retained, "getStringProperty", "sourceCreature"))
+    objects = d.call(d.game_map, "getObjects")
+    sources = d.stringProperties(objects, "sourceCreature")
+    living = [
+        actor for actor, source in zip(objects, sources, strict=True) if source == "TAMOKO" and d.call(actor, "isAlive")
+    ]
+    d.test.assertEqual([placed] if placed is not None else [], living, "Unexpected extra living source Tamoko")
+    return retained, placed is not None
+
+
+def tamokoEarlySnapshot(d, name):
+    actor, placed = tamokoEarlyActor(d, name)
+
+    def itemNames(owner):
+        items = d.call(owner, "getItems")
+        names = d.stringProperties(items, "name")
+        d.test.assertTrue(all(names))
+        d.test.assertEqual(len(names), len(set(names)), "Dialogue cannot clone source inventory identities")
+        return tuple(sorted(names))
+
+    return {
+        "name": d.call(actor, "getName"),
+        "placed": placed,
+        "area": d.call(actor, "getStringProperty", "sourceArea"),
+        "alive": d.call(actor, "isAlive"),
+        "hp": d.call(actor, "getHp"),
+        "departed": d.call(actor, "getBoolProperty", "plugin_cityDeparted"),
+        "actorItems": itemNames(actor),
+        "actorEquipment": tuple(
+            sorted((str(slot), d.call(item, "getName")) for slot, item in d.call(actor, "getEquipped").items() if item)
+        ),
+        "playerItems": itemNames(d.player),
+        "gold": d.gold(),
+        "exp": d.call(d.player, "getNumericProperty", "exp"),
+        "journal": read(d, d.game_map, "plugin_cityCustodyJournal", []),
+        "globals": read(d, d.game_map, "plugin_cityCustodyGlobals", {}),
+        "cursor": read(d, d.game_map, "plugin_cityTamokoEarlyDialogue", {}),
+        "move": d.number("plugin_cityTamokoMove"),
+        "move1": d.flag("plugin_cityFlag_tamokoMove1"),
+        "move2": d.flag("plugin_cityFlag_tamokoMove2"),
+        "discussed": d.flag("plugin_cityFlag_tamokoDiscussed"),
+        "firstChoice": d.string("plugin_cityTamokoFirstChoice"),
+        "secondChoice": d.string("plugin_cityTamokoSecondChoice"),
+        "eltanDiscussion": d.string("plugin_cityTamokoEltanDiscussion"),
+        "eltanCarried": d.flag("plugin_cityFlag_eltanCarried"),
+        "eltanSafe": d.flag("plugin_cityFlag_eltanSafe"),
+        "diaryStage": state(d, "cythandriaDiary"),
+        "activeQuests": tuple(sorted(d.questNames())),
+        "completedQuests": tuple(sorted(d.questNames(completed=True))),
+        "visibleJournal": tamokoJournalSnapshot(d),
+    }
+
+
+def tamokoEarlyNativeChoice(d, name, meeting, choices, terminal_state, *, checkpoint=None):
+    d.test.assertIn(meeting, ("first", "second"))
+    d.test.assertIn(terminal_state, (6, 7) if meeting == "first" else (12, 18, 19))
+    action = "discussTamokoFirstMeeting" if meeting == "first" else "discussTamokoSecondMeeting"
+    condition = "canTamokoFirstMeeting" if meeting == "first" else "canTamokoSecondMeeting"
+    d.test.assertTrue(d.condition(name + "Dialog", condition), "The natural source meeting must be available")
+    before = tamokoEarlySnapshot(d, name)
+    d.test.assertTrue(before["alive"] and before["placed"] and not before["departed"])
+    d.test.assertEqual("AR0800" if meeting == "first" else "AR1100", before["area"])
+    if checkpoint:
+        d.saveAndReload(checkpoint + "-before")
+        d.test.assertEqual(before, tamokoEarlySnapshot(d, name), "The active early meeting changed across save/reload")
+        d.test.assertTrue(d.condition(name + "Dialog", condition))
+    witness = d.chooseUi(name + "Dialog", action, dialogue_choices=list(choices))
+    d.test.assertEqual(list(choices), witness["selectedIds"])
+    d.test.assertIs(type(witness["nativeOptionSeq"]), int)
+    d.test.assertGreater(witness["nativeOptionSeq"], 0, "The actual native entry option trace is mandatory")
+    readers = [row for row in witness["panels"] if row["kind"] == "nativeReader"]
+    rescued = before["globals"].get("GLOBAL:RescuedEltan", int(before["eltanCarried"] or before["eltanSafe"]))
+    if meeting == "second":
+        d.test.assertIs(type(rescued), int)
+        d.test.assertIn(rescued, (0, 1), "Unsupported source Eltan state cannot earn an automatic transition")
+    d.test.assertEqual(1 if meeting == "first" else 2 + rescued, len(readers))
+    d.test.assertTrue(all(row["title"] == "Tamoko" for row in readers))
+    after = tamokoEarlySnapshot(d, name)
+    for key in ("name", "alive", "hp", "departed", "actorItems", "actorEquipment", "playerItems", "gold", "exp"):
+        d.test.assertEqual(before[key], after[key], ("Early dialogue changed identity or death-owned resources", key))
+    expected_globals = dict(before["globals"])
+    expected_globals["GLOBAL:TamokoMove"] = 1 if meeting == "first" else 2
+    if meeting == "second":
+        expected_globals["GLOBAL:RescuedEltan"] = rescued
+    d.test.assertEqual(expected_globals, after["globals"], "The dialogue changed unrelated source globals")
+    journal_id = 27461 if meeting == "first" else 27462 if terminal_state == 12 else 27463
+    expected_journal = list(before["journal"])
+    if journal_id not in expected_journal:
+        expected_journal.append(journal_id)
+    d.test.assertEqual(expected_journal, after["journal"], "The terminal needs its exact source journal entry once")
+    d.test.assertEqual({}, after["cursor"])
+    d.test.assertEqual(1 if meeting == "first" else 2, after["move"])
+    d.test.assertTrue(after["move1"])
+    d.test.assertEqual(meeting == "second", after["move2"])
+    d.test.assertEqual(before["discussed"] if meeting == "first" else True, after["discussed"])
+    if meeting == "first":
+        d.test.assertEqual("sourceState" + str(terminal_state), after["firstChoice"])
+        d.test.assertEqual(before["secondChoice"], after["secondChoice"])
+    else:
+        d.test.assertEqual(before["firstChoice"], after["firstChoice"])
+        d.test.assertEqual("refuse" if terminal_state == 12 else "accept", after["secondChoice"])
+        d.test.assertEqual("rescued" if rescued else "notRescued", after["eltanDiscussion"])
+    informed = meeting == "second" and terminal_state in (18, 19)
+    quest_id = "cityCythandriaDiaryQuest"
+    expected_active = list(before["activeQuests"])
+    journal_quest = next(row[1] for row in TAMOKO_JOURNAL_ENTRIES if row[0] == journal_id)
+    if journal_quest not in expected_active:
+        expected_active.append(journal_quest)
+    if informed and before["diaryStage"] == "notStarted":
+        d.test.assertNotIn(quest_id, expected_active + list(before["completedQuests"]))
+        expected_active.append(quest_id)
+    d.test.assertEqual(
+        "active" if informed and before["diaryStage"] == "notStarted" else before["diaryStage"], after["diaryStage"]
+    )
+    d.test.assertEqual(tuple(sorted(expected_active)), after["activeQuests"])
+    d.test.assertEqual(before["completedQuests"], after["completedQuests"])
+    d.test.assertFalse(d.condition(name + "Dialog", condition))
+    d.test.assertEqual(after, tamokoEarlySnapshot(d, name), "Repeated visibility checks replayed a source terminal")
+    if checkpoint:
+        d.saveAndReload(checkpoint + "-after")
+        d.test.assertEqual(after, tamokoEarlySnapshot(d, name), "The settled source meeting changed across save/reload")
+        d.test.assertFalse(d.condition(name + "Dialog", condition))
+        d.test.assertEqual(after, tamokoEarlySnapshot(d, name))
+    return {
+        "meeting": meeting,
+        "choices": list(choices),
+        "terminalState": terminal_state,
+        "nativeOptionSeq": witness["nativeOptionSeq"],
+        "sourceActor": after["name"],
+        "sourceMove": after["globals"]["GLOBAL:TamokoMove"],
+        "sourceEltanState": rescued if meeting == "second" else None,
+        "sourceJournalId": journal_id,
+        "informedLead": informed,
+        "saveReload": bool(checkpoint),
+    }
+
+
+def tamokoEarlyTopology(
+    d, *, identity, first_choices, first_terminal, second_choices, second_terminal, rescue_before_second=False
+):
+    start(d)
+    planner = QuestRoute(d)
+    planner.ensurePhase(7)
+    receipts = []
+    for meeting, area, choices, terminal in (
+        ("first", "AR0800", first_choices, first_terminal),
+        ("second", "AR1100", second_choices, second_terminal),
+    ):
+        if meeting == "second":
+            if rescue_before_second:
+                planner.settle("rescueEltan", "carry")
+                d.test.assertEqual("active", state(d, "rescueEltan"))
+                d.test.assertTrue(d.flag("plugin_cityFlag_eltanCarried"))
+                carried = d.call(d.player, "getItems")
+                d.test.assertIn("MISC55", d.stringProperties(carried, "sourceItem"))
+            else:
+                d.test.assertFalse(d.flag("plugin_cityFlag_eltanCarried"))
+                d.test.assertFalse(d.flag("plugin_cityFlag_eltanSafe"))
+        name = planner.actorName([{"creature": "TAMOKO", "area": area}])
+        planner.contact(name)
+        receipts.append(
+            tamokoEarlyNativeChoice(
+                d, name, meeting, choices, terminal, checkpoint="city-tamoko-early-" + identity + "-" + meeting
+            )
+        )
+    d.test.assertEqual(int(rescue_before_second), receipts[1]["sourceEltanState"])
+    d.check("baldursGate.tamoko.early." + identity, True, sourceId="TAMOKO.DLG:early", meetings=receipts)
+
+
+def tamokoQuestUiIds(quests):
+    needed = {"tamokoMercy", "cythandriaDiary"}
+
+    def conditionRows(condition):
+        yield condition
+        for key in ("all", "any"):
+            for child in condition.get(key, []):
+                yield from conditionRows(child)
+
+    for _pass in range(len(quests) + 1):
+        flags = {"tamokoMove1", "tamokoMove2", "tamokoDiscussed"}
+        for row in quests:
+            if row["id"] in needed:
+                flags.update(key for key, value in row.get("acceptEffects", {}).get("flags", {}).items() if value)
+                for outcome in row["outcomes"]:
+                    flags.update(key for key, value in outcome.get("effects", {}).get("flags", {}).items() if value)
+        previous = set(needed)
+        for row in quests:
+            conditions = [row.get("acceptConditions", {})] + [
+                outcome.get("conditions", {}) for outcome in row["outcomes"]
+            ]
+            if any(
+                flags.intersection(condition.get("flags", [])) or needed.intersection(condition.get("questStages", {}))
+                for root in conditions
+                for condition in conditionRows(root)
+            ):
+                needed.add(row["id"])
+        if needed == previous:
+            return frozenset(needed)
+    raise AssertionError("Finite quest metadata did not reach its UI dependency fixed point")
+
+
+def tamokoFinalScore(d):
+    return d.call(d.call(d.player, "getStats"), "getNumericProperty", "intelligence") + d.number("plugin_cityStanding")
+
+
+def tamokoFinalActor(d, name):
+    registry = d.object("cityClock")
+    bindings = [
+        row
+        for row in read(d, registry, "relocationDefinitions", [])
+        if row["canonicalActorId"] == name and row["sourceCreature"] == "TAMOKO"
+    ]
+    d.test.assertEqual(1, len(bindings), "The route needs the actual canonical Tamoko relocation owner")
+    retained = d.call(registry, "getObjectProperty", "plugin_cityRelocationActor_" + bindings[0]["id"])
+    d.test.assertIsNotNone(retained, "The canonical actor must survive departure under its existing native owner")
+    placed = d.object(name, required=False)
+    if placed is not None:
+        d.test.assertEqual(retained, placed, "A same-name actor cannot replace the source actor")
+    d.test.assertEqual(name, d.call(retained, "getName"))
+    d.test.assertEqual("TAMOKO", d.call(retained, "getStringProperty", "sourceCreature"))
+    d.test.assertEqual("AR0123", d.call(retained, "getStringProperty", "sourceArea"))
+    objects = d.call(d.game_map, "getObjects")
+    sources = d.stringProperties(objects, "sourceCreature")
+    live = [
+        actor for actor, source in zip(objects, sources, strict=True) if source == "TAMOKO" and d.call(actor, "isAlive")
+    ]
+    d.test.assertEqual([placed] if placed is not None else [], live, "Unexpected extra living source Tamoko")
+    return retained, placed is not None
+
+
+def tamokoFinalSnapshot(d, name):
+    actor, placed = tamokoFinalActor(d, name)
+
+    def itemNames(owner):
+        items = d.call(owner, "getItems")
+        names = d.stringProperties(items, "name")
+        d.test.assertTrue(all(names))
+        d.test.assertEqual(len(names), len(set(names)), "Source inventory identities must not be cloned")
+        return tuple(sorted(names))
+
+    equipment = tuple(
+        sorted(
+            (str(slot), d.call(item, "getName"))
+            for slot, item in d.call(actor, "getEquipped").items()
+            if item is not None
+        )
+    )
+    return {
+        "name": d.call(actor, "getName"),
+        "placed": placed,
+        "alive": d.call(actor, "isAlive"),
+        "hp": d.call(actor, "getHp"),
+        "npc": d.call(actor, "isNpc"),
+        "departed": d.call(actor, "getBoolProperty", "plugin_cityDeparted"),
+        "actorItems": itemNames(actor),
+        "actorEquipment": equipment,
+        "playerItems": itemNames(d.player),
+        "gold": d.gold(),
+        "exp": d.call(d.player, "getNumericProperty", "exp"),
+        "journal": read(d, d.game_map, "plugin_cityCustodyJournal", []),
+        "globals": read(d, d.game_map, "plugin_cityCustodyGlobals", {}),
+        "move": d.number("plugin_cityTamokoMove"),
+        "stage": state(d, "tamokoMercy"),
+        "spared": d.flag("plugin_cityFlag_tamokoSpared"),
+        "fought": d.flag("plugin_cityFlag_tamokoFought"),
+        "peaceOutcome": d.flag("plugin_cityOutcome_tamokoMercy_complete"),
+        "fightOutcome": d.flag("plugin_cityOutcome_tamokoMercy_fight"),
+        "activeQuests": tuple(sorted(d.questNames())),
+        "completedQuests": tuple(sorted(d.questNames(completed=True))),
+        "visibleJournal": tamokoJournalSnapshot(d),
+    }
+
+
+def tamokoFinalNativeChoice(d, name, choices, *, outcome_key, checkpoint=None):
+    d.test.assertIn(outcome_key, ("complete", "fight"))
+    d.test.assertEqual("active", state(d, "tamokoMercy"))
+    d.test.assertTrue(d.condition(name + "Dialog", "canDiscussTamokoFinalMeeting"))
+    before = tamokoFinalSnapshot(d, name)
+    d.test.assertTrue(before["placed"] and before["alive"] and before["npc"])
+    if checkpoint:
+        d.saveAndReload(checkpoint + "-before")
+        d.test.assertEqual(before, tamokoFinalSnapshot(d, name), "The active saved actor/quest changed before choice")
+    score = tamokoFinalScore(d)
+    if "philosophy" in choices:
+        d.test.assertGreaterEqual(score, 7, "The authored route has not earned the philosophy option")
+        d.test.assertEqual("complete" if score >= 12 else "fight", outcome_key)
+        if outcome_key == "fight":
+            d.test.assertLess(score, 12, "The observed score must remain in the middle band after reload")
+    witness = d.chooseUi(name + "Dialog", "discussTamokoFinalMeeting", dialogue_choices=list(choices))
+    d.test.assertEqual(list(choices), witness["selectedIds"])
+    d.test.assertIs(type(witness["nativeOptionSeq"]), int)
+    d.test.assertGreater(witness["nativeOptionSeq"], 0, "The real authored entry option trace is required")
+    readers = [row for row in witness["panels"] if row["kind"] == "nativeReader"]
+    d.test.assertEqual(1, len(readers))
+    d.test.assertEqual("Tamoko", readers[0]["title"])
+    if "philosophy" in choices and score < 12:
+        d.test.assertIn("reasoning", readers[0]["body"])
+    after = tamokoFinalSnapshot(d, name)
+    for key in ("name", "alive", "hp", "actorItems", "actorEquipment", "playerItems", "gold", "exp"):
+        d.test.assertEqual(before[key], after[key], ("Dialogue changed death-owned resources or actor identity", key))
+    d.test.assertEqual("completed", after["stage"])
+    d.test.assertIn("cityTamokoMercyQuest", d.questNames(completed=True))
+    erased_ids = {row[1] for row in TAMOKO_JOURNAL_ENTRIES} | {"cityTamokoMercyQuest"}
+    d.test.assertEqual(tuple(name for name in before["activeQuests"] if name not in erased_ids), after["activeQuests"])
+    d.test.assertEqual(tuple(sorted((*before["completedQuests"], "cityTamokoMercyQuest"))), after["completedQuests"])
+    d.test.assertEqual([entry for entry in before["journal"] if entry not in (27461, 27462, 27463)], after["journal"])
+    globals_expected = dict(before["globals"])
+    peaceful = outcome_key == "complete"
+    if peaceful:
+        globals_expected["GLOBAL:TamokoMove"] = 4
+    d.test.assertEqual(globals_expected, after["globals"], "Terminal cleanup altered unrelated source globals")
+    d.test.assertEqual(4 if peaceful else before["move"], after["move"])
+    d.test.assertEqual(peaceful, after["spared"])
+    d.test.assertEqual(not peaceful, after["fought"])
+    d.test.assertEqual(peaceful, after["peaceOutcome"])
+    d.test.assertEqual(not peaceful, after["fightOutcome"])
+    d.test.assertEqual(not peaceful, after["placed"])
+    d.test.assertEqual(peaceful, after["departed"])
+    d.test.assertEqual(peaceful, after["npc"])
+    d.test.assertFalse(d.condition(name + "Dialog", "canDiscussTamokoFinalMeeting"))
+    d.test.assertEqual(after, tamokoFinalSnapshot(d, name), "Repeated visibility checks changed a terminal encounter")
+    if checkpoint:
+        d.saveAndReload(checkpoint + "-after")
+        d.test.assertEqual(after, tamokoFinalSnapshot(d, name), "Saved terminal identity/effects changed or paid twice")
+        d.test.assertFalse(d.condition(name + "Dialog", "canDiscussTamokoFinalMeeting"))
+        d.test.assertEqual(after, tamokoFinalSnapshot(d, name))
+    return {
+        "social": score,
+        "choices": list(choices),
+        "nativeOptionSeq": witness["nativeOptionSeq"],
+        "actor": after["name"],
+        "outcome": outcome_key,
+        "sourceJournalIdsPresentBefore": [number for number in (27461, 27462, 27463) if number in before["journal"]],
+        "saveReload": bool(checkpoint),
+    }
+
+
+def tamokoFinalTopology(d, *, identity, choices, outcome_key, ordinary_reaction=False):
+    start(d)
+    planner = QuestRoute(d)
+    if ordinary_reaction:
+        planner.settle("scarDoppelgangers", "jhassoDead")
+        d.test.assertEqual("completed", state(d, "scarDoppelgangers"))
+    planner.accept("tamokoMercy")
+    row = planner.quests["tamokoMercy"]
+    outcome = next(entry for entry in row["outcomes"] if entry["id"] == outcome_key)
+    planner.conditions(outcome.get("conditions", {}))
+    name = planner.actorName(row["givers"])
+    planner.contact(name)
+    if ordinary_reaction:
+        score = tamokoFinalScore(d)
+        d.test.assertGreaterEqual(score, 7, "The actual composed reaction must expose philosophy")
+        d.test.assertLess(score, 12, "The actual composed reaction must select the middle-reaction fight")
+    receipt = tamokoFinalNativeChoice(d, name, choices, outcome_key=outcome_key, checkpoint="city-tamoko-" + identity)
+    if outcome_key == "fight":
+        nativeVictory(d, name)
+    d.check("baldursGate.tamoko.final." + identity, True, **receipt)
 
 
 def questRoute(d, key, outcome_key, *, item_first=False):
@@ -934,7 +1382,8 @@ def questRoute(d, key, outcome_key, *, item_first=False):
         planner.contact(name)
     if not row.get("repeatable") and not outcome.get("effects", {}).get("finale") and d.object(name, required=False):
         d.test.assertFalse(d.condition(name + "Dialog", "canQuest" + upperFirst(key) + upperFirst(outcome_key)))
-        d.choose(name + "Dialog", "talk")
+        repeat_action = "showInventory" if name == "cityAr0800ScriptActorTamoko" else "talk"
+        d.choose(name + "Dialog", repeat_action)
         d.test.assertEqual(before, resources(d), "Returning after a quest reward paid twice")
 
 
@@ -1061,7 +1510,9 @@ def storeRequests(d, store_id, actor_name):
 
 def generatedQuestCases():
     result = []
-    for quest in documents()["quests"]:
+    quests = documents()["quests"]
+    ui_quests = tamokoQuestUiIds(quests)
+    for quest in quests:
         for outcome in quest["outcomes"]:
             condition = outcome.get("conditions", {})
             hero = "Sorcerer" if condition.get("minSocial", 0) >= 12 else "Warrior"
@@ -1079,6 +1530,7 @@ def generatedQuestCases():
                     ),
                     sources=SOURCES,
                     duration_seconds=1200,
+                    isolated_gui=quest["id"] in ui_quests,
                 )
             )
     return tuple(result)
@@ -1865,7 +2317,426 @@ CASES += (
     ),
 )
 
+CASES += (
+    RouteCase(
+        "baldurs-gate-native-tamoko-threaten",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.threaten",),
+        partial(tamokoFinalTopology, identity="threaten", choices=("threaten",), outcome_key="fight"),
+        classes=("Warrior",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-tamoko-removeObstacle",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.removeObstacle",),
+        partial(
+            tamokoFinalTopology,
+            identity="removeObstacle",
+            choices=("appealChoice", "removeObstacle"),
+            outcome_key="fight",
+        ),
+        classes=("Warrior",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-tamoko-unavoidableFight",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.unavoidableFight",),
+        partial(
+            tamokoFinalTopology,
+            identity="unavoidableFight",
+            choices=("appealChoice", "unavoidableFight"),
+            outcome_key="fight",
+        ),
+        classes=("Warrior",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-tamoko-forgivingFight",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.forgivingFight",),
+        partial(
+            tamokoFinalTopology,
+            identity="forgivingFight",
+            choices=("refuseHarm", "forgivingFight"),
+            outcome_key="fight",
+        ),
+        classes=("Warrior",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-tamoko-notEnemyFight",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.notEnemyFight",),
+        partial(
+            tamokoFinalTopology,
+            identity="notEnemyFight",
+            choices=("appealChoice", "notEnemy", "forgivingFight"),
+            outcome_key="fight",
+        ),
+        classes=("Warrior",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-tamoko-philosophyPeace",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.philosophyPeace",),
+        partial(
+            tamokoFinalTopology,
+            identity="philosophyPeace",
+            choices=("refuseHarm", "philosophy"),
+            outcome_key="complete",
+        ),
+        classes=("Sorcerer",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-tamoko-notEnemyPeace",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.notEnemyPeace",),
+        partial(
+            tamokoFinalTopology,
+            identity="notEnemyPeace",
+            choices=("appealChoice", "notEnemy", "philosophy"),
+            outcome_key="complete",
+        ),
+        classes=("Sorcerer",),
+        sources=SOURCES,
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+)
+
+CASES += (
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair1",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair1",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair1",
+            first_choices=("rejectSpy", "rejectFamily", "askRelative"),
+            first_terminal=7,
+            second_choices=("threaten",),
+            second_terminal=12,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair2",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair2",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair2",
+            first_choices=("rejectSpy", "defendGorion", "endRiddles"),
+            first_terminal=6,
+            second_choices=("questionPromise", "refuseUnknown"),
+            second_terminal=12,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair3",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair3",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair3",
+            first_choices=("rejectSpy", "askKnowledge", "defendGorion", "askRelative"),
+            first_terminal=7,
+            second_choices=("questionPromise", "promise", "mustKill"),
+            second_terminal=12,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair4",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair4",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair4",
+            first_choices=("hearInformation", "rejectFamily", "endRiddles"),
+            first_terminal=6,
+            second_choices=("promise", "askHow", "mustKill"),
+            second_terminal=12,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair5",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair5",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair5",
+            first_choices=("askIdentity", "rejectRiddles", "defendGorion", "askRelative"),
+            first_terminal=7,
+            second_choices=("promise", "askHow", "askDivinity", "mustKill"),
+            second_terminal=12,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair6",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair6",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair6",
+            first_choices=("askIdentity", "listen", "defendGorion", "endRiddles"),
+            first_terminal=6,
+            second_choices=("promise", "askHow", "askDivinity", "askLove", "rejectRedemption"),
+            second_terminal=12,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair7",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair7",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair7",
+            first_choices=("rejectSpy", "rejectFamily", "askRelative"),
+            first_terminal=7,
+            second_choices=("promise", "askHow", "askDivinity", "askLove", "trySpare", "thankForLead"),
+            second_terminal=18,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-pair8",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.pair8",),
+        partial(
+            tamokoEarlyTopology,
+            identity="pair8",
+            first_choices=("rejectSpy", "defendGorion", "endRiddles"),
+            first_terminal=6,
+            second_choices=("promise", "askHow", "askDivinity", "trySpare", "promiseViolence"),
+            second_terminal=19,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+)
+
+CASES += (
+    RouteCase(
+        "baldurs-gate-native-early-tamoko-rescued",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.early.rescued",),
+        partial(
+            tamokoEarlyTopology,
+            identity="rescued",
+            first_choices=("hearInformation", "defendGorion", "askRelative"),
+            first_terminal=7,
+            second_choices=("promise", "askHow", "askDivinity", "askLove", "trySpare", "thankForLead"),
+            second_terminal=18,
+            rescue_before_second=True,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+)
+
+CASES += (
+    RouteCase(
+        "baldurs-gate-native-tamoko-philosophyFight",
+        MAP,
+        (MAP,),
+        ("baldursGate.tamoko.final.philosophyFight",),
+        partial(
+            tamokoFinalTopology,
+            identity="philosophyFight",
+            choices=("refuseHarm", "philosophy"),
+            outcome_key="fight",
+            ordinary_reaction=True,
+        ),
+        classes=("Warrior",),
+        sources=SOURCES + ("tests/fixtures/baldurs_gate_city_tamoko_dialogue.json",),
+        duration_seconds=1200,
+        isolated_gui=True,
+    ),
+)
+
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateTamokoJournalQuest.isCompleted": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+        "baldursGate.tamoko.final.threaten",
+        "baldursGate.tamoko.final.removeObstacle",
+        "baldursGate.tamoko.final.unavoidableFight",
+        "baldursGate.tamoko.final.forgivingFight",
+        "baldursGate.tamoko.final.notEnemyFight",
+        "baldursGate.tamoko.final.philosophyPeace",
+        "baldursGate.tamoko.final.notEnemyPeace",
+        "baldursGate.tamoko.final.philosophyFight",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.canTamokoFirstMeeting": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.canTamokoSecondMeeting": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.discussTamokoFirstMeeting": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.discussTamokoSecondMeeting": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.discussTamokoEarlyMeeting": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.finishTamokoEarlyTerminal": (
+        "baldursGate.tamoko.early.pair1",
+        "baldursGate.tamoko.early.pair2",
+        "baldursGate.tamoko.early.pair3",
+        "baldursGate.tamoko.early.pair4",
+        "baldursGate.tamoko.early.pair5",
+        "baldursGate.tamoko.early.pair6",
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.activateTamokoEarlyLead": (
+        "baldursGate.tamoko.early.pair7",
+        "baldursGate.tamoko.early.pair8",
+        "baldursGate.tamoko.early.rescued",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.canDiscussTamokoFinalMeeting": (
+        "baldursGate.tamoko.final.threaten",
+        "baldursGate.tamoko.final.removeObstacle",
+        "baldursGate.tamoko.final.unavoidableFight",
+        "baldursGate.tamoko.final.forgivingFight",
+        "baldursGate.tamoko.final.notEnemyFight",
+        "baldursGate.tamoko.final.philosophyPeace",
+        "baldursGate.tamoko.final.notEnemyPeace",
+        "baldursGate.tamoko.final.philosophyFight",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.discussTamokoFinalMeeting": (
+        "baldursGate.tamoko.final.threaten",
+        "baldursGate.tamoko.final.removeObstacle",
+        "baldursGate.tamoko.final.unavoidableFight",
+        "baldursGate.tamoko.final.forgivingFight",
+        "baldursGate.tamoko.final.notEnemyFight",
+        "baldursGate.tamoko.final.philosophyPeace",
+        "baldursGate.tamoko.final.notEnemyPeace",
+        "baldursGate.tamoko.final.philosophyFight",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.commitTamokoFinalMeeting": (
+        "baldursGate.tamoko.final.threaten",
+        "baldursGate.tamoko.final.removeObstacle",
+        "baldursGate.tamoko.final.unavoidableFight",
+        "baldursGate.tamoko.final.forgivingFight",
+        "baldursGate.tamoko.final.notEnemyFight",
+        "baldursGate.tamoko.final.philosophyPeace",
+        "baldursGate.tamoko.final.notEnemyPeace",
+        "baldursGate.tamoko.final.philosophyFight",
+    ),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (
@@ -1878,31 +2749,9 @@ SOURCE_BRANCHES = {
     "res/maps/baldursGate/script.py:BaldursGateDialog.takeCompanionItem": (
         "baldursGate.companions.nativeItemTransfer",
     ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.declineTamokoFirstMeeting": (
-        "baldursGate.quest.tamokoMercy.fight",
-    ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.refuseTamokoRequest": ("baldursGate.quest.tamokoMercy.fight",),
     "res/maps/baldursGate/script.py:BaldursGateRegion.onEnter": ("baldursGate.regions.entered",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.finishHistoryChoices": ("baldursGate.history.helped",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.canFinishHistoryChoices": ("baldursGate.history.helped",),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.canTamokoFirstMeeting": (
-        "baldursGate.quest.cythandriaDiary.complete",
-    ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.hearTamokoWarning": (
-        "baldursGate.quest.cythandriaDiary.complete",
-    ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.canTamokoSecondMeeting": (
-        "baldursGate.quest.cythandriaDiary.complete",
-    ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.discussTamokoRequest": (
-        "baldursGate.quest.cythandriaDiary.complete",
-    ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.canFinishTamokoSecondMeeting": (
-        "baldursGate.quest.cythandriaDiary.complete",
-    ),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.acceptTamokoRequest": (
-        "baldursGate.quest.cythandriaDiary.complete",
-    ),
     "res/maps/baldursGate/script.py:BaldursGateDialog.restoreStatue": ("baldursGate.quest.balduranCloak.complete",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.canRestoreStatue": ("baldursGate.quest.balduranCloak.complete",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.requestJalanthaAudience": ("baldursGate.temple.audience",),
@@ -2030,3 +2879,11 @@ PENDING_GAMEPLAY_OBLIGATIONS = {
     ]
     if entry["implementation"]["status"] != "excluded"
 }
+
+TAMOKO_COMPATIBILITY_CONTRACTS = {
+    "res/maps/baldursGate/script.py:BaldursGateDialog.acceptCythandriaDiary": "Legacy saved options cannot accept the optional diary lead; the full informed sequence owns new admission.",
+    "res/maps/baldursGate/script.py:BaldursGateDialog.canAcceptCythandriaDiary": "The removed generic admission option remains a denied compatibility condition, not a natural UI branch.",
+}
+for _compatibility in TAMOKO_COMPATIBILITY_CONTRACTS:
+    del SOURCE_BRANCHES[_compatibility]
+DEFENSIVE_SOURCE_BRANCHES.update(TAMOKO_COMPATIBILITY_CONTRACTS)

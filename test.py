@@ -154,6 +154,10 @@ FAST_TEST_PREFIXES = (
     "BindingSourceLayoutTest.",
     "BuiltinGameplayRegistrationTest.",
     "SavedWaitSourceTest.",
+    "BaldursGateTamokoEarlyMeetingTest.",
+    "BaldursGateTamokoFinalMeetingTest.",
+    "BaldursGateTamokoEarlyRoutesTest.",
+    "BaldursGateTamokoFinalRoutesTest.",
     "BaldursGateCityContentTest.",
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
@@ -28204,6 +28208,18 @@ if SOURCE_UI_TESTS_AVAILABLE:
         BuiltinGameplayRegistrationTest as _BuiltinGameplayRegistrationTest,
     )
     from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
+    from tests.test_baldurs_gate_tamoko_early_meetings import (
+        BaldursGateTamokoEarlyMeetingTest as _BaldursGateTamokoEarlyMeetingTest,
+    )
+    from tests.test_baldurs_gate_tamoko_final_meeting import (
+        BaldursGateTamokoFinalMeetingTest as _BaldursGateTamokoFinalMeetingTest,
+    )
+    from tests.test_baldurs_gate_tamoko_early_routes import (
+        BaldursGateTamokoEarlyRoutesTest as _BaldursGateTamokoEarlyRoutesTest,
+    )
+    from tests.test_baldurs_gate_tamoko_final_routes import (
+        BaldursGateTamokoFinalRoutesTest as _BaldursGateTamokoFinalRoutesTest,
+    )
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
     from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
@@ -28345,6 +28361,18 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class BaldursGateCustodyRoleSourceTest(_BaldursGateCustodyRoleSourceTest):
+        pass
+
+    class BaldursGateTamokoEarlyMeetingTest(_BaldursGateTamokoEarlyMeetingTest):
+        pass
+
+    class BaldursGateTamokoFinalMeetingTest(_BaldursGateTamokoFinalMeetingTest):
+        pass
+
+    class BaldursGateTamokoEarlyRoutesTest(_BaldursGateTamokoEarlyRoutesTest):
+        pass
+
+    class BaldursGateTamokoFinalRoutesTest(_BaldursGateTamokoFinalRoutesTest):
         pass
 
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
@@ -28732,6 +28760,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BuiltinGameplayRegistrationTest
     del _SavedWaitSourceTest
     del _WaitStateRuntimeTest
+    del _BaldursGateTamokoEarlyMeetingTest
+    del _BaldursGateTamokoFinalMeetingTest
+    del _BaldursGateTamokoEarlyRoutesTest
+    del _BaldursGateTamokoFinalRoutesTest
     del _BaldursGateCityContentTest, _BaldursGateCityDataTest
     del _BaldursGateCustodySourceTest
     del _BaldursGateCustodyPatrolSourceTest

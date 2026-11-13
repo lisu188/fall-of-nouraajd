@@ -51,7 +51,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "b30965ce7b86ee76a3a7a72865b28ef9b815701e807459685e7942e92c078ed1"
+REVIEWED_GAMEPLAY_DIGEST = "43d4c2324c7facf184823575c32da3b361e411b381e23ecb8186215e836ab16f"
 
 
 @dataclass(frozen=True)
@@ -747,6 +747,16 @@ def contractEvidence():
     own = "tests/test_gameplay_branch_catalog.py:GameplayBranchCatalogTest."
     native = "test.py:GameTest."
     return {
+        "res/maps/baldursGate/script.py:BaldursGateDialog.acceptCythandriaDiary": (
+            "source-double",
+            "tests/test_baldurs_gate_tamoko_early_routes.py:BaldursGateTamokoEarlyRoutesTest."
+            "testLegacyDiaryEntryCallbacksDenyBothConditionAndActionAfterRefusal",
+        ),
+        "res/maps/baldursGate/script.py:BaldursGateDialog.canAcceptCythandriaDiary": (
+            "source-double",
+            "tests/test_baldurs_gate_tamoko_early_routes.py:BaldursGateTamokoEarlyRoutesTest."
+            "testLegacyDiaryEntryCallbacksDenyBothConditionAndActionAfterRefusal",
+        ),
         "res/maps/baldursGate/script.py:BaldursGatePortal.onDestroy": (
             "source-double",
             "tests/test_baldurs_gate_city_content.py:BaldursGateCityContentTest."
