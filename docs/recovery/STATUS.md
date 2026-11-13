@@ -84,3 +84,18 @@ Every published repaired version must include a README and its actual startup
 screenshot. Publication must reject any remaining `.REMOVED.git-id` marker.
 
 Draft PR: https://github.com/lisu188/fall-of-nouraajd/pull/1653
+
+## Published snapshot
+
+The verified earliest reconstruction is published at
+https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae
+(recovered commit `4c3e3a1df289e609376c5f6aa997ad649f3d7bf2`). It includes its
+README, actual startup screenshot, and zero `.REMOVED.git-id` files.
+
+`replay` now requires `--evidence-dir` for matching source fingerprints and
+screenshots, and supports `--tip` to checkpoint a verified prefix. A portable
+bundle was verified with a fresh clone and `git fsck --full`.
+
+GitHub Actions is currently blocked by the repository-wide queue (285 queued
+runs, no runner assigned to historical jobs). No historical container or normal
+PR build checks have passed yet. Local focused checks continue meanwhile.

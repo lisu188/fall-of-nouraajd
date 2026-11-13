@@ -14,6 +14,36 @@ from scripts import recover_history as recovery
 
 
 class HistoricalRecoveryTest(unittest.TestCase):
+    def testDocumentedReplayRequiresMatchingEvidenceAndPreservesOriginalReadme(self):
+        commit = self.commit(
+            {"main.cpp" + recovery.MARKER_SUFFIX: self.marker(b"int game;\n"), "README.md": b"Original project notes\n"}
+        )
+        catalog = recovery.auditHistory(self.repo)
+        with recovery.GitObjects(self.repo) as objects:
+            _, restoration = recovery.prepareSnapshot(objects, catalog, commit)
+        evidence = self.root / "evidence"
+        evidence.mkdir()
+        report = {
+            "sourceCommit": commit,
+            "sourceTree": restoration["sourceTree"],
+            "restoration": {"restoredFilesFingerprint": "f" * 64},
+        }
+        (evidence / "verification.json").write_text(json.dumps(report))
+        with self.assertRaisesRegex(recovery.RecoveryError, "No matching verified"):
+            recovery.replayHistory(self.repo, catalog, evidence_dir=evidence)
+        report["restoration"]["restoredFilesFingerprint"] = restoration["restoredFilesFingerprint"]
+        (evidence / "verification.json").write_text(json.dumps(report))
+        documentation = {"README.md": b"Recovery notes\n", "recovery/startup.png": b"test fixture"}
+        with patch("scripts.recovery_readme.snapshotDocumentation", return_value=documentation):
+            mapping = recovery.replayHistory(self.repo, catalog, evidence_dir=evidence)
+        self.assertTrue(mapping["documentationAttached"])
+        recovered = mapping["commitMap"][commit]
+        self.assertEqual(
+            b"Original project notes\n\n---\n\nRecovery notes\n", self.git("show", recovered + ":README.md")
+        )
+        self.assertEqual(b"test fixture", self.git("show", recovered + ":recovery/startup.png"))
+        self.assertNotIn(recovery.MARKER_SUFFIX.encode(), self.git("ls-tree", "-r", "--name-only", recovered))
+
     def testOverridesCannotReintroduceRemovalMarkers(self):
         original = self.blob(b"int main() {}\n")
         commit = self.commit({"main.cpp" + recovery.MARKER_SUFFIX: original.encode()})
@@ -281,6 +311,9 @@ class HistoricalRecoveryTest(unittest.TestCase):
         subprocess.run(["git", "clone", "--bare", "--quiet", str(bundle), str(clone)], check=True)
         imported_refs = recovery.gitCommand(clone, "for-each-ref", "--format=%(refname)").decode().splitlines()
         self.assertEqual(sorted(mapping["recoveryRefs"]), imported_refs)
+        checkout = self.root / "checked-out"
+        subprocess.run(["git", "clone", "--quiet", str(bundle), str(checkout)], check=True)
+        self.assertEqual(b"int game;\n", (checkout / "main.cpp").read_bytes())
         self.assertEqual(refs_before, self.git("for-each-ref"))
 
     def testReplayRejectsCatalogThatHidesOrChangesDamagedHistory(self):

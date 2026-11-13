@@ -24,6 +24,7 @@
     "seconds": 6.85,
     "timedOut": false
   },
+  "capturedFrameBinding": "SHA-256 bound to the persisted native viewport screenshot after visual and PNG validation",
   "configure": {
     "command": [
       "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin/qmake",
@@ -498,11 +499,17 @@
         "replacementBlob": "b4290d625db20c7d2a934c7a426f844b2f6e0cf9"
       }
     ],
+    "restoredFilesFingerprint": "4dd9688483ab8e3fc0b8890ed80178454b335e16a0520d0c4be8fac4141e53b5",
     "sourceCommit": "b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae",
     "sourceTree": "a52f6a83298998702d2b76e5a959df9cc2ae4906",
     "status": "complete",
     "submodules": [],
     "unresolved": []
+  },
+  "restorationFingerprintBinding": {
+    "method": "Every materialized file and mode compared with prepared Git inputs; recorded smoke-only header overlay checked by before/after SHA-256",
+    "restorerSha256": "a7531467f9d1dd45c8f1f6c52a9e6e9c6ae7cd109760596bc0286842b33f78da",
+    "verifiedFiles": 167
   },
   "smoke": {
     "command": [
@@ -524,6 +531,7 @@
       "frame": {
         "height": 718,
         "path": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/earliest-final/snapshot-lfnq6aab/smoke/startup.png",
+        "sha256": "1ca10eab81d55270f28f6f33498b622ce294ddd5ab140dcb4635440d7921cd00",
         "width": 1278
       },
       "reason": "",

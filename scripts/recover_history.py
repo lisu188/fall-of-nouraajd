@@ -499,7 +499,41 @@ def writeTree(repo_root, files):
     return writeDirectory(directories)
 
 
-def replayHistory(repo_root, catalog, overrides=None, tips=None):
+def attachSnapshotDocumentation(objects, files, restoration, evidence_dir):
+    try:
+        from scripts.recovery_readme import snapshotDocumentation
+    except ModuleNotFoundError:
+        from recovery_readme import snapshotDocumentation
+
+    for path in sorted(Path(evidence_dir).rglob("verification.json")):
+        evidence = readJson(path)
+        verified_restoration = evidence.get("restoration", {})
+        if (
+            evidence.get("sourceTree") != restoration["sourceTree"]
+            or verified_restoration.get("restoredFilesFingerprint") != restoration["restoredFilesFingerprint"]
+        ):
+            continue
+        evidence["verifiedFromCommit"] = evidence["sourceCommit"]
+        evidence["sourceCommit"] = restoration["sourceCommit"]
+        evidence["restoration"]["sourceCommit"] = restoration["sourceCommit"]
+        documentation = snapshotDocumentation(evidence, path.parent)
+        if "README.md" in files:
+            existing = files["README.md"]
+            content = existing.get("content")
+            if content is None:
+                content = objects.read(existing["blob"], "blob")
+            documentation["README.md"] = content.rstrip() + b"\n\n---\n\n" + documentation["README.md"]
+        for name, content in documentation.items():
+            safePath(name)
+            if name != "README.md" and name in files:
+                raise RecoveryError(f"Recovery documentation would overwrite a historical file: {name}")
+            files[name] = {"mode": "100644", "content": content}
+        restoration["documentation"] = {"evidence": str(path), "files": sorted(documentation)}
+        return
+    raise RecoveryError(f"No matching verified screenshot and README evidence for {restoration['sourceCommit']}")
+
+
+def replayHistory(repo_root, catalog, overrides=None, tips=None, evidence_dir=None):
     # Resolve every required reconstruction before writing any recovery object.
     prepared = {}
     with GitObjects(repo_root) as objects:
@@ -517,6 +551,8 @@ def replayHistory(repo_root, catalog, overrides=None, tips=None):
         for item in catalog["commits"]:
             if item["commit"] in required and item["damaged"]:
                 prepared[item["commit"]] = prepareSnapshot(objects, catalog, item["commit"], overrides)
+                if evidence_dir is not None:
+                    attachSnapshotDocumentation(objects, *prepared[item["commit"]], evidence_dir)
         mapping, reports = {}, []
         for item in catalog["commits"]:
             commit = item["commit"]
@@ -549,6 +585,7 @@ def replayHistory(repo_root, catalog, overrides=None, tips=None):
         "schemaVersion": 1,
         "status": "complete",
         "completeDamagedHistory": selected_tips == catalog["damagedTips"],
+        "documentationAttached": evidence_dir is not None,
         "selectedOriginalTips": selected_tips,
         "originalRefs": catalog["originalRefs"],
         "commitMap": dict(sorted(mapping.items())),
@@ -575,6 +612,7 @@ def bundleHistory(repo_root, mapping, output):
                 raise RecoveryError("Invalid recovery bundle ref")
             gitCommand(bare, "check-ref-format", ref)
             gitCommand(bare, "update-ref", ref, oid)
+        gitCommand(bare, "symbolic-ref", "HEAD", sorted(mapping["recoveryRefs"])[0])
         target.parent.mkdir(parents=True, exist_ok=True)
         gitCommand(bare, "bundle", "create", str(target), "--all")
         verification = gitCommand(bare, "bundle", "verify", str(target)).decode().strip()
@@ -603,6 +641,12 @@ def main(argv=None):
             child.add_argument("--overrides", type=Path)
         if command == "replay":
             child.add_argument("--tip", action="append", help="Replay this damaged commit and its ancestors")
+            child.add_argument(
+                "--evidence-dir",
+                type=Path,
+                required=True,
+                help="Successful per-version verification reports and startup screenshots",
+            )
         if command == "restore":
             child.add_argument("--commit", required=True)
             child.add_argument("--output-dir", type=Path, required=True)
@@ -631,7 +675,9 @@ def main(argv=None):
             if args.report:
                 writeJson(args.report, result)
         elif args.command == "replay":
-            result = replayHistory(args.repo_root, readJson(args.catalog), loadOverrides(args.overrides), args.tip)
+            result = replayHistory(
+                args.repo_root, readJson(args.catalog), loadOverrides(args.overrides), args.tip, args.evidence_dir
+            )
             writeJson(args.output, result)
             result = {
                 "status": result["status"],

@@ -152,6 +152,8 @@ def validateSmokeReport(report_path: Path, artifact_root: Path) -> dict:
     width, height = validatePng(frame_path)
     if (width, height) != (frame.get("width"), frame.get("height")):
         raise VerificationError("Frame dimensions differ from the startup report")
+    if "sha256" in frame and hashlib.sha256(frame_path.read_bytes()).hexdigest() != frame["sha256"]:
+        raise VerificationError("Frame content differs from the recorded screenshot")
     return report
 
 
@@ -195,6 +197,11 @@ def runSmoke(
     else:
         try:
             result["startup"] = validateSmokeReport(report_path, output_dir)
+            frame_path = Path(result["startup"]["frame"]["path"])
+            if not frame_path.is_absolute():
+                frame_path = output_dir / frame_path
+            result["startup"]["frame"]["sha256"] = hashlib.sha256(frame_path.read_bytes()).hexdigest()
+            writeJson(report_path, result["startup"])
             result["status"] = "success"
         except VerificationError as error:
             result["reason"] = str(error)
@@ -348,6 +355,27 @@ def toolchainFingerprint(recipe: dict, environment: dict[str, str]) -> dict:
     return versions
 
 
+def exportEvidence(result: dict, output_root: Path) -> None:
+    """Keep successful evidence together so replay does not depend on temporary artifact paths."""
+    if result.get("status") != "success":
+        return
+    artifact_root = Path(result["artifactDir"])
+    startup = validateSmokeReport(Path(result["smoke"]["startupReport"]), artifact_root)
+    evidence_dir = output_root / "evidence" / result["fingerprint"]
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    frame_path = Path(startup["frame"]["path"])
+    if not frame_path.is_absolute():
+        frame_path = artifact_root / frame_path
+    shutil.copyfile(frame_path, evidence_dir / "startup.png")
+    shutil.copyfile(result["smoke"]["startupReport"], evidence_dir / "startup.json")
+    for key in ("configure", "build", "smoke"):
+        log_path = Path(result[key]["log"])
+        if log_path.is_file():
+            shutil.copyfile(log_path, evidence_dir / ("startup.log" if key == "smoke" else key + ".log"))
+    result["evidenceDir"] = str(evidence_dir.resolve())
+    writeJson(evidence_dir / "verification.json", result)
+
+
 def verifySnapshot(
     repo_root: Path,
     catalog: dict,
@@ -405,7 +433,9 @@ def verifySnapshot(
             cached = json.loads(cached_path.read_text())
             if cached.get("status") == "success":
                 validateSmokeReport(Path(cached["smoke"]["startupReport"]), Path(cached["artifactDir"]))
-                return {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
+                cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
+                exportEvidence(cached, output_root)
+                return cached
         projects = sorted(source_root.glob("*.pro"))
         if len(projects) != 1:
             raise VerificationError(f"Expected one historical qmake project, found {len(projects)}")
@@ -449,6 +479,7 @@ def verifySnapshot(
         result["status"] = result["smoke"]["status"]
         if "reason" in result["smoke"]:
             result["reason"] = result["smoke"]["reason"]
+        exportEvidence(result, output_root)
         writeJson(cached_path, result)
         return result
     except (VerificationError, OSError, ValueError, subprocess.TimeoutExpired) as error:
