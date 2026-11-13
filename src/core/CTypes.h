@@ -86,7 +86,9 @@ class CTypes {
         };
     }
 
-    template <fn::MetaRegisteredGameObject T> static void register_builder() {
+    template <fn::MetaRegisteredGameObject T>
+        requires std::default_initializable<T> && std::same_as<T, fn::clean_t<T>>
+    static void register_builder() {
         (*builders())[T::static_meta()->name()] = []() { return std::make_shared<T>(); };
     }
 
@@ -118,17 +120,24 @@ class CTypes {
         map_types()->insert(std::type_index(typeid(std::map<std::string, std::shared_ptr<T>>)));
     }
 
-    template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived U, fn::GameObjectDerived... Args>
+    template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived Base, fn::GameObjectDerived... Bases>
+        requires std::default_initializable<T> && std::same_as<T, fn::clean_t<T>> &&
+                 (std::derived_from<T, Base> && !std::same_as<T, Base>) &&
+                 ((std::derived_from<T, Bases> && !std::same_as<T, Bases>) && ...)
     static void register_type() {
-        static_assert(std::derived_from<T, U> && !std::same_as<T, U>, "invalid base class");
         register_type<T>();
-        register_any_cast<T, U>();
-        register_any_cast<U, T>();
-        register_cast<U, T>();
-        register_type<T, Args...>();
+        const auto registerBase = []<typename U>() {
+            register_any_cast<T, U>();
+            register_any_cast<U, T>();
+            register_cast<U, T>();
+        };
+        registerBase.template operator()<Base>();
+        (registerBase.template operator()<Bases>(), ...);
     }
 
-    template <fn::MetaRegisteredGameObject T> static void register_type() {
+    template <fn::MetaRegisteredGameObject T>
+        requires std::default_initializable<T> && std::same_as<T, fn::clean_t<T>>
+    static void register_type() {
         register_builder<T>();
         register_type_metadata<T>();
     }
@@ -137,14 +146,18 @@ class CTypes {
         primitiveTypes()->insert_or_assign(std::type_index(typeid(T)), std::type_index(typeid(ValueType)));
     }
 
-    template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived U, fn::GameObjectDerived... Args>
+    template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived Base, fn::GameObjectDerived... Bases>
+        requires (std::derived_from<T, Base> && !std::same_as<T, Base>) &&
+                 ((std::derived_from<T, Bases> && !std::same_as<T, Bases>) && ...)
     static void register_type_metadata() {
-        static_assert(std::derived_from<T, U> && !std::same_as<T, U>, "invalid base class");
         register_type_metadata<T>();
-        register_any_cast<T, U>();
-        register_any_cast<U, T>();
-        register_cast<U, T>();
-        register_type_metadata<T, Args...>();
+        const auto registerBase = []<typename U>() {
+            register_any_cast<T, U>();
+            register_any_cast<U, T>();
+            register_cast<U, T>();
+        };
+        registerBase.template operator()<Base>();
+        (registerBase.template operator()<Bases>(), ...);
     }
 
     template <fn::MetaRegisteredGameObject T> static void register_type_metadata() {
