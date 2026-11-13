@@ -28036,7 +28036,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             )
             (root / "CMakeLists.txt").write_text(project + "\n", encoding="utf-8")
             environment = os.environ.copy()
-            environment.update(PATH=str(inherited_directory), PYTHONHOME="inherited-python-home")
+            environment.update(PATH=str(inherited_directory), PYTHONHOME=sys.base_prefix)
             build = root / "build"
             for command in (
                 [
@@ -28091,7 +28091,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         for target, (actual_path, actual_home) in results.items():
             with self.subTest(target=target):
                 self.assertEqual([inherited], actual_path)
-                self.assertEqual("inherited-python-home", actual_home)
+                self.assertEqual(sys.base_prefix, actual_home)
 
     def testCmakeCopiesCanonicalRunnerWithoutInterpretingWorkflowExpressions(self):
         cmake_executable = shutil.which("cmake")
