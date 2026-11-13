@@ -37,7 +37,8 @@ on the NDK libc++ toolchain.
 The script pins the Android runtime inputs used by this branch:
 
 - Python 3.14.7 official aarch64 Android embeddable package, verified against Python.org's published SHA-256;
-- vcpkg registry/tool release `2026.05.25`;
+- the exact vcpkg registry commit from the manifest's `builtin-baseline`, with release `2026.05.25` as the fallback
+  for manifests without a baseline; `GAME_ANDROID_VCPKG_REF` explicitly overrides the checkout;
 - project triplet `triplets/arm64-android-dynamic.cmake`, which keeps API 28 but builds shared libraries so stock SDLActivity can load `libSDL2.so` before `libmain.so`;
 - SDL Android Java sources taken directly from the exact SDL2 source tree built by that vcpkg invocation.
 
