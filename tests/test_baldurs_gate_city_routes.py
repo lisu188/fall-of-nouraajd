@@ -7,6 +7,7 @@ from collections import Counter
 import json
 from pathlib import Path
 import unittest
+from unittest import mock
 
 from scripts.build_baldurs_gate_city import decodeCityData
 from tests import gameplay_routes_baldurs_gate as routes
@@ -16,6 +17,193 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testComponentAwarePlanningHasBoundedExpansionAndCellWork(self):
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        approach = routes.cityApproachParents
+        work = {"expansions": 0, "cells": 0}
+
+        def counted(*args):
+            work["expansions"] += 1
+            self.assertLessEqual(work["expansions"], 40, "Fixed Lothander planner expansion budget")
+            result = approach(*args)
+            work["cells"] += len(result)
+            self.assertLessEqual(work["cells"], 20000, "Fixed Lothander planner reachable-cell budget")
+            return result
+
+        with mock.patch.object(routes, "cityApproachParents", side_effect=counted):
+            path = routes.cityTravelPath(
+                (156, 35, 0),
+                "AR0300",
+                "AR0300",
+                geometry["connections"],
+                lambda _link: True,
+                geometry["atlas"],
+                walkable,
+                portals,
+                destination_point=(183, 48, 0),
+            )
+        self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], [link["object"] for link in path])
+        self.assertEqual({"expansions": 34, "cells": 18210}, work)
+
+    def testUnreachableComponentCycleStopsAtDistinctArrivalBudget(self):
+        atlas = {"A": {"bounds": [0, 0, 0, 4, 1]}, "B": {"bounds": [6, 0, 0, 2, 1]}}
+        cells = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (6, 0, 0), (7, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0)})
+        links = [
+            {"object": "out", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "back", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [0, 0, 0]},
+        ]
+        approach, visits = routes.cityApproachParents, []
+
+        def counted(*args):
+            visits.append(tuple(args[0]))
+            self.assertLessEqual(len(visits), 2, "Repeated arrival must not expand the cyclic route again")
+            return approach(*args)
+
+        with mock.patch.object(routes, "cityApproachParents", side_effect=counted):
+            with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+                routes.cityTravelPath(
+                    (0, 0, 0), "A", "A", links, lambda _link: True, atlas, cells, portals, destination_point=(3, 0, 0)
+                )
+        self.assertEqual([(0, 0, 0), (6, 0, 0)], visits)
+
+    def testLothanderContactNeedsTheAuthoredReturnToItsOwnStreetComponent(self):
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        origin, target = (156, 35, 0), (183, 48, 0)
+        bounds = geometry["atlas"]["AR0300"]["bounds"]
+        self.assertIn(origin, walkable)
+        self.assertIn(target, walkable)
+        with self.assertRaisesRegex(AssertionError, "No portal-safe city approach"):
+            routes.cityApproachPath(origin, target, bounds, walkable, portals)
+        route = routes.cityTravelPath(
+            origin,
+            "AR0300",
+            "AR0300",
+            geometry["connections"],
+            lambda _link: True,
+            geometry["atlas"],
+            walkable,
+            portals,
+            destination_point=target,
+        )
+        self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], [link["object"] for link in route])
+        self.assertEqual((187, 38, 0), tuple(route[-1]["target"]))
+        path = routes.cityApproachPath(tuple(route[-1]["target"]), target, bounds, walkable, portals)
+        self.assertEqual(14, len(path))
+        self.assertEqual(target, path[-1])
+        self.assertFalse(set(path[:-1]) & portals)
+        self.assertEqual(
+            (),
+            routes.cityTravelPath(
+                origin,
+                "AR0300",
+                "AR0300",
+                geometry["connections"],
+                lambda _link: True,
+                geometry["atlas"],
+                walkable,
+                portals,
+            ),
+        )
+
+    def testTargetComponentPlannerCannotInventLinksPermissionsOrArrivals(self):
+        atlas = {"A": {"bounds": [0, 0, 0, 4, 1]}, "B": {"bounds": [6, 0, 0, 2, 1]}}
+        cells = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (6, 0, 0), (7, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0)})
+        links = [
+            {"object": "out", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "back", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [3, 0, 0]},
+        ]
+        for mutation in (None, "denied", "missing", "wrongArrival", "notWalkable"):
+            with self.subTest(mutation=mutation):
+                candidate = links[:-1] if mutation == "missing" else links
+                if mutation == "wrongArrival":
+                    candidate = [links[0], dict(links[1], target=[0, 0, 0])]
+                target = (2, 0, 0) if mutation == "notWalkable" else (3, 0, 0)
+
+                def plan():
+                    return routes.cityTravelPath(
+                        (0, 0, 0),
+                        "A",
+                        "A",
+                        candidate,
+                        lambda link: mutation != "denied" or link["object"] != "back",
+                        atlas,
+                        cells,
+                        portals,
+                        destination_point=target,
+                    )
+
+                if mutation:
+                    with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+                        plan()
+                else:
+                    self.assertEqual(["out", "back"], [link["object"] for link in plan()])
+
+    def testContactUsesActualSourcePortalsBeforeOrdinaryNativeContactAndRejectsActorReplacement(self):
+        from types import SimpleNamespace
+
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        links = {tuple(link["origin"]): link for link in geometry["connections"]}
+        by_name = {link["object"]: link for link in geometry["connections"]}
+        name, target = "cityAr0300Actor28", (183, 48, 0)
+        for mutation in (None, "actorReplaced", "wrongArrival", "budget"):
+            with self.subTest(mutation=mutation):
+                actor = {"__handle__": "same-lothander"}
+                driver = SimpleNamespace(test=self, turns=0, position=(156, 35, 0), transitions=[], contacts=[])
+                driver.coords = lambda owner=None: (
+                    target
+                    if isinstance(owner, dict)
+                    else tuple(by_name[owner]["origin"]) if owner is not None else driver.position
+                )
+                driver.object = lambda key, required=True: actor if key == name else key
+                driver.number, driver.flag = lambda _key: 5, lambda _key: False
+                driver.string = lambda _key: routes.currentArea(driver)
+
+                def call(owner, method, key):
+                    if method == "getNumericProperty" and key in ("targetX", "targetY", "targetZ"):
+                        return by_name[owner]["target"]["XYZ".index(key[-1])]
+                    self.assertEqual(("getBoolProperty", "locked"), (method, key))
+                    return False
+
+                def navigate(point, *, limit):
+                    point = tuple(point)
+                    self.assertGreater(limit, 0)
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, point)))
+                    self.assertIn(point, walkable)
+                    driver.position = point
+                    driver.turns += 10000 if mutation == "budget" else 1
+                    if point in links:
+                        link = links[point]
+                        driver.transitions.append(link["object"])
+                        driver.position = tuple(link["target"])
+                        if mutation == "actorReplaced":
+                            actor["__handle__"] = "different-lothander"
+                        if mutation == "wrongArrival":
+                            driver.position = (156, 35, 0)
+
+                def contact(key, *, after_tick):
+                    self.assertEqual(name, key)
+                    self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], driver.transitions)
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, target)))
+                    after_tick()
+                    driver.contacts.append(key)
+
+                driver.call, driver.navigateCoords, driver.navigateTo = call, navigate, contact
+                if mutation:
+                    with self.assertRaisesRegex(
+                        AssertionError, "City contact identity changed|Actual portal arrival|City approach turn budget"
+                    ):
+                        routes.contactCityObject(driver, name)
+                    self.assertEqual([], driver.contacts)
+                else:
+                    routes.contactCityObject(driver, name)
+                    self.assertEqual([name], driver.contacts)
+                    self.assertGreater(driver.turns, 14)
+
     def testNortheastArrivalCannotReachItsWestExitEvenWithOtherPortalCellsAllowed(self):
         walkable, portals = routes.cityMovementCells()
         bounds = routes.documents()["geometry"]["atlas"]["AR0300"]["bounds"]
