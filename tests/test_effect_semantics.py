@@ -165,7 +165,7 @@ class EffectContractTest(unittest.TestCase):
         classes = sourceInteractions(roll)
         packets = []
         caster = types.SimpleNamespace(getGame=lambda: types.SimpleNamespace(createObject=lambda name: Stats()))
-        victim = types.SimpleNamespace(hurt=packets.append)
+        victim = types.SimpleNamespace(hurtFrom=lambda cause, packet: packets.append(packet))
         for result in (1, 8):
             roll[0] = result
             classes["ChillTouch"]().performAction(caster, victim)
@@ -222,6 +222,129 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
 
     def values(self, actor):
         return {name: actor.getStats().getNumericProperty(name) for name in STAT_NAMES}
+
+    def testMigratedCombatProducersPreserveNativeResultsAndRandomStreamWhenObserved(self):
+        engine = self.engine
+        action_ids = (
+            "Attack",
+            "ElemStaff",
+            "DoubleAttack",
+            "SneakAttack",
+            "Strike",
+            "ChaosBlast",
+            "Devour",
+            "FrostBolt",
+            "MagicMissile",
+            "ShadowBolt",
+            "Mutilation",
+            "LethalPoison",
+            "Bloodlash",
+            "Backstab",
+            "DeathStrike",
+            "BloodThirst",
+            "ExposeCorruption",
+            "SmugglersMark",
+            "BurningHands",
+            "AgannazarsScorcher",
+            "Fireball",
+            "FlameStrike",
+            "LightningBolt",
+            "ChromaticOrb",
+            "ConeOfCold",
+            "SkullTrap",
+            "LarlochsMinorDrain",
+            "VampiricTouch",
+            "FingerOfDeath",
+            "SpiritualHammer",
+            "MelfsAcidArrow",
+            "ChillTouch",
+        )
+        effect_ids = (
+            "EndlessPainEffect",
+            "AbyssalShadowsEffect",
+            "MutilationEffect",
+            "LethalPoisonEffect",
+            "BloodlashEffect",
+            "ExposeCorruptionEffect",
+            "SmugglersMarkEffect",
+            "MelfsAcidArrowEffect",
+            "CloudkillEffect",
+        )
+
+        def runProducer(type_id, enabled, seed, pulse):
+            caster = self.actor(type_id + ("Observed" if enabled else "Ordinary") + "Caster")
+            victim = self.actor(type_id + ("Observed" if enabled else "Ordinary") + "Victim")
+            for actor in (caster, victim):
+                stats = actor.getObjectProperty("baseStats")
+                for name, value in (
+                    ("stamina", 1000),
+                    ("intelligence", 1000),
+                    ("hit", 1000),
+                    ("block", 0),
+                    ("armor", 0),
+                ):
+                    stats.setNumericProperty(name, value)
+                actor.heal(0)
+                actor.setMana(actor.getManaMax())
+            if type_id == "Strike":
+                weapon = self.game.createObject("Sword")
+                caster.addItem(weapon)
+                caster.equipItem("0", weapon)
+                self.assertIs(weapon, caster.getWeapon())
+            observations = []
+
+            class Observer(engine.CTrigger):
+                def trigger(observer, actor, event):
+                    self.assertIs(victim, actor)
+                    self.assertIs(caster, event.getCause())
+                    observations.append(
+                        (event.getStringProperty("combatKind"), event.getObjectProperty("combatProducer"))
+                    )
+
+            for kind in ("onCombatAttempt", "onCombatRoll", "onCombatPacket"):
+                observer = Observer()
+                observer.setGame(self.game)
+                observer.setStringProperty("object", victim.getName())
+                observer.setStringProperty("event", kind)
+                self.gameMap.getEventHandler().registerTrigger(observer)
+            producer = self.game.createObject(type_id)
+            self.gameMap.setBoolProperty("nativeCombatFacts", enabled)
+            engine._seedRandomForTests(seed)
+            if pulse:
+                producer.setCaster(caster)
+                producer.setVictim(victim)
+                producer.apply(victim)
+            else:
+                caster.useAction(producer, victim)
+            snapshot = (
+                caster.getHp(),
+                caster.getMana(),
+                victim.getHp(),
+                self.values(caster),
+                self.values(victim),
+                sorted((effect.getTypeId(), effect.getTimeLeft()) for effect in caster.getEffects()),
+                sorted((effect.getTypeId(), effect.getTimeLeft()) for effect in victim.getEffects()),
+                producer.getTimeLeft() if pulse else None,
+                engine.randint(1, 1000000),
+            )
+            if enabled:
+                kinds = [kind for kind, _ in observations]
+                self.assertIn("onCombatPacket", kinds)
+                self.assertEqual(0 if pulse else 1, kinds.count("onCombatAttempt"))
+                if pulse:
+                    self.assertTrue(all(owner is producer for kind, owner in observations if kind == "onCombatPacket"))
+            else:
+                self.assertEqual([], observations)
+            return snapshot
+
+        self.addCleanup(self.gameMap.setBoolProperty, "nativeCombatFacts", False)
+        for seed in (188, 991):
+            for pulse, type_ids in ((False, action_ids), (True, effect_ids)):
+                for type_id in type_ids:
+                    with self.subTest(producer=type_id, seed=seed):
+                        ordinary = runProducer(type_id, False, seed, pulse)
+                        observed = runProducer(type_id, True, seed, pulse)
+                        self.assertEqual(ordinary, observed)
 
     def attachTagEffect(self, caster, victim, effect_id):
         # Actor links are native-only fields; the cast pipeline supplies them.

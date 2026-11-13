@@ -74,7 +74,7 @@ def load(self, context):
             damage.setNumericProperty("fire", 1)
             damage.setNumericProperty("frost", 1)
             damage.setNumericProperty("thunder", 1)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class DoubleAttack(CInteraction):
@@ -96,9 +96,9 @@ def load(self, context):
     class Strike(CInteraction):
         def performAction(self, first, second):
             if first.getWeapon():
-                dmg = first.getDmg()
+                dmg = first.getDmgFor(second)
                 if dmg:
-                    second.hurt(dmg + first.getStats().getNumericProperty("damage"))
+                    second.hurtFrom(first, dmg + first.getStats().getNumericProperty("damage"))
 
     @register(context)
     class ChaosBlast(CInteraction):
@@ -106,7 +106,7 @@ def load(self, context):
             damage = spell_damage(first)
             damage.setNumericProperty("fire", first.getMana() // 2)
             damage.setNumericProperty("thunder", first.getMana() // 2)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class Devour(CInteraction):
@@ -114,9 +114,9 @@ def load(self, context):
             # Devour never crits: ask getDmg to skip the crit roll. The old code tried to
             # suppress crit by mutating first.getStats(), but getStats() returns a freshly
             # composed copy on every call, so the mutation did nothing and Devour still crit.
-            dmg = first.getDmg(False)
+            dmg = first.getDmgFor(second, False)
             if dmg:
-                second.hurt(dmg)
+                second.hurtFrom(first, dmg)
                 # Heal 75% of the damage dealt directly: routing it through an integer percent
                 # of hpMax floors to healProc(0) (= full heal) when dmg*75 < hpMax.
                 first.heal(max(1, dmg * 75 // 100))
@@ -131,7 +131,7 @@ def load(self, context):
             damage = spell_damage(first)
             intelligence = first.getStats().getNumericProperty("intelligence")
             damage.setNumericProperty("frost", intelligence * 75 // 100)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class MagicMissile(CInteraction):
@@ -145,8 +145,8 @@ def load(self, context):
     class ShadowBolt(CInteraction):
         def performAction(self, first, second):
             damage = spell_damage(first)
-            damage.setNumericProperty("shadow", int(first.getDmg() * 2.25))
-            second.hurt(damage)
+            damage.setNumericProperty("shadow", int(first.getDmgFor(second) * 2.25))
+            second.hurtFrom(first, damage)
 
         def configureEffect(self, effect):
             if randint(1, 2) == 1:
@@ -156,7 +156,7 @@ def load(self, context):
     @register(context)
     class Mutilation(CInteraction):
         def performAction(self, first, second):
-            second.hurt(int(first.getDmg() * 1.5))
+            second.hurtFrom(first, int(first.getDmgFor(second) * 1.5))
 
     @register(context)
     class LethalPoison(CInteraction):
@@ -166,12 +166,12 @@ def load(self, context):
     @register(context)
     class Bloodlash(CInteraction):
         def performAction(self, first, second):
-            second.hurt(int(first.getDmg() * 1.5))
+            second.hurtFrom(first, int(first.getDmgFor(second) * 1.5))
 
     @register(context)
     class Backstab(CInteraction):
         def performAction(self, first, second):
-            second.hurt(int(first.getDmg() * 1.75))
+            second.hurtFrom(first, int(first.getDmgFor(second) * 1.75))
 
         def configureEffect(self, effect):
             return randint(1, 5) == 1
@@ -179,15 +179,15 @@ def load(self, context):
     @register(context)
     class DeathStrike(CInteraction):
         def performAction(self, first, second):
-            second.hurt(first.getDmg() * 2)
+            second.hurtFrom(first, first.getDmgFor(second) * 2)
             if second.getHpRatio() < 20:
-                second.hurt(int(first.getDmg() * 1.5))
+                second.hurtFrom(first, int(first.getDmgFor(second) * 1.5))
 
     @register(context)
     class BloodThirst(CInteraction):
         def performAction(self, first, second):
-            tmp_dmg = max(1, first.getDmg() * 20 // 100)
-            second.hurt(tmp_dmg)
+            tmp_dmg = max(1, first.getDmgFor(second) * 20 // 100)
+            second.hurtFrom(first, tmp_dmg)
             first.heal(tmp_dmg)
 
     @register(context)
@@ -241,7 +241,7 @@ def load(self, context):
             if is_cultist(second):
                 base += 3 + clues * 2
             damage.setNumericProperty("fire", max(1, base))
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
         def configureEffect(self, effect):
             caster = effect.getCaster()
@@ -297,7 +297,7 @@ def load(self, context):
             damage = spell_damage(first)
             routes = first.getNumericProperty("wayfarer_routes")
             damage.setNumericProperty("normal", max(1, first.getStats().getNumericProperty("agility") // 2 + routes))
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
         def configureEffect(self, effect):
             caster = effect.getCaster()
@@ -317,14 +317,14 @@ def load(self, context):
         def performAction(self, first, second):
             damage = spell_damage(first)
             damage.setNumericProperty("fire", 3 + first.getLevel() * 2)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class AgannazarsScorcher(CInteraction):
         def performAction(self, first, second):
             damage = spell_damage(first)
             damage.setNumericProperty("fire", 6 + first.getStats().getNumericProperty("intelligence") // 2)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class Fireball(CInteraction):
@@ -334,14 +334,14 @@ def load(self, context):
                 rolled += randint(1, 6)
             damage = spell_damage(first)
             damage.setNumericProperty("fire", rolled)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class FlameStrike(CInteraction):
         def performAction(self, first, second):
             damage = spell_damage(first)
             damage.setNumericProperty("fire", 10 + first.getLevel() * 2)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class LightningBolt(CInteraction):
@@ -351,7 +351,7 @@ def load(self, context):
                 rolled += randint(1, 6)
             damage = spell_damage(first)
             damage.setNumericProperty("thunder", rolled)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class ChromaticOrb(CInteraction):
@@ -360,7 +360,7 @@ def load(self, context):
             damage = spell_damage(first)
             base = 4 + first.getLevel() + first.getStats().getNumericProperty("intelligence") // 3
             damage.setNumericProperty(kinds[randint(0, len(kinds) - 1)], base)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class ConeOfCold(CInteraction):
@@ -368,7 +368,7 @@ def load(self, context):
             intelligence = first.getStats().getNumericProperty("intelligence")
             damage = spell_damage(first)
             damage.setNumericProperty("frost", 8 + first.getLevel() + intelligence // 2)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class SkullTrap(CInteraction):
@@ -378,7 +378,7 @@ def load(self, context):
                 rolled += randint(1, 6)
             damage = spell_damage(first)
             damage.setNumericProperty("shadow", rolled)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class LarlochsMinorDrain(CInteraction):
@@ -386,7 +386,7 @@ def load(self, context):
             drained = 4 + first.getLevel()
             damage = spell_damage(first)
             damage.setNumericProperty("shadow", drained)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
             first.heal(drained)
 
     @register(context)
@@ -395,17 +395,17 @@ def load(self, context):
             drained = 6 + first.getLevel() * 2
             damage = spell_damage(first)
             damage.setNumericProperty("shadow", drained)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
             first.heal(drained // 2)
 
     @register(context)
     class FingerOfDeath(CInteraction):
         def performAction(self, first, second):
             damage = spell_damage(first)
-            damage.setNumericProperty("shadow", first.getDmg() * 2)
-            second.hurt(damage)
+            damage.setNumericProperty("shadow", first.getDmgFor(second) * 2)
+            second.hurtFrom(first, damage)
             if second.getHpRatio() < 20 and second.isAlive():
-                second.hurt(int(first.getDmg() * 1.5))
+                second.hurtFrom(first, int(first.getDmgFor(second) * 1.5))
 
     @register(context)
     class SpiritualHammer(CInteraction):
@@ -413,14 +413,14 @@ def load(self, context):
             damage = spell_damage(first)
             strength = first.getStats().getNumericProperty("strength")
             damage.setNumericProperty("normal", 3 + first.getLevel() + strength // 3)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class MelfsAcidArrow(CInteraction):
         def performAction(self, first, second):
             damage = spell_damage(first)
             damage.setNumericProperty("normal", 2 + randint(1, 4) + first.getLevel() // 2)
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
     @register(context)
     class Cloudkill(CInteraction):
@@ -453,7 +453,7 @@ def load(self, context):
         def performAction(self, first, second):
             damage = spell_damage(first)
             damage.setNumericProperty("frost", 2 + randint(1, 8))
-            second.hurt(damage)
+            second.hurtFrom(first, damage)
 
         def configureEffect(self, effect):
             caster = effect.getCaster()

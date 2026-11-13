@@ -1,8 +1,11 @@
 # Native combat facts
 
 `nativeCombatFacts` is an opt-in map property, absent or `false` by default. No scenario resource currently enables it.
-Coverage includes the migrated Attack, MagicMissile and Melf's acid-arrow producers. Other damage producers require
-explicit migration and an audited operation boundary.
+All direct damage producers in `res/plugins/interaction.py` and all damage pulses in `res/plugins/effect.py` use
+explicit cause/receiver APIs. Their arithmetic, healing, attack-roll count and random-draw order remain unchanged.
+The 47 hostile configured interactions are offensive, including the four enemy signatures and two OctoBogz actions.
+The ten self-buff interactions remain nonoffensive. A signature's `selfTarget` controls its attached effect; it still
+attacks the selected opponent.
 
 ## Capture and delivery
 
@@ -63,3 +66,20 @@ Observers run synchronously. Scenario code should queue plain observations and h
 script consequences at a separately audited boundary. This layer supplies no BG1 `AttackedBy`, `HitBy`, `Heard` or
 `SHOUT` consumer. Their source timing, listener ownership, conditions and consequences still require implementation and
 independent acceptance before any source-equivalence claim.
+
+The audited palace script closure additionally leaves script-slot priority, queued action preemption, transient-event
+expiry, `Continue`, response selection and inter-actor ordering unverified. Its higher `SHOUT` script can preempt lower
+listeners. `NearestEnemyOf` cannot be replaced with the player, and hearing delivery requires verified distances and
+actor liveness. Producer migration does not resolve those boundaries or enable any source scenario.
+
+## Producer regression coverage
+
+`tests/test_native_combat_producers.py` executes the actual plugins for 32 immediate damage action families and nine
+damage effect families. Fixed expectations cover all five packet channels, caster/receiver identity, healing, native
+roll targets, Devour's critical flag, subsequent-hit branches and explicit random calls. It also checks the configured
+offensive inventory and rejects remaining unattributed `hurt`/`getDmg` calls in those two plugins.
+
+`EffectSemanticRuntimeTest.testMigratedCombatProducersPreserveNativeResultsAndRandomStreamWhenObserved` runs the same
+families through the real native action/effect boundaries with two fixed seeds. It compares observation-off/on resource,
+stat, attached-effect and duration results plus the next random draw, and checks emitted causes, receivers, attempts and
+effect producer ownership. It requires a current `_game` build; a skipped invocation supplies no native acceptance.
