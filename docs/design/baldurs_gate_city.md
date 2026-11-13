@@ -41,11 +41,11 @@ The city additionally enables `plugin_cityFixedLoot`: defeated NPCs transfer onl
 
 The map generator aggregates factual source collision metadata into native cells, places individually identified objects, and records any placement adjustment. Source actor schedules, locks, traps, ownership, stock and door states must have an implemented outcome or an explicit unresolved ledger obligation. Merely drawing a container or offering a generic conversation does not satisfy that obligation.
 
-The city starts with an explicit native level-five profile and a recorded history selection. History is not played campaign progress. Quests use composed native statistics: Intelligence plus local standing for reaction; Agility 12, 16 or 18 for audited lock/theft tiers; Strength 12 or 14 for source-permitted forcing. Source prohibitions and unavoidable detection take precedence. Native combat experience and item effects require documented conversions; unsupported source effects must remain visible acceptance gaps.
+The city starts with a recorded native hero profile and history selection. The existing hero and experience grant determine its actual level and composed stats. History is not played campaign progress. Quests use composed native statistics: Intelligence plus local standing for reaction; Agility 12, 16 or 18 for audited lock/theft tiers; Strength 12 or 14 for source-permitted forcing. Source prohibitions and unavoidable detection take precedence. Native combat experience and item effects require documented conversions; unsupported source effects must remain visible acceptance gaps.
 
 First-visit and later-return states share one serialized map. Deaths, actual possessions, containers, locks, followers, stock, clocks and optional quests must survive transitions and reloads. Outside errands are labelled text-choice excursions; the city interlude applies only after its prerequisites. Completing the finale records the city storyline without completing unrelated optional quests.
 
-Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. The local C: disk guard currently blocks large native builds and captures; CI can provide compilation and automated checks, but cannot substitute for missing original-source reconciliation or owner acceptance.
+Acceptance requires the complete declared source/interaction manifest, focused regressions, real MCP routes using natural movement and dialogue choices, all five hero classes collectively, save/reload checks, isolated visual inspection, selected Linux/Windows builds, applicable coverage of at least 90 percent, and review resolution. Record these evidence classes separately. Check local capacity against the 90 percent disk guard before native builds or captures. Prefer CI for heavy compilation and automated checks; these cannot substitute for missing original-source reconciliation or owner acceptance.
 
 ## Generated district content
 
@@ -70,6 +70,57 @@ python scripts/build_baldurs_gate_city_ledger.py --check
 
 Its strict `--require-mapped` and `--require-acceptance` modes are expected to fail until all declared obligations and evidence are complete. No generated row has accepted native gameplay status. The ledger rejects invented receipts, missing source fingerprints and stale input mappings.
 
+### Poison-chain source inventory
+
+`tests/fixtures/baldurs_gate_city_poison_dialogue.json` records the supporting EE
+graphs for Marek, Lothander, the Diviner, the priestess, Jalantha and Chanthalas:
+72 states and 112 transitions, including false and unlinked entries. It also
+records nine selected script blocks, four item headers, two item abilities,
+eleven inline effects and eight explicit unresolved frontiers. All 218 additional
+ledger obligations remain planned, with native, original-game and owner
+acceptance pending. These records retain source identities and fingerprints;
+original binaries, dialogue prose and full script dumps stay outside Git.
+
+`tests/fixtures/baldurs_gate_city_poison_followup.json` preserves 41 additional
+supporting-EE source records: TENYA2's 12 states and 23 transitions, BDMAREK's
+header, ability and two effects, and two GTIMES constants. Every record adds a
+required planned ledger obligation; the preceding 218 poison records and all
+older ledger rows remain unchanged. These additions award no native, original
+game, coverage or owner acceptance.
+
+TENYA2 supplies body-item alternatives through BOYBODY and MISC54. Seven terminal
+transitions give the item to LastTalkedToBy and depart; those transitions occur
+on eight syntactic paths. A separate transition creates MISC54 on the actor and
+turns hostile. The retained graph does not establish external entry into its
+unlinked state. PUMBERL's conditioned summon, the separate Tenya/Tenya2 death
+identities, actual ownership and the starting-history bridge remain pending.
+
+PoisonParty and PoisonParty2 are distinct GLOBAL timers, initialized respectively
+to ONE_DAY = 7200 and TEN_DAYS = 72000 before Lothander's later agreement choice.
+The selected warning block rearms only PoisonParty. Their durations are not
+summed; source scheduling and conversion to this engine's clock remain pending.
+BDMAREK's declared ability owns opcode 215 and opcode 142 effects. That table
+contains no opcode 309. This selected payload does not establish exclusive
+manual drinking, absence of automatic cure, or the complete producer chain;
+42 BALDUR blocks and newly encountered resource identifiers remain unfollowed.
+No original dialogue prose, binary payload or full script dump is committed.
+
+The development auditor can additionally decode bounded ITM V1 inline effect
+fields with `--item-effects`; existing invocations retain their previous output
+and resource-discovery behavior. For example:
+
+```powershell
+python scripts/audit_candlekeep_source.py --game-root "C:\Program Files (x86)\GOG Galaxy\Games\Baldur's Gate - Enhanced Edition" --scope city --item-effects --output-dir build/city-source-audit
+```
+
+The opt-in decoder bounds each item to 16 abilities, 64 unique effects and 128
+effect references, and validates those limits before legacy table expansion.
+It records raw fields, order, offsets and hashes. Effect execution, native stat
+conversion and original-edition behavior remain separate work; resource fields
+can also name variables and are never followed by this decoder. In particular,
+POTN47's EE variable effect establishes a possible producer, while its relation
+to other cure paths and the classic guide's retrieval behavior remains unresolved.
+
 Focused development checks are separate from native acceptance:
 
 ```powershell
@@ -79,7 +130,7 @@ python test.py --suite mcp-branches --branch-group baldursGate
 
 The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
 
-Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. Recheck capacity before large local builds or captures; historical cleanup evidence does not replace a current capacity check. The 90 percent guard remains in force.
 
 City structured metadata uses a `city-json:` text prefix to preserve its string type through native loading,
 cloning and saves. The runtime accepts protected and legacy plain JSON text and protects subsequent state writes.
