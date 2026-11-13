@@ -24,6 +24,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 
 namespace gui_async {
+template <typename Predicate, typename... Args>
+concept ReadyPredicate = requires(Predicate &ready, Args... args) {
+    { std::invoke(ready, args...) } -> std::convertible_to<bool>;
+};
+
+template <typename Predicate, typename T>
+concept OwnerReadyPredicate = requires(Predicate &ready, std::shared_ptr<T> &owner) {
+    requires std::same_as<std::remove_cvref_t<decltype(false || std::invoke(ready, owner))>, bool>;
+};
+
 inline std::shared_ptr<CGame> gameFor(const std::shared_ptr<CGameGraphicsObject> &owner) {
     auto gui = owner->getGui();
     return gui && gui->getGame() ? gui->getGame() : owner->getGame();
@@ -37,7 +47,9 @@ vstd::task_handle<T> spawn(const std::shared_ptr<CGameGraphicsObject> &owner, vs
     return owner->getGuiTaskGroup().spawn(std::move(task), vstd::loopScheduler(vstd::event_loop<>::instance()));
 }
 
-template <typename T> T run(const std::shared_ptr<CGameGraphicsObject> &owner, vstd::task<T> task) {
+template <typename T>
+    requires(std::is_void_v<T> || requires { T{}; })
+T run(const std::shared_ptr<CGameGraphicsObject> &owner, vstd::task<T> task) {
     try {
         return game_async::wait(spawn(owner, std::move(task)));
     } catch (const vstd::task_cancelled &) {
@@ -48,6 +60,7 @@ template <typename T> T run(const std::shared_ptr<CGameGraphicsObject> &owner, v
 }
 
 template <typename Predicate, typename Reader>
+    requires ReadyPredicate<Predicate> && std::invocable<Reader &>
 vstd::task<std::invoke_result_t<Reader &>> until(Predicate ready, Reader read) {
     auto loop = vstd::event_loop<>::instance();
     if (!loop->isMainThread()) {
@@ -64,6 +77,8 @@ vstd::task<std::invoke_result_t<Reader &>> until(Predicate ready, Reader read) {
 }
 
 template <typename T, typename Predicate, typename Callback>
+    requires std::derived_from<T, CGameGraphicsObject> && OwnerReadyPredicate<Predicate, T> &&
+             std::invocable<Callback &, std::shared_ptr<T> &>
 vstd::task<void> whenReady(std::weak_ptr<T> owner, Predicate ready, Callback callback) {
     co_await vstd::until(vstd::event_loop<>::instance(), [owner, ready = std::move(ready)]() mutable {
         auto self = owner.lock();

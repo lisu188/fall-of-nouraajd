@@ -22,50 +22,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGui;
 
 namespace fn::sdl {
-struct SurfaceDeleter {
-    void operator()(SDL_Surface *surface) const noexcept {
-        if (surface) {
-            SDL_FreeSurface(surface);
+template <typename T, auto Destroy>
+    requires requires(T *resource) {
+        { std::invoke(Destroy, resource) } -> std::same_as<void>;
+    }
+struct ResourceDeleter {
+    void operator()(T *resource) const noexcept {
+        if (resource) {
+            std::invoke(Destroy, resource);
         }
     }
 };
 
-struct TextureDeleter {
-    void operator()(SDL_Texture *texture) const noexcept {
-        if (texture) {
-            SDL_DestroyTexture(texture);
-        }
-    }
-};
+using SurfaceDeleter = ResourceDeleter<SDL_Surface, SDL_FreeSurface>;
+using TextureDeleter = ResourceDeleter<SDL_Texture, SDL_DestroyTexture>;
+using RendererDeleter = ResourceDeleter<SDL_Renderer, SDL_DestroyRenderer>;
+using WindowDeleter = ResourceDeleter<SDL_Window, SDL_DestroyWindow>;
+using FontDeleter = ResourceDeleter<TTF_Font, TTF_CloseFont>;
 
 struct GuiTextureDeleter {
     std::weak_ptr<CGui> owner;
 
     void operator()(SDL_Texture *texture) const noexcept;
-};
-
-struct RendererDeleter {
-    void operator()(SDL_Renderer *renderer) const noexcept {
-        if (renderer) {
-            SDL_DestroyRenderer(renderer);
-        }
-    }
-};
-
-struct WindowDeleter {
-    void operator()(SDL_Window *window) const noexcept {
-        if (window) {
-            SDL_DestroyWindow(window);
-        }
-    }
-};
-
-struct FontDeleter {
-    void operator()(TTF_Font *font) const noexcept {
-        if (font) {
-            TTF_CloseFont(font);
-        }
-    }
 };
 
 using SurfacePtr = std::unique_ptr<SDL_Surface, SurfaceDeleter>;

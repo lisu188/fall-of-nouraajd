@@ -35,11 +35,36 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CTooltipHandler.h"
 #include "object/CQuest.h"
 #include <cctype>
+#include <concepts>
 #include <cstdlib>
 #include <exception>
 #include <utility>
 
 namespace {
+template <typename Result>
+    requires(std::same_as<Result, bool> || std::same_as<Result, void>)
+Result invokeListCallback(const std::shared_ptr<CGameGraphicsObject> &parent, const std::shared_ptr<CGui> &gui,
+                          int index, const std::shared_ptr<CGameObject> &object, const std::string &method,
+                          const char *failureMessage, bool eligible, bool missingResult = false) {
+    if (!eligible || method.empty()) {
+        if constexpr (std::same_as<Result, bool>) {
+            return missingResult;
+        } else {
+            return;
+        }
+    }
+    try {
+        return parent->meta()
+            ->invoke_method<Result, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                method, vstd::cast<CGameGraphicsObject>(parent), gui, index, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning(failureMessage, method, exception.what());
+        if constexpr (std::same_as<Result, bool>) {
+            return false;
+        }
+    }
+}
+
 std::string listObjectLabel(const std::shared_ptr<CGameObject> &object) {
     if (!object)
         return "Empty";
@@ -449,31 +474,15 @@ CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> 
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || callback.empty()) {
-        return;
-    }
-    try {
-        parent->meta()
-            ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                callback, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list callback failure:", callback, exception.what());
-    }
+    invokeListCallback<void>(parent, gui, i, object, callback,
+                             "Ignoring list callback failure:", canInvokeParentCallback(gui, parent));
 }
 
 bool CListView::invokeRightClickCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || rightClickCallback.empty()) {
-        return false;
-    }
-    try {
-        return parent->meta()
-            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                rightClickCallback, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list right-click callback failure:", rightClickCallback, exception.what());
-        return false;
-    }
+    return invokeListCallback<bool>(
+        parent, gui, i, object, rightClickCallback,
+        "Ignoring list right-click callback failure:", canInvokeParentCallback(gui, parent));
 }
 
 auto CListView::getArrowCallback(bool left) {
@@ -489,75 +498,34 @@ auto CListView::getArrowCallback(bool left) {
 
 bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || select.empty()) {
-        return false;
-    }
-    try {
-        return parent->meta()
-            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                select, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list select callback failure:", select, exception.what());
-        return false;
-    }
+    return invokeListCallback<bool>(parent, gui, i, object, select,
+                                    "Ignoring list select callback failure:", canInvokeParentCallback(gui, parent));
 }
 
 bool CListView::invokeDragStart(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || dragStart.empty()) {
-        return true;
-    }
-    try {
-        return parent->meta()
-            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                dragStart, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list drag-start callback failure:", dragStart, exception.what());
-        return false;
-    }
+    return invokeListCallback<bool>(parent, gui, i, object, dragStart,
+                                    "Ignoring list drag-start callback failure:", canInvokeParentCallback(gui, parent),
+                                    true);
 }
 
 bool CListView::invokeDragValidate(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || dragValidate.empty()) {
-        return true;
-    }
-    try {
-        return parent->meta()
-            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                dragValidate, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list drag-validate callback failure:", dragValidate, exception.what());
-        return false;
-    }
+    return invokeListCallback<bool>(
+        parent, gui, i, object, dragValidate,
+        "Ignoring list drag-validate callback failure:", canInvokeParentCallback(gui, parent), true);
 }
 
 void CListView::invokeDrop(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || drop.empty()) {
-        return;
-    }
-    try {
-        parent->meta()
-            ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                drop, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list drop callback failure:", drop, exception.what());
-    }
+    invokeListCallback<void>(parent, gui, i, object, drop,
+                             "Ignoring list drop callback failure:", canInvokeParentCallback(gui, parent));
 }
 
 void CListView::invokeDragCancel(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!canInvokeParentCallback(gui, parent) || dragCancel.empty()) {
-        return;
-    }
-    try {
-        parent->meta()
-            ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-                dragCancel, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
-    } catch (const std::exception &exception) {
-        vstd::logger::warning("Ignoring list drag-cancel callback failure:", dragCancel, exception.what());
-    }
+    invokeListCallback<void>(parent, gui, i, object, dragCancel,
+                             "Ignoring list drag-cancel callback failure:", canInvokeParentCallback(gui, parent));
 }
 
 bool CListView::canInvokeParentCallback(const std::shared_ptr<CGui> &gui,
