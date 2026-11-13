@@ -21,9 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <concepts>
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <unordered_map>
+#include <utility>
 
 namespace {
 using Index = std::uint32_t;
@@ -49,6 +52,18 @@ struct Node {
     Index hops = 0;
     unsigned char passability = 0; // unknown, blocked, passable
 };
+
+template <typename Records>
+concept IndexedRecords = requires(Records &records, Index index) {
+    { records.at(index) } -> std::same_as<Node &>;
+};
+
+template <typename Records>
+concept SearchRecords =
+    IndexedRecords<Records> &&
+    requires(Records &records, Coords coords, CNavigationSearchResult &result, const CNavigationSearchLimits &limits) {
+        { records.get(coords, result, limits) } -> std::same_as<Index>;
+    };
 
 Cost checkedAdd(Cost first, Cost second) {
     if (second < 0 || first > SEARCH_INFINITE_COST - 1 - second)
@@ -164,7 +179,7 @@ class ChunkRecords {
     Index generation = 0;
 };
 
-template <typename Records> class IndexedHeap {
+template <IndexedRecords Records> class IndexedHeap {
   public:
     IndexedHeap(Records &records, std::pmr::vector<Index> &entries, CNavigationSearchStatistics &statistics)
         : records(records), entries(entries), statistics(statistics) {
@@ -244,11 +259,13 @@ struct GenericGraph {
     bool canStep(Coords coords) const { return passable(coords); }
     double heuristic(Coords from, Coords goal) const { return distance(from, goal); }
     Cost cost(Coords from, Coords to) const { return std::max<Cost>(1, stepCost(from, to)); }
-    template <typename Visitor> void visit(Coords coords, Visitor visitor) const {
+    template <typename Visitor>
+        requires std::invocable<Visitor &, const Coords &>
+    void visit(Coords coords, Visitor visitor) const {
         for (auto neighbor : neighbors(coords))
-            visitor(neighbor);
+            std::invoke(visitor, std::as_const(neighbor));
         if (auto next = waypoint(coords))
-            visitor(*next);
+            std::invoke(visitor, std::as_const(*next));
     }
 };
 
@@ -258,16 +275,32 @@ struct MapGraph {
     bool canStep(Coords coords) const { return snapshot.canStep(coords); }
     double heuristic(Coords from, Coords goal) const { return snapshot.heuristic(from, goal); }
     Cost cost(Coords from, Coords to) const { return std::max<Cost>(1, snapshot.stepCost(from, to)); }
-    template <typename Visitor> void visit(Coords coords, Visitor visitor) const {
+    template <typename Visitor>
+        requires std::invocable<Visitor &, const Coords &>
+    void visit(Coords coords, Visitor visitor) const {
         const auto neighbors = snapshot.neighbors(coords);
         for (std::size_t i = 0; i < neighbors.count; ++i)
-            visitor(neighbors.cardinal[i]);
+            std::invoke(visitor, neighbors.cardinal[i]);
         for (auto next : neighbors.connectors)
-            visitor(next);
+            std::invoke(visitor, std::as_const(next));
     }
 };
 
-template <typename Records, typename Graph>
+template <typename Graph>
+concept SearchGraph = requires(const Graph &graph, Coords from, Coords to, void (*visitor)(const Coords &)) {
+    { graph.current() } -> std::convertible_to<bool>;
+    { graph.canStep(from) } -> std::convertible_to<bool>;
+    { graph.heuristic(from, to) } -> std::convertible_to<double>;
+    { graph.cost(from, to) } -> std::same_as<Cost>;
+    { graph.visit(from, visitor) } -> std::same_as<void>;
+};
+
+static_assert(SearchRecords<SparseRecords>);
+static_assert(SearchRecords<ChunkRecords>);
+static_assert(SearchGraph<GenericGraph>);
+static_assert(SearchGraph<MapGraph>);
+
+template <SearchRecords Records, SearchGraph Graph>
 void search(Records &records, std::pmr::vector<Index> &entries, const Graph &graph, Coords start, Coords goal,
             bool fullPath, CNavigationSearchLimits limits, CNavigationSearchResult &result) {
     result.firstStep = start;
@@ -355,9 +388,11 @@ void search(Records &records, std::pmr::vector<Index> &entries, const Graph &gra
         throw SearchFailure{CNavigationSearchStatus::Cancelled};
 }
 
-template <typename Action> void runBounded(CNavigationSearchResult &result, Action action) {
+template <typename Action>
+    requires std::invocable<Action &>
+void runBounded(CNavigationSearchResult &result, Action action) {
     try {
-        action();
+        std::invoke(action);
     } catch (const SearchFailure &failure) {
         result.status = failure.status;
         result.path.clear();
