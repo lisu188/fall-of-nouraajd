@@ -154,7 +154,7 @@ jobs:
           echo "prefix=${{ runner.os }}-ccache-cxx26-release-scoped-v1-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
         if: needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -348,14 +348,14 @@ jobs:
           echo "dir=${CCACHE_DIR}" >> "${GITHUB_OUTPUT}"
           echo "prefix=${{ runner.os }}-ccache-cxx26-coverage-scoped-v1-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
       - name: Restore Python test timings
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
@@ -559,7 +559,7 @@ jobs:
           & $sccacheExe --version
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v3-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat') }}
@@ -749,7 +749,7 @@ jobs:
       - *setup-windows-fast-tools
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
@@ -851,7 +851,7 @@ jobs:
           $sccacheVersion = $env:SCCACHE_VERSION -replace "[^A-Za-z0-9_.-]", "-"
           "prefix=${{ runner.os }}-sccache-$sccacheVersion-clangcl-${{ env.LLVM_VERSION }}-cxx26-$toolset-" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
       - name: Restore sccache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
