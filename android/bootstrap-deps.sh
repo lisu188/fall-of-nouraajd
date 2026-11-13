@@ -65,41 +65,30 @@ if [[ ! -f "${PYTHON_PREFIX}/include/python${PYTHON_VERSION%.*}/Python.h" || ! -
 fi
 
 VCPKG_ROOT="${DEPS_ROOT}/vcpkg"
+VCPKG_BASELINE="$(
+    python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("builtin-baseline", ""))' \
+        "${REPO_ROOT}/vcpkg.json"
+)"
+if [[ -z "${GAME_ANDROID_VCPKG_REF:-}" && -n "${VCPKG_BASELINE}" ]]; then
+    VCPKG_REF="${VCPKG_BASELINE}"
+fi
+
 if [[ ! -d "${VCPKG_ROOT}/.git" ]]; then
-    git clone --depth 1 --branch "${VCPKG_REF}" https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
+    if [[ "${VCPKG_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+        git init "${VCPKG_ROOT}"
+        git -C "${VCPKG_ROOT}" remote add origin https://github.com/microsoft/vcpkg.git
+        git -C "${VCPKG_ROOT}" fetch --depth 1 origin "${VCPKG_REF}"
+        git -C "${VCPKG_ROOT}" checkout --detach FETCH_HEAD
+    else
+        git clone --depth 1 --branch "${VCPKG_REF}" https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
+    fi
 else
-    VCPKG_HEAD="$(git -C "${VCPKG_ROOT}" describe --tags --exact-match 2>/dev/null || git -C "${VCPKG_ROOT}" rev-parse HEAD)"
-    if [[ "${VCPKG_HEAD}" != "${VCPKG_REF}" ]]; then
+    VCPKG_HEAD="$(git -C "${VCPKG_ROOT}" rev-parse HEAD)"
+    VCPKG_EXPECTED="$(git -C "${VCPKG_ROOT}" rev-parse --verify "${VCPKG_REF}^{commit}" 2>/dev/null || true)"
+    if [[ "${VCPKG_HEAD}" != "${VCPKG_EXPECTED}" ]]; then
         echo "Existing ${VCPKG_ROOT} is at ${VCPKG_HEAD}, expected ${VCPKG_REF}. Remove it or set GAME_ANDROID_DEPS_DIR." >&2
         exit 7
     fi
-fi
-
-VCPKG_BASELINE="$(python3 - "${REPO_ROOT}/vcpkg.json" <<'PY'
-import json
-import re
-import sys
-from pathlib import Path
-
-baseline = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("builtin-baseline")
-if not isinstance(baseline, str) or not re.fullmatch(r"[0-9a-f]{40}", baseline):
-    raise SystemExit("vcpkg.json must pin a 40-character builtin-baseline commit")
-print(baseline)
-PY
-)"
-
-# The engine tag and manifest registry baseline are independent pins. A shallow
-# engine checkout lacks the baseline and historical port trees needed by vcpkg.
-# Fetch their history without checking out a different engine or changing ports.
-if [[ "$(git -C "${VCPKG_ROOT}" rev-parse --is-shallow-repository)" == true ]]; then
-    git -C "${VCPKG_ROOT}" fetch --no-tags --unshallow origin "${VCPKG_BASELINE}"
-elif ! git -C "${VCPKG_ROOT}" cat-file -e "${VCPKG_BASELINE}:versions/baseline.json" 2>/dev/null; then
-    git -C "${VCPKG_ROOT}" fetch --no-tags origin "${VCPKG_BASELINE}"
-fi
-if ! git -C "${VCPKG_ROOT}" cat-file -e "${VCPKG_BASELINE}^{commit}" 2>/dev/null ||
-        ! git -C "${VCPKG_ROOT}" cat-file -e "${VCPKG_BASELINE}:versions/baseline.json" 2>/dev/null; then
-    echo "Pinned vcpkg registry baseline is unavailable: ${VCPKG_BASELINE}." >&2
-    exit 11
 fi
 
 if [[ ! -x "${VCPKG_ROOT}/vcpkg" ]]; then
@@ -156,4 +145,3 @@ Gradle properties: ${PROPERTIES_FILE}
 Build from ${SCRIPT_DIR} with Gradle 9.5.0 or newer in the 9.5 line:
   gradle :app:assembleDebug
 EOF
-
