@@ -138,6 +138,58 @@ class CSerializationReadContext {
     std::vector<std::shared_ptr<const json>> documents;
 };
 
+namespace fn {
+template <typename T>
+concept JsonCodecValue = std::same_as<T, clean_t<T>> && std::copy_constructible<T>;
+
+template <typename F, typename T>
+concept JsonEncoderFor =
+    std::copy_constructible<F> &&
+    (std::is_invocable_r_v<CSerializationResult<json>, F &, const T &, CSerializationWriteContext &> ||
+     (!std::invocable<F &, const T &, CSerializationWriteContext &> &&
+      std::is_invocable_r_v<CSerializationResult<json>, F &, const T &>));
+
+template <typename F, typename T>
+concept JsonDecoderFor =
+    std::copy_constructible<F> &&
+    (std::is_invocable_r_v<CSerializationResult<T>, F &, const std::shared_ptr<CGame> &, const json &,
+                           CSerializationReadContext &> ||
+     (!std::invocable<F &, const std::shared_ptr<CGame> &, const json &, CSerializationReadContext &> &&
+      std::is_invocable_r_v<CSerializationResult<T>, F &, const std::shared_ptr<CGame> &, const json &>));
+
+template <typename T>
+concept GameObjectPointer = SharedPtr<T> && std::convertible_to<clean_t<T>, std::shared_ptr<CGameObject>>;
+
+template <typename T>
+concept GameObjectSet = SetLike<T> && GameObjectPointer<typename clean_t<T>::value_type>;
+
+template <typename T>
+concept GameObjectMap = MapLike<T> && std::same_as<typename clean_t<T>::key_type, std::string> &&
+                        GameObjectPointer<typename clean_t<T>::mapped_type>;
+
+template <typename T>
+concept GameObjectReadPointer = SharedPtr<T> && requires(std::shared_ptr<CGameObject> object) {
+    dynamic_cast<typename clean_t<T>::element_type *>(object.get());
+    { std::dynamic_pointer_cast<typename clean_t<T>::element_type>(object) } -> std::convertible_to<T>;
+};
+
+template <typename T>
+concept GameObjectReadSet = SetLike<T> && GameObjectReadPointer<typename clean_t<T>::value_type>;
+
+template <typename T>
+concept GameObjectReadMap = MapLike<T> && std::same_as<typename clean_t<T>::key_type, std::string> &&
+                            GameObjectReadPointer<typename clean_t<T>::mapped_type>;
+
+template <typename T>
+concept JsonRepresentation = std::same_as<T, json> || std::same_as<T, std::shared_ptr<json>>;
+
+template <typename T>
+concept JsonInput = std::same_as<T, json> || requires(T &value) {
+    bool(!value);
+    { *value } -> std::convertible_to<const json &>;
+};
+} // namespace fn
+
 template <typename Context> class CSerializationOperation {
   public:
     explicit CSerializationOperation(Context &context) : context(context), root(context.begin()) {}
@@ -225,29 +277,30 @@ inline CSerializationResult<std::any> CSerializerBase::deserialize(const std::sh
     });
 }
 
-template <typename T> class CTypedJsonCodec final : public CSerializerBase {
+template <fn::JsonCodecValue T> class CTypedJsonCodec final : public CSerializerBase {
   public:
     using Encoder = std::function<CSerializationResult<json>(const T &, CSerializationWriteContext &)>;
     using Decoder = std::function<CSerializationResult<T>(const std::shared_ptr<CGame> &, const json &,
                                                           CSerializationReadContext &)>;
 
     template <typename Encode, typename Decode>
+        requires fn::JsonEncoderFor<Encode, T> && fn::JsonDecoderFor<Decode, T>
     CTypedJsonCodec(Encode encode, Decode decode)
         : encoder([encode = std::move(encode)](
                       const T &value, CSerializationWriteContext &context) mutable -> CSerializationResult<json> {
               if constexpr (std::invocable<Encode &, const T &, CSerializationWriteContext &>) {
-                  return encode(value, context);
+                  return std::invoke(encode, value, context);
               } else {
-                  return encode(value);
+                  return std::invoke(encode, value);
               }
           }),
           decoder([decode = std::move(decode)](const std::shared_ptr<CGame> &game, const json &document,
                                                CSerializationReadContext &context) mutable -> CSerializationResult<T> {
               if constexpr (std::invocable<Decode &, const std::shared_ptr<CGame> &, const json &,
                                            CSerializationReadContext &>) {
-                  return decode(game, document, context);
+                  return std::invoke(decode, game, document, context);
               } else {
-                  return decode(game, document);
+                  return std::invoke(decode, game, document);
               }
           }) {}
 
@@ -280,62 +333,62 @@ template <typename T> class CTypedJsonCodec final : public CSerializerBase {
 template <typename Serialized, typename Deserialized> class CSerializerFunction {
   public:
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::SharedPtr<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectPointer<V>
     static T serialize(V deserialized) {
         return CSerializerFunction<T, std::shared_ptr<CGameObject>>::serialize(deserialized);
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::SharedPtr<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectReadPointer<V>
     static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return std::dynamic_pointer_cast<typename V::element_type>(
             CSerializerFunction<T, std::shared_ptr<CGameObject>>::deserialize(map, serialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::SharedPtr<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectReadPointer<V>
     static V deserialize(std::shared_ptr<CGame> map, T serialized, CSerializationReadContext &context) {
         return std::dynamic_pointer_cast<typename V::element_type>(
             CSerializerFunction<T, std::shared_ptr<CGameObject>>::deserialize(map, serialized, context));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::SetLike<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectSet<V>
     static T serialize(V deserialized) {
         return CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::serialize(
             vstd::cast<std::set<std::shared_ptr<CGameObject>>>(deserialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::SetLike<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectReadSet<V>
     static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return vstd::cast<V>(
             CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::deserialize(map, serialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::SetLike<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectReadSet<V>
     static V deserialize(std::shared_ptr<CGame> map, T serialized, CSerializationReadContext &context) {
         return vstd::cast<V>(
             CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::deserialize(map, serialized, context));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::MapLike<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectMap<V>
     static T serialize(V deserialized) {
         return CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::serialize(
             vstd::cast<std::map<std::string, std::shared_ptr<CGameObject>>>(deserialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::MapLike<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectReadMap<V>
     static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return vstd::cast<V>(
             CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(map, serialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-        requires fn::MapLike<V>
+        requires std::same_as<T, std::shared_ptr<json>> && fn::GameObjectReadMap<V>
     static V deserialize(std::shared_ptr<CGame> map, T serialized, CSerializationReadContext &context) {
         return vstd::cast<V>(CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(
             map, serialized, context));
@@ -524,8 +577,8 @@ class CSerialization {
         StrictScope &operator=(StrictScope &&) = delete;
     };
 
-    template <typename Serialized, typename Deserialized> static Serialized serialize(Deserialized deserialized) {
-        static_assert(std::same_as<Serialized, json> || std::same_as<Serialized, std::shared_ptr<json>>);
+    template <fn::JsonRepresentation Serialized, typename Deserialized>
+    static Serialized serialize(Deserialized deserialized) {
         auto result = serializationValueOrThrow(serializeExpected(deserialized));
         if constexpr (std::same_as<Serialized, json>) {
             return result;
@@ -534,7 +587,7 @@ class CSerialization {
         }
     }
 
-    template <typename Serialized, typename Deserialized>
+    template <fn::JsonInput Serialized, typename Deserialized>
     static Deserialized deserialize(std::shared_ptr<CGame> map, Serialized serialized) {
         if constexpr (std::same_as<Serialized, json>) {
             return serializationValueOrThrow(deserializeExpected<Deserialized>(map, serialized));
