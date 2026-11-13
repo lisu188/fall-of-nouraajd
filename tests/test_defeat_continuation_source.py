@@ -131,7 +131,14 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "loserDescription); requireDefeatCurrent(); const auto rewardScale = b->getScale(); requireDefeatCurrent(); a->addExpScaled(rewardScale); requireDefeatCurrent();",
+            "loserDescription); requireDefeatCurrent(); const bool sevenSunsReplacement = "
+            "CSevenSunsMerchantDialogue::isSettledReplacement(expectedGame.lock(), encounterMap, b, "
+            "requireDefeatCurrent); requireDefeatCurrent();",
+            text,
+        )
+        self.assertIn(
+            "if (sevenSunsReplacement) { a->addExp(420); } else { const auto rewardScale = b->getScale(); "
+            "requireDefeatCurrent(); a->addExpScaled(rewardScale); } requireDefeatCurrent();",
             text,
         )
         guard = self.requiredBlock(self.body, "const auto requireDefeatCurrent =")

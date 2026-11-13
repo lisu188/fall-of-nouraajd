@@ -41,6 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -240,6 +241,62 @@ void testScalarPropertyMetadataWorkIsBounded() {
     std::cout << "[performance] scalar metadata calls=" << decodedCalls << " direct=" << directCalls
               << " budget=" << budget << '\n';
     expect_true(decodedCalls <= budget, "scalar decoding must not repeat the reflected property type lookup");
+}
+
+void testSerializationProgressRecordBudget() {
+    class DiagnosticEnvironment {
+      public:
+        DiagnosticEnvironment() {
+            if (const char *value = std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS"))
+                previous = value;
+        }
+        ~DiagnosticEnvironment() { set(previous ? previous->c_str() : nullptr); }
+        static void set(const char *value) {
+#ifdef _WIN32
+            _putenv_s("GAME_SAVE_STAGE_DIAGNOSTICS", value ? value : "");
+#else
+            if (value)
+                setenv("GAME_SAVE_STAGE_DIAGNOSTICS", value, 1);
+            else
+                unsetenv("GAME_SAVE_STAGE_DIAGNOSTICS");
+#endif
+        }
+
+      private:
+        std::optional<std::string> previous;
+    } environment;
+    DiagnosticEnvironment::set("1");
+    constexpr std::size_t visits = 65536;
+    constexpr int independentRoots = 512;
+    for (int index = 0; index < independentRoots; ++index) {
+        auto document = std::make_shared<json>();
+        CSerializationWriteContext context("unadmitted-construction-root");
+        CSerialization::setProperty(document, "index", std::any(index), context);
+        expect_true(document->at("index").get<int>() == index && context.progressCounters().visits == 0 &&
+                        context.progressCounters().records == 0 && context.progressCounters().bytes == 0,
+                    "sequential unadmitted construction roots must never multiply the diagnostic record budget");
+    }
+    CSerializationProgress progress;
+    progress.begin("write");
+    for (std::size_t index = 0; index < visits; ++index)
+        progress.visit(CSerializationVisit::Property);
+    progress.finished();
+    progress.end();
+    const auto counts = progress.counters();
+    expect_true(counts.visits == visits && counts.properties == visits && counts.objects == 0 &&
+                    counts.mapEntries == 0 && counts.arrayEntries == 0 && counts.records == 11 &&
+                    counts.records <= 32 && counts.bytes <= counts.records * 512,
+                "fixed serialization visits must emit only begin, nine power-of-four progress records, and end");
+    DiagnosticEnvironment::set("0");
+    progress.begin("read");
+    for (std::size_t index = 0; index < visits; ++index)
+        progress.visit(CSerializationVisit::Property);
+    progress.end();
+    expect_true(progress.counters().visits == 0 && progress.counters().records == 0 && progress.counters().bytes == 0,
+                "disabled serialization diagnostics must do no counter or output work for the same workload");
+    std::cout << "[performance] serialization-progress visits=" << visits << " records=" << counts.records
+              << " bytes=" << counts.bytes << " recordBudget=32 recordBytesBudget=512 disabledWork=0"
+              << " unadmittedRoots=" << independentRoots << " unadmittedRecords=0\n";
 }
 
 void testTypedCodecWorkIsBoundedPerOperation() {
@@ -819,6 +876,7 @@ void testOwnedSaveEnvelopesHaveZeroNestedGraphCopies() {
 } // namespace
 
 void run_serialization_performance_tests() {
+    testSerializationProgressRecordBudget();
     testTypedCodecWorkIsBoundedPerOperation();
     test_map_load_property_notifications_are_bounded_per_object();
     testMutualEffectGraphSerializationHasBoundedActorDefinitions();

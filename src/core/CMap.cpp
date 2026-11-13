@@ -100,6 +100,13 @@ CMap::~CMap() {
             }
         }
     }
+    for (const auto &object : sceneRetiredLifetimeOwners) {
+        if (!object || !object->owningMap.expired() ||
+            std::ranges::any_of(mapObjects, [&](const auto &entry) { return entry.second == object; }))
+            continue;
+        if (auto creature = vstd::cast<CCreature>(object))
+            creature->releaseEffectReferences();
+    }
 }
 
 std::map<int, std::pair<int, int>> CMap::getBounds() {
@@ -1813,4 +1820,14 @@ void CMap::registerPlayerTriggers() {
 
     getEventHandler()->registerTrigger(restartTrigger);
     getEventHandler()->registerTrigger(turnTrigger);
+}
+
+std::set<std::shared_ptr<CMapObject>> CMap::getSceneRetiredObjects() { return sceneRetiredObjects; }
+
+void CMap::setSceneRetiredObjects(std::set<std::shared_ptr<CMapObject>> objects) {
+    objects.erase(nullptr);
+    for (const auto &object : objects)
+        sceneRetiredLifetimeOwners.insert(object);
+    sceneRetiredObjects = std::move(objects);
+    recordDirectPropertyChanged("sceneRetiredObjects");
 }

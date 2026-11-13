@@ -56,6 +56,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -3020,6 +3021,105 @@ void testSerializationScopeRestoration() {
     strict_thread.join();
     lenient_thread.join();
     expect_true(isolated == 64, "concurrent operation contexts must never share strict policy or graph state");
+
+    class DiagnosticEnvironment {
+      public:
+        DiagnosticEnvironment() {
+            if (const char *value = std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS"))
+                previous = value;
+        }
+        ~DiagnosticEnvironment() { set(previous ? previous->c_str() : nullptr); }
+        static void set(const char *value) {
+#ifdef _WIN32
+            _putenv_s("GAME_SAVE_STAGE_DIAGNOSTICS", value ? value : "");
+#else
+            if (value)
+                setenv("GAME_SAVE_STAGE_DIAGNOSTICS", value, 1);
+            else
+                unsetenv("GAME_SAVE_STAGE_DIAGNOSTICS");
+#endif
+        }
+
+      private:
+        std::optional<std::string> previous;
+    } environment;
+    const std::map<std::string, std::shared_ptr<CGameObject>> fixed{{"a", nullptr}, {"b", nullptr}};
+    DiagnosticEnvironment::set("0");
+    CSerializationProgress disabled_admission("write");
+    CSerializationWriteContext disabled("disabled-progress");
+    auto unchanged = CSerialization::serializeExpected(fixed, disabled);
+    expect_true(unchanged && disabled.progressCounters().visits == 0 && disabled.progressCounters().records == 0,
+                "disabled diagnostics must remain silent with zero diagnostic counter work");
+    DiagnosticEnvironment::set("1");
+    for (int index = 0; index < 128; ++index) {
+        CSerializationWriteContext unadmitted("unadmitted-tile-shaped-operation");
+        auto value = CSerialization::serializeExpected(fixed, unadmitted);
+        expect_true(value && value->dump() == unchanged->dump() && unadmitted.progressCounters().records == 0 &&
+                        unadmitted.progressCounters().visits == 0,
+                    "independent construction roots must stay silent even when the environment flag is enabled");
+    }
+    CSerializationProgress write_admission("write");
+    CSerializationWriteContext writer("enabled-progress");
+    auto encoded = CSerialization::serializeExpected(fixed, writer);
+    write_admission.finished();
+    write_admission.end();
+    const auto written = write_admission.counters();
+    expect_true(encoded && unchanged && encoded->dump() == unchanged->dump() && written.visits == 4 &&
+                    written.objects == 2 && written.mapEntries == 2 && written.properties == 0 &&
+                    written.arrayEntries == 0 && written.records == 4 && written.bytes <= 4 * 512,
+                "independent map entries must share one bounded diagnostic session without changing JSON");
+    auto game = std::make_shared<CGame>();
+    CSerializationProgress read_admission("read");
+    CSerializationReadContext reader(false, "enabled-progress");
+    auto decoded = CSerialization::deserializeExpected<std::map<std::string, std::shared_ptr<CGameObject>>>(
+        game, *encoded, reader);
+    read_admission.finished();
+    read_admission.end();
+    const auto read = read_admission.counters();
+    expect_true(decoded && decoded->empty() && read.visits == 4 && read.objects == 2 && read.mapEntries == 2 &&
+                    read.properties == 0 && read.arrayEntries == 0 && read.records == 4 && read.bytes <= 4 * 512,
+                "read visits include null attempts and share their independent-entry record budget");
+    auto progress_document = std::make_shared<json>();
+    CSerializationProgress cached_admission("write");
+    CSerializationWriteContext cached("cached-progress");
+    {
+        CSerializationOperation scope(cached);
+        DiagnosticEnvironment::set("0");
+        CSerialization::setProperty(progress_document, "number", std::any(7), cached);
+        cached.finish(*progress_document);
+    }
+    cached_admission.finished();
+    cached_admission.end();
+    expect_true(progress_document->at("number").get<int>() == 7 && cached_admission.counters().properties == 1 &&
+                    cached_admission.counters().visits == 1 && cached_admission.counters().records == 3,
+                "the existing flag must be read once per session rather than once per visit");
+    DiagnosticEnvironment::set("1");
+    CSerializationProgress array_admission("write");
+    CSerializationWriteContext array_writer("array-progress");
+    const std::set<std::shared_ptr<CGameObject>> array_values{nullptr};
+    auto array_encoded = CSerialization::serializeExpected(array_values, array_writer);
+    expect_true(array_encoded && array_writer.progressCounters().arrayEntries == 1 &&
+                    array_writer.progressCounters().objects == 1 && array_writer.progressCounters().visits == 2,
+                "array entries use existing visits rather than another collection scan");
+    array_admission.finished();
+    array_admission.end();
+    struct UnencodableProgressValue {};
+    CSerializationWriteContext failed("failed-progress");
+    bool original_failure = false;
+    try {
+        CSerializationProgress error_admission("write");
+        CSerializationOperation scope(failed);
+        CSerialization::setProperty(progress_document, "missing", std::any(UnencodableProgressValue{}), failed);
+    } catch (const CSerializationException &error) {
+        original_failure = error.getError().code == CSerializationErrorCode::MissingCodec &&
+                           error.getError().source == "failed-progress" && error.getError().propertyPath == "missing";
+    }
+    expect_true(original_failure && failed.progressCounters().properties == 1 && failed.progressCounters().records == 2,
+                "diagnostic unwind must preserve the original typed error and release its session");
+    auto following = CSerialization::serializeExpected(fixed, writer);
+    expect_true(following && following->dump() == unchanged->dump() && writer.progressCounters().visits == 0 &&
+                    writer.progressCounters().records == 0,
+                "admission unwind must release TLS before the next unadmitted root, even with the flag enabled");
 }
 
 void testSerializerBaseDestruction() {

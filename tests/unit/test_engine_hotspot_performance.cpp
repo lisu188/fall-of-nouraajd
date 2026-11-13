@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "seven_suns_warning_fixture.h"
+#include "seven_suns_merchant_fixture.h"
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
@@ -1848,6 +1850,94 @@ void testEquipmentTailChecksKeepFixedWork() {
               << " factories=" << factories << "\n";
     context->shutdown();
 }
+// Copyright (C) 2026 Andrzej Lis
+// SPDX-License-Identifier: GPL-3.0-or-later
+void testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded() {
+    SevenSunsWarningFixture fixture;
+    const auto objectCount = fixture.map->getObjects().size();
+    const auto triggerCount = fixture.map->getTriggers().size();
+    const auto effectOwners = fixture.game->getContext()->getEffectOwnerCount();
+    const auto experience = fixture.player->getExp();
+    const auto gold = fixture.player->getGold();
+    std::size_t callerChecks = 0;
+    auto session = fixture.begin([&] { ++callerChecks; });
+    expect_true(session != nullptr, "fixed warning workload must admit its exact native actor");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::finish(*session);
+    session->close();
+    session.reset();
+    const auto receipt = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    const auto journal = fixture.journal();
+    for (int pass = 0; pass < 128; ++pass) {
+        auto replay = fixture.begin([&] { ++callerChecks; });
+        expect_true(replay && replay->view().at("status").get<std::string>() == "retired",
+                    "settled replay is a bounded acknowledgement, never another source action");
+        if (replay)
+            replay->close();
+    }
+    constexpr std::size_t CallerCheckBudget = 16384;
+    expect_true(fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1 &&
+                    fixture.destroyCalls == 0 && fixture.map->getObjects().size() + 1 == objectCount &&
+                    fixture.map->getTriggers().size() == triggerCount &&
+                    fixture.game->getContext()->getEffectOwnerCount() == effectOwners &&
+                    fixture.player->getExp() == experience && fixture.player->getGold() == gold &&
+                    fixture.journal() == journal && fixture.player->getQuests().size() == 1 && !receipt.empty() &&
+                    receipt.size() <= 4096 &&
+                    fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == receipt && callerChecks > 0 &&
+                    callerChecks <= CallerCheckBudget && fixture.stockAndEffectIntact() &&
+                    fixture.protectedActorsIntact() && fixture.map->tryBeginSaveSnapshot().has_value(),
+                "three source edges plus128 replays preserve bounded registry/trigger/receipt/owner/quest work");
+    std::cout << "Seven Suns warning guard: edges=3 replays=128 actorFactories=" << fixture.actorFactories
+              << " itemFactories=" << fixture.itemFactories << " questFactories=" << fixture.questFactories
+              << " triggerGrowth=0 receiptBytes=" << receipt.size()
+              << " receiptBudget=4096 callerChecks=" << callerChecks << " callerCheckBudget=" << CallerCheckBudget
+              << '\n';
+}
+
+void testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded() {
+    SevenSunsMerchantFixture f;
+    std::size_t checks = 0;
+    auto flow = f.beginMerchant(0, [&] { ++checks; });
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
+    const auto xp = f.player->getExp(), gold = f.player->getGold();
+    auto first = f.settle();
+    f.focus(2);
+    auto second = f.settle();
+    std::array<std::shared_ptr<CCreature>, 4> replacements;
+    for (std::size_t i = 0; i < 4; ++i)
+        replacements[i] = f.replacement(i);
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    const auto effectOwners = f.game->getContext()->getEffectOwnerCount();
+    std::size_t scans = first.at("checked").get<int>() + second.at("checked").get<int>();
+    for (int n = 0; n < 128; ++n) {
+        auto result = CSevenSunsMerchantDialogue::settle(f.game, f.clock, [&] { ++checks; });
+        scans += result.at("checked").get<int>();
+        expect_true(result.at("checked").get<int>() == 4 && result.at("replaced").get<int>() == 0,
+                    "every coordinator replay has exactly four bounded candidates and zero additional replacements");
+    }
+    bool owners = true;
+    for (std::size_t i = 0; i < 4; ++i)
+        owners = owners && replacements[i] && f.replacement(i) == replacements[i] && f.oldOwnershipIntact(i);
+    constexpr std::size_t CheckBudget = 65536, ReceiptBudget = 65536, ScanBudget = 4 * (128 + 2);
+    expect_true(
+        first.at("replaced").get<int>() == 2 && second.at("replaced").get<int>() == 2 && owners &&
+            scans == ScanBudget && f.map->getObjects().size() == objects &&
+            f.map->getEventHandler()->getTriggers().size() == triggers &&
+            f.game->getContext()->getEffectOwnerCount() == effectOwners && f.merchantDestroyed == 0 &&
+            f.newDestroyed == 0 && f.player->getExp() == xp && f.player->getGold() == gold &&
+            f.player->getQuests().empty() &&
+            f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+            receipt.size() <= ReceiptBudget && checks > 0 && checks <= CheckBudget &&
+            f.map->tryBeginSaveSnapshot().has_value(),
+        "four once-owned replacements plus128 replays cannot grow registry/triggers/effects/receipt or grant rewards");
+    std::cout << "Seven Suns merchant guard: lineages=4 replacements=4 replays=128 eligibilityChecks=" << scans
+              << " eligibilityBudget=" << ScanBudget << " callerChecks=" << checks << " callerBudget=" << CheckBudget
+              << " receiptBytes=" << receipt.size() << " receiptBudget=" << ReceiptBudget << '\n';
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -1881,4 +1971,6 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();
+    testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded();
 }

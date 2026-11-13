@@ -1,0 +1,654 @@
+{
+  "schema": "baldurs-gate-seven-suns-warning-source.v1",
+  "actor": {
+    "id": "cityAr0601Actor2",
+    "sourceActor": "AR0601#actor2",
+    "sourceArea": "AR0601",
+    "sourceCreature": "DOPPSM",
+    "sourceDialogue": "DOPPSM"
+  },
+  "sources": {
+    "dialogueFingerprint": {
+      "bytes": 1074,
+      "sha256": "263ba285fac3cc7d486ce0c4223ce4af574b257b7ce224d8755b988906df6aac"
+    },
+    "compactMetadata": {
+      "path": "scar-seven-suns-compact-metadata-successor/evidence.json",
+      "bytes": 49983,
+      "sha256": "eca3349ebbc6153af12a8ae51ef67f5c7fe4da98f39358ecbf600d73cd8e7aa9"
+    },
+    "privateTextSelection": {
+      "path": "seven-suns-warning-tlk-22-read-20261027/evidence-private.json",
+      "bytes": 4966,
+      "sha256": "20d87f0c5bc6fbd46e892e124bf8372330a7bd9c3ca1c416ebf4a5f4c380f2ed",
+      "rawTextIncludedHere": false,
+      "strrefs": [
+        981,
+        982,
+        983,
+        984,
+        985,
+        986,
+        987,
+        988,
+        989,
+        990,
+        991,
+        992,
+        993,
+        994,
+        995,
+        996,
+        997,
+        998,
+        999,
+        16590,
+        11853,
+        26986
+      ]
+    }
+  },
+  "edition": {
+    "target": "officially patched unmodded original BG1",
+    "support": "installed potentially modified BGEE; base/effective DOPPSM bytes equal",
+    "originalParity": false,
+    "journalRaw92Status": "journal presence supported; BG2-only bit6 does not establish classic unsolved status",
+    "instantSetGlobal": "BG1:TotS primary documentation supports immediate selected-edge effects; exact original installation not authenticated"
+  },
+  "entryState": 0,
+  "states": [
+    {
+      "id": 0,
+      "textStrref": 981,
+      "meaning": "Merchant asks what the visitor wants.",
+      "entry": [
+        {
+          "op": "True",
+          "args": []
+        }
+      ],
+      "classification": "reachableFromExplicitEntry",
+      "transitions": [
+        {
+          "id": 0,
+          "replyStrref": 988,
+          "replyMeaning": "Question the recent business decisions.",
+          "rawFlags": 5,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "SetGlobal",
+              "args": [
+                "CheckedSevenSuns",
+                "GLOBAL",
+                2
+              ]
+            }
+          ],
+          "next": [
+            "DOPPSM",
+            2
+          ],
+          "journal": null
+        },
+        {
+          "id": 1,
+          "replyStrref": 989,
+          "replyMeaning": "Ask for a tour.",
+          "rawFlags": 5,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "SetGlobal",
+              "args": [
+                "AskedForTour",
+                "GLOBAL",
+                1
+              ]
+            },
+            {
+              "op": "SetGlobal",
+              "args": [
+                "CheckedSevenSuns",
+                "GLOBAL",
+                2
+              ]
+            }
+          ],
+          "next": [
+            "DOPPSM",
+            1
+          ],
+          "journal": null
+        },
+        {
+          "id": 2,
+          "replyStrref": 990,
+          "replyMeaning": "Ask to see the owner.",
+          "rawFlags": 5,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "SetGlobal",
+              "args": [
+                "CheckedSevenSuns",
+                "GLOBAL",
+                2
+              ]
+            }
+          ],
+          "next": [
+            "DOPPSM",
+            1
+          ],
+          "journal": null
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "textStrref": 982,
+      "meaning": "Merchant refuses the request and asks the visitor to leave.",
+      "entry": null,
+      "classification": "reachableFromExplicitEntry",
+      "transitions": [
+        {
+          "id": 3,
+          "replyStrref": 991,
+          "replyMeaning": "Insist on seeing Jhasso.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            7
+          ],
+          "journal": null
+        },
+        {
+          "id": 4,
+          "replyStrref": 992,
+          "replyMeaning": "Insist on a tour.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            3
+          ],
+          "journal": null
+        },
+        {
+          "id": 5,
+          "replyStrref": 993,
+          "replyMeaning": "Accept the refused tour and leave.",
+          "rawFlags": 3,
+          "conditions": [
+            {
+              "op": "Global",
+              "args": [
+                "AskedForTour",
+                "GLOBAL",
+                1
+              ]
+            }
+          ],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            8
+          ],
+          "journal": null
+        },
+        {
+          "id": 6,
+          "replyStrref": 994,
+          "replyMeaning": "Find another person to answer.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            8
+          ],
+          "journal": null
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "textStrref": 983,
+      "meaning": "Merchant is hurried and unwilling to answer.",
+      "entry": null,
+      "classification": "reachableFromExplicitEntry",
+      "transitions": [
+        {
+          "id": 7,
+          "replyStrref": 995,
+          "replyMeaning": "Insist on answers.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            3
+          ],
+          "journal": null
+        },
+        {
+          "id": 8,
+          "replyStrref": 996,
+          "replyMeaning": "Say farewell.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            8
+          ],
+          "journal": null
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "textStrref": 984,
+      "meaning": "Merchant reports face-changing infiltrators, warns the visitor and intends to flee.",
+      "entry": null,
+      "classification": "reachableFromExplicitEntry",
+      "transitions": [
+        {
+          "id": 9,
+          "replyStrref": null,
+          "replyMeaning": null,
+          "rawFlags": 92,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "EscapeArea",
+              "args": []
+            }
+          ],
+          "next": null,
+          "journal": {
+            "strref": 26986,
+            "rawFlags": 92
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "textStrref": 985,
+      "meaning": "Merchant challenges why the visitor is present.",
+      "entry": null,
+      "classification": "noPathFromAuditedEntry;externalEntryUnproved",
+      "transitions": [
+        {
+          "id": 10,
+          "replyStrref": 997,
+          "replyMeaning": "Claim to be tourists.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            5
+          ],
+          "journal": null
+        },
+        {
+          "id": 11,
+          "replyStrref": 998,
+          "replyMeaning": "Claim to be newly hired mercenaries.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            5
+          ],
+          "journal": null
+        },
+        {
+          "id": 12,
+          "replyStrref": 999,
+          "replyMeaning": "Claim to work for Jhasso.",
+          "rawFlags": 1,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "DOPPSM",
+            5
+          ],
+          "journal": null
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "textStrref": 986,
+      "meaning": "Merchant rejects the explanations and orders guards to kill the visitors.",
+      "entry": null,
+      "classification": "noPathFromAuditedEntry;externalEntryUnproved",
+      "transitions": [
+        {
+          "id": 13,
+          "replyStrref": null,
+          "replyMeaning": null,
+          "rawFlags": 0,
+          "conditions": [],
+          "effects": [],
+          "next": [
+            "SSUNGU",
+            5
+          ],
+          "journal": null
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "textStrref": 987,
+      "meaning": "Merchant issues a hostile order without permitting questions.",
+      "entry": null,
+      "classification": "noPathFromAuditedEntry;externalEntryUnproved",
+      "transitions": [
+        {
+          "id": 14,
+          "replyStrref": null,
+          "replyMeaning": null,
+          "rawFlags": 12,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "Enemy",
+              "args": []
+            }
+          ],
+          "next": null,
+          "journal": null
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "textStrref": 16590,
+      "meaning": "Merchant says Jhasso has been missing since the disturbance, reports face-changing infiltrators and intends to flee.",
+      "entry": null,
+      "classification": "reachableFromExplicitEntry",
+      "transitions": [
+        {
+          "id": 15,
+          "replyStrref": null,
+          "replyMeaning": null,
+          "rawFlags": 92,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "EscapeArea",
+              "args": []
+            }
+          ],
+          "next": null,
+          "journal": {
+            "strref": 26986,
+            "rawFlags": 92
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "textStrref": 11853,
+      "meaning": "Merchant interrupts the farewell to warn of face-changing infiltrators.",
+      "entry": null,
+      "classification": "reachableFromExplicitEntry",
+      "transitions": [
+        {
+          "id": 16,
+          "replyStrref": null,
+          "replyMeaning": null,
+          "rawFlags": 92,
+          "conditions": [],
+          "effects": [
+            {
+              "op": "EscapeArea",
+              "args": []
+            }
+          ],
+          "next": null,
+          "journal": {
+            "strref": 26986,
+            "rawFlags": 92
+          }
+        }
+      ]
+    }
+  ],
+  "reachableStates": [
+    0,
+    1,
+    2,
+    3,
+    7,
+    8
+  ],
+  "reachableEdges": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    15,
+    16
+  ],
+  "globalDefaults": {
+    "AskedForTour": 0,
+    "CheckedSevenSuns": 0
+  },
+  "sourceGlobalsScope": "GLOBAL",
+  "terminalEscapeEdges": [
+    9,
+    15,
+    16
+  ],
+  "journal": {
+    "strref": 26986,
+    "rawFlags": 92,
+    "meaning": "A frightened merchant reports shapechanger infiltration of the Seven Suns.",
+    "nativeQuestId": "citySevenSunsWarningLead",
+    "nativeStatus": "separate open lead; no Scar quest acceptance/completion/reward",
+    "nativeClass": "BaldursGateSevenSunsWarningLeadQuest"
+  },
+  "cancellation": {
+    "beforeFirstChoice": "No source-global, talk, journal or retirement effect.",
+    "afterCommittedChoice": "Previously committed source globals and native talk/history bookkeeping remain; no terminal journal/retirement until selected escape edge.",
+    "reopen": "A new explicit talk restarts sole audited entry0 using persisted globals; never silently resume a cancelled source cursor.",
+    "uncertainAdmittedPartialWork": "Quarantine; no automatic retry or manufactured success."
+  },
+  "boundaries": {
+    "automaticInitdlg": "not audited; explicit interaction only",
+    "state4": "No audited in-dialogue incoming edge or entry predicate.",
+    "state5": "No path from entry0; external SSUNGU state5 link retained without following.",
+    "state6": "No path from entry0; Enemy action14 is not activated.",
+    "externalLink": {
+      "from": [
+        "DOPPSM",
+        5,
+        13
+      ],
+      "to": [
+        "SSUNGU",
+        5
+      ],
+      "status": "unread/outside implemented reachable flow"
+    }
+  },
+  "conversion": {
+    "capability": "CGuiHandler.supportsSevenSunsWarning",
+    "intents": [
+      "beginSevenSunsWarning(clock,actor)",
+      "advanceSevenSunsWarning(revision,edgeIndex)",
+      "endSevenSunsWarning()"
+    ],
+    "authority": "Native per-flow session captures exact pre-dialog context/generation/map-binding epoch/assigned player/canonical clock and actor; verifies every suspension and each source mutation.",
+    "leases": "Bounded per native mutation, never across UI; committed choice/cancel remains saveable.",
+    "pythonAuthority": "Presentation only; no direct global/cursor/journal/talk/retirement or quest-reward writes.",
+    "retirement": "Same living actor and actual possessions/effects retained; no destroy/victory/death/loot/gold/XP/combat credit.",
+    "firstChoiceBookkeeping": "Native owned freezeHistory, exact talked record and per-conversation talk count only after first committed edge.",
+    "workBudget": {
+      "maxSourceTransitions": 3,
+      "maxNativeViews": 4,
+      "maxActorOrItemConstructors": 0,
+      "maxLeadQuestConstructors": 1
+    },
+    "journalCreation": "Exactly1 separate native active mapQuest lead with captureJournal(False) under owned terminal boundary; zero Scar acceptance/completion/reward effects.",
+    "generatedConfig": "The prepared generator emits citySevenSunsWarningLead; generated-config-entry.json is a bounded integration fragment. Full generatedconfig is not rewritten inthis preparation.",
+    "mcpRoutes": "11 actual RouteCase plans use existing natural travel/contact, native dialogue/readers/chooser inputs, real saves/reloads and visible questPanel; none executed during preparation."
+  },
+  "acceptance": {
+    "sourceInventory": true,
+    "syntaxAndModelOnly": true,
+    "native": false,
+    "saveReload": false,
+    "visual": false,
+    "owner": false,
+    "originalParity": false
+  },
+  "sharedGlobals": {
+    "authority": "Shared serialized source GLOBAL namespace; never authoritative only inside warning receipts.",
+    "defaults": "Missing keys mean0; preserve all existing integer values and unrelated keys.",
+    "condition": "AskedForTour equals1 exactly; no source bounds limiting incoming values to0/1 or0/2.",
+    "provenOtherDialogueWrites": [
+      {
+        "dialogue": "DOPMER",
+        "name": "CheckedSevenSuns",
+        "scope": "GLOBAL",
+        "value": 2,
+        "evidencePointers": [
+          "/rows/DOPMER.DLG/base/facts/pools/actions/0/expressions/0",
+          "/rows/DOPMER.DLG/base/facts/pools/actions/1/expressions/0",
+          "/rows/DOPMER.DLG/base/facts/pools/actions/2/expressions/0"
+        ]
+      }
+    ],
+    "outsideDoppsmAskedForTourWriter": "Unproved among retained4resource closure; SSUNGU and Scar dialogue must not be invented or implicitly followed.",
+    "nativeSerialization": {
+      "property": "plugin_citySourceGlobals",
+      "shape": {
+        "GLOBAL": {
+          "AskedForTour": "integer ifpresent",
+          "CheckedSevenSuns": "integer ifpresent"
+        }
+      },
+      "variableSpelling": "ASCIIcase-insensitive; existingstoredspelling preserved; scopeexactGLOBAL"
+    }
+  },
+  "completePathsByInitialGlobal": {
+    "AskedForTourNot1": [
+      [
+        0,
+        7,
+        9
+      ],
+      [
+        0,
+        8,
+        16
+      ],
+      [
+        1,
+        3,
+        15
+      ],
+      [
+        1,
+        4,
+        9
+      ],
+      [
+        1,
+        5,
+        16
+      ],
+      [
+        1,
+        6,
+        16
+      ],
+      [
+        2,
+        3,
+        15
+      ],
+      [
+        2,
+        4,
+        9
+      ],
+      [
+        2,
+        6,
+        16
+      ]
+    ],
+    "AskedForTour1": [
+      [
+        0,
+        7,
+        9
+      ],
+      [
+        0,
+        8,
+        16
+      ],
+      [
+        1,
+        3,
+        15
+      ],
+      [
+        1,
+        4,
+        9
+      ],
+      [
+        1,
+        5,
+        16
+      ],
+      [
+        1,
+        6,
+        16
+      ],
+      [
+        2,
+        3,
+        15
+      ],
+      [
+        2,
+        4,
+        9
+      ],
+      [
+        2,
+        5,
+        16
+      ],
+      [
+        2,
+        6,
+        16
+      ]
+    ]
+  }
+}

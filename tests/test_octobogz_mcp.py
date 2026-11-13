@@ -442,6 +442,200 @@ def reportDecisionReplayFailure(stdout, returncode, evidence):
         pass
 
 
+class ScoutHealingBoundaryEvidence:
+    """Exact bounded observations; native item-use fields never imply an unobserved consumption."""
+
+    INVENTORY_LIMIT = 128
+    EVENT_LIMIT = 128
+    PAYLOAD_LIMIT = 65536
+    PART_CHARS = 256
+    STAGES = frozenset(
+        {
+            "before entering the hunt lair",
+            "after scout",
+            "partial reload",
+            "before owned town portal retreat",
+            "owned town portal retreat complete",
+            "readiness inventory",
+        }
+    )
+
+    def __init__(self, sequence, player_name):
+        self.sequence, self.started_sequence = sequence, sequence
+        self.player_name = player_name
+        self.positions, self.boundaries, self.events, self.gaps = {}, {}, [], []
+        self.validator_sequence = sequence
+        self.baseline_aligned = False
+        self.discarded_before_baseline = 0
+        if player_name is not None and (
+            not isinstance(player_name, str) or not player_name or len(player_name.encode("utf-8")) > 160
+        ):
+            self.gap("player-identity-cap")
+
+    def gap(self, reason):
+        if reason not in self.gaps:
+            self.gaps.append(reason)
+
+    def alignBaseline(self, sequence, discarded=0):
+        if type(sequence) is not int or sequence < self.sequence:
+            self.gap("baseline-sequence-invalid")
+            return False
+        self.sequence = self.started_sequence = sequence
+        self.discarded_before_baseline = discarded
+        self.baseline_aligned = True
+        return True
+
+    def inventory(self, stage, properties, sequence_before=None, sequence_after=None):
+        if stage not in self.STAGES:
+            return
+        items = properties.get("items") or []
+        rows = []
+        if len(items) > self.INVENTORY_LIMIT:
+            self.gap("inventory-cap")
+        for item in items[: self.INVENTORY_LIMIT]:
+            values = item.get("properties", item)
+            name, type_id = values.get("name"), values.get("typeId")
+            if not isinstance(name, str) or not name or not isinstance(type_id, str):
+                self.gap("missing-identity")
+                continue
+            if len(name.encode("utf-8")) > 160 or len(type_id.encode("utf-8")) > 80:
+                self.gap("identity-cap")
+                continue
+            rows.append(
+                {
+                    "name": name,
+                    "typeId": type_id,
+                    "power": values.get("power", 0),
+                    "tags": sorted(values.get("tags") or []),
+                }
+            )
+        rows.sort(key=lambda row: row["name"])
+        if len({row["name"] for row in rows}) != len(rows):
+            self.gap("duplicate-identity")
+        if sequence_before is None or sequence_after is None:
+            self.gap("boundary-sequence-unavailable")
+        self.boundaries[stage] = {
+            "sequenceBefore": sequence_before,
+            "sequenceAfter": sequence_after,
+            "itemCount": len(items),
+            "recordedCount": len(rows),
+            "items": rows,
+            "hp": properties.get("hp"),
+            "mana": properties.get("mana"),
+        }
+
+    def native(self, records):
+        if not self.baseline_aligned:
+            self.gap("baseline-unaligned")
+            return
+        for record in records:
+            seq = record.get("seq")
+            if type(seq) is not int or seq != self.sequence + 1:
+                self.gap("trace-sequence-gap")
+            if type(seq) is not int or seq <= self.sequence:
+                continue
+            self.sequence = seq
+            if record.get("event") not in {
+                "item_used",
+                "inventory_added",
+                "inventory_removed",
+                "combat_started",
+                "combat_finished",
+            }:
+                continue
+            refs = [record.get(key) for key in ("actor", "owner", "attacker")]
+            refs += record.get("opponents", [])
+            if not any(
+                isinstance(ref, dict) and ref.get("isPlayer") is True and ref.get("name") == self.player_name
+                for ref in refs
+            ):
+                continue
+            if record.get("event") == "item_used":
+                item = record.get("item", {})
+                if record.get("itemNameLength") != len(item.get("name", "").encode("utf-8")):
+                    self.gap("native-item-name-truncated")
+            if len(self.events) < self.EVENT_LIMIT:
+                self.events.append(json.loads(json.dumps(record, allow_nan=False)))
+            else:
+                self.gap("native-event-cap")
+
+    @classmethod
+    def decodeNotes(cls, notes):
+        parts = [json.loads(note.removeprefix("SCOUT_HEALING_PART ")) for note in notes]
+        if not parts:
+            raise ValueError("Missing Scout diagnostic parts")
+        first = parts[0]
+        total = first.get("parts")
+        if type(total) is not int or not 1 <= total <= cls.PAYLOAD_LIMIT // cls.PART_CHARS + 1:
+            raise ValueError("Invalid Scout diagnostic part count")
+        if len(parts) != total or {row.get("part") for row in parts} != set(range(1, total + 1)):
+            raise ValueError("Missing or duplicate Scout diagnostic part")
+        if any(
+            any(row.get(key) != first.get(key) for key in ("v", "parts", "sha256", "payloadBytes")) for row in parts
+        ):
+            raise ValueError("Mixed Scout diagnostic payloads")
+        encoded = "".join(row["data"] for row in sorted(parts, key=lambda row: row["part"]))
+        if len(encoded.encode()) != first["payloadBytes"] or sha256(encoded.encode()).hexdigest() != first["sha256"]:
+            raise ValueError("Altered Scout diagnostic payload")
+        return json.loads(encoded)
+
+    def notes(self):
+        gaps = list(self.gaps)
+        if not self.baseline_aligned:
+            gaps.append("baseline-unaligned")
+        for stage in ("before entering the hunt lair", "after scout", "partial reload", "readiness inventory"):
+            if stage not in self.boundaries:
+                gaps.append("missing-" + stage)
+        payload = {
+            "v": 1,
+            "scope": "Scout-start-through-postreload-readiness",
+            "complete": not gaps,
+            "gaps": gaps,
+            "validatorSeqBeforeAlignment": self.validator_sequence,
+            "startSeq": self.started_sequence,
+            "discardedBeforeBaseline": self.discarded_before_baseline,
+            "baselineAligned": self.baseline_aligned,
+            "boundaryOrdering": "Inventory serialization is bracketed by sequenceBefore/sequenceAfter; no finer event order is inferred.",
+            "lastSeq": self.sequence,
+            "boundaries": self.boundaries,
+            "nativeEventCount": len(self.events),
+            "nativeEvents": self.events,
+        }
+        encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+        if len(encoded.encode()) > self.PAYLOAD_LIMIT:
+            payload = {
+                "v": 1,
+                "scope": payload["scope"],
+                "complete": False,
+                "gaps": gaps + ["payload-cap"],
+                "observedPayloadBytes": len(encoded.encode()),
+                "nativeEventCount": len(self.events),
+                "boundaryCounts": {key: value["itemCount"] for key, value in self.boundaries.items()},
+            }
+            encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+        digest = sha256(encoded.encode()).hexdigest()
+        chunks = [encoded[index : index + self.PART_CHARS] for index in range(0, len(encoded), self.PART_CHARS)]
+        result = []
+        for index, chunk in enumerate(chunks):
+            note = "SCOUT_HEALING_PART " + json.dumps(
+                {
+                    "v": 1,
+                    "part": index + 1,
+                    "parts": len(chunks),
+                    "sha256": digest,
+                    "payloadBytes": len(encoded.encode()),
+                    "data": chunk,
+                },
+                ensure_ascii=True,
+                separators=(",", ":"),
+            )
+            escaped = note.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            if max(len(note.encode()), len(escaped.encode())) + 2 > 1400:
+                raise ValueError("Scout diagnostic part exceeds annotation bound")
+            result.append(note)
+        return result
+
+
 class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def setUp(self):
         import test as harness
@@ -553,6 +747,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         from tests.gameplay_branch_rewards import resetMainQuestRewardSession
 
         self.healing_conservation = {}
+        self.scout_healing_evidence = None
         validator = self._native_combat_validator
         GameplayBranchDriver.assertNativeCombatOutcomes(validator)
         resetMainQuestRewardSession(validator)
@@ -672,7 +867,16 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         return tuple(self.call(actor, "getNumericProperty", "pos" + axis) for axis in "xyz")
 
     def snapshot(self, stage):
+        scout_sequence = None
+        try:
+            scout_sequence = self.beginScoutHealingBoundary(stage)
+        except BaseException:
+            pass
         data = json.loads(self.engine("jsonify", self.player))["properties"]
+        try:
+            self.observeScoutHealingBoundary(stage, data, scout_sequence)
+        except BaseException:
+            pass
         items = data.get("items") or []
         coords = self.coords()
         self.assertEqual(
@@ -1299,7 +1503,16 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.brewOwnedBasicLifePotions()
 
     def healingPreparationInventory(self):
+        scout_sequence = None
+        try:
+            scout_sequence = self.beginScoutHealingBoundary("readiness inventory")
+        except BaseException:
+            pass
         properties = json.loads(self.engine("jsonify", self.player))["properties"]
+        try:
+            self.observeScoutHealingBoundary("readiness inventory", properties, scout_sequence)
+        except BaseException:
+            pass
         items = {}
         for item in properties.get("items") or []:
             identity = self.itemIdentity(item)
@@ -1890,6 +2103,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertFalse(self.call(self.game_map, "getBoolProperty", "octobogzHuntCleared"))
         self.trackLivingHuntActors()
         if getattr(self, "mcp_profile_class", None) == "Sorcerer":
+            self.snapshot("after scout")
             self.equipEarnedBroodWeapon()
 
     def observeActors(self, stage, actors):
@@ -2445,6 +2659,54 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     save_path.with_suffix(".json.bak").unlink(missing_ok=True)
         self.assertMeaningfulPulseWitness()
 
+    def readScoutHealingTrace(self, evidence, *, baseline=False):
+        validator = getattr(self, "_native_combat_validator", None)
+        path = getattr(validator, "trace_path", None)
+        if path is None:
+            evidence.gap("native-trace-unavailable")
+            return None
+        if not baseline and not evidence.baseline_aligned:
+            evidence.gap("baseline-unaligned")
+            return None
+        try:
+            from tests.gameplay_branch_driver import readNewNativeTrace
+
+            records = readNewNativeTrace(path, evidence.positions, evidence.sequence)
+            if baseline:
+                head = records[-1]["seq"] if records else evidence.sequence
+                evidence.alignBaseline(head, len(records))
+            else:
+                evidence.native(records)
+            return evidence.sequence
+        except BaseException:
+            evidence.gap("baseline-trace-read-error" if baseline else "native-trace-read-error")
+            return None
+
+    def beginScoutHealingBoundary(self, stage):
+        if getattr(self, "mcp_profile_class", None) != "Sorcerer" or stage not in ScoutHealingBoundaryEvidence.STAGES:
+            return None
+        evidence = getattr(self, "scout_healing_evidence", None)
+        if evidence is None:
+            if stage != "before entering the hunt lair":
+                return None
+            validator = getattr(self, "_native_combat_validator", None)
+            evidence = ScoutHealingBoundaryEvidence(getattr(validator, "_combat_trace_seq", 0), None)
+            self.scout_healing_evidence = evidence
+            return self.readScoutHealingTrace(evidence, baseline=True)
+        return self.readScoutHealingTrace(evidence)
+
+    def observeScoutHealingBoundary(self, stage, properties, sequence_before=None):
+        evidence = getattr(self, "scout_healing_evidence", None)
+        if evidence is None or stage not in ScoutHealingBoundaryEvidence.STAGES:
+            return
+        name = properties.get("name", "")
+        if evidence.player_name is None:
+            evidence.player_name = name
+        if not name or name != evidence.player_name or len(name.encode("utf-8")) > 160:
+            evidence.gap("player-identity-mismatch")
+        sequence_after = self.readScoutHealingTrace(evidence)
+        evidence.inventory(stage, properties, sequence_before, sequence_after)
+
     def rememberHealingConservation(self, stage, serialized_items=None):
         try:
             if getattr(self, "mcp_profile_class", None) != "Sorcerer":
@@ -2627,6 +2889,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def addHealingConservationNote(self, error, initial):
         try:
             error.add_note(self.healingConservationNote(initial))
+            evidence = getattr(self, "scout_healing_evidence", None)
+            if evidence is not None:
+                for note in evidence.notes():
+                    error.add_note(note)
         except BaseException:
             pass
 
@@ -2680,6 +2946,334 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+
+    def scoutEvidenceFixture(self, count=52):
+        evidence = ScoutHealingBoundaryEvidence(100, "actualHero")
+        evidence.alignBaseline(100)
+        items = [
+            {"properties": {"name": "fixture-100-" + str(index), "typeId": "LifePotion", "power": 2, "tags": ["heal"]}}
+            for index in range(count)
+        ]
+        for stage in ScoutHealingBoundaryEvidence.STAGES:
+            evidence.inventory(
+                stage,
+                {"name": "actualHero", "hp": 91, "mana": 140, "items": items},
+                evidence.sequence,
+                evidence.sequence,
+            )
+        return evidence, items
+
+    def testScoutBoundaryRealRouteSnapshotsAfterScoutBeforeEquipmentAndRetainsReadiness(self):
+        import ast
+
+        source = Path(__file__).read_text()
+        owner = next(
+            node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.ClassDef) and node.name == "OctobogzMcpWalkthroughTest"
+        )
+        methods = {node.name: node for node in owner.body if isinstance(node, ast.FunctionDef)}
+        body = ast.get_source_segment(source, methods["enterHunt"])
+        self.assertEqual(1, body.count('self.snapshot("after scout")'))
+        self.assertLess(
+            body.index('self.assertEqual("brood", self.state()["stage"])'), body.index('self.snapshot("after scout")')
+        )
+        self.assertLess(body.index('self.snapshot("after scout")'), body.index("self.equipEarnedBroodWeapon()"))
+        readiness = ast.get_source_segment(source, methods["ensureAuthoredHealingReadiness"])
+        self.assertIn("target = 13 if initial else 10", readiness)
+        self.assertIn("fights, 18", readiness)
+        self.assertIn("conversions, 20", readiness)
+        self.assertIn(
+            "self.scout_healing_evidence = None", ast.get_source_segment(source, methods["startFreshHuntGame"])
+        )
+
+    def testScoutBoundarySplitsExactFiftyTwoIdentitiesWithoutDroppingThemForNoteSize(self):
+        evidence, items = self.scoutEvidenceFixture()
+        notes = evidence.notes()
+        self.assertGreater(len(notes), 1)
+        for note in notes:
+            escaped = note.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            self.assertLessEqual(max(len(note.encode()), len(escaped.encode())) + 2, 1400)
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(notes)
+        self.assertTrue(payload["complete"], payload)
+        self.assertEqual([], payload["gaps"])
+        for boundary in payload["boundaries"].values():
+            self.assertEqual((52, 52), (boundary["itemCount"], boundary["recordedCount"]))
+            self.assertEqual({row["properties"]["name"] for row in items}, {row["name"] for row in boundary["items"]})
+
+    def testScoutBoundaryPartsRejectOmissionDuplicateAndAlteredPayload(self):
+        evidence, _ = self.scoutEvidenceFixture()
+        notes = evidence.notes()
+        changed = json.loads(notes[0].removeprefix("SCOUT_HEALING_PART "))
+        changed["data"] = changed["data"].replace("Scout-start", "Scout-stort")
+        forged = "SCOUT_HEALING_PART " + json.dumps(changed)
+        for rows in (notes[:-1], notes + [notes[0]], [forged, *notes[1:]]):
+            with self.assertRaises(ValueError):
+                ScoutHealingBoundaryEvidence.decodeNotes(rows)
+
+    def testScoutBoundaryNativeUseRetainsHpAndConsumptionAndOnlyMarksActualOverflow(self):
+        evidence, _ = self.scoutEvidenceFixture(count=1)
+
+        def event(seq):
+            return {
+                "seq": seq,
+                "event": "item_used",
+                "actor": {"name": "actualHero", "isPlayer": True},
+                "item": {"name": "fixture-100-0", "typeId": "LifePotion"},
+                "itemNameLength": 13,
+                "hpBefore": 41,
+                "hpAfter": 77,
+                "hpMaxBefore": 91,
+                "hpMaxAfter": 91,
+                "ownedBefore": True,
+                "ownedAfter": False,
+                "onlyUsedItemRemoved": True,
+                "removedCount": 1,
+                "addedCount": 0,
+            }
+
+        row = event(101)
+        row["itemNameLength"] = len(row["item"]["name"])
+        events = [{**row, "seq": seq} for seq in range(101, 229)]
+        evidence.native(events)
+        self.assertEqual(128, len(evidence.events))
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        # This deliberately large bounded batch can exceed the payload cap, never silently the event cap.
+        self.assertTrue(payload["complete"], payload["gaps"])
+        self.assertNotIn("native-event-cap", payload["gaps"])
+        self.assertEqual(
+            (41, 77, True),
+            (evidence.events[0]["hpBefore"], evidence.events[0]["hpAfter"], evidence.events[0]["onlyUsedItemRemoved"]),
+        )
+        evidence.native([{**row, "seq": 229}])
+        self.assertEqual(128, len(evidence.events))
+        self.assertIn("native-event-cap", ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())["gaps"])
+
+    def testScoutBoundaryInventoryAndPayloadOverflowRemainExplicitlyPartial(self):
+        evidence, _ = self.scoutEvidenceFixture(count=129)
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertFalse(payload["complete"])
+        self.assertIn("inventory-cap", payload["gaps"])
+        evidence, _ = self.scoutEvidenceFixture(count=1)
+        items = [
+            {"properties": {"name": "n" * 150 + str(index), "typeId": "t" * 80, "tags": ["heal"], "power": 2}}
+            for index in range(128)
+        ]
+        for stage in ScoutHealingBoundaryEvidence.STAGES:
+            evidence.inventory(stage, {"items": items}, evidence.sequence, evidence.sequence)
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertFalse(payload["complete"])
+        self.assertIn("payload-cap", payload["gaps"])
+
+    def testScoutBoundaryObservationReadsOnlyCachedInventoryAndExistingLocalTrace(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from tests import gameplay_branch_driver
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_profile_class = "Sorcerer"
+        walker._native_combat_validator = SimpleNamespace(
+            _combat_trace_seq=10, trace_path=Path("existing-native-trace")
+        )
+        walker.call = Mock(side_effect=AssertionError("Diagnostics cannot query or mutate engine"))
+        walker.engine = walker.call
+        props = {"name": "actualHero", "hp": 91, "mana": 140, "items": []}
+        with patch.object(gameplay_branch_driver, "readNewNativeTrace", return_value=[]) as read:
+            before = walker.beginScoutHealingBoundary("before entering the hunt lair")
+            walker.observeScoutHealingBoundary("before entering the hunt lair", props, before)
+        self.assertEqual(10, before)
+        self.assertEqual(2, read.call_count)
+        records = [
+            {
+                "seq": 11,
+                "event": "inventory_removed",
+                "owner": {"name": "actualHero", "isPlayer": True},
+                "item": {"name": "used"},
+            },
+            {
+                "seq": 12,
+                "event": "item_used",
+                "actor": {"name": "actualHero", "isPlayer": True},
+                "item": {"name": "used"},
+                "itemNameLength": 4,
+                "hpBefore": 41,
+                "hpAfter": 77,
+            },
+        ]
+        with patch.object(gameplay_branch_driver, "readNewNativeTrace", side_effect=[records, []]):
+            before = walker.beginScoutHealingBoundary("after scout")
+            walker.observeScoutHealingBoundary("after scout", props, before)
+        self.assertEqual(records, walker.scout_healing_evidence.events)
+        self.assertEqual(
+            (12, 12),
+            (
+                walker.scout_healing_evidence.boundaries["after scout"]["sequenceBefore"],
+                walker.scout_healing_evidence.boundaries["after scout"]["sequenceAfter"],
+            ),
+        )
+        walker.call.assert_not_called()
+        walker.scout_healing_evidence.native([{"seq": 14, "event": "unrelated"}])
+        self.assertIn("trace-sequence-gap", walker.scout_healing_evidence.gaps)
+
+    def testScoutBoundaryStaleValidatorDiscardsOldUseAndBracketsSerializedReload(self):
+        from types import SimpleNamespace
+        from tests import gameplay_branch_driver
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_profile_class = "Sorcerer"
+        walker._native_combat_validator = SimpleNamespace(_combat_trace_seq=10, trace_path=Path("trace"))
+        props = {
+            "name": "actualHero",
+            "hp": 91,
+            "mana": 140,
+            "items": [{"properties": {"name": "remaining", "typeId": "LifePotion", "power": 2}}],
+        }
+
+        def used(seq, name):
+            return {
+                "seq": seq,
+                "event": "item_used",
+                "actor": {"name": "actualHero", "isPlayer": True},
+                "item": {"name": name, "typeId": "LifePotion"},
+                "itemNameLength": len(name.encode()),
+                "hpBefore": 41,
+                "hpAfter": 77,
+                "ownedBefore": True,
+                "ownedAfter": False,
+                "onlyUsedItemRemoved": True,
+            }
+
+        old = [used(11, "before-baseline"), {"seq": 12, "event": "unrelated"}]
+        during = used(13, "during-baseline-serialization")
+        after = used(14, "after-baseline")
+        batches = [old, [during], [after], [], [{"seq": 15, "event": "unrelated"}], [], [], []]
+        with patch.object(gameplay_branch_driver, "readNewNativeTrace", side_effect=batches) as read:
+            token = walker.beginScoutHealingBoundary("before entering the hunt lair")
+            walker.observeScoutHealingBoundary("before entering the hunt lair", props, token)
+            token = walker.beginScoutHealingBoundary("after scout")
+            walker.observeScoutHealingBoundary("after scout", props, token)
+            restored = json.loads(json.dumps(props))
+            token = walker.beginScoutHealingBoundary("partial reload")
+            walker.observeScoutHealingBoundary("partial reload", restored, token)
+            token = walker.beginScoutHealingBoundary("readiness inventory")
+            walker.observeScoutHealingBoundary("readiness inventory", restored, token)
+        evidence = walker.scout_healing_evidence
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertTrue(payload["complete"], payload)
+        self.assertEqual(
+            (10, 12, 2, 15),
+            (
+                payload["validatorSeqBeforeAlignment"],
+                payload["startSeq"],
+                payload["discardedBeforeBaseline"],
+                payload["lastSeq"],
+            ),
+        )
+        self.assertEqual([13, 14], [row["seq"] for row in payload["nativeEvents"]])
+        self.assertEqual([10, 12, 13, 14, 14, 15, 15, 15], [row.args[2] for row in read.call_args_list])
+        for stage, expected in (
+            ("before entering the hunt lair", (12, 13)),
+            ("after scout", (14, 14)),
+            ("partial reload", (15, 15)),
+            ("readiness inventory", (15, 15)),
+        ):
+            boundary = payload["boundaries"][stage]
+            self.assertEqual(expected, (boundary["sequenceBefore"], boundary["sequenceAfter"]))
+            self.assertEqual(["remaining"], [row["name"] for row in boundary["items"]])
+        self.assertIn("no finer event order is inferred", payload["boundaryOrdering"])
+
+    def testScoutBoundaryBaselineContinuityFailureCannotBecomeComplete(self):
+        from types import SimpleNamespace
+        from tests import gameplay_branch_driver
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_profile_class = "Sorcerer"
+        walker._native_combat_validator = SimpleNamespace(_combat_trace_seq=10, trace_path=Path("trace"))
+        with patch.object(gameplay_branch_driver, "readNewNativeTrace", side_effect=AssertionError("lost 11")) as read:
+            for stage in ScoutHealingBoundaryEvidence.STAGES:
+                token = walker.beginScoutHealingBoundary(stage)
+                walker.observeScoutHealingBoundary(stage, {"name": "actualHero", "items": []}, token)
+            # The baseline must actually initialize regardless of set iteration order.
+            token = walker.beginScoutHealingBoundary("before entering the hunt lair")
+            walker.observeScoutHealingBoundary("before entering the hunt lair", {"name": "actualHero"}, token)
+        evidence = walker.scout_healing_evidence
+        evidence.native([{"seq": 11, "event": "unrelated"}])
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertFalse(payload["complete"])
+        self.assertFalse(payload["baselineAligned"])
+        self.assertIn("baseline-trace-read-error", payload["gaps"])
+        self.assertIn("baseline-unaligned", payload["gaps"])
+        self.assertIn("boundary-sequence-unavailable", payload["gaps"])
+        self.assertEqual([], payload["nativeEvents"])
+        self.assertEqual(1, read.call_count)
+
+    def testScoutBoundaryFreshCursorPrecedesSerializationAndPostCursorImmediatelyFollows(self):
+        import ast
+
+        source = Path(__file__).read_text()
+        owner = next(
+            n for n in ast.parse(source).body if isinstance(n, ast.ClassDef) and n.name == "OctobogzMcpWalkthroughTest"
+        )
+        methods = {n.name: n for n in owner.body if isinstance(n, ast.FunctionDef)}
+        for method in ("snapshot", "healingPreparationInventory"):
+            body = ast.get_source_segment(source, methods[method])
+            self.assertLess(body.index("self.beginScoutHealingBoundary("), body.index('self.engine("jsonify"'))
+            self.assertLess(body.index('self.engine("jsonify"'), body.index("self.observeScoutHealingBoundary("))
+            self.assertLess(
+                body.index("self.observeScoutHealingBoundary("), body.index("self.rememberHealingConservation(")
+            )
+        for method in ("readScoutHealingTrace", "beginScoutHealingBoundary", "observeScoutHealingBoundary"):
+            body = ast.get_source_segment(source, methods[method])
+            self.assertNotIn("self.call(", body)
+            self.assertNotIn("self.engine(", body)
+
+    def testScoutBoundarySupplementaryPartsSurviveTheActualLegacyNoteByteCap(self):
+        evidence, _ = self.scoutEvidenceFixture()
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.scout_healing_evidence = evidence
+        rows = evidence.boundaries["after scout"]["items"]
+        indices = list(range(len(rows)))
+        walker.healing_conservation = {
+            "ids": [[row["name"], row["typeId"], row["power"], 1] for row in rows],
+            "events": [],
+            "effects": [],
+            "last": indices,
+            "gaps": [],
+            "observedRelevantCount": 52,
+            "anchors": {
+                key: indices for key in ("ready13", "hunt", "scout", "reload", "retreatBefore", "retreatAfter")
+            },
+        }
+        primary = AssertionError("same actual finite readiness assertion")
+        walker.addHealingConservationNote(primary, False)
+        legacy = json.loads(primary.__notes__[0].removeprefix("HEALING_CONSERVATION "))
+        self.assertFalse(legacy["complete"])
+        self.assertIn("note-byte-cap", legacy["gaps"])
+        self.assertNotIn("ids", legacy)
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(
+            [note for note in primary.__notes__ if note.startswith("SCOUT_HEALING_PART ")]
+        )
+        self.assertTrue(payload["complete"])
+        self.assertEqual(52, payload["boundaries"]["after scout"]["recordedCount"])
+        self.assertEqual(("same actual finite readiness assertion",), primary.args)
+
+    def testScoutBoundaryFailureNotesCannotReplaceOriginalReadinessException(self):
+        from unittest.mock import Mock
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.scout_healing_evidence, _ = self.scoutEvidenceFixture()
+        walker.healingConservationNote = Mock(return_value="HEALING_CONSERVATION legacy partial note")
+        primary = AssertionError("unchanged readiness10 failure")
+        walker.addHealingConservationNote(primary, False)
+        self.assertEqual(("unchanged readiness10 failure",), primary.args)
+        parts = [note for note in primary.__notes__ if note.startswith("SCOUT_HEALING_PART ")]
+        self.assertTrue(ScoutHealingBoundaryEvidence.decodeNotes(parts)["complete"])
+        with patch.object(
+            walker.scout_healing_evidence, "notes", side_effect=RuntimeError("diagnostic emission failed")
+        ):
+            walker.addHealingConservationNote(primary, False)
+        self.assertEqual(("unchanged readiness10 failure",), primary.args)
+
     def healingConservationData(self, walker, initial=False):
         method = getattr(walker, "healingConservationNote", None)
         self.assertTrue(callable(method), "Readiness must retain pure cached conservation data at failure")
@@ -2841,7 +3435,9 @@ class OctobogzDiagnosticTest(unittest.TestCase):
                 [
                     {
                         "properties": {
-                            "name": f"native-{index}-" + "%界\ud800\r\n::error" * 4,
+                            "name": f"native-{index}-"
+                            + "%ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢\ud800\r\n::error"
+                            * 4,
                             "typeId": "LifePotion",
                             "power": 2,
                             "tags": ["heal"],

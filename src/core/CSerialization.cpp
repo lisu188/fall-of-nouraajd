@@ -27,8 +27,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 #include "object/CEffect.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
 #include <limits>
 #include <mutex>
 #include <stdexcept>
@@ -285,6 +289,7 @@ class EffectReadContext {
         while (!pending.empty()) {
             auto *node = pending.back();
             pending.pop_back();
+            context.visit(CSerializationVisit::GraphNode);
             if (node->is_object()) {
                 needsFixup = needsFixup || node->contains("effectReferences");
                 if (node->contains("effectActorId") && (node->contains("class") || node->contains("ref"))) {
@@ -384,6 +389,7 @@ class EffectReadContext {
             }
         } else {
             metadata = CSerializationConstructionGuard::metadata(object);
+            context.visit(CSerializationVisit::Initialization);
             CSerializationConstructionGuard::initialize([&] { metadata->invoke_method<void>("initialize", object); });
         }
     }
@@ -429,6 +435,7 @@ class EffectReadContext {
         for (std::size_t index = 0; index < initializations.size(); ++index) {
             auto object = initializations[index];
             auto metadata = CSerializationConstructionGuard::metadata(object);
+            context.visit(CSerializationVisit::Initialization);
             CSerializationConstructionGuard::initialize([&] { metadata->invoke_method<void>("initialize", object); });
         }
     }
@@ -455,6 +462,136 @@ class EffectReadContext {
 
 } // namespace
 
+namespace {
+thread_local CSerializationProgress *activeSerializationProgress = nullptr;
+std::atomic<std::uint64_t> serializationProgressIdentity{0};
+constexpr std::size_t serializationProgressRecordLimit = 32;
+constexpr std::size_t serializationProgressRecordBytes = 512;
+} // namespace
+
+void CSerializationProgress::begin(const char *operationDirection) noexcept {
+    counts = {};
+    complete = false;
+    nextVisit = 1;
+    lastVisit = "none";
+    if (activeSerializationProgress) {
+        session = activeSerializationProgress;
+        return;
+    }
+    const char *flag = std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS");
+    enabled = flag && flag[0] == '1' && flag[1] == '\0';
+    if (!enabled) {
+        session = nullptr;
+        return;
+    }
+    direction = operationDirection;
+    session = this;
+    activeSerializationProgress = this;
+    if (enabled) {
+        identity = ++serializationProgressIdentity;
+        exceptions = std::uncaught_exceptions();
+        started = std::chrono::steady_clock::now();
+        mark("begin");
+    }
+}
+
+void CSerializationProgress::join() noexcept {
+    counts = {};
+    session = activeSerializationProgress;
+}
+
+void CSerializationProgress::end() noexcept {
+    if (!session)
+        return;
+    if (session == this) {
+        if (enabled)
+            mark("end");
+        activeSerializationProgress = nullptr;
+    } else {
+        counts = session->counts;
+    }
+    session = nullptr;
+}
+
+void CSerializationProgress::finished() noexcept {
+    if (session == this)
+        complete = true;
+}
+
+const CSerializationProgressCounters &CSerializationProgress::counters() const noexcept {
+    return session ? session->counts : counts;
+}
+
+void CSerializationProgress::visit(CSerializationVisit kind) noexcept {
+    if (!session || !session->enabled)
+        return;
+    auto &owner = *session;
+    auto increment = [](std::uint64_t &value) {
+        if (value != std::numeric_limits<std::uint64_t>::max())
+            ++value;
+    };
+    increment(owner.counts.visits);
+    switch (kind) {
+    case CSerializationVisit::Object:
+        increment(owner.counts.objects);
+        owner.lastVisit = "object";
+        break;
+    case CSerializationVisit::Property:
+        increment(owner.counts.properties);
+        owner.lastVisit = "property";
+        break;
+    case CSerializationVisit::ArrayEntry:
+        increment(owner.counts.arrayEntries);
+        owner.lastVisit = "arrayEntry";
+        break;
+    case CSerializationVisit::MapEntry:
+        increment(owner.counts.mapEntries);
+        owner.lastVisit = "mapEntry";
+        break;
+    case CSerializationVisit::GraphNode:
+        increment(owner.counts.graphNodes);
+        owner.lastVisit = "graphNode";
+        break;
+    case CSerializationVisit::Initialization:
+        increment(owner.counts.initializations);
+        owner.lastVisit = "initialization";
+        break;
+    }
+    if (owner.counts.visits >= owner.nextVisit && owner.counts.records + 1 < serializationProgressRecordLimit) {
+        owner.mark("progress");
+        owner.nextVisit = owner.nextVisit <= std::numeric_limits<std::uint64_t>::max() / 4
+                              ? owner.nextVisit * 4
+                              : std::numeric_limits<std::uint64_t>::max();
+    }
+}
+
+void CSerializationProgress::mark(const char *stage) noexcept {
+    if (!enabled || counts.records >= serializationProgressRecordLimit)
+        return;
+    const auto elapsed =
+        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+    char record[serializationProgressRecordBytes];
+    const int length = std::snprintf(
+        record, sizeof(record),
+        "{\"diagnostic\":\"serialization-progress\",\"direction\":\"%s\",\"session\":%llu,\"stage\":\"%s\","
+        "\"elapsedMicroseconds\":%lld,"
+        "\"visits\":%llu,\"objects\":%llu,\"properties\":%llu,\"arrayEntries\":%llu,\"mapEntries\":%llu,"
+        "\"graphNodes\":%llu,\"initializations\":%llu,\"visit\":\"%s\",\"finished\":%s,\"unwinding\":%s}\n",
+        direction, static_cast<unsigned long long>(identity), stage, static_cast<long long>(elapsed),
+        static_cast<unsigned long long>(counts.visits), static_cast<unsigned long long>(counts.objects),
+        static_cast<unsigned long long>(counts.properties), static_cast<unsigned long long>(counts.arrayEntries),
+        static_cast<unsigned long long>(counts.mapEntries), static_cast<unsigned long long>(counts.graphNodes),
+        static_cast<unsigned long long>(counts.initializations), lastVisit, complete ? "true" : "false",
+        std::uncaught_exceptions() > exceptions ? "true" : "false");
+    if (length <= 0)
+        return;
+    const auto bytes = std::min(static_cast<std::size_t>(length), sizeof(record) - 1);
+    ++counts.records;
+    counts.bytes += bytes;
+    std::fwrite(record, 1, bytes, stderr);
+    std::fflush(stderr);
+}
+
 class CSerializationWriteContext::State {
   public:
     explicit State(bool includeDetached) : effects(includeDetached) {}
@@ -474,11 +611,16 @@ CSerializationWriteContext::CSerializationWriteContext(std::string source, bool 
     : sourceName(std::move(source)), includeDetached(includeDetached) {}
 CSerializationWriteContext::~CSerializationWriteContext() = default;
 bool CSerializationWriteContext::begin() {
-    if (depth == 0)
+    if (depth == 0) {
         operationState.reset();
+        progress.join();
+    }
     return depth++ == 0;
 }
-void CSerializationWriteContext::end() noexcept { --depth; }
+void CSerializationWriteContext::end() noexcept {
+    if (--depth == 0)
+        progress.end();
+}
 CSerializationWriteContext::State &CSerializationWriteContext::state() {
     if (!operationState)
         operationState = std::make_unique<State>(includeDetached);
@@ -496,6 +638,7 @@ void CSerializationWriteContext::finish(json &document) {
     }
     if (operationState)
         operationState->effects.finish(document, *this);
+    progress.finished();
 }
 std::unordered_map<int, std::shared_ptr<CCreature>> CSerializationWriteContext::externalActors() {
     return state().effects.externalActors();
@@ -522,10 +665,14 @@ bool CSerializationReadContext::begin() {
     if (depth == 0) {
         operationState.reset();
         documents.clear();
+        progress.join();
     }
     return depth++ == 0;
 }
-void CSerializationReadContext::end() noexcept { --depth; }
+void CSerializationReadContext::end() noexcept {
+    if (--depth == 0)
+        progress.end();
+}
 CSerializationReadContext::State &CSerializationReadContext::state() {
     if (!operationState)
         operationState = std::make_unique<State>(*this, external);
@@ -557,6 +704,7 @@ const json &CSerializationReadContext::prepare(const std::shared_ptr<CGame> &gam
 void CSerializationReadContext::finish(const std::shared_ptr<CGame> &game) {
     if (operationState)
         operationState->effects.finish(game, *this);
+    progress.finished();
 }
 void CSerializationReadContext::keepDocument(std::shared_ptr<const json> document) {
     if (document)
@@ -792,6 +940,7 @@ void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, con
         return;
     CSerializationConstructionGuard::check();
     CSerializationOperation operation(context);
+    context.visit(CSerializationVisit::Property);
     const auto &value = operation.isRoot() ? context.prepare(object->getGame(), document) : document;
     CSerializationReadContext::PropertyScope propertyScope(context, key,
                                                            CSerializationConstructionGuard::typeName(object));
@@ -969,6 +1118,7 @@ void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::s
 void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::string &propertyName,
                                  const std::any &propertyValue, CSerializationWriteContext &context) {
     CSerializationOperation scope(context);
+    context.visit(CSerializationVisit::Property);
     CSerializationWriteContext::PropertyScope propertyScope(context, propertyName);
     const auto propertyType = std::type_index(propertyValue.type());
     if (propertyType == std::type_index(typeid(int))) {
@@ -1013,6 +1163,7 @@ std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &objec
 
 std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &object,
                                        CSerializationWriteContext &context) {
+    context.visit(CSerializationVisit::Object);
     auto &state = context.state();
     ObjectDepthScope depth(state.objectDepth);
     auto config = std::make_shared<json>();
@@ -1022,7 +1173,14 @@ std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &objec
         if (!state.effects.writeRecord(object, config))
             return config;
         auto properties = std::make_shared<json>();
+        const bool mapObject = std::dynamic_pointer_cast<CMap>(object) != nullptr;
         object->meta()->for_all_properties(object, [&](auto property) {
+            if (mapObject && property->name() == "sceneRetiredObjects") {
+                const auto value = object->getProperty<std::any>(property->name());
+                using Retired = std::set<std::shared_ptr<CMapObject>>;
+                if (value.type() == typeid(Retired) && std::any_cast<const Retired &>(value).empty())
+                    return;
+            }
             if (property->name() != "type")
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<std::any>(property->name()), context);
@@ -1053,6 +1211,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
 
 std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game, const json *config,
                                                 CSerializationReadContext &context) {
+    context.visit(CSerializationVisit::Object);
     CSerializationConstructionGuard::check();
     if (!game || !config || !config->is_object()) {
         if (context.isStrict())
@@ -1225,8 +1384,10 @@ std::shared_ptr<json> map_serialize(const std::map<std::string, std::shared_ptr<
                                     CSerializationWriteContext &context) {
     auto result = std::make_shared<json>();
     const bool independentEntries = context.isRootOperation() && context.state().objectDepth == 0;
-    for (const auto &[key, object] : objects)
+    for (const auto &[key, object] : objects) {
+        context.visit(CSerializationVisit::MapEntry);
         add_member(result, key, independentEntries ? object_serialize(object) : object_serialize(object, context));
+    }
     return result;
 }
 
@@ -1250,6 +1411,7 @@ map_deserialize(const std::shared_ptr<CGame> &game, const json *document, CSeria
     const bool independentEntries =
         context.isRootOperation() && context.state().objectDepth == 0 && !context.state().effects.hasGraph();
     for (const auto &[key, value] : document->items()) {
+        context.visit(CSerializationVisit::MapEntry);
         CSerializationReadContext::PropertyScope path(context, key);
         std::shared_ptr<CGameObject> object;
         if (independentEntries) {
@@ -1283,8 +1445,10 @@ std::shared_ptr<json> array_serialize(const std::set<std::shared_ptr<CGameObject
                                       CSerializationWriteContext &context) {
     auto result = std::make_shared<json>();
     const bool independentEntries = context.isRootOperation() && context.state().objectDepth == 0;
-    for (const auto &object : objects)
+    for (const auto &object : objects) {
+        context.visit(CSerializationVisit::ArrayEntry);
         add_arr_member(result, independentEntries ? object_serialize(object) : object_serialize(object, context));
+    }
     return result;
 }
 
@@ -1308,6 +1472,7 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
     const bool independentEntries =
         context.isRootOperation() && context.state().objectDepth == 0 && !context.state().effects.hasGraph();
     for (std::size_t index = 0; index < document->size(); ++index) {
+        context.visit(CSerializationVisit::ArrayEntry);
         CSerializationReadContext::PropertyScope path(context, "[" + std::to_string(index) + "]", {}, true);
         const auto &entry = (*document)[index];
         if (!entry.is_object()) {

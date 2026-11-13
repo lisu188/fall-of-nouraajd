@@ -129,6 +129,9 @@ class CObjectHandler : public CGameObject {
 
   private:
     friend class CRngHandler;
+    friend class CSevenSunsDialogue;
+    friend class CSevenSunsMerchantDialogue;
+    friend class CSevenSunsMerchantStock;
     friend class CSerializationConstructionGuard;
     friend void game_detail::requireCurrentDefeatConstruction();
     friend void game_detail::preserveDefeatCallbackFailure(std::exception_ptr primary);

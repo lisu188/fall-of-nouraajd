@@ -257,6 +257,8 @@ void appendDump(std::ostringstream &stream, const json &value, int indent, int d
         appendEscapedString(stream, value.get<std::string>());
     } else if (value.is_boolean()) {
         stream << (value.get<bool>() ? "true" : "false");
+    } else if (value.is_number_unsigned()) {
+        stream << value.get<unsigned long long>();
     } else if (value.is_number_integer()) {
         stream << value.get<long long>();
     } else if (value.is_number()) {
@@ -391,6 +393,8 @@ bool json::is_number() const {
 bool json::is_number_integer() const {
     return std::holds_alternative<std::int64_t>(data) || std::holds_alternative<std::uint64_t>(data);
 }
+
+bool json::is_number_unsigned() const { return std::holds_alternative<std::uint64_t>(data); }
 
 bool json::empty() const { return size() == 0; }
 

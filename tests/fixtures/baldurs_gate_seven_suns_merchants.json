@@ -1,0 +1,1385 @@
+{
+  "schema": "baldurs-gate-seven-suns-merchants-source.v1",
+  "dialogue": "DOPMER",
+  "dialogueFingerprint": {
+    "bytes": 1687,
+    "sha256": "e0410b2b978573d0e921a63bf3a55fd53d49c291f556b6e0a045db63762030a7"
+  },
+  "metadataEvidence": {
+    "bytes": 49983,
+    "sha256": "eca3349ebbc6153af12a8ae51ef67f5c7fe4da98f39358ecbf600d73cd8e7aa9"
+  },
+  "finitePathEvidence": {
+    "bytes": 43019,
+    "sha256": "f61f4bf63caed920b10e051d6fd3cee5b08e41686003116601433a307fc6269e"
+  },
+  "privateTextSelection": {
+    "entries": 29,
+    "evidence": {
+      "bytes": 6596,
+      "sha256": "1e51c505882c3407d10a5a28c7fc00557cca38c264ca8bf99014462afc20802d"
+    },
+    "tlkSha256": "a530306b14439e680f3c2d9f4b368b418b529fef9a015ac76d19a0b229be1d96",
+    "tlkUnchanged": true,
+    "fullOriginalTextInFixture": false
+  },
+  "lineages": [
+    {
+      "id": "cityAr0601Actor1",
+      "sourceActor": "AR0601#actor1",
+      "sourceArea": "AR0601",
+      "sourceCreature": "DOPMER",
+      "sourceDialogue": "DOPMER"
+    },
+    {
+      "id": "cityAr0601Actor3",
+      "sourceActor": "AR0601#actor3",
+      "sourceArea": "AR0601",
+      "sourceCreature": "DOPMER",
+      "sourceDialogue": "DOPMER"
+    },
+    {
+      "id": "cityAr0602Actor1",
+      "sourceActor": "AR0602#actor1",
+      "sourceArea": "AR0602",
+      "sourceCreature": "DOPMER",
+      "sourceDialogue": "DOPMER"
+    },
+    {
+      "id": "cityAr0602Actor2",
+      "sourceActor": "AR0602#actor2",
+      "sourceArea": "AR0602",
+      "sourceCreature": "DOPMER",
+      "sourceDialogue": "DOPMER"
+    }
+  ],
+  "states": [
+    {
+      "id": 0,
+      "textStrref": 16585,
+      "body": "Welcome to the Seven Suns. I recognize your face; tell me who you are.",
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        0,
+        1,
+        2
+      ],
+      "automaticEdge": null
+    },
+    {
+      "id": 1,
+      "textStrref": 16589,
+      "body": "Joke as you please. Your invented conqueror does not frighten us.",
+      "entryCondition": null,
+      "edges": [
+        3
+      ],
+      "automaticEdge": 3
+    },
+    {
+      "id": 2,
+      "textStrref": 16591,
+      "body": "And these companions of yours\u2014how well do they know you?",
+      "entryCondition": null,
+      "edges": [
+        4,
+        5,
+        6
+      ],
+      "automaticEdge": null
+    },
+    {
+      "id": 3,
+      "textStrref": 16595,
+      "body": "Then let us both enjoy the silence. Leave us to our work.",
+      "entryCondition": null,
+      "edges": [
+        7
+      ],
+      "automaticEdge": 7
+    },
+    {
+      "id": 4,
+      "textStrref": 16596,
+      "body": "That disappoints me.",
+      "entryCondition": null,
+      "edges": [
+        8
+      ],
+      "automaticEdge": 8
+    },
+    {
+      "id": 5,
+      "textStrref": 16597,
+      "body": "A solitary traveler... You are exactly the sort I have been craving.",
+      "entryCondition": null,
+      "edges": [
+        9,
+        10,
+        11
+      ],
+      "automaticEdge": null
+    },
+    {
+      "id": 6,
+      "textStrref": 16601,
+      "body": "Brothers, our meal has arrived. Let us begin.",
+      "entryCondition": null,
+      "edges": [
+        12
+      ],
+      "automaticEdge": 12
+    },
+    {
+      "id": 7,
+      "textStrref": 16602,
+      "body": "You again? Tell us why you insist on troubling us.",
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        13,
+        14,
+        15
+      ],
+      "automaticEdge": null
+    },
+    {
+      "id": 8,
+      "textStrref": 16607,
+      "body": "Our customers can afford our prices. Take your questions elsewhere.",
+      "entryCondition": null,
+      "edges": [
+        16
+      ],
+      "automaticEdge": 16
+    },
+    {
+      "id": 9,
+      "textStrref": 16608,
+      "body": "Your remarks will be your end. Brothers, these visitors may discover us. Deal with them now.",
+      "entryCondition": null,
+      "edges": [
+        17
+      ],
+      "automaticEdge": 17
+    },
+    {
+      "id": 10,
+      "textStrref": 16609,
+      "body": "Would you give up everything to learn what we really are?",
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 2
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        18,
+        19,
+        20
+      ],
+      "automaticEdge": null
+    },
+    {
+      "id": 11,
+      "textStrref": 16613,
+      "body": "We trade in stolen faces and identities. We are doppelgangers, and you have offered us new skins.",
+      "entryCondition": null,
+      "edges": [
+        21
+      ],
+      "automaticEdge": 21
+    },
+    {
+      "id": 12,
+      "textStrref": 16614,
+      "body": "I have revealed too much. Brothers, these witnesses must become our next meal.",
+      "entryCondition": null,
+      "edges": [
+        22
+      ],
+      "automaticEdge": 22
+    },
+    {
+      "id": 13,
+      "textStrref": 16615,
+      "body": "A false face is life itself to us. This skin once belonged to someone else. We are doppelgangers; surrender yours.",
+      "entryCondition": null,
+      "edges": [
+        23
+      ],
+      "automaticEdge": 23
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "from": 0,
+      "to": 1,
+      "replyStrref": 16586,
+      "reply": "Call me Foolio Displasius. I have come to ruin your company!",
+      "rawFlags": 5,
+      "terminal": false,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "CheckedSevenSuns"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "reveals": false
+    },
+    {
+      "id": 1,
+      "from": 0,
+      "to": 2,
+      "replyStrref": 16587,
+      "reply": "I lead this party. Why do you need our names?",
+      "rawFlags": 5,
+      "terminal": false,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "CheckedSevenSuns"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "reveals": false
+    },
+    {
+      "id": 2,
+      "from": 0,
+      "to": 3,
+      "replyStrref": 16588,
+      "reply": "My identity is private. We can dispense with introductions.",
+      "rawFlags": 5,
+      "terminal": false,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "CheckedSevenSuns"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "reveals": false
+    },
+    {
+      "id": 3,
+      "from": 1,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 8,
+      "terminal": true,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 4,
+      "from": 2,
+      "to": 4,
+      "replyStrref": 16592,
+      "reply": "We are adventurers who have grown close through our journeys.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 5,
+      "from": 2,
+      "to": 5,
+      "replyStrref": 16593,
+      "reply": "We scarcely know one another. Traveling together is convenient.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 6,
+      "from": 2,
+      "to": 3,
+      "replyStrref": 16594,
+      "reply": "I will not discuss my private life with a merchant.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 7,
+      "from": 3,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 8,
+      "terminal": true,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 8,
+      "from": 4,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 8,
+      "terminal": true,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 9,
+      "from": 5,
+      "to": 3,
+      "replyStrref": 16598,
+      "reply": "Keep your ailments to yourself. I have heard enough.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 10,
+      "from": 5,
+      "to": 4,
+      "replyStrref": 16599,
+      "reply": "Someone who loves me would notice if I disappeared with you.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 11,
+      "from": 5,
+      "to": 6,
+      "replyStrref": 16600,
+      "reply": "Why would someone as wealthy as you take an interest in me?",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 12,
+      "from": 6,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 12,
+      "terminal": true,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Doppleganger"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Laola"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "reveals": true
+    },
+    {
+      "id": 13,
+      "from": 7,
+      "to": 8,
+      "replyStrref": 16605,
+      "reply": "If this is a shop, why are you so unwilling to sell us anything?",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 14,
+      "from": 7,
+      "to": 9,
+      "replyStrref": 16603,
+      "reply": "A merchant lecturing me about shame? Your hypocrisy is impressive.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 15,
+      "from": 7,
+      "to": 9,
+      "replyStrref": 16606,
+      "reply": "Your voice does not offend me. Give us better answers.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 16,
+      "from": 8,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 8,
+      "terminal": true,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 17,
+      "from": 9,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 12,
+      "terminal": true,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Doppleganger"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Laola"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "reveals": true
+    },
+    {
+      "id": 18,
+      "from": 10,
+      "to": 11,
+      "replyStrref": 16610,
+      "reply": "You are impostors. I accept the risk\u2014show us your real faces.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 19,
+      "from": 10,
+      "to": 12,
+      "replyStrref": 16611,
+      "reply": "What truth? I only wanted directions out of here.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 20,
+      "from": 10,
+      "to": 13,
+      "replyStrref": 16612,
+      "reply": "Truth matters little to me. I enjoy a convincing fiction too.",
+      "rawFlags": 1,
+      "terminal": false,
+      "orderedActions": [],
+      "reveals": false
+    },
+    {
+      "id": 21,
+      "from": 11,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 12,
+      "terminal": true,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Doppleganger"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Laola"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "reveals": true
+    },
+    {
+      "id": 22,
+      "from": 12,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 12,
+      "terminal": true,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Doppleganger"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Laola"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "reveals": true
+    },
+    {
+      "id": 23,
+      "from": 13,
+      "to": null,
+      "replyStrref": null,
+      "reply": null,
+      "rawFlags": 12,
+      "terminal": true,
+      "orderedActions": [
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Doppleganger"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "name": "SetGlobal",
+          "arguments": [
+            {
+              "kind": "string",
+              "value": "Laola"
+            },
+            {
+              "kind": "string",
+              "value": "GLOBAL"
+            },
+            {
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "reveals": true
+    }
+  ],
+  "completePaths": [
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        0,
+        3
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        }
+      ],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        1,
+        4,
+        8
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        }
+      ],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        1,
+        5,
+        9,
+        7
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        }
+      ],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        1,
+        5,
+        10,
+        8
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        }
+      ],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        1,
+        5,
+        11,
+        12
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Doppleganger",
+            "GLOBAL",
+            1
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Laola",
+            "GLOBAL",
+            1
+          ]
+        }
+      ],
+      "setsRevealGlobal": true
+    },
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        1,
+        6,
+        7
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        }
+      ],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 0,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        2,
+        7
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "CheckedSevenSuns",
+            "GLOBAL",
+            2
+          ]
+        }
+      ],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 7,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        13,
+        16
+      ],
+      "orderedActions": [],
+      "setsRevealGlobal": false
+    },
+    {
+      "entryState": 7,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        14,
+        17
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Doppleganger",
+            "GLOBAL",
+            1
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Laola",
+            "GLOBAL",
+            1
+          ]
+        }
+      ],
+      "setsRevealGlobal": true
+    },
+    {
+      "entryState": 7,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        15,
+        17
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Doppleganger",
+            "GLOBAL",
+            1
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Laola",
+            "GLOBAL",
+            1
+          ]
+        }
+      ],
+      "setsRevealGlobal": true
+    },
+    {
+      "entryState": 10,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 2
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        18,
+        21
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Doppleganger",
+            "GLOBAL",
+            1
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Laola",
+            "GLOBAL",
+            1
+          ]
+        }
+      ],
+      "setsRevealGlobal": true
+    },
+    {
+      "entryState": 10,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 2
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        19,
+        22
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Doppleganger",
+            "GLOBAL",
+            1
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Laola",
+            "GLOBAL",
+            1
+          ]
+        }
+      ],
+      "setsRevealGlobal": true
+    },
+    {
+      "entryState": 10,
+      "entryCondition": {
+        "status": "syntax-only",
+        "expressions": [
+          {
+            "kind": "call",
+            "name": "NumberOfTimesTalkedTo",
+            "arguments": [
+              {
+                "kind": "integer",
+                "value": 2
+              }
+            ]
+          }
+        ],
+        "evaluated": false
+      },
+      "edges": [
+        20,
+        23
+      ],
+      "orderedActions": [
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Doppleganger",
+            "GLOBAL",
+            1
+          ]
+        },
+        {
+          "name": "SetGlobal",
+          "arguments": [
+            "Laola",
+            "GLOBAL",
+            1
+          ]
+        }
+      ],
+      "setsRevealGlobal": true
+    }
+  ],
+  "entriesByPriorSourceTalkCount": {
+    "0": 0,
+    "1": 7,
+    "2": 10
+  },
+  "sourceCountConversion": {
+    "commit": "Accepted native begin increments once before first UI, including later cancellation",
+    "genericBookkeepingIsNotSourceCounter": true,
+    "noEntryAtOrAbove": 3,
+    "legacyGenericCountWithoutSourceCounter": "Native refuses unknown migration; never reset or infer silently",
+    "classicInitiationAndAliasParity": "Documented conversion; original engine/installed IDS authentication pending"
+  },
+  "sharedGlobals": {
+    "scope": "GLOBAL",
+    "names": [
+      "CheckedSevenSuns",
+      "Doppleganger",
+      "Laola"
+    ],
+    "firstChoice": [
+      "CheckedSevenSuns",
+      "GLOBAL",
+      2
+    ],
+    "revealingTerminalOrder": [
+      [
+        "Doppleganger",
+        "GLOBAL",
+        1
+      ],
+      [
+        "Laola",
+        "GLOBAL",
+        1
+      ]
+    ],
+    "attackedScriptOrder": [
+      [
+        "Doppleganger",
+        "GLOBAL",
+        1
+      ],
+      [
+        "Laola",
+        "GLOBAL",
+        1
+      ],
+      [
+        "CheckedSevenSuns",
+        "GLOBAL",
+        2
+      ]
+    ],
+    "laolaIsNotExtraRevealPredicate": true
+  },
+  "replacement": {
+    "resource": "DOPPSS",
+    "spell": "SPWI993",
+    "opcode": 151,
+    "style": 0,
+    "quietOldActorRetirementIsNotVictory": true,
+    "sameLineageAndAreaRequired": true,
+    "hostilityToggleOrWarningRetirementFallback": false,
+    "attackRevealSupportedByThisUiVersion": false
+  },
+  "sourceBindings": {
+    "spell": {
+      "resource": "SPWI993.SPL",
+      "base": {
+        "bytes": 346,
+        "sha256": "d18e8b8d1575e57481b63bccaff62b5c2b0a18da9cc86a81f9d5d292cce4c1fc"
+      },
+      "effective": {
+        "bytes": 346,
+        "sha256": "d18e8b8d1575e57481b63bccaff62b5c2b0a18da9cc86a81f9d5d292cce4c1fc"
+      }
+    },
+    "replacementCreature": {
+      "resource": "DOPPSS.CRE",
+      "base": {
+        "bytes": 1116,
+        "sha256": "3a94bcb25ad1dccf2f0b78dcafe1529e57802a69b566bf8aa566e7c74c8ceee1"
+      },
+      "effective": {
+        "bytes": 1116,
+        "sha256": "3a94bcb25ad1dccf2f0b78dcafe1529e57802a69b566bf8aa566e7c74c8ceee1"
+      }
+    },
+    "weapon": {
+      "resource": "S1-12.ITM",
+      "base": {
+        "bytes": 170,
+        "sha256": "44c02f993700e11ec0994567ad9edb9ad4c1737eab6761dbe6767887f6cc343a"
+      },
+      "effective": {
+        "bytes": 218,
+        "sha256": "29045d90fb11e54d672cafed2d4550606a0672355d93b211e9df8a0be7cc0f1f"
+      },
+      "baseEffectiveEqual": false,
+      "effectiveExtraReference": "CIFGAIN is unfollowed; modified effective effect is not silently selected"
+    },
+    "randomPlaceholder": {
+      "resource": "RNDTRE05.ITM",
+      "base": {
+        "bytes": 114,
+        "sha256": "e2b6333f09da3cae56e798a9f22541716dc44c37cef3fb60ad329655f8fdf85d"
+      },
+      "effective": {
+        "bytes": 114,
+        "sha256": "e2b6333f09da3cae56e798a9f22541716dc44c37cef3fb60ad329655f8fdf85d"
+      }
+    },
+    "nativeStockContract": "doppss-native-v1",
+    "nativeResolverAndOwnershipAcceptance": "Separately root-owned; this fixture pins source facts, not a native certificate",
+    "originalClassicAuthentication": false
+  },
+  "acceptanceGaps": [
+    "Installed possibly modified BGEE is not authenticated classic BG1",
+    "Root-owned supported stock/creature conversion contract is a separate capability prerequisite",
+    "Source script scheduling and compiled selector/IDS authentication require explicit review",
+    "AttackedBy/offensive-spell source behavior remains unsupported by this UI version",
+    "Current native/CI/MCP/render/owner proof remains pending for this proposal",
+    "Scar/Jhasso predicates, source death counters and EE rewards remain separate obligations; preserve all3 floor combat requirements"
+  ],
+  "fullOriginalTextOrBinaryIncluded": false
+}

@@ -309,6 +309,294 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+    def sevenSunsDeathModel(self):
+        model = CityModel()
+        originals = []
+        for name, source, area, creature in (
+            ("cityAr0601Actor1", "AR0601#actor1", "AR0601", "DOPMER"),
+            ("cityAr0601Actor3", "AR0601#actor3", "AR0601", "DOPMER"),
+            ("cityAr0602Actor1", "AR0602#actor1", "AR0602", "DOPMER"),
+            ("cityAr0602Actor2", "AR0602#actor2", "AR0602", "DOPMER"),
+            ("cityAr0603Actor2", "AR0603#actor2", "AR0603", "DOPPSS"),
+        ):
+            actor = CityCreature(
+                model,
+                name,
+                sourceActor=source,
+                sourceArea=area,
+                sourceCreature=creature,
+                sourceDialogue="DOPMER" if creature == "DOPMER" else "",
+            )
+            model.game_map.addObject(actor)
+            model.clock.initializeActor(actor)
+            originals.append(actor)
+        return model, originals
+
+    def sevenSunsModelCount(self, model):
+        count = getattr(model.clock, "sevenSunsDeathCount", None)
+        return count() if count else 0
+
+    def sevenSunsReplacement(self, model, old):
+        actor = CityCreature(
+            model,
+            old.getName(),
+            typeId="citySevenSunsRevealedDoppss",
+            sourceActor=old.getStringProperty("sourceActor"),
+            sourceArea=old.getStringProperty("sourceArea"),
+            sourceCreature="DOPPSS",
+        )
+        model.game_map.removeObject(old)
+        model.game_map.addObject(actor)
+        model.clock.setObjectProperty("plugin_citySevenSunsMerchantOld_" + old.getName(), old)
+        model.clock.setObjectProperty("plugin_citySevenSunsMerchantNew_" + old.getName(), actor)
+        model.game_map.setStringProperty(
+            "plugin_citySevenSunsMerchantState",
+            "city-json:" + json.dumps({"version": 1, "actors": {old.getName(): {"status": "replaced"}}}),
+        )
+        return actor
+
+    def sevenSunsDestroyEvent(self, model, actor):
+        actor.setHp(0)
+        if model.game_map.getObjectByName(actor.getName()) is actor:
+            model.game_map.removeObject(actor)
+        model.createObject("BaldursGateDeathTrigger").trigger(actor, None)
+
+    def testSevenSunsRetiredOriginalCannotStealGenericClaimOrReplacementCredit(self):
+        model, originals = self.sevenSunsDeathModel()
+        old = originals[0]
+        current = self.sevenSunsReplacement(model, old)
+        self.sevenSunsDestroyEvent(model, old)
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityDeath_" + old.getName()))
+        self.assertIsNone(model.clock.getObjectProperty("plugin_cityCorpse_" + old.getName()))
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertIs(current, model.game_map.getObjectByName(old.getName()))
+        self.sevenSunsDestroyEvent(model, current)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        self.assertIs(current, model.clock.getObjectProperty("plugin_cityCorpse_" + old.getName()))
+        self.assertEqual(
+            "DOPPSS", decodeCityData(model.game_map.getStringProperty("plugin_cityDeaths"))[old.getName()]["creature"]
+        )
+
+    def testSevenSunsCountsExactlyFiveOwnedDeathsOnceAndPreservesGenericRecords(self):
+        model, originals = self.sevenSunsDeathModel()
+        for expected, actor in enumerate(originals, 1):
+            self.sevenSunsDestroyEvent(model, actor)
+            self.assertEqual(expected, self.sevenSunsModelCount(model))
+            self.sevenSunsDestroyEvent(model, actor)
+            self.assertEqual(expected, self.sevenSunsModelCount(model))
+            self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+        rows = decodeCityData(model.game_map.getStringProperty("plugin_cityDeaths"))
+        self.assertEqual({actor.getName() for actor in originals}, set(rows))
+        for area in ("AR0601", "AR0602", "AR0603"):
+            self.assertTrue(model.game_map.getBoolProperty("plugin_cityCombatObserved_" + area))
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityOutcome_scarDoppelgangers_complete"))
+
+    def testSevenSunsLivingActorsAndForgedFlagsOrRowsCannotGrantCredit(self):
+        model, originals = self.sevenSunsDeathModel()
+        actor = originals[0]
+        model.createObject("BaldursGateDeathTrigger").trigger(actor, None)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        row = {
+            "sourceActor": actor.getStringProperty("sourceActor"),
+            "area": "AR0601",
+            "creature": "DOPMER",
+            "role": "original",
+        }
+        model.game_map.setStringProperty(
+            "plugin_citySevenSunsDeaths", "city-json:" + json.dumps({"version": 1, "lineages": {actor.getName(): row}})
+        )
+        model.game_map.setBoolProperty("plugin_cityDeath_" + actor.getName(), True)
+        model.game_map.setBoolProperty("plugin_cityFlag_fiveSSDoppleDead", True)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        model.clock.setObjectProperty("plugin_cityCorpse_" + actor.getName(), actor)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        model.game_map.removeObject(actor)
+        self.assertTrue(actor.isAlive())
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+
+    def testSevenSunsSameNameCloneDoesNotReplaceCanonicalOwner(self):
+        model, originals = self.sevenSunsDeathModel()
+        original = originals[4]
+        impostor = CityCreature(model, original.getName(), **original.properties)
+        model.game_map.removeObject(original)
+        model.game_map.addObject(impostor)
+        model.clock.initializeActor(impostor)
+        self.sevenSunsDestroyEvent(model, impostor)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertIs(original, model.clock.getObjectProperty("plugin_citySevenSunsOriginal_" + original.getName()))
+
+    def testSevenSunsWrongSourceAndUnrelatedDeathsKeepGenericBookkeepingOnly(self):
+        model, originals = self.sevenSunsDeathModel()
+        originals[0].setStringProperty("sourceActor", "AR0601#actor99")
+        self.sevenSunsDestroyEvent(model, originals[0])
+        for name, creature in (("cityAr0601Actor2", "DOPPSM"), ("cityAr0603Actor1", "JHASSO")):
+            actor = CityCreature(model, name, sourceCreature=creature, sourceArea="AR0603", sourceActor="AR0603#actor1")
+            model.game_map.addObject(actor)
+            model.clock.setObjectProperty("plugin_citySevenSunsMerchantOld_" + name, actor)
+            self.sevenSunsDestroyEvent(model, actor)
+            self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + name))
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertEqual(3, len(decodeCityData(model.game_map.getStringProperty("plugin_cityDeaths"))))
+
+    def testSevenSunsJsonRoundtripKeepsOnceCountWithSameOwnedAliases(self):
+        model, originals = self.sevenSunsDeathModel()
+        actor = originals[4]
+        self.sevenSunsDestroyEvent(model, actor)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        witness = decodeCityData(model.game_map.getStringProperty("plugin_citySevenSunsDeaths"))
+        model.game_map.setStringProperty(
+            "plugin_citySevenSunsDeaths", "city-json:" + json.dumps(json.loads(json.dumps(witness)))
+        )
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        self.sevenSunsDestroyEvent(model, actor)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        self.assertEqual(witness, decodeCityData(model.game_map.getStringProperty("plugin_citySevenSunsDeaths")))
+
+    def testSevenSunsExistingDeathRecordWithoutWitnessIsNotInferred(self):
+        model = CityModel()
+        actor = CityCreature(
+            model, "cityAr0603Actor2", sourceActor="AR0603#actor2", sourceArea="AR0603", sourceCreature="DOPPSS"
+        )
+        model.game_map.addObject(actor)
+        self.sevenSunsDestroyEvent(model, actor)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+
+    def testSevenSunsReplacementRestoreBindsExistingOldNewAliasesWithoutInferringDeaths(self):
+        model, originals = self.sevenSunsDeathModel()
+        old = originals[0]
+        current = self.sevenSunsReplacement(model, old)
+        model.clock.properties.pop("plugin_citySevenSunsOriginal_" + old.getName(), None)
+        model.clock.initializeActor(current)
+        self.assertIs(old, model.clock.getObjectProperty("plugin_citySevenSunsOriginal_" + old.getName()))
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.sevenSunsDestroyEvent(model, current)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+
+    def testSevenSunsReplacementNeedsExactOldNewPointersAndCommittedRole(self):
+        for mismatch in ("new", "old", "status", "masqueradeOriginal"):
+            with self.subTest(mismatch=mismatch):
+                model, originals = self.sevenSunsDeathModel()
+                old = originals[0]
+                current = self.sevenSunsReplacement(model, old)
+                if mismatch == "new":
+                    model.clock.setObjectProperty("plugin_citySevenSunsMerchantNew_" + old.getName(), originals[1])
+                elif mismatch == "old":
+                    model.clock.setObjectProperty(
+                        "plugin_citySevenSunsMerchantOld_" + old.getName(),
+                        CityCreature(model, old.getName(), **old.properties),
+                    )
+                elif mismatch == "masqueradeOriginal":
+                    current.setStringProperty("sourceCreature", "DOPMER")
+                    current.setStringProperty("sourceDialogue", "DOPMER")
+                    current.setStringProperty("typeId", current.getName())
+                else:
+                    model.game_map.setStringProperty(
+                        "plugin_citySevenSunsMerchantState",
+                        'city-json:{"actors":{"cityAr0601Actor1":{"status":"pending"}}}',
+                    )
+                self.sevenSunsDestroyEvent(model, current)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertIs(current, model.clock.getObjectProperty("plugin_cityCorpse_" + current.getName()))
+
+    def testSevenSunsInvalidWitnessLeavesGenericDeathRecordCorpseAndCombatObservation(self):
+        for document in (
+            {"version": True, "lineages": {}},
+            {"version": 1, "lineages": {}, "count": 5},
+            {"version": 1, "lineages": {"unrelated": {}}},
+        ):
+            with self.subTest(document=document):
+                model, originals = self.sevenSunsDeathModel()
+                actor = originals[4]
+                text = "city-json:" + json.dumps(document)
+                model.game_map.setStringProperty("plugin_citySevenSunsDeaths", text)
+                self.sevenSunsDestroyEvent(model, actor)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertEqual(text, model.game_map.getStringProperty("plugin_citySevenSunsDeaths"))
+                self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+                self.assertTrue(model.game_map.getBoolProperty("plugin_cityCombatObserved_AR0603"))
+
+    def testSevenSunsCanonicalSourceRequiresExactAreaActorDialogueAndConfiguredType(self):
+        for key, wrong in (
+            ("sourceArea", "AR0602"),
+            ("sourceActor", "AR0601#actor99"),
+            ("sourceDialogue", "DOPPSM"),
+            ("typeId", "unrelatedCreature"),
+        ):
+            with self.subTest(key=key):
+                model, originals = self.sevenSunsDeathModel()
+                actor = originals[0]
+                actor.setStringProperty(key, wrong)
+                self.sevenSunsDestroyEvent(model, actor)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+
+    def testSevenSunsMalformedMerchantReceiptFailsClosedWithoutBreakingGenericDeath(self):
+        for document in (
+            [],
+            {"actors": []},
+            {"actors": {"cityAr0601Actor1": []}},
+            {"actors": {"cityAr0601Actor1": None}},
+        ):
+            with self.subTest(document=document):
+                model, originals = self.sevenSunsDeathModel()
+                current = self.sevenSunsReplacement(model, originals[0])
+                model.game_map.setStringProperty(
+                    "plugin_citySevenSunsMerchantState", "city-json:" + json.dumps(document)
+                )
+                self.sevenSunsDestroyEvent(model, current)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertIs(current, model.clock.getObjectProperty("plugin_cityCorpse_" + current.getName()))
+                self.assertTrue(model.game_map.getBoolProperty("plugin_cityCombatObserved_AR0601"))
+
+    def testSevenSunsMalformedJsonCannotBreakGenericDeathOrGrantCount(self):
+        for key in ("plugin_citySevenSunsDeaths", "plugin_citySevenSunsMerchantState"):
+            with self.subTest(key=key):
+                model, originals = self.sevenSunsDeathModel()
+                actor = (
+                    self.sevenSunsReplacement(model, originals[0]) if key.endswith("MerchantState") else originals[4]
+                )
+                model.game_map.setStringProperty(key, "city-json:{broken")
+                self.sevenSunsDestroyEvent(model, actor)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+                self.assertTrue(
+                    model.game_map.getBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"))
+                )
+
+    def testSevenSunsMcpCannotDispatchTriggerOrGameEventDirectly(self):
+        import mcp
+
+        class CTrigger:
+            def trigger(self, *_args):
+                raise AssertionError("A direct MCP trigger must remain denied")
+
+        class CEventHandler:
+            def gameEvent(self, *_args):
+                raise AssertionError("A direct MCP event must remain denied")
+
+        server = mcp.EngineMcpServer(Path("."), Path("unused-native-build"))
+        server.handles.update(trigger=CTrigger(), handler=CEventHandler(), clock=CityModel().clock)
+        try:
+            for handle, method in (
+                ("trigger", "trigger"),
+                ("trigger", "triggerFlow"),
+                ("handler", "gameEvent"),
+                ("handler", "gameEventAsync"),
+                ("clock", "recordSevenSunsDeath"),
+                ("clock", "bindSevenSunsDeathOwner"),
+                ("clock", "initializeActor"),
+            ):
+                response = server._engine_handle_call({"handle": handle, "method": method})
+                self.assertTrue(response["isError"], response)
+                self.assertIn("not exported", response["structuredContent"]["error"])
+            response = server._engine_handle_call({"handle": "clock", "method": "sevenSunsDeathCount"})
+            self.assertFalse(response["isError"], response)
+            self.assertEqual(0, response["structuredContent"]["result"])
+            self.assertNotIn("CTrigger.trigger", mcp.MCP_ALLOWED_EXPORTS)
+            self.assertNotIn("CEventHandler.gameEvent", mcp.MCP_ALLOWED_EXPORTS)
+        finally:
+            server.close()
+
     def testResourceCallbacksUseOnlyNativeAllowedBuiltins(self):
         allowed = nativePluginBuiltins()
         unsupported = unsupportedPluginBuiltins(SCRIPT.read_text(encoding="utf-8"), allowed)

@@ -105,6 +105,15 @@ bool CGameContext::UnsafeOperationLease::isCurrent() const {
            map->getGame() == owner;
 }
 
+bool CGameContext::UnsafeOperationLease::isSaveAdmissionHealthy() const {
+    if (!isCurrent() || !local)
+        return false;
+    SaveAdmissionLocks lock(state, local);
+    return !state->quarantined && !local->quarantined && state->exclusive == CSaveAdmissionState::Exclusive::None &&
+           local->exclusive == CSaveAdmissionState::Exclusive::None && state->unsafeOwners > 0 &&
+           local->unsafeOwners > 0;
+}
+
 void CGameContext::UnsafeOperationLease::release(bool quarantineSave) noexcept {
     auto ownedState = std::move(state);
     auto ownedLocal = std::move(local);
