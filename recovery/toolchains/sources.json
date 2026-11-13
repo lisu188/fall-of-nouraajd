@@ -1,0 +1,31 @@
+{
+    "schemaVersion": 1,
+    "sources": [
+        {
+            "name": "python-2.7.18",
+            "url": "https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tar.xz",
+            "sha256": "b62c0e7937551d0cc02b8fd5cb0f544f9405bafc9a54d3808ed4594812edef43"
+        },
+        {
+            "name": "python-3.3.7",
+            "url": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz",
+            "sha256": "85f60c327501c36bc18c33370c14d472801e6af2f901dafbba056f61685429fe"
+        },
+        {
+            "name": "python-3.4.10",
+            "url": "https://www.python.org/ftp/python/3.4.10/Python-3.4.10.tar.xz",
+            "sha256": "d46a8f6fe91679e199c671b1b0a30aaf172d2acb5bcab25beb35f16c3d195b4e"
+        },
+        {
+            "name": "python-3.12.9-controller",
+            "url": "https://www.python.org/ftp/python/3.12.9/Python-3.12.9.tar.xz",
+            "sha256": "7220835d9f90b37c006e9842a8dff4580aaca4318674f947302b8d28f3f81112"
+        },
+        {
+            "name": "boost-1.58.0",
+            "url": "https://archives.boost.io/release/1.58.0/source/boost_1_58_0.tar.bz2",
+            "sha256": "fdfc204fc33ec79c99b9a74944c3e54bd78be4f7f15e260c0e2700a36dc7d3e5",
+            "checksumSource": "https://archives.boost.io/release/1.58.0/source/boost_1_58_0.tar.bz2.json"
+        }
+    ]
+}

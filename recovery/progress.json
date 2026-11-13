@@ -1,0 +1,36 @@
+{
+  "ciStatus": "repository-wide Actions queue; no historical runner assigned",
+  "publishedCommitCount": 3,
+  "schemaVersion": 1,
+  "snapshots": [
+    {
+      "evidence": "recovery/evidence/earliest",
+      "originalCommit": "b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae",
+      "originalTree": "a52f6a83298998702d2b76e5a959df9cc2ae4906",
+      "published": true,
+      "url": "https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/2013-reconstruction",
+      "originalCommit": "108bdcbeda04cefeba5e1895f91df023cea8487f",
+      "originalTree": "54126a24ae5e9b85e05fc1f9a4a198953cc262d7",
+      "published": true,
+      "url": "https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/108bdcbeda04cefeba5e1895f91df023cea8487f",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/second-original",
+      "originalCommit": "afdd8069397059b5ed17285c9338603534ace659",
+      "originalTree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "published": true,
+      "url": "https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/afdd8069397059b5ed17285c9338603534ace659",
+      "validation": "build-and-startup-passed"
+    }
+  ],
+  "sourceInputsReadyTreeCount": 365,
+  "status": "in-progress",
+  "targetCommitCount": 367,
+  "targetTreeCount": 365,
+  "validatedCommitCount": 3
+}

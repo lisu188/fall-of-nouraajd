@@ -1,0 +1,5120 @@
+{
+  "results": [
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "7ab9851bb6f8753aa547135018db271a9ec3ef8e8450ae211c162207bb546e50",
+      "sourceCommits": [
+        "fec4f4525135e863c194bb07fe044ab161ae9709"
+      ],
+      "sourceTree": "0176fdfd407c6f7afd38f01bccdea9c2edc3ae87",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "b9a93c53ed2d08dde4b8ea42f02be8fadb16daaf0ec93a73f970a1749b14f623",
+      "sourceCommits": [
+        "6465fa1050850af1836a4327c4edb14aceb7cd69"
+      ],
+      "sourceTree": "01d9145c5d6863a582d645b874cde73b5d9f21db",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 58
+      },
+      "restoredFilesFingerprint": "bd456c8081b202d70891a7ab9522cd3283a3a357a6b8218b62b5fd971f516a76",
+      "sourceCommits": [
+        "46855a8d1de201492858e67db9cb2941fb721151"
+      ],
+      "sourceTree": "01fbe8535f86a527e73d20a5d348ce91b2469b52",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "c4087033a21c2af2e4f26592f9513a49c181a2f971ac509dc2b98cae70f79fec",
+      "sourceCommits": [
+        "b26490a1d5564b1e59a32bbd9feee48cbf800ff8"
+      ],
+      "sourceTree": "02321dcf2de2cfdd9386f5fa95dd0a30366fb124",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 152,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "1d9cfbebc174c989eb5a04024667344b78aebe060e05c958a2189a9036199d6b",
+      "sourceCommits": [
+        "f4dc52d5b64b5d8255d31f820fc30ed7b4112ef3"
+      ],
+      "sourceTree": "02cea0a89aadd0b8c948bb810d30b28524423b2f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 245,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "ec9a72c53f23241514b4f43bea7f684c872706b779f960f128f38c8f6cfe9364",
+      "sourceCommits": [
+        "db8ad1fc44af8f117e42c0853b2a2b57d01df8b2"
+      ],
+      "sourceTree": "051d91e7ffb68561e15d446cd526f05a8cef0216",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 205,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 50,
+        "reconstruction": 30
+      },
+      "restoredFilesFingerprint": "f1be7108314f7626a06dd5820424ffe1dcaccedc333e2a305a51583c6d369b68",
+      "sourceCommits": [
+        "bf7e346c561ed955d7fb9b286cddd36e84d121f2"
+      ],
+      "sourceTree": "058462c3d511df0d210565bd8c2ad0cb72ffbfa2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "1470e3f0ff97add676c84c51d7015801d2eb15e7a1a8b102aa09432763fa9452",
+      "sourceCommits": [
+        "181f31e1e9a7f3516c7fbd3d4400aa0822c1d387"
+      ],
+      "sourceTree": "07db997d47b27ffafa47a068acfaf2bfa31a997c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "dbc2d3e80c4008645088fce96cf3351e9dc0d15de057cfe0a567082d02edbdda",
+      "sourceCommits": [
+        "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
+      ],
+      "sourceTree": "089c528a35d35bd8552372f851b19db02097104f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 218,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 52
+      },
+      "restoredFilesFingerprint": "d9549312f7e053ce9a0bdfc67e71f0453c15b03e56c28337fd3282f52b5a41ca",
+      "sourceCommits": [
+        "e8b7c3d0e6da989122a0587943a98504342da3cd"
+      ],
+      "sourceTree": "08b67cf8633e706371bbfd9f6fdfc735c63f5757",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "dce3ad6d0f635c3de823a0cc599ab55a0b9dd00a2c8877153f549e862781c611",
+      "sourceCommits": [
+        "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d"
+      ],
+      "sourceTree": "09c46132d737ca06557377d0ab5a60434491f36c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 188,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "8ed06bb5af52436f39c37a5ce862bf28f8b2a4529ac691ba8982efa4d81f345a",
+      "sourceCommits": [
+        "23add7278f50e9ad1c7b232eb7717597ff3ea0ae"
+      ],
+      "sourceTree": "0b60c69828dc0d57212e8ffdfa87ebba39158fea",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "0b88cd75b8ff2e987802b6921d4c3eafb929295cfb2564aea50e74258f551c3e",
+      "sourceCommits": [
+        "77581ebb8c9133ed56b11e6ecf6d5a10980f73e4"
+      ],
+      "sourceTree": "0bf29b6957288271367f08ec11a9fb9760b0ef18",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "4060816b458be869e56b68063d33023ceda4360d3d54dbae942d3b177516014f",
+      "sourceCommits": [
+        "874190dae431b570131b0b08561c0900057a6538"
+      ],
+      "sourceTree": "0c32f6b216c608b34fe2b33e294c516dfec7bf36",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 231,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "e20f04999eee74355136a27e444c102c9cb411435b85d65aaf1fb2edc397c4fe",
+      "sourceCommits": [
+        "a867af7effb9e502476ab70121f1035554b7b37c"
+      ],
+      "sourceTree": "0c437f82022d5640036583f068e4de2b273dd5bd",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 246,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "213375b23a877d22287797410dde250b115c06e568507d42fc17b22a0d606ce7",
+      "sourceCommits": [
+        "3c1d5cc7718cc139d004316be3bdf46e4360f7ea"
+      ],
+      "sourceTree": "0c51b84604a9f09dbc38adf85332eaa126754403",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "f0c95c99e5ab4f3f3d1b447645c2ac9039fa768945c2000b5d225da46901086b",
+      "sourceCommits": [
+        "8c67b6c5800deaa0bd6b95d636e4e9de72b80490"
+      ],
+      "sourceTree": "0d724be5c1ca694caf39cca17888684642282f90",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "e64a0908d0ebc0b727ef5d60220815f0e7185d4d7fb1e328c620b0bfe17a7159",
+      "sourceCommits": [
+        "1084dbc78cb2606f6740c61f03622b360206ce32"
+      ],
+      "sourceTree": "0d8b368a0e19a66249eef922b6f044b6d7f21e34",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "8a90976c58e9df3bdaaf1debe116280d94ac06b7563d613f9a0e74a2e6f1a82d",
+      "sourceCommits": [
+        "c1d177cb26e2e664ce4f603d823a2fea059d9386"
+      ],
+      "sourceTree": "10bca83d0f0cc98e901f206b7a7d1fa5c35a7399",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 168,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "564a62b6bf5ec2939ef3ea1e6f0f32605d70e33e54fd622a254fb490647c09b9",
+      "sourceCommits": [
+        "1b2eb449914cdff38292b1449b4608957b349145"
+      ],
+      "sourceTree": "114681828078c326b72252551abc6b4e46775d26",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "7d5822968ffea5653fcda80e88a631141ee29c50dc160ad3d0a00f55a7107bd5",
+      "sourceCommits": [
+        "559ead9db96da50ae2e451d4c15fc0eb9985aa8f"
+      ],
+      "sourceTree": "125d2f4f21abdaf317de02aa423e7e99ce30c79c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "314500a34ecdfd2ad3531ee6d875538b61cc14d927f33f359baebe6eb79a1714",
+      "sourceCommits": [
+        "61369722a47d404eddf30cd505d82066af4f9b6e"
+      ],
+      "sourceTree": "132147a66e77c37739ef85b479ec70babaa1021f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 158,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "1a51b9d21ffbdbaeed7a910215e57db6d00eb992eb52a2d6c794f71c2d81d8e0",
+      "sourceCommits": [
+        "2dcbea7ad0f259bec3444db698b8e6a741f35f51"
+      ],
+      "sourceTree": "13ff681576a96cf072f18fc2ee8bceb58443639b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 168,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "1d0784bb88a92bb26a8c4881f931ef3b9ead9c9497a6878cc18f2ba4dddd43c0",
+      "sourceCommits": [
+        "6da7e98186ea29ca59619905c550447459ebedb8"
+      ],
+      "sourceTree": "147c55f2280c21a4069918c57998dd17b152d931",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "310abe6ddf40f6b5a8597d5862164b7be14e3288a836c95febff083b1f428d0d",
+      "sourceCommits": [
+        "a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177"
+      ],
+      "sourceTree": "15933f7c7d096db851eab42d42bf8dc3d177502f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 249,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "2b8ab24da1605fff1c3e754a72afb30671a1218774fd8e0df0eaf8d3b165b288",
+      "sourceCommits": [
+        "d3725a2e185c5e04069e053acfe7b3cd2e8df67a"
+      ],
+      "sourceTree": "15a718e0daa9f441fc4a76e523e4793e87bc40b6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 72,
+        "reconstruction": 19
+      },
+      "restoredFilesFingerprint": "cc37aa7bef910ff155b9d20627c9262cbe087a598c69763326123e2555c2a23f",
+      "sourceCommits": [
+        "90c2da337412a8b4b5cdc2efa91eb271fb5565c9"
+      ],
+      "sourceTree": "15acb1801c2007a76abedc1f9cdf7b3be911dbeb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "d015d2c2772aad7ff1def260004b5ce83e0843ea5512e64dbbc9dc8f00c8f9c3",
+      "sourceCommits": [
+        "a27bfe45e2cfa4b5d96394a6fcba384b98288dc9"
+      ],
+      "sourceTree": "15c3c2b9687935f7aa3c9c27734f1bbf2e3bcc12",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 22,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "db2550eac2fcf83df044cb70301fbc99475c07f59644c4cd2fae811c6639938e",
+      "sourceCommits": [
+        "6249de1f73f78e69d83773a7645f69e7e64cc5f3"
+      ],
+      "sourceTree": "15dfb18cc1d3b83d0cd777a8683692a4e79c45db",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "392aa3068fbe73a56a053621612797900b76c904d3744b1de62628031b81dbd0",
+      "sourceCommits": [
+        "42d65bb1c334582eb32323a1e0c0e0835a0e340b"
+      ],
+      "sourceTree": "179e05ab5f9ec2385a5a6081d0b6c98e453e5898",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "a2f48d026a16310c9e84314b274057ef0f3f3be6304ca2f17fab379fab053fef",
+      "sourceCommits": [
+        "d96cb47c9272200eb1a6cbc3b7f7785688cdd741"
+      ],
+      "sourceTree": "185be101556f3b98aaaaa29e58aa11e7c00ac203",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "dcbef11731ff46cdd385e63fe3bac0bc1f068f3ad1e08820e59b12b1cb0846e3",
+      "sourceCommits": [
+        "83f5addfdbc6f59cc91ac0a9fee63e7131b6b7d8"
+      ],
+      "sourceTree": "18775f04cc0da5e3d1c3b03749869b145a875f18",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "893c12be2f16c9dd020cd5a9b919605715a9df9e16b0963e1e8af84e77494833",
+      "sourceCommits": [
+        "3439d0c4e5572aa51cd1ba324b0e844a9633bc82"
+      ],
+      "sourceTree": "1a0caa0b3d7bbc0adccbc1ebe9e2875829e25dc3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "6afe2882f342725610507ccfc7801c43da53691670c84bcb809b00fec9cf5163",
+      "sourceCommits": [
+        "eacc2b048f24ef3ac1622e2ddfb6767e75ce0649"
+      ],
+      "sourceTree": "1a5020cea20c7747a8a85c1d3575d59b6d6cea53",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 233,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "fd9a38950233dadb628b7b5f4f56275934f9647335b61d66def0fa0e6d48fa5c",
+      "sourceCommits": [
+        "466d7f400881743b23af062bf725f80363058437"
+      ],
+      "sourceTree": "1a6c07270143702ee9e19cb1613e0edb4e54875c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 151,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "21ee5f92ec535cb34053ff47a7bcb4bae8151c35a9ad1da9af22f47181304696",
+      "sourceCommits": [
+        "7e7241ec50535484682d7426658d516e46c22100"
+      ],
+      "sourceTree": "1a7dd2bea693bb9d637311626d095838cc79870d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "fb57c71c624a5187e0d135af0d586b05bb193c0eca9630aa3455deefaf178cb6",
+      "sourceCommits": [
+        "fe01b5980ebbec1a29dc3b2210597e7003ff729f"
+      ],
+      "sourceTree": "1acca09a3afc3e64016cb8c6357ad54fb8ce4243",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 154,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 17
+      },
+      "restoredFilesFingerprint": "48d3fef8ede7ff6de68ea16562eaec7b4b90697c8cbd9a6d93b8161652dc6918",
+      "sourceCommits": [
+        "f2c254b087ffa7ab035dc86946997dbb5a4fe6c0"
+      ],
+      "sourceTree": "1c67009e0d2ca3dff5d2eee03e98137625109848",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 72,
+        "reconstruction": 16
+      },
+      "restoredFilesFingerprint": "8657563051b119e0a01734ab858a76c043c75468e37a8e027d86e5f47c2103c8",
+      "sourceCommits": [
+        "4b3902d44f874a1fae86054d7240a2af76901bb4"
+      ],
+      "sourceTree": "1cbea618228ae2ccfe403974781f0d171c089189",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "423c1927af5a5efbd1367b567b26b9fb02c95ae8"
+      ],
+      "sourceTree": "1d31bb9d73610a9134c7620d527d733866d5afc8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "5cd2899cdf96c6c8e66a3c1f02c5166825a8435a1dcb11d90f3cea7b32304d1d",
+      "sourceCommits": [
+        "ab3ba77439b9578cd8c8a5974975f25cfe5eb043"
+      ],
+      "sourceTree": "1d89e164676c1c2608303d2a89c082c038d08952",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "fa164d1cf04bc1cf2c8639a66d29bddcf0fa2d69bc6ebf9b25ce7b2a14a552aa",
+      "sourceCommits": [
+        "0a3d56f9013ffc2356697596c094d1b53efde28b"
+      ],
+      "sourceTree": "1e5673b7f5083ab0286c0b402ca0d5716c798468",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "fc2209a01e7ac9f9a4105b847e4d2af0b5a7d8420e72fd448cc4a1a6719eee1b",
+      "sourceCommits": [
+        "8a198c1f3e7b255f958b2dc2c8cc7640bb7f0afb"
+      ],
+      "sourceTree": "1e94579ef43b2fe582056dad915f88e06c05ee27",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "4ef34e51305acda161f4b272d26a8de6e8799afdb1366f582be06c4ed8718ed4",
+      "sourceCommits": [
+        "4629d7800785790dff844e811457ef8a91e8e2e2"
+      ],
+      "sourceTree": "1fc6fbbd1ccf346b3fa3901d422130b5c3e876fc",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 280,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "7b0bdaee6e4f2c409ee84ef8cfb77bd7fefe527fe9d823fee480c55d0c1e250f",
+      "sourceCommits": [
+        "c90b86c5098927c1f123ad050632d9a220aa4604"
+      ],
+      "sourceTree": "2098f8082af66db6a3be9a9cb112eef7a7a15402",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "efc69b48fd199a356d0eb9c8610d69213db9f388f6d85a3d8994e90baf15eac3",
+      "sourceCommits": [
+        "e4a4821fb1ed08fe7f72f63e49748c23390f16ac"
+      ],
+      "sourceTree": "21b3800d6c7f256ade94467bebe7a69928256689",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 183,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 22,
+        "reconstruction": 21
+      },
+      "restoredFilesFingerprint": "bbaf76f04ee87e91b72e0856fa38f0f29b39281b6e5276f823e2dde0c0f8ee91",
+      "sourceCommits": [
+        "1db40aa015e0dfad33a46a2fc6bd8da5215544ab"
+      ],
+      "sourceTree": "235f504851de46f808040c14dedd9bea3271aa0d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 152,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "54f728742a8da656de1b5425eeaa0276f9c589b81e3a8ceaea497cd6348e1cbc",
+      "sourceCommits": [
+        "c3a6974a7408c845cc8086c43d412cd6a83d2d31"
+      ],
+      "sourceTree": "240abec4457a804990815bfa5a3875a3feb8f7e6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 249,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "aa43efcd7ab1fc140f965165d9e57c80830c93e238141f34c459ec231ee0fdaa",
+      "sourceCommits": [
+        "0d06c2f31f5bdbdc613c802fe595c9cfe0393057"
+      ],
+      "sourceTree": "244953898c6db9e61e71702cec0d7ce8da1cd6b7",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 238,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "640e1f7d63856106527369972e586d617cb197e10d0393d1d83a708e22594e56",
+      "sourceCommits": [
+        "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
+      ],
+      "sourceTree": "2484bd2bc42338d995b06301f834ca2641fe5d5a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 214,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 54,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "512982af66aeab19d92dd3e1acda73f2a2e2e0acbd548137dbb7f2b9971d8114",
+      "sourceCommits": [
+        "171ce17f5546805f0dd08bd8ab311ccce7a7bd84"
+      ],
+      "sourceTree": "2783965eb6f1b57470e7cb572d5cedba5637ae56",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "2459698c38ae3e867a02141135c26d5d1cfb86136d02483928f1f29e47a8f417",
+      "sourceCommits": [
+        "25124a740fb59242695fb5b477d318b40e7d0121"
+      ],
+      "sourceTree": "286402f6c24ebc53488609df20fdfe1b1e2874ea",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "f6ec83d023518e332a58efb4689864467e5b7f07adf2c73fe1027b1054289105",
+      "sourceCommits": [
+        "78f01f818cc3d73e47af8af1b9946653eeb8b6bf"
+      ],
+      "sourceTree": "2934df35394ed0639015903c8b00c0f11d4936cf",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "3b2ca387376ec4198e21c6e9a3bb73682bb6ebc7f4d005fe5793f31d7c94a693",
+      "sourceCommits": [
+        "91ab6fa2fbe54702cd2cbcdd5dfa3205924f7a6b"
+      ],
+      "sourceTree": "2a1245a522bb909b35ef4c2c32e1f71c9fafbe94",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "af5963077b9e028914de13ab80ce2cbf4ef44801e1430230e11e1268f06be34b",
+      "sourceCommits": [
+        "d8f5b95be817631a31ed0fe13ec64730613a56a4"
+      ],
+      "sourceTree": "2a4ef143c32d82865d342555a6fbca677b0c3a6c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 222,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 52
+      },
+      "restoredFilesFingerprint": "ebfde5be528d41c7e3bf918e64f605ddad924bf340a10d69ba7118d590d0e9a9",
+      "sourceCommits": [
+        "70dc75ede4bbdda080775689a32f1f9edfe75ffa"
+      ],
+      "sourceTree": "2b219a3e180b7e37daf103cb8c01167f7b31fcbd",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "be2285a50faa92870b6aa6c465116d39b237569256d7ce966921cfdb54cfa130",
+      "sourceCommits": [
+        "68a0744b497eafc36e0de8f5614c0b1aeba3cd15"
+      ],
+      "sourceTree": "2b37bcbd7448ac5bd11d93e0216b3213ece40330",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "8508ed73681d583db00f430b86dba878b284dafead44640e18eacedb20633989",
+      "sourceCommits": [
+        "396231cf76e089db836e546b915481836d32767f"
+      ],
+      "sourceTree": "2cc2f5442ec4a6915b4f0388e23eb0073f2637be",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 154,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 17
+      },
+      "restoredFilesFingerprint": "48d3fef8ede7ff6de68ea16562eaec7b4b90697c8cbd9a6d93b8161652dc6918",
+      "sourceCommits": [
+        "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+      ],
+      "sourceTree": "2d5da79ad5abe56d2b00cc04952d73e71dc30bf2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 248,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "f76b86e5a87cb1dcbe78867bf71d4016dbb0b023957ede63f9870ade09731ffc",
+      "sourceCommits": [
+        "42d793141f8206b0d6bbd3503b8b84d6e7a50e97"
+      ],
+      "sourceTree": "2e426b860681f7eb2c9051fd68433f7e0279948f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 247,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "627345c41257771283ae77ea7f999321cac82c2e9598e2ee9af384fe972f6fc2",
+      "sourceCommits": [
+        "6ce8f8b619a5296b90446170218950ec8d16d3e3"
+      ],
+      "sourceTree": "2f029787846c2b52e14af89cfa57cf5b0ddaf48f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "a62cd79551aad1758cac865e4f0011e2af8767fa5464d59d5d49df8fefcd0074",
+      "sourceCommits": [
+        "1e2efe2b31f4a0c741dc2e6ec8f0df5e97e8ab5b"
+      ],
+      "sourceTree": "2f5a3fcbbec573e42496f89399f6eab17ab9c9f8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 172,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "967a5cc2762a323111584fe8c2e6a0ae0df7a83f6e4d6b1b9c810d4f78d81386",
+      "sourceCommits": [
+        "5e000dca02a17e179719d99ae93d31687c9d2244"
+      ],
+      "sourceTree": "31217a2066f3e568d8701155f95e3c79bac7a596",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "3a65a89dcfe6de818b034cbdb4d2bb5144f8aef152d1527eeac38089ef4598c1",
+      "sourceCommits": [
+        "d8370b561a096d063db9568eb639c3477a8638f0"
+      ],
+      "sourceTree": "31e0f00037b134090226a49fbf00520ee50fd40e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 158,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "c290c4451967054e9c8c32b9b6918b968ba9364a5198ef8073a5be2ed6b76c17",
+      "sourceCommits": [
+        "075f2684d49ee713f49de0d88aff3a4480ddd6a6"
+      ],
+      "sourceTree": "322a459b5b620ec08ad3770d36fc0e01022c8891",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 244,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "f70d55688a093258e6e4bf85d58b8557c072eea1b54d6e09433ffea6a8fc7673",
+      "sourceCommits": [
+        "1209b99fb504d5015ad2202f561c84f857cab44e"
+      ],
+      "sourceTree": "32368c76d49dce6cedaa5102a7b3b1738cb6d6e4",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "fa7f36fa1c27767341e800a8e2833676d04b25b1"
+      ],
+      "sourceTree": "3249f0db37df6a537905eec899df90e05e5bd00e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 202,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "bb1f8451d5bcfe67046cdf52201566b21c079544699441abf726098650f6bfb7",
+      "sourceCommits": [
+        "a5fc4556044a945e8c88d949177499a9ff7c95de"
+      ],
+      "sourceTree": "3291d5acfd2726dba8f8d3327d7942413105e3f9",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 217,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "28d8039a1e9b626f3b889596d2cb125b6aab5dfe8a399d3018f4c4e9b5aeb141",
+      "sourceCommits": [
+        "04e2bc8707bfdffbbff422a64fd5d25b1503f49c"
+      ],
+      "sourceTree": "32d586a507a68334d782f3384afaf9e05998a024",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 279,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 58
+      },
+      "restoredFilesFingerprint": "856cc0d51cf24bf7baa58ac8b9f97d10575d111d773ea1394d5efe002147be10",
+      "sourceCommits": [
+        "a1102ac053605a68abd7f98eb8b714b5a00ac6ec"
+      ],
+      "sourceTree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "911cb96cde1fcda29f9f7f68fe59afaec872e6f28f1bfb6e0ac5a8e92b7a621c",
+      "sourceCommits": [
+        "a97769c921cf57d945ffc10f70fd940ac86f3774"
+      ],
+      "sourceTree": "33accee8dc737a6e99d6dd1f82369066bb690bf0",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "dccb9ebf938de8891593f71c2efb2235ea727d95ed344dcd9bf27c36d7556e6f",
+      "sourceCommits": [
+        "e2e604b09cda43317530a1543d5ef8ae1cf3c3b0"
+      ],
+      "sourceTree": "33e0d5ad348cef78e90cf06d0da4c49fec2cb825",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 196,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "bba93e86e61b4ec3c49d2b3c7a7cdd2e666d1321ec3762d2aa2c4c9eb76f7c57",
+      "sourceCommits": [
+        "18f71340e6334db61d3abc88ac99ac118270d7d1"
+      ],
+      "sourceTree": "33e82062c7f602518e681a5814c0268741f80c62",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "ff66c77860f10af8fd485bb4ad9f895267de965c44cbf0466de0dd1c9326d738",
+      "sourceCommits": [
+        "7482347bc37b07f65ced0f48a7e39aabf09c4dd5"
+      ],
+      "sourceTree": "33ede8c5b0fc09a350df7891c7c0dfc38b690514",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 224,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 52
+      },
+      "restoredFilesFingerprint": "4dbfbe775a03db5de615725342c5253b5bbcaffe8b028a965eaab015459736bb",
+      "sourceCommits": [
+        "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9"
+      ],
+      "sourceTree": "3469da8cf33982cef7b981c69098aad13167b2b9",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 190,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "0137c2d9b5ed8eb6e18e0cf417e6bb914f2f2fe4ceb36879dfbb50b0009979d9",
+      "sourceCommits": [
+        "d27f773772f47adafa4a9077b9c9e2b1ab67f091"
+      ],
+      "sourceTree": "35a3d321720be5f8bc07e4414d60e52d2c0db737",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 23,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "c8de3e950be218f04f036b891fa15282b8473cd59b1a17f0f921b638220d1f3b",
+      "sourceCommits": [
+        "81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9"
+      ],
+      "sourceTree": "363929ff3eff475998a80cfcf6409f825565c806",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "9a9caf6687c0c26fead21787795012803fea985f0ec7aa0c8c40c41d4ce89e56",
+      "sourceCommits": [
+        "34752b534da5159a391cec2ecfbe681cc38e1db9"
+      ],
+      "sourceTree": "374080417e9775094eb87ff2459dc8cb097f1f11",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "00fe292b81052d78077b5d9b8bbbd1ca7ad3354e6fcce58714a1994cfb20ebd6",
+      "sourceCommits": [
+        "229ade513a8962ea399d9cc4251f0968acdd62b1"
+      ],
+      "sourceTree": "3747c3436136c81c0012882a8a6a4b5eeaeb58dd",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "5f6fc8706a6450fb4e480a4dfb6cc222da1ff85c10d8706b12dd9ef1390b220a",
+      "sourceCommits": [
+        "33122f794dd7589f09b11dc952cd30dd05a0f239"
+      ],
+      "sourceTree": "37b6e698843627a524c3a8cb17a5b0ce5168fc8d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 201,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "67ff7023415aebe27137e4e28e3063481a30dceda10ad7e8f6a22fae4746b1f9",
+      "sourceCommits": [
+        "e899bef6df6f290bc79088296a169152ece3f10a"
+      ],
+      "sourceTree": "385e782f57ebb5eab482c5b9947491648d102563",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "08dcd54ad85691f9ea0d417d32234b70620329b0d2bdab252d0d2576c8743c9d",
+      "sourceCommits": [
+        "51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1"
+      ],
+      "sourceTree": "39d9fad6d7a02d16497f9beba0b3ad0222dd63c3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "1daa6b81a07039864bf1ebe00592b906d22ee84580cc60728c7c4055bea6bed5",
+      "sourceCommits": [
+        "c1b8045a931f2712030e918f9af13bee52a69b18"
+      ],
+      "sourceTree": "39dccf4fe874311456e84985830f374b31f7e4bc",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 282,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "3dced34df1365e75881cfd397951eb0ce1c3bc4714dbe6b03328621c88ce4e5b",
+      "sourceCommits": [
+        "7022f82ba68e4b740e85915b1710dd0502837efe"
+      ],
+      "sourceTree": "3a3959894ad4327a3cf53ae6a7cf3fbc23427748",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 248,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "66766304a01ab68671a4413819dcedfbd02b90ba36c11942d9374b3bbbcfd880",
+      "sourceCommits": [
+        "66ddef19cbebe949241a650f370744d7ba493b64"
+      ],
+      "sourceTree": "3a4dfd70ac2ef1df5d52366fc5247f7e58dc7ea9",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "2ef5b0a9969712730749862a89d813daecbc55d8b6a80f6a64fdd31a8b189281",
+      "sourceCommits": [
+        "b51715bf9de3a0138b49e1a28e81e914268fb49a"
+      ],
+      "sourceTree": "3bb524fa1791d87e8131c549c380e30d114a7d3e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "be76ab81eb129aff16a0d595b0a8a200b8b46db1ddf4e4425e1dd98b86ba762a",
+      "sourceCommits": [
+        "712b84e04439d96e4baeb4a9b739895370185682"
+      ],
+      "sourceTree": "3bc8800f427fdd6b0a069c5a56d3f8fb27c91196",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "cbde72a2d013a627205fd6e29e46c6dbe41c162eb1cc86b1abdda944261027c0",
+      "sourceCommits": [
+        "a763a6322c2e2d3dc7785ffbb04fc54f1e71c2e3"
+      ],
+      "sourceTree": "3d15b11cb459ac59ada56a5241615c5b67b4f118",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 240,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "393f38a774495714fd3f06da7e1cc50fb84a210c9f86c6715f78f24650d94e8f",
+      "sourceCommits": [
+        "2a7848bbc88570b6b7a805ff1d382290b11f0804"
+      ],
+      "sourceTree": "3d8f3ee723e9148f3769c38c9bc6d76790d4be49",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 60
+      },
+      "restoredFilesFingerprint": "3f1a8b22ed0d00c509d9ae978c00e716bb142e3b65b846f1ebf95a8925d122bf",
+      "sourceCommits": [
+        "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9"
+      ],
+      "sourceTree": "3e9513ae5d2f7b62e85fc13336f1dcc666ef9565",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "d4359481be5154b9b71e008227257c5315314f8810d759b628f6d74de30885bd",
+      "sourceCommits": [
+        "a64e71fc174103f81e7f3ef44ab8a79a312ea18b"
+      ],
+      "sourceTree": "41c22ff791d77441044e5d0f5f87cecdf582901c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "57279d1d5faa1afbc2e6729c56bb46c7f5f639cd311962ca4f39b691d4f46151",
+      "sourceCommits": [
+        "800026c23e9d51578496bbbc95b8e052dba1d6f8"
+      ],
+      "sourceTree": "4398768e69eaad569c05f83b0b591ad65d5e9604",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 205,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 52,
+        "reconstruction": 29
+      },
+      "restoredFilesFingerprint": "56609cca777e3f869bfb30419579a81771118bbe7296ac49bac7402ed0276643",
+      "sourceCommits": [
+        "b4855c2e4b2628bb1ba4e9504de4400c4729603c"
+      ],
+      "sourceTree": "43fdf5482a5a9001e145078f75e8d226ce9854aa",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "a6f8a80597b4df42a5cf2c42e628bf3fa54fed1a543b563257a1770d6fa8d1f4",
+      "sourceCommits": [
+        "25a25733afccb1fb4ad76840bb99dcb6e8798252"
+      ],
+      "sourceTree": "46f6130e2cf50eb90c670c44aa73590220b74bb2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 195,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 32
+      },
+      "restoredFilesFingerprint": "4d818f4ae444aecffee0ba6e767fc35062029f8037fa291c700e82bc2aa16652",
+      "sourceCommits": [
+        "a2567aac4099cd68008bbd8390d6cf8a02b6bc81"
+      ],
+      "sourceTree": "4850b282c8c4c775aa2294c92010bd14b2531024",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 22,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "866ccfa54927fb75722e3944648941601a1ed852d9d4d52ce7ee445fec12b221",
+      "sourceCommits": [
+        "4a6a0310a4c84dbb67673f9c9ec1724da2fbf4f6"
+      ],
+      "sourceTree": "492bd374cb3b456711d03adc525b4db6531399b4",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 156,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "2ac2180d1c96ed3cd62633b96416b0421d9b46cb02c7b0788b7ffe6c72a44d2f",
+      "sourceCommits": [
+        "a38eeef4f17603c79b9b64a88bf87ff36b79d926"
+      ],
+      "sourceTree": "4997f8568f2f4960fca1a019f1f9b28923704d9a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "b1e958a4d50fd5f1240e6ffab977092b01629398e07c8ead1b1c16d8622c1e32",
+      "sourceCommits": [
+        "70449d6d217978ad3e1038ab138f38739b0a4ab8"
+      ],
+      "sourceTree": "499f731a145cfb36da06de082a530c2e0e086176",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 246,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "213375b23a877d22287797410dde250b115c06e568507d42fc17b22a0d606ce7",
+      "sourceCommits": [
+        "6d68d5737fc4968ba7e68852550042929f6b1e8b"
+      ],
+      "sourceTree": "4aa59cb0b7ebe91241838d17fa361dadd33400be",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 201,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "fb6136419a0e34fe60a47ba8beef8d712dcf031168f34f780393daeacd3023f1",
+      "sourceCommits": [
+        "a264a9520d1e6fa11cf41d1af381e4eb758f380e"
+      ],
+      "sourceTree": "4afa81627b257a36d0820d007b886cd47673c411",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 61,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "fb33aad43ed2ef17489b19ac47bc85ad01b54780689ed0e6f32e911edeb64bdb",
+      "sourceCommits": [
+        "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f"
+      ],
+      "sourceTree": "4bbb080d2497e1f9bf2bffa0ac27ce54a4744589",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "d9965b18d239148403fcc8a69eee8ce17d6991743dd4fbdffc1b3baea78e9784",
+      "sourceCommits": [
+        "b4d315b857f8df32b17422f64b381a36f3d90d1d"
+      ],
+      "sourceTree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "842e131ff9b4008add656f1fa03df6aa3cae9f2a96b4d84a57e9be23763fde49",
+      "sourceCommits": [
+        "95b01c98de4f4b1e49ec72e367e295720898efeb"
+      ],
+      "sourceTree": "4d6f6f0b81d223de7decd0f1da2042c030ed348e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "a533a3970cd9d35f86cbbdbdfd28e5af08d30a524dcfd9911eeb80160a9efee1",
+      "sourceCommits": [
+        "f6b016214b3367ba302c2a6ed47face5d27f3c13"
+      ],
+      "sourceTree": "4d869a17f3b4e14d58e28ff4c2acfe7834edb232",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 249,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "2163248efad4ca63a0c73654388acea008c501ce2b0dabfff272c3b767326b69",
+      "sourceCommits": [
+        "76f6d79cfe9f016ccd9973965b6c68de4a544bde"
+      ],
+      "sourceTree": "4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "fd86e6ca9063407aff415c47ed0226b63abf425e55ccbb2c265c4406bd5f9d77",
+      "sourceCommits": [
+        "471be57fbbd86d75c56133e610a1f28bb68446bb"
+      ],
+      "sourceTree": "4f1b7cea4d6d9f2d318ac3633ec6c9e3e1ce259d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 233,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "2572076a8248324dc9bd1decbcf03a77bb6b1ca65a97882f82af9b5d83551ddc",
+      "sourceCommits": [
+        "333a2d91122b9033cb19280f5d8b5c19d7a2b8f7"
+      ],
+      "sourceTree": "4f9ce58b703b989ec88d83183c9c75033a23cabe",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 194,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 22,
+        "reconstruction": 21
+      },
+      "restoredFilesFingerprint": "3e3ff510d67accea3772a6016d2f9609fc6bbc6cb45c4fcef6a081567c46506a",
+      "sourceCommits": [
+        "f4bf8a28af45446e2deb5a51288cf4304a776d9e"
+      ],
+      "sourceTree": "505ae131a1c5b47397cbe0b9a44c32d089dc8e54",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "bf78aeeee6cdf44d1ca1a119b1a9ef999fafabb89142e40eda4389d8ab7535c9",
+      "sourceCommits": [
+        "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
+      ],
+      "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "665f71cbee6a1e5cd5c3bc585f631c9da7c31f3f73a6594bc60500286c811f07",
+      "sourceCommits": [
+        "2e3be1ab489eb4d62156adf63296c0be80aced02"
+      ],
+      "sourceTree": "5188a0a2607cfea0b500de4052dafe34e48e5eb0",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "exactOriginal": 22,
+        "existingFile": 5,
+        "reconstruction": 6
+      },
+      "restoredFilesFingerprint": "4dd9688483ab8e3fc0b8890ed80178454b335e16a0520d0c4be8fac4141e53b5",
+      "sourceCommits": [
+        "108bdcbeda04cefeba5e1895f91df023cea8487f"
+      ],
+      "sourceTree": "54126a24ae5e9b85e05fc1f9a4a198953cc262d7",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 225,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 50
+      },
+      "restoredFilesFingerprint": "2c9da5c902615e6067720f2006a98152d627e9bf8940770e4da0ec5d027f9755",
+      "sourceCommits": [
+        "9fc9416b1025044633a6b789212f67c56ecaafba"
+      ],
+      "sourceTree": "55859406b98cadc948b1428fce63d8eb0975ecbf",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 165,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "2536c09179676193b8fa7672516caf08d15b83037ff54a543b9d7ab32cd969fb",
+      "sourceCommits": [
+        "59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1"
+      ],
+      "sourceTree": "56527f9b926bec939909be4b21c54616f4035896",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 190,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "bb9c0c6439a7188f993d6343fd2e549f3d59db9b3394e4b5e5c1441b7627dd61",
+      "sourceCommits": [
+        "23e6b207a2efa9d51efed68ed9f9e027bee2c881"
+      ],
+      "sourceTree": "5697c4f4f5351a42e29ec2924ef1e0cdce6840bb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 221,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "5023936f57c8f7fac335908abbf342f7a930ec2f6b8295641cd59b3f09244fbc",
+      "sourceCommits": [
+        "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+      ],
+      "sourceTree": "57633b78ddf8623c6bf470a00d849ed1bed6b787",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 196,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "d93534a4a93b2b7131eea910424f1e64d8c6fc459e6cd07ab907c7ac87761a52",
+      "sourceCommits": [
+        "00d9708014417b8142294022d65ec201ccdfa29a"
+      ],
+      "sourceTree": "58777ad32c3a8c36e24e39c322043c87ea30e23d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 279,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "existingFile": 1,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "9b3f9018668da13b3849ef4f15ceed484c92c0ceb503c36cc7490dc752db8391",
+      "sourceCommits": [
+        "8965c542530e1e58bb2917bf8d6b756735f57561"
+      ],
+      "sourceTree": "59255cf8032acdb16ec33381f48c61f89c8b02c5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "2e249992f7d8ba778cf3f8e90783eec7c7d27ced6eade011b1bf56b4b6fe59ba",
+      "sourceCommits": [
+        "0815aeac5f12dc58dd113d3fee1a837c06e39413"
+      ],
+      "sourceTree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 212,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 54,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "1dd1c6ff04af6eeea6c6b2ec3ad640eaf69c94d0901a8f26cf1882518463abf0",
+      "sourceCommits": [
+        "308cdda7906564428d9d9e2094f2b3f4f64157a6"
+      ],
+      "sourceTree": "5a66f2bd1028794eb1b8ac73b3a3e846f9f964a2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 244,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "b992bb877d9ad8cee1bec10272d4c9e412bb2de65dbe3e421ac18c90ac85b088",
+      "sourceCommits": [
+        "3eeceef7626d02eefc6f9e0f570442a25eb5abcb"
+      ],
+      "sourceTree": "5a80092cf3a658ee46dfc084abb097a81256ae2a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 280,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "2bb3208f1f6bf2f280f8c04caddf65c280f5bd0bd9e13c04310be0e55a48f920",
+      "sourceCommits": [
+        "71a3432e36b5649aabdd63c7807a78e9a8a3749a"
+      ],
+      "sourceTree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 61
+      },
+      "restoredFilesFingerprint": "f44e9b84410d2bea0b7190e63ce97305eccbe818c6c30407e7c708289421b3e1",
+      "sourceCommits": [
+        "7c79af080a5bd21526ff5af890cb3f9559f689ac"
+      ],
+      "sourceTree": "5b795b78ce60e271d1c28ce9a8a8747667784167",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "9e7b80942bd22bb9694dcac9a7ded4c3aad77c8fbd3bc543a920cfc1bd23e9a6",
+      "sourceCommits": [
+        "a1b7375b0e1208e59908eccdef9060397c5d7d59"
+      ],
+      "sourceTree": "5bf591d14636d1ea7b1cb73bf4a9176d46239013",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "61daeddaac51f0d300a9b6f708b3fef4c4155eb1bf986b5a9a263679a74cd55c",
+      "sourceCommits": [
+        "12f2a671ce7e158779270d260d4a43b0d5f1f97e"
+      ],
+      "sourceTree": "5c1e61cf5ec289d3b3fe3f3b7e24d6a3ee77cef5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "b99eff728c16d22547f87fea4cdce735a2c61d85b0b0ec55194a270e6f593519",
+      "sourceCommits": [
+        "10d313da2d8f48f7ca90baa3655a479a80e66e30"
+      ],
+      "sourceTree": "5c81e58140bb504b054695985652e93033bda7a5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "72046d0050f8f0e90a1009678da98be2fdd2a3795b28d02c1728c1a87758617c",
+      "sourceCommits": [
+        "86487a820bd6d2130e684d4d6b0c5681dbb6b561"
+      ],
+      "sourceTree": "5cda2d923cf9259b0e8a8295cccaf2ee194770c4",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 168,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "15d21859d2c907a254efc6ecc7bcaaaa0c4f755a3f78f455dd62cfde780b9a5f",
+      "sourceCommits": [
+        "6d8b6688d0808565029e6b96e9a52549e80c19aa"
+      ],
+      "sourceTree": "5d1456cfdabfad51681138ea1c663cea35dee0e0",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "b2abb94ed39ab7d0ab1c6315beeadc3913b44e634cda86a43119cd9a4f09d0a0",
+      "sourceCommits": [
+        "033454720855389e3a77640ca1d93bbe94d5a999"
+      ],
+      "sourceTree": "5da7e7f49bfd2642b0ded1f08208ebd5388c79dc",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 214,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 54,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "5251ea371112ed5b1c58129f1e011919930fde7383eb24be1cde8906492387ed",
+      "sourceCommits": [
+        "da88f7cdce4067cdf6507b85c538b85ec051a8eb"
+      ],
+      "sourceTree": "5dded2cc130ebfac998cf7eb6d23cb82aee748da",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "28844ffe49fd2aee0ab4f4469f2906f87975d4a8df2fd1fe31abbb47ddb62f87",
+      "sourceCommits": [
+        "58259116b3208867a11fdc532caa0c8b8afd5be7"
+      ],
+      "sourceTree": "5e0bb30e5de1e1ee07c425c6e756433f6febaa4d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "88314a970c4c7fead3eeeb140e440b4e664341bb78153e42a9b3950ae585e32d",
+      "sourceCommits": [
+        "dd491c463722a689dcc62c279d9f595d6c01def6"
+      ],
+      "sourceTree": "5fb3675b948238a5d0d66571a3fe29ea06b17ef1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 168,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "3990fd0068c712480cdc6037c47870c33217a7998bef98f237de7b4ad07e6512",
+      "sourceCommits": [
+        "49e977688f81001f36778639eb3aad898aedc9e4"
+      ],
+      "sourceTree": "616a2a7ed8b04f28c6f0546dab9d2696cf143dfb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "70d9c9ae8c9139ff602150b75a63fb2e83c263ca84a8e2b0c5f1b946ef545c2a",
+      "sourceCommits": [
+        "bf32a4c93e396bd645769a9957eacd6a75106b62"
+      ],
+      "sourceTree": "620875cb4254b3c73c14e7793d33671d1a6300b7",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 240,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "f72009f86d5014a2678ab9a5c4eb5ce7d0270f51b416d265fe6072955d0fa131",
+      "sourceCommits": [
+        "e0c118c4e58bd1d1758271f32243b66e2950c13c"
+      ],
+      "sourceTree": "6472dafcfb7af4573ee1ed408d0bdea80a47c705",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 218,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 51
+      },
+      "restoredFilesFingerprint": "1b63773d84e61783b1be7646659930e3787be519a033903f4521f10f1cdb02e3",
+      "sourceCommits": [
+        "cce51b01010c31cc69119e695dc3133c8c372210"
+      ],
+      "sourceTree": "65355be56cf913888c639b7ed0a894d2d4519d62",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "5168cf0e5e702c0f7c75485e9554ea78dc349d7ce29fbee8500adda7c7df3e50",
+      "sourceCommits": [
+        "66eff54a33083c0ea5d52283c4103681adb63508"
+      ],
+      "sourceTree": "6606399a97f4fbce716a2cc44b6d0edd55ec4363",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "3a65a89dcfe6de818b034cbdb4d2bb5144f8aef152d1527eeac38089ef4598c1",
+      "sourceCommits": [
+        "ab6edd08cb0b1dd973093df8e8589d6f54fbbc94"
+      ],
+      "sourceTree": "671cbe90708bcf872d8899e52fe22b07ac679478",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "b6678b5aceef33dd89ad2bc393060ab7a56b5e83acc96758a14a5434b34a7178",
+      "sourceCommits": [
+        "d17093d881d39bad873d61baab7acf703abb23ea"
+      ],
+      "sourceTree": "67e57a41e807263641e7555c20aa4558b398f083",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 72,
+        "reconstruction": 19
+      },
+      "restoredFilesFingerprint": "d90a4b3c1f7b13b15efb4b90dbd063335dd7a5892860a38f0011673d166eca3a",
+      "sourceCommits": [
+        "0a5919fc203684c6b5ba1c443c1a7708d0212c39",
+        "65c8c9af4275c739c47047e6ef162172d68d8050"
+      ],
+      "sourceTree": "68e8923fb35c01e4cd759311e25067f3d9972bd8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 249,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "00f4797186a5ed3751946abb5ed0c9983751cd1bef14a125465ce4b4ce5799ce",
+      "sourceCommits": [
+        "9fff22c0ae13c876bef60034ee46e4aeedfda2f6"
+      ],
+      "sourceTree": "6bc35e6867fa87a0f6e339688127e21e9f887664",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 250,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "5f30e9d4e3d041114890707eabb2bed7e33e04d1847923ead94aaa835d5d46af",
+      "sourceCommits": [
+        "66975a887b903b121c4317d4497f0db83d9546d8"
+      ],
+      "sourceTree": "6cda675213055a181f26aadeff457b40493b0b33",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "7fb898ac4e41b70b95c4813c9af2b0699ce9a274a53500af5409dde95c4b34da",
+      "sourceCommits": [
+        "c4154108da73e14df7694666a020281cf424a3ab"
+      ],
+      "sourceTree": "6d517da53cc090e578fee25ae7103b9f703c003d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "d015d2c2772aad7ff1def260004b5ce83e0843ea5512e64dbbc9dc8f00c8f9c3",
+      "sourceCommits": [
+        "643efc345388456f9b92e918b72be1a460d56ae4"
+      ],
+      "sourceTree": "6dab62144a7af6173c1874fceba186031ae9b95d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 66,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "ce4443434507a97977aa0b01f6c2f03466a7ee51ae582bf3fc0b81288be54a73",
+      "sourceCommits": [
+        "dc3f989ddf8cdcbf6af1302823c0ce653f546baa"
+      ],
+      "sourceTree": "6e2038ac3e21fd4840352c56e92c30abd0407c08",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "ca70641b880410a4a829034a3bc67e83f8f7d7a2fdf9bc4de6df5919f77ff626",
+      "sourceCommits": [
+        "75c6918509bb39a489d979fb0dfcdfd103fcfbf6"
+      ],
+      "sourceTree": "6e4067d95a0d291d46cd71cd4126d4b939c897d3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "f6ec83d023518e332a58efb4689864467e5b7f07adf2c73fe1027b1054289105",
+      "sourceCommits": [
+        "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2"
+      ],
+      "sourceTree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 214,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 54,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "279e249597d50a41effa1a1e5d1152c8f6e725faed9abd18eda7afaead8f32c6",
+      "sourceCommits": [
+        "b81d72df5c6b006f640a3cccf1913b43a3f0c2e9"
+      ],
+      "sourceTree": "70662e3228f7a367246745445823cea7375f50e8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "6deedb88b269522753cab1e4c7900128ba16c72225dcf586a0c41f92c4548df8",
+      "sourceCommits": [
+        "bc243030d30e75591a3aff3702525f4472f37331"
+      ],
+      "sourceTree": "708e0a9cdb13df64e6bd4918027c8fd63485970c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "bf1eb224459123d1b4aee9970135666bd17bb7cef948eb041ffbcb05de0565a0",
+      "sourceCommits": [
+        "f25cffe508b1d872875d941854c4b6170c9cbefc"
+      ],
+      "sourceTree": "70b01787e6064dac4a67961cf3086cc655c1db99",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "f3ee0e9c48b82e7a226802fec366585271e1c3476fe4881c4ed09159093dd9fb",
+      "sourceCommits": [
+        "7c1127cf428ae90028e13005e7fe4a78d727c678"
+      ],
+      "sourceTree": "70cf9e3f6be89e501a0a74f6c5ec6a742d08c028",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "1bcc9a3f3c0a0ab10e1d5408f42d300ed81024febb1737b58eec45836e6c61c8",
+      "sourceCommits": [
+        "9dfc6e513419db09902f141de4b1583c511e6200"
+      ],
+      "sourceTree": "70fc4148d804fe4e41b90b92cc5c555744d11ac0",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 163,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "83f7f57ac74dd5e22de580b2f68e78d7c2149d89beba567869a7fac2017ff107",
+      "sourceCommits": [
+        "beaccdfa47c0491cdfd1f194b8f234c631704b61"
+      ],
+      "sourceTree": "71182a5b244d317ee14d62481a3fca8da0d438a1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 65,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "b9f847a277efa0baa08cc3ecb35623a6f295e6a36778cb4353ca76e78e7e5fca",
+      "sourceCommits": [
+        "74ffdde33436cd7bf70565b683f8eda1e2439352"
+      ],
+      "sourceTree": "71e1979c7dcf1dc126737403dcc2823e60130733",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "31d73a1bf695092e04e20dfc77247e310641b396945ef26407cda8041fd8fc02",
+      "sourceCommits": [
+        "2468b0ee1b703b24a4151eb79410165e66e3c588"
+      ],
+      "sourceTree": "72b9eebcc11a24a6d6d89f760bb807fce26c9572",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 159,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "1294dee90f57a05a75c9b056b884bca320856242cf40398d583b9a4e4455aacb",
+      "sourceCommits": [
+        "e89c185311f1b7285bb556482c6ca7dc81eaddeb"
+      ],
+      "sourceTree": "745d336ee673751b9dc781db9b67ecd289d355af",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "12be6039c446af98c12255b7975370f15c4dd4ff131a19bd15a55d3e19a47e91",
+      "sourceCommits": [
+        "eecb6cfb9a44161dbe829cdc7009d3c253718446"
+      ],
+      "sourceTree": "74679e1a2ab79b615c26634e62e39b47b449d05d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 165,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "faf6c28c36352577586c63df1a934127ce406f011702a0985fea77f29e16b971",
+      "sourceCommits": [
+        "467d4b5cd6231cdaa33ea0430536e4345bf46fe0"
+      ],
+      "sourceTree": "7484e04268eac2b756ff4dbdc6569b6cf5f01bc5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "3362abd738de695c7052e0a1c16eeff4af15bd7bfcbe82b4d800d7a5e81fb95d",
+      "sourceCommits": [
+        "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139"
+      ],
+      "sourceTree": "7620736bef709f4d419d986a6f98e231c83a1e4e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 220,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 52
+      },
+      "restoredFilesFingerprint": "361216a17f1d0532600eadae2bd36b11f87e14b7b171c0ad6035d2b2d4ce414d",
+      "sourceCommits": [
+        "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+      ],
+      "sourceTree": "7692be9ed922eb74b1616b09eaf54d0a56718c63",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 246,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "7b88eabc0fa3611037ae8ce07ee045de5b992f37ff259e4f210d554dd377a02e",
+      "sourceCommits": [
+        "f429df527fbb213c04f714c665e43949126739b7"
+      ],
+      "sourceTree": "76c26c9ad2597c7e859be2956f9395c07f75fe75",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 248,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "99530b759043c63d97427bbe3fcf5391cfce653422cb2f247918254c933786a6",
+      "sourceCommits": [
+        "39356696f34ba87148a75f7ca6b8f808edf6303d"
+      ],
+      "sourceTree": "76c32234a6944d6c2edf810df8c1db13de10c43c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "4770238f9c2fe9ab24fe74eee51b49564a9c179d1adff18750360336318d6506",
+      "sourceCommits": [
+        "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e"
+      ],
+      "sourceTree": "777fd6482406600aab6929bcee0033865501387e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 188,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "417030c6b24b67f8406fc32a36d40409554fdc4eac97529ae4bdaa47e59851e9",
+      "sourceCommits": [
+        "2017b1ead3293bf0b53bfe1a7b3804310911173b"
+      ],
+      "sourceTree": "78e633b37174acdd93b38d7af9c3e4128d07f4e8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 215,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "b8b6d19b5513a689a42ca7b428dc1f44c2d7ba23ef177b9af99f4bffbd4ee309",
+      "sourceCommits": [
+        "b578c8359dacd1dc0fe6e03dd81eba10de4b5fb4"
+      ],
+      "sourceTree": "7a9b0b4abf27e007f2bc67ae40ae8a4e638463a8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 66,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "26af67a3878416969cc911603b8763d6316e5001d89e971d4fa00e563a6f12b7",
+      "sourceCommits": [
+        "225fe55433f89e7714c1363ac89712f7fa0560b3"
+      ],
+      "sourceTree": "7ab6747fa03c1ee9c5498cdf10b521288bed6489",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "8ce865a1b51d96d27a839eea71ec0322a64c0b82fb49e5e235a4c383c39fd84b",
+      "sourceCommits": [
+        "9843aa0b06bc706fdaeee61f20339c29a9d3a6de"
+      ],
+      "sourceTree": "7bf75491be2cb6d98d281f68bcdbfb36a8474527",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 168,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 30,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "6c88761b96463de552852793284309bf4624d6ccf5dc751f82a74a2a79f42420",
+      "sourceCommits": [
+        "8372ec042efe2ef8a6eba0caf8efd0e1343ee8a7"
+      ],
+      "sourceTree": "7c1039c3b64bc04cc3852a4ebaf80ead1c650ebf",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "c2aac7e60a48d9d1919405a95e688b7aef7d0fc289a1c5f9a0cd0cee476fefce",
+      "sourceCommits": [
+        "413714c49abd549163bab41f6cda6c220af4fc77"
+      ],
+      "sourceTree": "7cdcb76c6252a06c5ed25898a082079011d01593",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 240,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "60f5c3a92d95c91fc125a23c1073c4b752932fdaffacb8f078b832e65f09a89f",
+      "sourceCommits": [
+        "09df518e2037d12f912da6c774635a91c886c097"
+      ],
+      "sourceTree": "7db1a3f10ff2e6bb5c24f0219cde54e3ed76c133",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 220,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 52
+      },
+      "restoredFilesFingerprint": "69dcbff80c43e44874a7956751597b8a9f5afdbc2d9daa24a9d10a9b679103f8",
+      "sourceCommits": [
+        "b4954bbcaad2b59cd68f24beb69fe05cbbe46081"
+      ],
+      "sourceTree": "7e0bd39b64f3c7650a63a5ff0ac760ee4cb0c85c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "1054e0198f7b749630612c5cddeae57df1ada000815afaae38c68c30046c9f58",
+      "sourceCommits": [
+        "3cc699ff0c3ee07dfbca1793828cbe2ee4298932"
+      ],
+      "sourceTree": "7feb3bc67f589976d94fb9ddc23cec95a085d078",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 224,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "8f3a87554fabedf2d1706aa9c8d0589210d41bf5f2a032107a562c53b5d05683",
+      "sourceCommits": [
+        "beef9d877e9f594fbcc0792794379070921ded15"
+      ],
+      "sourceTree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "16738567fa661724bea97c4acffdd1796f4ef796e8d34b1b83eee6ef6550f9fe",
+      "sourceCommits": [
+        "2c8335b09c899919d290741c8ef08033da2c5b61"
+      ],
+      "sourceTree": "811430cd5d7a410c5df1958e59ce82a14f208e32",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 195,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "a790204146b59c4848834c9e52b0f2ca7a69f8db199d89790ce16503eae10826",
+      "sourceCommits": [
+        "cdb285560097d679b94f693db0519c3cb83252fa"
+      ],
+      "sourceTree": "81dfc3b5e7435b74cbb9763901b8b27b54279e0f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 240,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "73f03d59aace10efa8876c6f1e940e8e547b9a883aea1213c9e15144a3e0e037",
+      "sourceCommits": [
+        "5fe60e7c6947844088efc763b596a88546dcdb4f"
+      ],
+      "sourceTree": "826b43370be082607e4019f85f92f6e600de7119",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 151,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "21ee5f92ec535cb34053ff47a7bcb4bae8151c35a9ad1da9af22f47181304696",
+      "sourceCommits": [
+        "e8a1b61a3368362508693275b990c748aa19957f"
+      ],
+      "sourceTree": "826ee789cd3962272ddbeaefa743db9d3e39adcd",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "a2f48d026a16310c9e84314b274057ef0f3f3be6304ca2f17fab379fab053fef",
+      "sourceCommits": [
+        "d371496488d43e4624d7198c86c4a39296c62a24"
+      ],
+      "sourceTree": "838cf148d1bf97c8075463e4ddf8a0041e0993bb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "d3ecea94f1593c37688f2222ded713af49210d4d25f89b8da4cc817c60e30bfe",
+      "sourceCommits": [
+        "34edc762d65df823025750663241ff65fd6c060d"
+      ],
+      "sourceTree": "83b4628f550fa8824011b6a2fdf8b93e48a5810f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 61,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "62ad32ed7510a93eaf8ef4f87aea17ae19a33e4a8e7731d024beae8d186d09c7",
+      "sourceCommits": [
+        "ae762f9c3572c5384c143690da32f8364fa39bcc"
+      ],
+      "sourceTree": "83d448c9b5cf93ff9fd6a27d8c07a4870ef363ee",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 240,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 63,
+        "reconstruction": 29
+      },
+      "restoredFilesFingerprint": "565a563c6dec469325b17d6ddf1b3da8ce3e2fac55a8fdf54fd340c6ac4c4c4c",
+      "sourceCommits": [
+        "c64edced37f5abe8e2ea19a16cbabf0bd45051a3"
+      ],
+      "sourceTree": "843519adea2ad6ba5ccdb8e7bc97af9044d37e5e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "321f45a13af78588691645551852f6e7a09e1552adaa0ba90f4a136091982464",
+      "sourceCommits": [
+        "cd9f1194b608d647a67b040689f48730dfa921e5"
+      ],
+      "sourceTree": "85df28ca8bc5373211a12e6fc7540253fdfc811f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 199,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "61e793622abc91937bc4d7a971d70a1cc573b3552966ead8e30543d43044a0e1",
+      "sourceCommits": [
+        "104edb40b2c18764b57630d15a6e1c12630752da"
+      ],
+      "sourceTree": "8744c031559207a2449f40a758ea0c78182dbd8b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 244,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "de6813161d147bb105b9890773fcf57f056547314e1dd378a8a7248024ed97db",
+      "sourceCommits": [
+        "6cc78c34d64fdee43adca1b829ccf687daa62ced"
+      ],
+      "sourceTree": "87ea8580651c311e0a64397425faa080539fb701",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 214,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 25,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "f76adc0ad92d6f9173f39dd018fa33efa3eef39120564318be6480238300e34e",
+      "sourceCommits": [
+        "afe6b3dcfc8bb1166843d705625f88cb549d0ed7"
+      ],
+      "sourceTree": "88b1cabf76878d8a90d98bc0313e9a5c0870afd5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "a2f48d026a16310c9e84314b274057ef0f3f3be6304ca2f17fab379fab053fef",
+      "sourceCommits": [
+        "653b34639f347701f578c2c7a30d766067ee5f1e"
+      ],
+      "sourceTree": "896267a0f2e54bf0c69144163db197f6f75be3c6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "dccb9ebf938de8891593f71c2efb2235ea727d95ed344dcd9bf27c36d7556e6f",
+      "sourceCommits": [
+        "cbad1c771874a73a57681687498f8ebc951f31ff"
+      ],
+      "sourceTree": "897f788bab4f5a138b293bbc8b7d0ec82ed25899",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 201,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "c87d30f163cfbf73fbb1b15118d04a759be7cf3d5d44ba3f86d8d5d635300508",
+      "sourceCommits": [
+        "5e6bd51644b16327a27dfe0f4c44cce307050146"
+      ],
+      "sourceTree": "8989f626cc2866e5fc6ea31d0cb1c193345100cb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "06f83b3128f1e36fda125fb15f3e463531f4991c94b8fac1c0c9ee3741f555f2",
+      "sourceCommits": [
+        "ead6e0b8498679734b6a4d05b88884a810527fed"
+      ],
+      "sourceTree": "89ab0bc05e7094e10ecebb5d1dbf2f190410284e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "721e229cd7a385339413e5410fc6689dec4813beed7de48b025f2d0bd63a2e6c",
+      "sourceCommits": [
+        "1636da69ef896b1f6cfb5c6a94f72cfc8e804222"
+      ],
+      "sourceTree": "8a2dc68e557a9e3b2718909e2dac17d54ce42c0e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "ff5a8e3e6bbe1b38fcdf83a16af02cb63214178f774e5ad600c8671cb229903b",
+      "sourceCommits": [
+        "c0677233f5ab2a7d634ace65231546f061999cff"
+      ],
+      "sourceTree": "8a77ae684d7f408e71d2763943d361815bad9be5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 22,
+        "reconstruction": 21
+      },
+      "restoredFilesFingerprint": "8aa47946a1b7fcce3cba9d4c5803f565d21c226e280805f7490078e5a13c1f41",
+      "sourceCommits": [
+        "c6ac94e1ec6a81ee1f618530c95fa93fe1cebe17"
+      ],
+      "sourceTree": "8be3489c991bab764817418bc0ab74b292fcdc50",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "cf758a7aa4f8d0e869a40acda46b6a7c81c682941fa0fe2ce7855c211a3a9810",
+      "sourceCommits": [
+        "74594f17271a871a3241e60f19aaa8f5c587409e"
+      ],
+      "sourceTree": "8c2632f19b9cba7f066827f7d5a301b5b703cf26",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "7fb898ac4e41b70b95c4813c9af2b0699ce9a274a53500af5409dde95c4b34da",
+      "sourceCommits": [
+        "e00a7c3e7babb948012584b298fab2f1e5abe351"
+      ],
+      "sourceTree": "8d5e571ff54c8bce2a5588efe01b59647e790e55",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 169,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 31,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "c76b1afbbcffde6954eec4fef7bd53c12ae1a26944b26e17471787decdc6a405",
+      "sourceCommits": [
+        "e4fd2d72a1278ebb391789b226bfb1241133d5a9"
+      ],
+      "sourceTree": "8dc6cfc0bbee1f66c9298a2566bad593dc44dc3e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 218,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 51
+      },
+      "restoredFilesFingerprint": "ac6349ccfb16f06a63f62c277fb0601df16e641244ee8a0dfd2e988f761491a4",
+      "sourceCommits": [
+        "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+      ],
+      "sourceTree": "8f178c00e7d328195d6b84c5755f4ad521dadb7c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 58
+      },
+      "restoredFilesFingerprint": "b2c40b2049016e02093308952c4d90dcd84425f8fd4023ca1631677b4fef1ed3",
+      "sourceCommits": [
+        "cdc0be72f141da8414fa7c59baf24917a4897b75"
+      ],
+      "sourceTree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "7fb898ac4e41b70b95c4813c9af2b0699ce9a274a53500af5409dde95c4b34da",
+      "sourceCommits": [
+        "54f4e53ca1ffcb22eb1a7c49e1f8a2cf0c8d538c"
+      ],
+      "sourceTree": "8fbe1c6af577c7bdf85df3bc420721459a7e9a73",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 207,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "76408e550366576de1006433d2d4b18fb6d1ef5b086ac1174f3684d70b8daa6f",
+      "sourceCommits": [
+        "08867695683dd074db43837f0df8b95428921f3f"
+      ],
+      "sourceTree": "8fe15b1808a2d0eef1239fd01e05fda66915f1ce",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "2d1cb1e48435147579b996bca69f02ed4261e46bf6f0a3caae2a6136f8d97e1f",
+      "sourceCommits": [
+        "57a7605e74dde483f858ccbd3fc1a341ab7c7aa8"
+      ],
+      "sourceTree": "9010d83ee7810a170d6795a651120ec5f3d123ee",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "0cd1487d1d407875508c84689ce67c5f83634e7b"
+      ],
+      "sourceTree": "91064cd9f99dd117304ac4165a501a883f8be423",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "e718820fe564422d4b23c5a271ee90090532ed505b5b1c00d41e6d635145060c",
+      "sourceCommits": [
+        "58cd90ca158fed5712b6151404e6c1ad90953599"
+      ],
+      "sourceTree": "9113355f5ad05272ed5d0060ae58fe0cb691d790",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "1054bd5145507c68609344ccf85287ab7eac814564697731ff4ce0d6783a8cbd",
+      "sourceCommits": [
+        "c85e4a79bde5380e2df8505aab816b3823be4ca9"
+      ],
+      "sourceTree": "9117e1015d0eac6e39c61f9ded1e57d16669d0b1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 185,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 22,
+        "reconstruction": 21
+      },
+      "restoredFilesFingerprint": "9192146b50dfe195a86c0d54ac6976f3831d3e641f4dd3596cd6ea1ce5c8e317",
+      "sourceCommits": [
+        "937210731327bd6202a04e67dfd471508f65894a"
+      ],
+      "sourceTree": "9118081935f3720147cc6191cddc7eabf8ea0ec3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 248,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "b2cf864cca2f7f584c3b450b8dcb58d6a1c2a14ed5930397271c349d3e6913cf",
+      "sourceCommits": [
+        "38bba6a98d8a17324de69e30d7eee433da922962"
+      ],
+      "sourceTree": "9141eb889fab0c0e2b062799f66facac274c39ed",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "270f3fee25461eb536b3ed51e45958cbc08c899bb91bd18d3e314cc2df510948",
+      "sourceCommits": [
+        "46f5b0471476ed363c963d6c31c091e0c3b9b741"
+      ],
+      "sourceTree": "92321afe30c2b347da3b02d4456b0f153a7f0460",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 212,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 54,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "6132953f88836cd89230097f44fb5a5b50b3fec3c15dd7f1227c07a2306f5b1e",
+      "sourceCommits": [
+        "50b044ed131403e4b9f39f3a41d2143bc39e104e"
+      ],
+      "sourceTree": "926636885c6b985e36be3e9690a09ee16ab47b48",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 158,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "f85ba8df9e8ee18aa5ac1fcdb834184347bd465ec250f1933d4f212b639914e4",
+      "sourceCommits": [
+        "dab88827988058b36a37287249ffab0fcfbe0bc8"
+      ],
+      "sourceTree": "930d6fae85ce0ba81dc9ed556aba9f67278624a2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 188,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "de95c1ce8cf9ee806e5deceba8688d5f962ced42703a480453a04d1363455ee3",
+      "sourceCommits": [
+        "75d178f1ac4574316543e76af9234f93e38ead59"
+      ],
+      "sourceTree": "935b0927616ce92b84b61a7f59d761b47852b5a9",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 153,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 35,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "fcbcab63d05a28763650bc435d6cc36f10e3b45967a26ac1c64208075bd281a2",
+      "sourceCommits": [
+        "76d496a31d7caca5597e15de1610af998daf8b34"
+      ],
+      "sourceTree": "94b69e2d20f6af2bf14944b2be950aaebcfd0306",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "3e2d5a9d2a13b67e7825e68df5cd954da5bd090852d4ebcd0c2685c24b3685f9",
+      "sourceCommits": [
+        "35b69687549d2b68864d26b1711931835b819670"
+      ],
+      "sourceTree": "94b7d24ae41cf9ca9d2a10b6807611340ec19d7b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "a72aa54fa4aca4df59f1f331eb75fe04d930c471d74a5fdb2b756f8b13aae76f",
+      "sourceCommits": [
+        "bf5670cf24fbfe04f4c3b1be827a94a593230bb5"
+      ],
+      "sourceTree": "95c4525ec9db5bfb75b0bd4c14125f151bc6541c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "470c3677662819494cbc5ac8041ae5b11160e4a3c7aad9b2209e58d100a4de6b",
+      "sourceCommits": [
+        "accbb098658a602e0bd9be83ce1b9365cb22140e"
+      ],
+      "sourceTree": "95e32b05391f590dfc370e375b7a5a339173e6c3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "4770238f9c2fe9ab24fe74eee51b49564a9c179d1adff18750360336318d6506",
+      "sourceCommits": [
+        "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66"
+      ],
+      "sourceTree": "96c884d022ce2917144579ee3c129a480942400d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 244,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "f70d55688a093258e6e4bf85d58b8557c072eea1b54d6e09433ffea6a8fc7673",
+      "sourceCommits": [
+        "9b81f779b9cc98cdd721c97f060f9f8cafa43ceb"
+      ],
+      "sourceTree": "970d79e1a0a337e627ab651f8f16e162e366f0b5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "7fb898ac4e41b70b95c4813c9af2b0699ce9a274a53500af5409dde95c4b34da",
+      "sourceCommits": [
+        "a23be4699a956fdaac390af03c5fbbc1679f7481"
+      ],
+      "sourceTree": "982f28924a8fb6aceacc9d39525a7e64bd5b4331",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "b9715005c29fade2a17b3e764c1e37d2af3993287f6bd1fb0cdda965a492b535",
+      "sourceCommits": [
+        "b3809b01f32d7e57fa0e3fe21c39d9916e18260c"
+      ],
+      "sourceTree": "98c6e48a6a94462b39a56a0fdcb06185873dd397",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "d911a3e06bf754f4a1cded0474601321aed239f8bd3d0b83aaa8f57c0df75e6a",
+      "sourceCommits": [
+        "b52fe7541c9f9a24fb1104b5f5e38a6dbb2d60a1"
+      ],
+      "sourceTree": "98cebafa9c1a2b95ee411932a788f4129391accd",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "7879688c10ec0019ea2ddd7ab23b07e12ed2fe93d7f84cb1743067e87fd02da2",
+      "sourceCommits": [
+        "e827b8a6cd2cb9a94cb1cdb95d2cedf15dd49e60"
+      ],
+      "sourceTree": "999b7cb06c777c95b7ae73efe6aca7baf731ae8d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "835edb42a1b1d773806a1fa8f8eef6091bd398db9512a1caff28eb34b82a67a0",
+      "sourceCommits": [
+        "709535a6085c63fe1d26aebc3414ea2281529b3b"
+      ],
+      "sourceTree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "4660a454380e5f0087aa9d18212cc7b692a5314dfff7f7081eecdda7e16ceec2",
+      "sourceCommits": [
+        "f1be75d6ad474f4841acef0388b3c5f47dc06119"
+      ],
+      "sourceTree": "9b5e0a2459a4e1941087b609114063bd18b1aae8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 279,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 58
+      },
+      "restoredFilesFingerprint": "2df6434b7ab4ea5c9f96c67430d43b6842e37f6eba4c5ac6f88a04035b6212fb",
+      "sourceCommits": [
+        "8bb9add08cfde759541b3b35a5a2f9ad499654ed"
+      ],
+      "sourceTree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "50ee0bd46a8b352563ba5428bf0d1de6094b133faf813dfa79a2525690b54285",
+      "sourceCommits": [
+        "30f2226a11e58b114692d6990323f26af5646e58"
+      ],
+      "sourceTree": "9bffc72b7581fca0e94b6e47ad6e42660744097b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "4cd5600150254b4fd8cc883d67e3bbe131c6bcf3610533a7f4b4358eec4636b5",
+      "sourceCommits": [
+        "5258bb040f2780638a76c26b0a61bb9437cdaab5"
+      ],
+      "sourceTree": "9c2893d3f24f2b2325e180f335f9d84d1bee3033",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "4660a454380e5f0087aa9d18212cc7b692a5314dfff7f7081eecdda7e16ceec2",
+      "sourceCommits": [
+        "fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab"
+      ],
+      "sourceTree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 246,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "7b88eabc0fa3611037ae8ce07ee045de5b992f37ff259e4f210d554dd377a02e",
+      "sourceCommits": [
+        "7ab99221ecdafe4694b09b12242e8fbcf133c0c0"
+      ],
+      "sourceTree": "9e1ddf7620be9a1027c5027389309f54b9bf5679",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "16738567fa661724bea97c4acffdd1796f4ef796e8d34b1b83eee6ef6550f9fe",
+      "sourceCommits": [
+        "1197f9cd917422bb6e43824cd738b60e3ca4358c"
+      ],
+      "sourceTree": "9e33b3ea18b991a5bc72b0250f1dcd6ac4b6e29c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 196,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "86eff9d436605ce72db529e1961189f8f86fd611749dc7d30c580b4075003be4",
+      "sourceCommits": [
+        "be7f9ca9af9d2f73ab4833a4ef884e71b798eb79"
+      ],
+      "sourceTree": "9f1c67807e48bd5c88742a416646eb900cac68ff",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 233,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "a90d15918e827ac03427646736a8583d1eed09b4f3fd9601bfb27be1e9f6839c",
+      "sourceCommits": [
+        "1053935294dfb5dd9ddfb38c1213f53fad8685e9"
+      ],
+      "sourceTree": "9fb78b53eab4d1ca9d6711ba39225335d0ee88d5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 23,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "c8de3e950be218f04f036b891fa15282b8473cd59b1a17f0f921b638220d1f3b",
+      "sourceCommits": [
+        "aae16c85d246c6031f53332fbc36cfb0586ca43f"
+      ],
+      "sourceTree": "a0aff4985ea1a0123a52a11c6a766b9e5fcdc7aa",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 68,
+        "reconstruction": 23
+      },
+      "restoredFilesFingerprint": "5b9a23f12576632a8b5c7cf8925b5cfd5746aac0f290205bf53a6873a58b4d84",
+      "sourceCommits": [
+        "70d0d690df45877698cb094405e25be00a8139fd"
+      ],
+      "sourceTree": "a0c62711cdc97b4bfe91652c5977a1f33260875d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 152,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "7bc3d716c172b6541c8b186d4fcd5105afd39bebeac38ee74cbf6f502e4099c2",
+      "sourceCommits": [
+        "e22a3a89543878620178ba23c15e0f6d2ac509df"
+      ],
+      "sourceTree": "a3577b481a6de7135dd1fa8bbca4252f3b940a39",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "compatibilityRepair": 11,
+        "exactOriginal": 22,
+        "reconstruction": 11
+      },
+      "restoredFilesFingerprint": "4dd9688483ab8e3fc0b8890ed80178454b335e16a0520d0c4be8fac4141e53b5",
+      "sourceCommits": [
+        "b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae"
+      ],
+      "sourceTree": "a52f6a83298998702d2b76e5a959df9cc2ae4906",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 202,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "22bc6caca4e3dc259917b9ae2bd79fe831800c150af5bd8c0ec83e1b96577cb4",
+      "sourceCommits": [
+        "eae1adecf2efe90f29c1b9b4a136c82de041a796"
+      ],
+      "sourceTree": "a55ed08bb2f89439ff567f2b73f7dfa25be4fa22",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "24f64ed59e58b2d1d5ccf27e6e5e1b978a6d5b0142aedd61c0e9e3f92507b799",
+      "sourceCommits": [
+        "00b9212a0944c4032bebc65310406734d3c678a3"
+      ],
+      "sourceTree": "a5f607f8327d796bd539a94d46cc876d64ae2289",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "98ffeb2c95e83335618a6a408efa0492a73b26e9c9c414f5e999ac5ca39586a4",
+      "sourceCommits": [
+        "5a308a75c3d6e05d1282aad4f8aa9d2c73476d56"
+      ],
+      "sourceTree": "a640c99d8e8e9f8c44b248d2538a88757189d4fb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 217,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "cbfa44197093139315f81d57f0468d28d7ec483f64f6b3e5cef54d21d376035c",
+      "sourceCommits": [
+        "f2221242fa026c5f1275a53376da6ed0d5e07b5c"
+      ],
+      "sourceTree": "a641d92d4cfbd12a33c205bbf47492a65e64b51f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 171,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "437fa9835094dbb9c654cbcd1ec873116e2f4d6bf8bdcef02c022f2dac28d8cf",
+      "sourceCommits": [
+        "6fade625f65ffb1b52a73605014175780e5f50bb"
+      ],
+      "sourceTree": "a7acfbeb34266c80c57ac23334f8c7a814c9411b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 246,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "213375b23a877d22287797410dde250b115c06e568507d42fc17b22a0d606ce7",
+      "sourceCommits": [
+        "f558ee820b14da9543b9cb1a61da694e1b9422ad"
+      ],
+      "sourceTree": "a81291cfb57cbd6779f7dce349f4a792d431bc1d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 165,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "a46f1d330699a442922b0b63da2cc24ac3c93ee1db9573e7cf42eb24582be561",
+      "sourceCommits": [
+        "998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0"
+      ],
+      "sourceTree": "a8376f1433b73cf3ae6c3282b4c314b50c61fdc3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 283,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "c443c5d34c12c40252be9fb01213c7904e66f1641f054cc31eaf23b793620743",
+      "sourceCommits": [
+        "779fb803ff021de5e74ed3b24d7c31a9adcaa236"
+      ],
+      "sourceTree": "a9d54b7182ba8f32a34de4760d53601cd25f8b30",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 232,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 61
+      },
+      "restoredFilesFingerprint": "7b3624992155f9195ddfc178b38c0c4abbc042fbde4a48843c4d1cd6a3d0ea47",
+      "sourceCommits": [
+        "a9534481e30ae59be3bee52c6ff23aaba2dbae48"
+      ],
+      "sourceTree": "a9f6f99b6673e05c472f29ce72026ac08e985002",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "404ac0cce362abab7c08a6d1b145790ec98d9f55ff94873f77e95f2798140a8a",
+      "sourceCommits": [
+        "b18ba43aca75315aeee3f07bd2ca269a0060d1ce"
+      ],
+      "sourceTree": "a9fddb0a7913b5553fcab83c5f8d6c3243a6d13a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 205,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 50,
+        "reconstruction": 29
+      },
+      "restoredFilesFingerprint": "f314b9ce9ea36ceca2a66ca6e3192d45f99f44245e008e87d86a1ecf1399070a",
+      "sourceCommits": [
+        "21ebd6611c521acf175ba29ab5247e6d221a5c87"
+      ],
+      "sourceTree": "ab33e8cc26da48da461ff44786a1816ca1029411",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "2e249992f7d8ba778cf3f8e90783eec7c7d27ced6eade011b1bf56b4b6fe59ba",
+      "sourceCommits": [
+        "cf4715fa2d6daa0658443374e35b9890a81ac801"
+      ],
+      "sourceTree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 152,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "2a91b46199dcf286bf0f5a900f3d4040fe0e8f3d2556439a13e6559c94e911ab",
+      "sourceCommits": [
+        "b5cb3758b3f864dde7d6baeb57a64b2e4bc2b7a8"
+      ],
+      "sourceTree": "abfc3fe9413f581dfb9029d5e077d14311dbd5f1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 218,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 57,
+        "reconstruction": 51
+      },
+      "restoredFilesFingerprint": "154ad3c2861047cac5efb33d014cbc2f0967ff2b3d3d0137327b5d399d1b9d91",
+      "sourceCommits": [
+        "e398df1047d75ac0b2885d0dcfc03ad4c35990c2"
+      ],
+      "sourceTree": "ac9371c8f3adc161deb123b95bd58928645c3aa8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "fe71e22f426c83d5a78bfe889f171b6710a81c0cd5cbafc40741d524dc7e3446",
+      "sourceCommits": [
+        "3338d79823e8d37ed1d42d5843ca9b214bfe9967"
+      ],
+      "sourceTree": "aca07a69d637606295c32d205f521d4a51195850",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 65,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "00e346487510c83a2ec3d30986b578f09f06f9bf8e6b5e4113895f385813ff6d",
+      "sourceCommits": [
+        "4c0be0149008787ff79b4479307f1945b28c9507"
+      ],
+      "sourceTree": "ad96fe398c11d2e0fb656210dab39bddd50e4f3c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 224,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 52
+      },
+      "restoredFilesFingerprint": "48877aacb6e79dd9300269ca9c90529a7cc5c022c69ce9134e7c02444909d52c",
+      "sourceCommits": [
+        "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+      ],
+      "sourceTree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 68,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "c08b0059b32898529a586b8a2359d4a211ab0f59f4983fc144c4b2e81a8b33b5",
+      "sourceCommits": [
+        "ddb05027fb3e831cbef7f16f1dea58f519c1756c"
+      ],
+      "sourceTree": "ae2e73fdd7400feff1b9c9c90c5b8205c5356378",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 156,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "6a8d2fb8105b8f3dc62fdaa03a04c088cb56cdbe74dfb114010b3da7ac7c36ae",
+      "sourceCommits": [
+        "a328b39e02a666350477447506d4f42e4cfab11b"
+      ],
+      "sourceTree": "aecd3c74a9e0c9bcc57ac4ac07b5c0a19c3726e8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "721e229cd7a385339413e5410fc6689dec4813beed7de48b025f2d0bd63a2e6c",
+      "sourceCommits": [
+        "e1131adb2c47336c7dbe62dee0246216feb554eb"
+      ],
+      "sourceTree": "aede0915f7445e7c4b566142fdf53a8a9423ceec",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 285,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "e7e0dee3a0388e5cc6363367b7fa4537a9c8121c57018d10352096a273f74b29",
+      "sourceCommits": [
+        "ebf0a64b9759e8a74655159986b8dfb1e85a3686"
+      ],
+      "sourceTree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 156,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "2ac2180d1c96ed3cd62633b96416b0421d9b46cb02c7b0788b7ffe6c72a44d2f",
+      "sourceCommits": [
+        "b7347069aae3d596883e4e962683945b868850c4"
+      ],
+      "sourceTree": "b0699a4995b82cd38d062d85b683b8689fa976c3",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 23,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "9fe3ae12da868d4befa7f050c3589600643499d88091dece651a73a2b866b52d",
+      "sourceCommits": [
+        "3e4cc2a9d557307a635f980f58d11e04c61b2b8d"
+      ],
+      "sourceTree": "b0d80f953f9322938deb0ed5bb1b50d8b9e4f122",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "66f83b39f6a6b782d087b08e8fc7b9dc804c769342f10c232846ca0a48b86585",
+      "sourceCommits": [
+        "b7f23b6f889dc583e963167964a9a5df19d594a8"
+      ],
+      "sourceTree": "b34e2ff0d606e42accb0edd35feb6c9631fe4710",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 151,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "4c7a24c121ebacb7bade7d2fd62f38475ad67e33c9cc7297d44dc4fb735e3f67",
+      "sourceCommits": [
+        "a2af8392c91594acefcd0d812e2d86f354d93746"
+      ],
+      "sourceTree": "b39f6a503f850f98021ba0d235a8f3af45705f08",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 207,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "3cbd73de42a1455ee0b3fc07ce81a412c2ae86caf8e1c14c040451c8494be07f",
+      "sourceCommits": [
+        "d732bf46e0b8a059330fdcbf4619ee7caf1c8381"
+      ],
+      "sourceTree": "b3a8b6c9d560b800f34b7c0b4961e10344a42e8e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "799c854f1878842c0866d0e3f3607a88a1071d9433840df84c3e0cd6c1c9a333",
+      "sourceCommits": [
+        "cc1597bad4b840bfcc2ad4663b410495fae038c1"
+      ],
+      "sourceTree": "b3d39756210c65ee5cfada2f6a4d361f772ff23a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "9e7b80942bd22bb9694dcac9a7ded4c3aad77c8fbd3bc543a920cfc1bd23e9a6",
+      "sourceCommits": [
+        "68fe4c08333803ebf226991b79b2e4421c989614"
+      ],
+      "sourceTree": "b58cf2ebd372f8b1b9d13cff3b91655b509ce91d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 249,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "4bf525765a26a57e361ef7227e4dc32a7ebc1e14352539e563efb2a66818d35b",
+      "sourceCommits": [
+        "73a1cc82875e17a5e6fa5ec2325cb764dd967462"
+      ],
+      "sourceTree": "b7b7093e61404d5bc716707d7b1d0723a2eb259e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "cd8dc1755aa16bf9a32542bcdee832c428cf26481cc3434ce88f73a3700c4fe7",
+      "sourceCommits": [
+        "20ed81eb0a586b57b5448d09e6d9ae4b6276f402"
+      ],
+      "sourceTree": "b7c6c9ec37996347a8ff0666fcc14d4ab23f420e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "32ac0b973b0c15a92e1ff865d9c8b1d7fefa64e5"
+      ],
+      "sourceTree": "b8665c2478a2dad6259d7fb14f30f9f3f302c738",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "fcc80694216633f29e08100dad336bdc0ca30a541cc7239be7bf9a36e43aa410",
+      "sourceCommits": [
+        "fd507cdac42337d763550ffe41334a39a1d0d954"
+      ],
+      "sourceTree": "bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "bffc6c3ea15c81995ded62880202a5a950647f4e7d4b613126f336e9c9176dcf",
+      "sourceCommits": [
+        "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2"
+      ],
+      "sourceTree": "baff63e2bc59ff86e6dd34096fbcdabf554a3a12",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "665f71cbee6a1e5cd5c3bc585f631c9da7c31f3f73a6594bc60500286c811f07",
+      "sourceCommits": [
+        "9fa206079a5750c5b43ac0168f3e48c9e0d738aa"
+      ],
+      "sourceTree": "bd5f00c7d9f98c783adaf855772e1c9611b56a39",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 217,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "ff0484a9f3939de3ce078e76782bc6fe33dfe5bb8bae02022127c7803bcc0fc7",
+      "sourceCommits": [
+        "be5aff4edf7f0f6ee483933390aa53c000f00d31"
+      ],
+      "sourceTree": "bdfcf1de7138af37cb7ab2062a3900bab6d8c8ec",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "c9792470baa758c78f4dfbeb2db198b5cc97e4c74e49e75a3c4de7071b4a2279",
+      "sourceCommits": [
+        "84017c9110a182dc9c25eca52576ff97f9a4b76c"
+      ],
+      "sourceTree": "be0c1f9744ef0cb5c276e0ee32cfe8790ae3e504",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "635def3350f4c3e20c3217363a478140ebf7e1d9797981877198f17697595c59",
+      "sourceCommits": [
+        "251c727c2a6957bcaca2335e2632bf2a60a772d3"
+      ],
+      "sourceTree": "be145d0bc5df25b8abc3418577089d2591788b61",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 213,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "99a255a1c101c3ecaeb109eb2e3733871da0ba91451940a7e232fdc5e6ec80ad",
+      "sourceCommits": [
+        "6ab63792d65354556cd2f0cd5e14ee999d80eadc"
+      ],
+      "sourceTree": "bf568de6503df91dac56f8bd77d16cddf88ff37d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 210,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 23,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "a0ea6cb85f908a88001c8568b0fbc2531547c4543d7584d101c31ae68b8c634f",
+      "sourceCommits": [
+        "da13b28d2062a5727d5856e3f94cf5aa2d653194"
+      ],
+      "sourceTree": "bfccfc73583df90ab1ee7b207b1ea934b6dfae26",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "20a3b0897a91effbda256e6f0d86e594feb4fc33612d6d9628ab910eff1e75bf",
+      "sourceCommits": [
+        "169b592c32924654d830fbf0571e86c5de9dc692"
+      ],
+      "sourceTree": "c0489a7f3585630b791c5619ae399cffdb83c169",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 190,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "b3f8e9ac20ba31d1b5768f27c0bb28d71060500c3db9e235173efb24defebac2",
+      "sourceCommits": [
+        "b24663bd7e3101a4043d4c79074f2897dcf2780c"
+      ],
+      "sourceTree": "c0b4a99062a2c3560284426447c546555e65443a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 214,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 54,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "8ed01048a3804a805e7ec88bf778b85ee43e7a03a9a26e2fc9edcecd2ba0d645",
+      "sourceCommits": [
+        "863e7d1337a795f3ceeb5c8228ec5e7ab3410f79"
+      ],
+      "sourceTree": "c14f94224e83bd52714a27a0e31fa63ae13b3b14",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "6deedb88b269522753cab1e4c7900128ba16c72225dcf586a0c41f92c4548df8",
+      "sourceCommits": [
+        "eef1a4ed9e2148f334fc0da05e924b556e2f355e"
+      ],
+      "sourceTree": "c1db9a17f125fb71d00903dd82f0e3b0c819bade",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "bfbbb8ef3c5a7eaf80693f175902e18da5ac8782a0306ebc61d23731cac726ff",
+      "sourceCommits": [
+        "7555be4552788be476084397738baf36ca8cac95"
+      ],
+      "sourceTree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "9b77531dd6440beb36e776a1defa198ee73fc8e34aeab06027aa12f72d4f0693",
+      "sourceCommits": [
+        "9968ca5001e0a5844399ae8c2a2134c9798ce039"
+      ],
+      "sourceTree": "c2201969faef0878f4dcbaa76bea32a988340191",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "420c8505712664c4d0ad6dd257380b79e56d43e79a7bca66b0c7cdaa4268ffeb",
+      "sourceCommits": [
+        "be9374978f350769c00621628815596901a63761"
+      ],
+      "sourceTree": "c22fb7b5605b63fa8069d67c9f21de8f2c5e83e6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 168,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 24
+      },
+      "restoredFilesFingerprint": "d7a857a150e74d0fd998cc4d3c858fddf1a3c624044387b6c0b76bc9e66a5e96",
+      "sourceCommits": [
+        "c79d046b24474a80fd55e3e55e912c3bc91d667a"
+      ],
+      "sourceTree": "c2c81b8ae8f989455e09b2ff25913e646737d4fc",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "e3360a070c8dc3b3cd5b0cceb61a20487f52442548943f0fd9af00bad7c226d5",
+      "sourceCommits": [
+        "9b71b07e7cecb4f629bb61b2b2ca08737a9fc52e"
+      ],
+      "sourceTree": "c2d25aea2e47f049d61f8fd55df0d09ad8299225",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 153,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "fcbcab63d05a28763650bc435d6cc36f10e3b45967a26ac1c64208075bd281a2",
+      "sourceCommits": [
+        "42b8f0f2b45c2a149af67102398d296c4cd7fae7"
+      ],
+      "sourceTree": "c4473e058fb22980d6c87fca2a966bcaebce5eb5",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "4660a454380e5f0087aa9d18212cc7b692a5314dfff7f7081eecdda7e16ceec2",
+      "sourceCommits": [
+        "fde9faf210ad1f0ef12b1b09a98b163a7efa6672"
+      ],
+      "sourceTree": "c525dc0cee9323bb5e60ae83531fb312cceb2460",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 232,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "9007f57aceeb16157a70eddbf72a089d525edeecf132547c7b61cc31a8e8d59c",
+      "sourceCommits": [
+        "2cb5d7432de904c89cb7868b487c00f6cca5b283"
+      ],
+      "sourceTree": "c57ee901e77b1288117b56605bffeda22e2746c4",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 163,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "d5e64bdb6c022876c4cb6e2559d2cfecb96ef3f9a76bc34669cb32eda4f10964",
+      "sourceCommits": [
+        "7e36b9a19871bbfd4f14d42c6bf42bdd7aa16502"
+      ],
+      "sourceTree": "c6389c1c3fff5ddf29ed27909ea50695673c70c6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "799c854f1878842c0866d0e3f3607a88a1071d9433840df84c3e0cd6c1c9a333",
+      "sourceCommits": [
+        "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9"
+      ],
+      "sourceTree": "c65f66a9510d49049e1ffc6e40d569c95e013ed6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "f3ee0e9c48b82e7a226802fec366585271e1c3476fe4881c4ed09159093dd9fb",
+      "sourceCommits": [
+        "50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb"
+      ],
+      "sourceTree": "c6b7e935bed34fa316636826d7e283521aa5b1df",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "ee729713c3e9fbae54ad27294f94955ec60caee3f2137a62d6a067b6127e2b03",
+      "sourceCommits": [
+        "856d7792e59d09f1e9cff08d9abb81052a47c7a3"
+      ],
+      "sourceTree": "c74b0751b7d4a1d6f83af069b05e2888e1c1ff4a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 153,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 35,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "fcbcab63d05a28763650bc435d6cc36f10e3b45967a26ac1c64208075bd281a2",
+      "sourceCommits": [
+        "edfb95cb76b2db3794277d726b58dc7d6ee301d1"
+      ],
+      "sourceTree": "c7c84b1e957f56fb4c962f4800789be5c9d3b4f7",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "63b193d0b06e7cbf603977fee1e5af6ab0f91cc7bac56bcde6528b3b45af14cd",
+      "sourceCommits": [
+        "70853de2b2731491f046ef03d3cf1d8268d8ef4c"
+      ],
+      "sourceTree": "c8fe2b11c0260b6b687a071d4027442e960ead51",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "c6309639d704310884c50c43c38fb4d99408b431e6c49a45298f0e654908a1bc",
+      "sourceCommits": [
+        "627b788d90ebebaab4e4da3a6300b802b10ce4bf"
+      ],
+      "sourceTree": "ca5a2edc1229cea216959feed80feb195c6feaa6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 158,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "2e414585dced40d91d005989bcdee49d0e3cc961e58cb5cb690abc9227745f6c",
+      "sourceCommits": [
+        "bc84e08dccf3b1f823d058411611908c9cd5a6b0"
+      ],
+      "sourceTree": "caaf8160198fa62439883758671443ce2852908a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "c76c655ba33f0605cb48cfb5bc2056b9c41751b6288092374e907d043eb48d27",
+      "sourceCommits": [
+        "8ccff81bf2bb22a0d526742eaef570653e47e63c"
+      ],
+      "sourceTree": "cc4d10d933b41fa763a878dc4f71ad01e61c31db",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 197,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "2ff377556e9e9231571ae91f09ef2bc5f307ac0b04c07df480fed2d5c0536f21",
+      "sourceCommits": [
+        "161a04cd7a7b4e57e4170b925f32dfd5d14ee66c"
+      ],
+      "sourceTree": "cf6f5cc63fb179d40f28530b0611aa950e60353a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 155,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 17
+      },
+      "restoredFilesFingerprint": "382ab58257f87260fdebe809baefcae7803ca5456982f6663fb2d0601b291508",
+      "sourceCommits": [
+        "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073"
+      ],
+      "sourceTree": "cfa5daf3063627fe1245d248937884f6833320f2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 248,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "66766304a01ab68671a4413819dcedfbd02b90ba36c11942d9374b3bbbcfd880",
+      "sourceCommits": [
+        "e43a91c0533f3ded4b560e92b0d735fc3613e8bf"
+      ],
+      "sourceTree": "d0f62efbb7e00916d3de43f78ff56f9722394488",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 208,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "349d648f809a2ec55eda7d718f3ef8c794ea7598e1d9b0ddd34e2af86e9f5223",
+      "sourceCommits": [
+        "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d"
+      ],
+      "sourceTree": "d213f40bfb8131815a3073f9827cb1f5b1a90e41",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "40824a3e9c94326f3b0b5a11f93ac1026a67df4923e7e86ff90da26e4590b853",
+      "sourceCommits": [
+        "deef71e6d465cfb67a5c3b6d52e108bf22793f84"
+      ],
+      "sourceTree": "d2b4cfe63124cf14e643d9c449037278a88d8d9c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "18c854f6af5e0dfdb98482e26ef9834529301bf39bb55cb7afbeb384bf070ceb",
+      "sourceCommits": [
+        "86dedc767b8d8012c8b20121feb74a0d4bf810f4"
+      ],
+      "sourceTree": "d2ea65d407e070e7db63f43ae052c91216649308",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 151,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "21ee5f92ec535cb34053ff47a7bcb4bae8151c35a9ad1da9af22f47181304696",
+      "sourceCommits": [
+        "4a877c5583d007e2a6ca5be2fc86db9cd6c3a6f8"
+      ],
+      "sourceTree": "d32509080b0ef4ddf0b6bdca084c288cdc35a2c0",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "00fe292b81052d78077b5d9b8bbbd1ca7ad3354e6fcce58714a1994cfb20ebd6",
+      "sourceCommits": [
+        "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5"
+      ],
+      "sourceTree": "d3d45ec630cb791b12e4b50e7e998a02057a2bbd",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "1a3664c6aa7596d5b8467e0ebdb5b145d4c8238f"
+      ],
+      "sourceTree": "d3db073245dbf5c252d3afc1cf173196f4c46cc2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "944b37d8032837e52ddfe1cc25a4028b6e29a6b19d9855c40416410e8c05ca10",
+      "sourceCommits": [
+        "122754e530d7bf0814f7a2edad57aa9981ad6429",
+        "21c04c61c564bb91953b90218c6cf4bed54417a9"
+      ],
+      "sourceTree": "d46010557a52f0891c2d2b87c78ea18166e67a71",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 206,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "66f83b39f6a6b782d087b08e8fc7b9dc804c769342f10c232846ca0a48b86585",
+      "sourceCommits": [
+        "feb27f5300dab7878fbdbc40df2126b0d1e8e4ff"
+      ],
+      "sourceTree": "d59f9f9105d89590a7b27ffc74f7a749f3f18dd1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 151,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "21ee5f92ec535cb34053ff47a7bcb4bae8151c35a9ad1da9af22f47181304696",
+      "sourceCommits": [
+        "8771a58cabd47a1c713e4a380b73529c50104e56"
+      ],
+      "sourceTree": "d6acd13e01d2a9ecee8899f530afe8fe37532716",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 72,
+        "reconstruction": 19
+      },
+      "restoredFilesFingerprint": "042e0a32b7ede0c69940216138585c2fdeb5f4642617da2c6c770534647a9b4f",
+      "sourceCommits": [
+        "38f5497d13d8ebc043e07ded0de5f22faf981914"
+      ],
+      "sourceTree": "d85b2030829954097207e98d96d251f71653ee96",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "57998115fcc7c09b612773e8cc1acee64a4da3fd92af408fe11854dc382a66fd",
+      "sourceCommits": [
+        "698123926ff4ce82c00fb905c410eb5136d1d3dd"
+      ],
+      "sourceTree": "d8c9a4a2849807d85e2b71a5e09fa350faee3073",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 186,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "3466eab513c04f90b8539ce75b838412d1cfeea2deb00634c7ea666e6ad91935",
+      "sourceCommits": [
+        "8d5eb7f18f89ff70ea633f463a57b72f46aaf2e4"
+      ],
+      "sourceTree": "d984bb2a019952e30603ea17d4aeda85adfdaedb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 171,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "c79bc683f0b817495bc40f72197dc345fb05c2b2bd39d827d561e5a06f9e1c65",
+      "sourceCommits": [
+        "d23993e897e48d26de66ca6fc0f10226be4ef187"
+      ],
+      "sourceTree": "da57f1c235b2cb151c20dc504313013ada830f8d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 231,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "34cd07e0bec3d8d81198228a73bb13cc1685e5d095a11f5fb519fc21ce4a9674",
+      "sourceCommits": [
+        "8259ac8f3f95ad87cab0c0970e5c71974480473e"
+      ],
+      "sourceTree": "da8d4ff1c5c10c6e21131dab10913215eff77024",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 158,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 28
+      },
+      "restoredFilesFingerprint": "746498afb8892d83f465ea6630c3c76c61fd5c25f3492041b29eb0370a0e42aa",
+      "sourceCommits": [
+        "35e6d471d572775548df5865f08560621c823b35"
+      ],
+      "sourceTree": "dbf438aeaf0b2dc6ab86e3623240131b97ab98b2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "compatibilityRepair": 11,
+        "exactOriginal": 22,
+        "reconstruction": 11
+      },
+      "restoredFilesFingerprint": "6e9533789314a17902c072169fd9805d796a29dbeb7180eadb5d6a24a59b0237",
+      "sourceCommits": [
+        "afdd8069397059b5ed17285c9338603534ace659"
+      ],
+      "sourceTree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 200,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 50,
+        "reconstruction": 29
+      },
+      "restoredFilesFingerprint": "d5f5343d3fefd92d1a0edbdfb072b5f0fc37e58c6a461e0ad1d9da5e517672fb",
+      "sourceCommits": [
+        "026e63de89a691376462db46297f8564012c024c"
+      ],
+      "sourceTree": "dd5aeb5dbca956517f1f91f718b6f6c9a29673e8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 165,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "1cbf890a2e137036df940a59585d84d47acfa9491d733129fde6d174d45e4973",
+      "sourceCommits": [
+        "ae187ade45027e4a0786c4ba843758d32f79af5d"
+      ],
+      "sourceTree": "de23b83456999cbf363e72398199771094e9a5b1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 231,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "a240a3d5a04313869c96997d964f5f0e60077054934ebbc753d15c6d481e76fb",
+      "sourceCommits": [
+        "d3a5fad2738ec66a752c41c02d0dab0bfb24f508"
+      ],
+      "sourceTree": "de9e3b066277e5db8e01074a06e43a0c28ddb518",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 241,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 57
+      },
+      "restoredFilesFingerprint": "50a43f90c210a654dc3146dd8c51bf832df117bf9dfe76cdde8f073c11dd48c4",
+      "sourceCommits": [
+        "f1abaea416c29da82f8fbc2aa690cc04664beb5b"
+      ],
+      "sourceTree": "def284b69a4aacee2efb0be1ac2a5d8b11d19407",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "6b9fc1ebbd2f6399e330d3bf2aa23cb2959e6399e937d013566e714def2c0e6c",
+      "sourceCommits": [
+        "8e8064fc1aecdee89fe581c3e6f46876859082bf"
+      ],
+      "sourceTree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "af08d112e78744be7afc702b7cb8cbc38dd0cc1f57a1d61ba89567a75123cef2",
+      "sourceCommits": [
+        "c440cf6f5b8fa478cbbd7476fb235dc7ed4f6c85"
+      ],
+      "sourceTree": "e004432950bef0c791a501ce0f2b2daace7a3260",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 171,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "7989cc947a28e8615168e6f715425a944bc36adb70fab98590d40f7fa4a13953",
+      "sourceCommits": [
+        "adeb6cc5fe0091ac2c3de13b923464396bbc6b3c"
+      ],
+      "sourceTree": "e053ae64c8a2c9aad4a16a486bbcfebffdad196f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 207,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "f851c73c8b7247743bc0fd114d57ae7da12909acfbd3e7d2b77940728b34738a",
+      "sourceCommits": [
+        "5a89254fdcbf8d3ea1360f1be6bf6daf1619a6cf"
+      ],
+      "sourceTree": "e07b12a52f8a324468a394ad01688f196f4e9361",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "7fe8f401c800c647a6498da620cf50de0cc714d4f125482fcb46c9cb2ae565da",
+      "sourceCommits": [
+        "c4d43a9f8ddd1980f4b39a659d63c68c6a2de31c"
+      ],
+      "sourceTree": "e0d8a77808b5620bac1be16bea71d51b2f4475d1",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 165,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "67b17e76aae14a149d8a235c53fca02abf662f9eca98c56cd093da86087cc2d5",
+      "sourceCommits": [
+        "c049ac73064442354af6224d06fe1c8b847bb8d9"
+      ],
+      "sourceTree": "e0dc50b172ed879ddbb50d8042f795f59b6c4f9b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 157,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 36,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "0d2bb009dce6eb9c02d1c931a1086c4f14faaa37997a1707bcef9ca3bd387c03",
+      "sourceCommits": [
+        "e9c6660f050aabfb03ff0e745d451524d2dafd17"
+      ],
+      "sourceTree": "e111186df15b68c775b532815ac1672e0a10c9d6",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 189,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "40e4bcaf65ead72802cf8ccca722e965e30284c3e0fd5373e52b93fc6e6af2f9",
+      "sourceCommits": [
+        "2f1b611df0ace34f501a30acdf50c0c14282cf0c"
+      ],
+      "sourceTree": "e1201bce394b5693973d56fdb6247d49abe2c54d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "3a65a89dcfe6de818b034cbdb4d2bb5144f8aef152d1527eeac38089ef4598c1",
+      "sourceCommits": [
+        "f5199306c188d9a088fe5c0ee6b14f75a269e433"
+      ],
+      "sourceTree": "e26e4ffcaa4411741a565f373b59ac4dfa8e8b84",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 249,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "4469807083539fc8cf7e6ec126e571f7b14226355aefc1bddbdad9aa2b42de75",
+      "sourceCommits": [
+        "6bf599c01d6f92fa9809dfb753ac7a42dc85a2b9"
+      ],
+      "sourceTree": "e2e5b8fe893865e14a6034c2d58a17f9210a64df",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "bf78aeeee6cdf44d1ca1a119b1a9ef999fafabb89142e40eda4389d8ab7535c9",
+      "sourceCommits": [
+        "17760db4ce0810e9d1f145e916f1ba78988c7149"
+      ],
+      "sourceTree": "e32fb6d1f416bc264911c953505ace448054db47",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 68,
+        "reconstruction": 23
+      },
+      "restoredFilesFingerprint": "9912334faea48f0e8c0a0f95411ea6ca3835b9358ea011c83ab9c0a1555f859a",
+      "sourceCommits": [
+        "3858af6ada96f937e75eadc42785b9b17d586caf"
+      ],
+      "sourceTree": "e40f34a04612db6dcfd880e0b99e22690d767223",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 193,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "fcd1b8b14ffa6848774eeee4944ca0a9530b46ef92de93a81012f885e704da50",
+      "sourceCommits": [
+        "2c626dc3beea8f1405e7250ab52724bb77d41e86"
+      ],
+      "sourceTree": "e4c69b6564310ebaa622a6333504a0230ad2a445",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 227,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "1b78d47fe14a877e0ee16bc339d70d264916379c9b98842a74ee21856aa0db89",
+      "sourceCommits": [
+        "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9"
+      ],
+      "sourceTree": "e4fa30d9c332bc5c3314260337db543717d4419c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "f26e3d60b941581e9ce323602b7394a5a9119eea"
+      ],
+      "sourceTree": "e59c9129d07ba8fa54bb8e0ba0d4976f5666e71f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 236,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 61
+      },
+      "restoredFilesFingerprint": "2d9d09c1a9c4d118f2c835d9c047043a8719e6f32a6754ce2257782912b6e64d",
+      "sourceCommits": [
+        "eb8276b2fc795f3af5f36370c209db85c1fb818d"
+      ],
+      "sourceTree": "e66dd5c26c055f78ad0f29d2254b2bf6b5202612",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 196,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 58,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "6112e405f933b2e0004dbbb150b3e28b5b4ae52e414065265104529390a385c4",
+      "sourceCommits": [
+        "e5b5c9b397541ae896c999ee1810f0f293cf10fa"
+      ],
+      "sourceTree": "e6cc36891201fe48b0bb25ec4a09d52c2556d04d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 209,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 36
+      },
+      "restoredFilesFingerprint": "aaed4b6cef803005b2f935102e518050d2a1ddf80c8d5fa2de92e41953844ec4",
+      "sourceCommits": [
+        "ee6512a07829eaf651364996d604b043bfcdee8f"
+      ],
+      "sourceTree": "e755d745b4e54f291c487cd494af1a4ab19bd729",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "94027632674bf477652d407a42f6460e5957e0791578fed48f531e78fad861ef",
+      "sourceCommits": [
+        "07af2054088cb3aa440ef5594d2caa0179c420b6"
+      ],
+      "sourceTree": "e7ba7d0616017f0411fc573dd57ea42ec47faf22",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 221,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 54
+      },
+      "restoredFilesFingerprint": "2684f5fcd7f7e40ee5240ca78b7a59a0e1b070fd9f4f3312a7fc769d5a9c2ba0",
+      "sourceCommits": [
+        "2565fadfd42ef79564159dbea40ec7c47c1a57f0"
+      ],
+      "sourceTree": "eae1fe5dfbfd25187a96bf7c957d358d5db121ee",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 233,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 62,
+        "reconstruction": 31
+      },
+      "restoredFilesFingerprint": "2572076a8248324dc9bd1decbcf03a77bb6b1ca65a97882f82af9b5d83551ddc",
+      "sourceCommits": [
+        "40a8022001be0850e6d2ac8a5ec77de9bb0bd45b"
+      ],
+      "sourceTree": "eba367cac27d3690381015910ba302cfe98528cb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "c16eb7a71295a39809c6cd501d0527ba2846c8a5ab061c06d14f4f13dbd9d543",
+      "sourceCommits": [
+        "54fc8adfbe133d3eb4b92bc2a3770b5eafceaeee"
+      ],
+      "sourceTree": "ec5491ce057df1acb04bb77c08bf0850a2b2e811",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 164,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "e5030dcaa6f47d332e03648777107bf0e8973beab83b0646ee6404e9359afa10",
+      "sourceCommits": [
+        "a5c82e1d3bab3e11c81bc92e1d5211ff5fb44e3f"
+      ],
+      "sourceTree": "ed43ce857358a593c159e3237b92953736a18e5e",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "50f18b137cbc90908d6060b6a2b73c957eb59d8472c091b77ff5aba990173a04",
+      "sourceCommits": [
+        "c577f6225739c5e3e1cf90081a92e997eaed65a4"
+      ],
+      "sourceTree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 237,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 53
+      },
+      "restoredFilesFingerprint": "ceddf47bc1c7b28765f02fa13140e8b4227200830eb741d7bb0dc48b8bedc0bf",
+      "sourceCommits": [
+        "83a7cb12ef28dbcf6fe0e26029d01196ef657578"
+      ],
+      "sourceTree": "eee661f5ea4a459713601a367830ed4cc9c6e3ba",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "f78a18dc3626042780db4a97f661ed61c6ca4caf652f70e11d03b56c136f1388",
+      "sourceCommits": [
+        "2d5108ed9acc3eea32b7d19b3450b876183f9b45"
+      ],
+      "sourceTree": "eef536d975e242f821ea3d1c250bf0dd15679e80",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 166,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 37,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "9d0f01ac0637f959a7a45717fd107fe000e359c5a4431c623643ecc9f3f1568c",
+      "sourceCommits": [
+        "0dcab4e4099037c9b5fd233e232ff971c343f0a9"
+      ],
+      "sourceTree": "f05f6e80bb1e1b04030a218dddedd40f5e770d61",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "c0115422e02b668de3a382473a2783371bddf23ea36e03129b27890f0e0ed426",
+      "sourceCommits": [
+        "80920f276d6aff53a2aa0dd237f4a26cb47cb60d"
+      ],
+      "sourceTree": "f258b5917713c6e1eeebb2d39e5595d166d2d819",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 187,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 58,
+        "reconstruction": 34
+      },
+      "restoredFilesFingerprint": "f68448fc91a6514ad7303c1054f131aee6c08556f8f583014a55285ac9510608",
+      "sourceCommits": [
+        "1b30a29102065bad6bd0e3cf4d0d4dd652d856b9"
+      ],
+      "sourceTree": "f35d8bd91e6f4e86f66ed88de4f184256e6aeb05",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 167,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 29,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "88e7aeff2f24baee0e21fd1122d76e5a4a466a4964dda7f9ad3abcb96d75a13e",
+      "sourceCommits": [
+        "27217e5f0cf3f8fba8d63d7ac92a7780d77a51b9"
+      ],
+      "sourceTree": "f39cccef256812a8c2c2b92a838839a64b4d71d2",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 72,
+        "reconstruction": 19
+      },
+      "restoredFilesFingerprint": "61965c350d8ed7637b818ec02f955b789a5f1d2ab09046b26945760599aa104c",
+      "sourceCommits": [
+        "eba063511fd3259ee3f6d6a8a28c48d30295749e"
+      ],
+      "sourceTree": "f5b029351524ee8165774fd610c8eadd08755369",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 234,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 61
+      },
+      "restoredFilesFingerprint": "b40012b1527171784d62327671144e59a3feaee97d1389ddbf87d12173b748bc",
+      "sourceCommits": [
+        "f873badeef24b84b8940982d21a2a9b87545fb30"
+      ],
+      "sourceTree": "f5e5d612f795ff2794cd4bc10a08bf27ba3e1240",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 190,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "e694f88435cd2063fb250d1aa7ab2e175fea28cf483e253a12a85d41fe19e569",
+      "sourceCommits": [
+        "9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d"
+      ],
+      "sourceTree": "f60f92ad5d6a13a1a8e35ed5425b99fd85fc2759",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 281,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 51
+      },
+      "restoredFilesFingerprint": "249c47af5d41970a78abe01c1386accb9fd4c3a6512062727de5f03935609f06",
+      "sourceCommits": [
+        "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f"
+      ],
+      "sourceTree": "f6b583fcab8d7da3b4fa077d1401da8eafeacbde",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 219,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "766c576af33c13928530492fdaf0fe03cb891df3a13ff4913b7fb253334ffd4c",
+      "sourceCommits": [
+        "cb42b1415a317340d83d240b92e65bae631b7dea"
+      ],
+      "sourceTree": "f6eb10b750fb51aca5dca992a2401c3b658b6374",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 203,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "df0cc7814e45b3020d32658511abd9069d317f10a1002376d5f757afe13a9dac",
+      "sourceCommits": [
+        "b544b03385befb58c2f805109ebafecd632cdef0"
+      ],
+      "sourceTree": "f7b0d4341d077c3bb2e45734a580b02feaf53d0f",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 150,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 34,
+        "reconstruction": 26
+      },
+      "restoredFilesFingerprint": "3a65a89dcfe6de818b034cbdb4d2bb5144f8aef152d1527eeac38089ef4598c1",
+      "sourceCommits": [
+        "760907d3a66eb94b295e383d3eddcc1b6ba9f3b9"
+      ],
+      "sourceTree": "f9208f74f5d2418fa73d89b412ad0a95ba121b46",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 277,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 55,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "8b4906cd5a457f96b02f9ef691b80bdbc6cfbaadeb2d3806eaff322407338d43",
+      "sourceCommits": [
+        "152007b28631784d3c5e17f2686eb6ef9ff30e46"
+      ],
+      "sourceTree": "f9b16149815272e9ec71b4a69061479d1979e398",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 243,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 59
+      },
+      "restoredFilesFingerprint": "b897f3f05f888b811e8589c82e6c6386ad01de824a9a11ca4d2f98c2199f1b39",
+      "sourceCommits": [
+        "b20a2bce816b58cae9d510bfdc390aaa2e4d73ec"
+      ],
+      "sourceTree": "fa43f0fed2916f0f7d21a50ec61f1cd20111875c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 190,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 49,
+        "reconstruction": 27
+      },
+      "restoredFilesFingerprint": "cd1529ba4cc83e765f9ee3a900f6f828dc46b6c7af91f54aac64c92d273bca17",
+      "sourceCommits": [
+        "75f3d90ee67e43eca7d4b40afc4ad3132f2bf53e"
+      ],
+      "sourceTree": "fbeaae97577297ddc01bcc179495b233898e4eeb",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 234,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 35
+      },
+      "restoredFilesFingerprint": "a7c1f4dd5c83c795e1d33c46532c3bd9037ac1acc2edb6723e3b1f6a8d2e38cb",
+      "sourceCommits": [
+        "4954fe8532bfca5b22e98de2a528ab128b659ff5"
+      ],
+      "sourceTree": "fc84a2ec513ed3d42f29b2fa122a47d67473197b",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 202,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 27,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "4336e397bd2769da7fe322a613bb941fb9cfb266a157d843c7d6caa16be752e6",
+      "sourceCommits": [
+        "47b73fdfc256aa3499b452af2246450bbfc8da27"
+      ],
+      "sourceTree": "fca38798abb6bbfbac25aea901e5679026b8100c",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 242,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 56,
+        "reconstruction": 55
+      },
+      "restoredFilesFingerprint": "669bc995c32b95a819ca2ff9ad22304b39568819ba37acdfcbc493bd4c5dfae8",
+      "sourceCommits": [
+        "3b0df86767a7483056dd3bfe71d3a19bf6268874"
+      ],
+      "sourceTree": "fd2b561df769eb7cd05a5b24810dc5354c9778ea",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 69,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "ebf8e3414c6a406cdc91a31c464140588a55aba9029b433dbaf8cabf2cbd2071",
+      "sourceCommits": [
+        "2d45bf477dde4ad9f196d3ba6e440dbeea7b4234"
+      ],
+      "sourceTree": "fe44df6a93f886a76fdfecfcdf5b70d9e7ff1749",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 235,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 66,
+        "reconstruction": 25
+      },
+      "restoredFilesFingerprint": "c23c6d07f72fd9da067ecfbf5d7a300c3fc5ba9bfe9701eb7037c4c0451f46b0",
+      "sourceCommits": [
+        "1e91cc7c3b84d79b6442e341453d729bfa4af802"
+      ],
+      "sourceTree": "fe90eeabf06677bad2a53c3faed0a7f4c94cf75a",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 240,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 56
+      },
+      "restoredFilesFingerprint": "981b4eae76f30099d2400100e6aa1d4db48652203ff1859902ce37eca6059d66",
+      "sourceCommits": [
+        "a4960e7ea91fb218d0bf851f241e5159f452465c"
+      ],
+      "sourceTree": "ff80ab3b246021220066449d326d8691046baf80",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 238,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 56,
+        "reconstruction": 61
+      },
+      "restoredFilesFingerprint": "1e7ead1c14301613b393cc05f52bb7f4c06412fba53267b6aae481fe065663cc",
+      "sourceCommits": [
+        "44fe765077f6eb320afd672dd222d0a46c033157"
+      ],
+      "sourceTree": "ffc3a72ea3091dfd3d9853f1d606c9d4f2d278a8",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 209,
+      "methods": {
+        "compatibilityRepair": 3,
+        "exactOriginal": 59,
+        "reconstruction": 37
+      },
+      "restoredFilesFingerprint": "4a7207a0dac139845dfc1f7ea2441037678ef67f9978f38836e28f5bf1e9f8c0",
+      "sourceCommits": [
+        "8998701baa7ee3659346922c4dc2f143d619eeb1"
+      ],
+      "sourceTree": "ffce08d6c82e5416923e74e9e5bba9645909136d",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 193,
+      "methods": {
+        "compatibilityRepair": 1,
+        "exactOriginal": 26,
+        "reconstruction": 22
+      },
+      "restoredFilesFingerprint": "7f188afac354207a75fa10c9fdedf43b2a2a932acdad3944b8ac03452f7bca7d",
+      "sourceCommits": [
+        "3a165015af6c10f22c9951cc65ebf2d2150a89cc"
+      ],
+      "sourceTree": "ffda04a28a833dc10e2831de0d7358270de57a28",
+      "status": "restoration-inputs-complete"
+    },
+    {
+      "fileCount": 226,
+      "methods": {
+        "compatibilityRepair": 2,
+        "exactOriginal": 59,
+        "reconstruction": 33
+      },
+      "restoredFilesFingerprint": "1bb2569c911f83e01338e1357433df28f80828ba575cbd00c59af6e250a31543",
+      "sourceCommits": [
+        "718e735056ffe5daceed5cccccf6da257a4fe314"
+      ],
+      "sourceTree": "ffee761da016546507d64cda072b997f0992a5d9",
+      "status": "restoration-inputs-complete"
+    }
+  ],
+  "schemaVersion": 1,
+  "status": "inputs-complete-builds-pending",
+  "treeCount": 365
+}

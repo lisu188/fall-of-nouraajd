@@ -1,0 +1,2965 @@
+{
+    "schemaVersion": 1,
+    "entries": [
+        {
+            "tree": "02cea0a89aadd0b8c948bb810d30b28524423b2f",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "f4dc52d5b64b5d8255d31f820fc30ed7b4112ef3",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "058462c3d511df0d210565bd8c2ad0cb72ffbfa2",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "bf7e346c561ed955d7fb9b286cddd36e84d121f2",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "089c528a35d35bd8552372f851b19db02097104f",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "0c32f6b216c608b34fe2b33e294c516dfec7bf36",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "874190dae431b570131b0b08561c0900057a6538",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "0d8b368a0e19a66249eef922b6f044b6d7f21e34",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "1084dbc78cb2606f6740c61f03622b360206ce32",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "114681828078c326b72252551abc6b4e46775d26",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "1b2eb449914cdff38292b1449b4608957b349145",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "13ff681576a96cf072f18fc2ee8bceb58443639b",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "2dcbea7ad0f259bec3444db698b8e6a741f35f51",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "15c3c2b9687935f7aa3c9c27734f1bbf2e3bcc12",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a27bfe45e2cfa4b5d96394a6fcba384b98288dc9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "179e05ab5f9ec2385a5a6081d0b6c98e453e5898",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "42d65bb1c334582eb32323a1e0c0e0835a0e340b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "18775f04cc0da5e3d1c3b03749869b145a875f18",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "83f5addfdbc6f59cc91ac0a9fee63e7131b6b7d8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "1a5020cea20c7747a8a85c1d3575d59b6d6cea53",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "eacc2b048f24ef3ac1622e2ddfb6767e75ce0649",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "1a7dd2bea693bb9d637311626d095838cc79870d",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "7e7241ec50535484682d7426658d516e46c22100",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "1d31bb9d73610a9134c7620d527d733866d5afc8",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "423c1927af5a5efbd1367b567b26b9fb02c95ae8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "1e5673b7f5083ab0286c0b402ca0d5716c798468",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "0a3d56f9013ffc2356697596c094d1b53efde28b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "1fc6fbbd1ccf346b3fa3901d422130b5c3e876fc",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "4629d7800785790dff844e811457ef8a91e8e2e2",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "c90b86c5098927c1f123ad050632d9a220aa4604",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "240abec4457a804990815bfa5a3875a3feb8f7e6",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "c3a6974a7408c845cc8086c43d412cd6a83d2d31",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2484bd2bc42338d995b06301f834ca2641fe5d5a",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2783965eb6f1b57470e7cb572d5cedba5637ae56",
+            "path": "config/creatures.json",
+            "source": "creatures-2a062c51b730d52b.json",
+            "sha256": "2a062c51b730d52b1967d2891fba86c20510fe6ccb93561d51b4c93c31b88f5d",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "171ce17f5546805f0dd08bd8ab311ccce7a7bd84",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2934df35394ed0639015903c8b00c0f11d4936cf",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "78f01f818cc3d73e47af8af1b9946653eeb8b6bf",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2a1245a522bb909b35ef4c2c32e1f71c9fafbe94",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "91ab6fa2fbe54702cd2cbcdd5dfa3205924f7a6b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2a4ef143c32d82865d342555a6fbca677b0c3a6c",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "d8f5b95be817631a31ed0fe13ec64730613a56a4",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2cc2f5442ec4a6915b4f0388e23eb0073f2637be",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "396231cf76e089db836e546b915481836d32767f",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "2f5a3fcbbec573e42496f89399f6eab17ab9c9f8",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "1e2efe2b31f4a0c741dc2e6ec8f0df5e97e8ab5b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "31217a2066f3e568d8701155f95e3c79bac7a596",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "5e000dca02a17e179719d99ae93d31687c9d2244",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "31e0f00037b134090226a49fbf00520ee50fd40e",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "d8370b561a096d063db9568eb639c3477a8638f0",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "322a459b5b620ec08ad3770d36fc0e01022c8891",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "075f2684d49ee713f49de0d88aff3a4480ddd6a6",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "3249f0db37df6a537905eec899df90e05e5bd00e",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "fa7f36fa1c27767341e800a8e2833676d04b25b1",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "32d586a507a68334d782f3384afaf9e05998a024",
+            "path": "config/creatures.json",
+            "source": "creatures-77dbb59de5703a49.json",
+            "sha256": "77dbb59de5703a49b13ec8c739db6dcea3b3bf7d053b14198c40a49101dc0aea",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "04e2bc8707bfdffbbff422a64fd5d25b1503f49c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a1102ac053605a68abd7f98eb8b714b5a00ac6ec",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "35a3d321720be5f8bc07e4414d60e52d2c0db737",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "d27f773772f47adafa4a9077b9c9e2b1ab67f091",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "374080417e9775094eb87ff2459dc8cb097f1f11",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "34752b534da5159a391cec2ecfbe681cc38e1db9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "37b6e698843627a524c3a8cb17a5b0ce5168fc8d",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "33122f794dd7589f09b11dc952cd30dd05a0f239",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "39dccf4fe874311456e84985830f374b31f7e4bc",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "c1b8045a931f2712030e918f9af13bee52a69b18",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "3a3959894ad4327a3cf53ae6a7cf3fbc23427748",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "7022f82ba68e4b740e85915b1710dd0502837efe",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "4398768e69eaad569c05f83b0b591ad65d5e9604",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "800026c23e9d51578496bbbc95b8e052dba1d6f8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "43fdf5482a5a9001e145078f75e8d226ce9854aa",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b4855c2e4b2628bb1ba4e9504de4400c4729603c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "46f6130e2cf50eb90c670c44aa73590220b74bb2",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "25a25733afccb1fb4ad76840bb99dcb6e8798252",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "4997f8568f2f4960fca1a019f1f9b28923704d9a",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a38eeef4f17603c79b9b64a88bf87ff36b79d926",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "499f731a145cfb36da06de082a530c2e0e086176",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b4d315b857f8df32b17422f64b381a36f3d90d1d",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "4d6f6f0b81d223de7decd0f1da2042c030ed348e",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "95b01c98de4f4b1e49ec72e367e295720898efeb",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5188a0a2607cfea0b500de4052dafe34e48e5eb0",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "2e3be1ab489eb4d62156adf63296c0be80aced02",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5697c4f4f5351a42e29ec2924ef1e0cdce6840bb",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "8965c542530e1e58bb2917bf8d6b756735f57561",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5a66f2bd1028794eb1b8ac73b3a3e846f9f964a2",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "308cdda7906564428d9d9e2094f2b3f4f64157a6",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "71a3432e36b5649aabdd63c7807a78e9a8a3749a",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5c1e61cf5ec289d3b3fe3f3b7e24d6a3ee77cef5",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5c81e58140bb504b054695985652e93033bda7a5",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "10d313da2d8f48f7ca90baa3655a479a80e66e30",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5d1456cfdabfad51681138ea1c663cea35dee0e0",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "6d8b6688d0808565029e6b96e9a52549e80c19aa",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5dded2cc130ebfac998cf7eb6d23cb82aee748da",
+            "path": "config/creatures.json",
+            "source": "creatures-2a062c51b730d52b.json",
+            "sha256": "2a062c51b730d52b1967d2891fba86c20510fe6ccb93561d51b4c93c31b88f5d",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "da88f7cdce4067cdf6507b85c538b85ec051a8eb",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "5fb3675b948238a5d0d66571a3fe29ea06b17ef1",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "dd491c463722a689dcc62c279d9f595d6c01def6",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "620875cb4254b3c73c14e7793d33671d1a6300b7",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "6606399a97f4fbce716a2cc44b6d0edd55ec4363",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "66eff54a33083c0ea5d52283c4103681adb63508",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "671cbe90708bcf872d8899e52fe22b07ac679478",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "ab6edd08cb0b1dd973093df8e8589d6f54fbbc94",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "67e57a41e807263641e7555c20aa4558b398f083",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "d17093d881d39bad873d61baab7acf703abb23ea",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "6dab62144a7af6173c1874fceba186031ae9b95d",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "643efc345388456f9b92e918b72be1a460d56ae4",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "70662e3228f7a367246745445823cea7375f50e8",
+            "path": "config/creatures.json",
+            "source": "creatures-2a062c51b730d52b.json",
+            "sha256": "2a062c51b730d52b1967d2891fba86c20510fe6ccb93561d51b4c93c31b88f5d",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b81d72df5c6b006f640a3cccf1913b43a3f0c2e9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "708e0a9cdb13df64e6bd4918027c8fd63485970c",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "bc243030d30e75591a3aff3702525f4472f37331",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "72b9eebcc11a24a6d6d89f760bb807fce26c9572",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "2468b0ee1b703b24a4151eb79410165e66e3c588",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "745d336ee673751b9dc781db9b67ecd289d355af",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "e89c185311f1b7285bb556482c6ca7dc81eaddeb",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "7484e04268eac2b756ff4dbdc6569b6cf5f01bc5",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "467d4b5cd6231cdaa33ea0430536e4345bf46fe0",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "7a9b0b4abf27e007f2bc67ae40ae8a4e638463a8",
+            "path": "config/creatures.json",
+            "source": "creatures-77dbb59de5703a49.json",
+            "sha256": "77dbb59de5703a49b13ec8c739db6dcea3b3bf7d053b14198c40a49101dc0aea",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b578c8359dacd1dc0fe6e03dd81eba10de4b5fb4",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "7c1039c3b64bc04cc3852a4ebaf80ead1c650ebf",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "8372ec042efe2ef8a6eba0caf8efd0e1343ee8a7",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "7db1a3f10ff2e6bb5c24f0219cde54e3ed76c133",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "811430cd5d7a410c5df1958e59ce82a14f208e32",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "2c8335b09c899919d290741c8ef08033da2c5b61",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "81dfc3b5e7435b74cbb9763901b8b27b54279e0f",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "cdb285560097d679b94f693db0519c3cb83252fa",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "826ee789cd3962272ddbeaefa743db9d3e39adcd",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "e8a1b61a3368362508693275b990c748aa19957f",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "87ea8580651c311e0a64397425faa080539fb701",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "6cc78c34d64fdee43adca1b829ccf687daa62ced",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "8a2dc68e557a9e3b2718909e2dac17d54ce42c0e",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "1636da69ef896b1f6cfb5c6a94f72cfc8e804222",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "8dc6cfc0bbee1f66c9298a2566bad593dc44dc3e",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "e4fd2d72a1278ebb391789b226bfb1241133d5a9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "cdc0be72f141da8414fa7c59baf24917a4897b75",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9010d83ee7810a170d6795a651120ec5f3d123ee",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "57a7605e74dde483f858ccbd3fc1a341ab7c7aa8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "91064cd9f99dd117304ac4165a501a883f8be423",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "0cd1487d1d407875508c84689ce67c5f83634e7b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9113355f5ad05272ed5d0060ae58fe0cb691d790",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "58cd90ca158fed5712b6151404e6c1ad90953599",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "926636885c6b985e36be3e9690a09ee16ab47b48",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "50b044ed131403e4b9f39f3a41d2143bc39e104e",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "930d6fae85ce0ba81dc9ed556aba9f67278624a2",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "dab88827988058b36a37287249ffab0fcfbe0bc8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "94b69e2d20f6af2bf14944b2be950aaebcfd0306",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "76d496a31d7caca5597e15de1610af998daf8b34",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "95e32b05391f590dfc370e375b7a5a339173e6c3",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "accbb098658a602e0bd9be83ce1b9365cb22140e",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "98c6e48a6a94462b39a56a0fdcb06185873dd397",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b3809b01f32d7e57fa0e3fe21c39d9916e18260c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "98cebafa9c1a2b95ee411932a788f4129391accd",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b52fe7541c9f9a24fb1104b5f5e38a6dbb2d60a1",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "709535a6085c63fe1d26aebc3414ea2281529b3b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "f1be75d6ad474f4841acef0388b3c5f47dc06119",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "8bb9add08cfde759541b3b35a5a2f9ad499654ed",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9c2893d3f24f2b2325e180f335f9d84d1bee3033",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "5258bb040f2780638a76c26b0a61bb9437cdaab5",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "9e33b3ea18b991a5bc72b0250f1dcd6ac4b6e29c",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "1197f9cd917422bb6e43824cd738b60e3ca4358c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "a3577b481a6de7135dd1fa8bbca4252f3b940a39",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "e22a3a89543878620178ba23c15e0f6d2ac509df",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "a5f607f8327d796bd539a94d46cc876d64ae2289",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "00b9212a0944c4032bebc65310406734d3c678a3",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "a8376f1433b73cf3ae6c3282b4c314b50c61fdc3",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "a9d54b7182ba8f32a34de4760d53601cd25f8b30",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "ab33e8cc26da48da461ff44786a1816ca1029411",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "21ebd6611c521acf175ba29ab5247e6d221a5c87",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "cf4715fa2d6daa0658443374e35b9890a81ac801",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "abfc3fe9413f581dfb9029d5e077d14311dbd5f1",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b5cb3758b3f864dde7d6baeb57a64b2e4bc2b7a8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "aecd3c74a9e0c9bcc57ac4ac07b5c0a19c3726e8",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a328b39e02a666350477447506d4f42e4cfab11b",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "aede0915f7445e7c4b566142fdf53a8a9423ceec",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "e1131adb2c47336c7dbe62dee0246216feb554eb",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "ebf0a64b9759e8a74655159986b8dfb1e85a3686",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "b0699a4995b82cd38d062d85b683b8689fa976c3",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b7347069aae3d596883e4e962683945b868850c4",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "b39f6a503f850f98021ba0d235a8f3af45705f08",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a2af8392c91594acefcd0d812e2d86f354d93746",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "b3d39756210c65ee5cfada2f6a4d361f772ff23a",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "cc1597bad4b840bfcc2ad4663b410495fae038c1",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "b7c6c9ec37996347a8ff0666fcc14d4ab23f420e",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "20ed81eb0a586b57b5448d09e6d9ae4b6276f402",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "b8665c2478a2dad6259d7fb14f30f9f3f302c738",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "32ac0b973b0c15a92e1ff865d9c8b1d7fefa64e5",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "fd507cdac42337d763550ffe41334a39a1d0d954",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "bd5f00c7d9f98c783adaf855772e1c9611b56a39",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "9fa206079a5750c5b43ac0168f3e48c9e0d738aa",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "be0c1f9744ef0cb5c276e0ee32cfe8790ae3e504",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "84017c9110a182dc9c25eca52576ff97f9a4b76c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "be145d0bc5df25b8abc3418577089d2591788b61",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "251c727c2a6957bcaca2335e2632bf2a60a772d3",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "bf568de6503df91dac56f8bd77d16cddf88ff37d",
+            "path": "config/creatures.json",
+            "source": "creatures-77dbb59de5703a49.json",
+            "sha256": "77dbb59de5703a49b13ec8c739db6dcea3b3bf7d053b14198c40a49101dc0aea",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "6ab63792d65354556cd2f0cd5e14ee999d80eadc",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c0489a7f3585630b791c5619ae399cffdb83c169",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "169b592c32924654d830fbf0571e86c5de9dc692",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c0b4a99062a2c3560284426447c546555e65443a",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "b24663bd7e3101a4043d4c79074f2897dcf2780c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c14f94224e83bd52714a27a0e31fa63ae13b3b14",
+            "path": "config/creatures.json",
+            "source": "creatures-2a062c51b730d52b.json",
+            "sha256": "2a062c51b730d52b1967d2891fba86c20510fe6ccb93561d51b4c93c31b88f5d",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "863e7d1337a795f3ceeb5c8228ec5e7ab3410f79",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c1db9a17f125fb71d00903dd82f0e3b0c819bade",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c4473e058fb22980d6c87fca2a966bcaebce5eb5",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "42b8f0f2b45c2a149af67102398d296c4cd7fae7",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "fde9faf210ad1f0ef12b1b09a98b163a7efa6672",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c65f66a9510d49049e1ffc6e40d569c95e013ed6",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c74b0751b7d4a1d6f83af069b05e2888e1c1ff4a",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "856d7792e59d09f1e9cff08d9abb81052a47c7a3",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c7c84b1e957f56fb4c962f4800789be5c9d3b4f7",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "edfb95cb76b2db3794277d726b58dc7d6ee301d1",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "c8fe2b11c0260b6b687a071d4027442e960ead51",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "70853de2b2731491f046ef03d3cf1d8268d8ef4c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "ca5a2edc1229cea216959feed80feb195c6feaa6",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "caaf8160198fa62439883758671443ce2852908a",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "bc84e08dccf3b1f823d058411611908c9cd5a6b0",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "d2b4cfe63124cf14e643d9c449037278a88d8d9c",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "deef71e6d465cfb67a5c3b6d52e108bf22793f84",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "d32509080b0ef4ddf0b6bdca084c288cdc35a2c0",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "4a877c5583d007e2a6ca5be2fc86db9cd6c3a6f8",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "d3db073245dbf5c252d3afc1cf173196f4c46cc2",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "1a3664c6aa7596d5b8467e0ebdb5b145d4c8238f",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "d6acd13e01d2a9ecee8899f530afe8fe37532716",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "8771a58cabd47a1c713e4a380b73529c50104e56",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "dbf438aeaf0b2dc6ab86e3623240131b97ab98b2",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "35e6d471d572775548df5865f08560621c823b35",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "dd5aeb5dbca956517f1f91f718b6f6c9a29673e8",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "026e63de89a691376462db46297f8564012c024c",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "de23b83456999cbf363e72398199771094e9a5b1",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "ae187ade45027e4a0786c4ba843758d32f79af5d",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "8e8064fc1aecdee89fe581c3e6f46876859082bf",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "e004432950bef0c791a501ce0f2b2daace7a3260",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "c440cf6f5b8fa478cbbd7476fb235dc7ed4f6c85",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "e0dc50b172ed879ddbb50d8042f795f59b6c4f9b",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "c049ac73064442354af6224d06fe1c8b847bb8d9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "e111186df15b68c775b532815ac1672e0a10c9d6",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "e9c6660f050aabfb03ff0e745d451524d2dafd17",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "e26e4ffcaa4411741a565f373b59ac4dfa8e8b84",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "f5199306c188d9a088fe5c0ee6b14f75a269e433",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "e59c9129d07ba8fa54bb8e0ba0d4976f5666e71f",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "f26e3d60b941581e9ce323602b7394a5a9119eea",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "ec5491ce057df1acb04bb77c08bf0850a2b2e811",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "54fc8adfbe133d3eb4b92bc2a3770b5eafceaeee",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "ed43ce857358a593c159e3237b92953736a18e5e",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "a5c82e1d3bab3e11c81bc92e1d5211ff5fb44e3f",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "eef536d975e242f821ea3d1c250bf0dd15679e80",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "2d5108ed9acc3eea32b7d19b3450b876183f9b45",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f05f6e80bb1e1b04030a218dddedd40f5e770d61",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "0dcab4e4099037c9b5fd233e232ff971c343f0a9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f258b5917713c6e1eeebb2d39e5595d166d2d819",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "80920f276d6aff53a2aa0dd237f4a26cb47cb60d",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f39cccef256812a8c2c2b92a838839a64b4d71d2",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "27217e5f0cf3f8fba8d63d7ac92a7780d77a51b9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f60f92ad5d6a13a1a8e35ed5425b99fd85fc2759",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f6b583fcab8d7da3b4fa077d1401da8eafeacbde",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f6eb10b750fb51aca5dca992a2401c3b658b6374",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "cb42b1415a317340d83d240b92e65bae631b7dea",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f9208f74f5d2418fa73d89b412ad0a95ba121b46",
+            "path": "config/creatures.json",
+            "source": "creatures-bf5ae1265fce8f1b.json",
+            "sha256": "bf5ae1265fce8f1b5a6677c20a5012fe6f8a44973bac8da8ed104b1717a8389e",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "760907d3a66eb94b295e383d3eddcc1b6ba9f3b9",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "f9b16149815272e9ec71b4a69061479d1979e398",
+            "path": "config/creatures.json",
+            "source": "creatures-24b3e6ff7370f324.json",
+            "sha256": "24b3e6ff7370f3240cfaf25f170e30be0c4228150096f9a496aa82eb87f53618",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "152007b28631784d3c5e17f2686eb6ef9ff30e46",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        },
+        {
+            "tree": "fbeaae97577297ddc01bcc179495b233898e4eeb",
+            "path": "config/creatures.json",
+            "source": "creatures-ecaf1886719a53ce.json",
+            "sha256": "ecaf1886719a53cef16dc863405a118f39f6c2d87da24799af6e991631f8ca60",
+            "provenance": {
+                "kind": "reconstructed-config",
+                "verified": false,
+                "sourceCommit": "75f3d90ee67e43eca7d4b40afc4ad3132f2bf53e",
+                "evidence": [
+                    "historical image directory IDs",
+                    "config/map.json saved creature state when present"
+                ],
+                "inferred": [
+                    "missing initial stats",
+                    "levelStats encoding and progression"
+                ],
+                "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified."
+            }
+        }
+    ]
+}
