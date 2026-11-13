@@ -14,6 +14,39 @@ from scripts import recover_history as recovery
 
 
 class HistoricalRecoveryTest(unittest.TestCase):
+    def testOverridesCannotReintroduceRemovalMarkers(self):
+        original = self.blob(b"int main() {}\n")
+        commit = self.commit({"main.cpp" + recovery.MARKER_SUFFIX: original.encode()})
+        overrides = {
+            "entries": [
+                {
+                    "path": "leftover.REMOVED.git-id",
+                    "blob": original,
+                    "add": True,
+                    "provenance": "invalid marker addition",
+                }
+            ]
+        }
+        with self.assertRaisesRegex(recovery.RecoveryError, "must not contain BFG"):
+            recovery.restoreSnapshot(
+                self.repo, recovery.auditHistory(self.repo), commit, self.root / "reintroduced-marker", overrides
+            )
+
+    def testSelectedTipCanCheckpointACompletePrefixOfIncompleteHistory(self):
+        root = self.commit({"main.cpp" + recovery.MARKER_SUFFIX: self.marker(b"int main() {}\n")})
+        child = self.commit({"new.cpp" + recovery.MARKER_SUFFIX: b"f" * 40}, parents=[root])
+        catalog = recovery.auditHistory(self.repo)
+        with self.assertRaisesRegex(recovery.RecoveryError, "unresolved required"):
+            recovery.replayHistory(self.repo, catalog)
+        result = recovery.replayHistory(self.repo, catalog, tips=[root])
+        self.assertEqual([root], result["selectedOriginalTips"])
+        self.assertFalse(result["completeDamagedHistory"])
+        self.assertEqual({root}, set(result["commitMap"]))
+        self.assertNotIn(child, result["commitMap"])
+        self.assertEqual(1, len(result["recoveryRefs"]))
+        with self.assertRaisesRegex(recovery.RecoveryError, "damaged commits"):
+            recovery.replayHistory(self.repo, catalog, tips=["a" * 40])
+
     def testInvalidPathTypesFailWithRecoveryError(self):
         for value in (None, 12, {}, []):
             with self.subTest(value=value), self.assertRaises(recovery.RecoveryError):

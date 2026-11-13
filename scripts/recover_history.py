@@ -376,16 +376,24 @@ def prepareSnapshot(objects, catalog, commit, overrides=None, allow_incomplete=F
     if unresolved and not allow_incomplete:
         paths = ", ".join(item["path"] for item in unresolved[:8])
         raise RecoveryError(f"{len(unresolved)} unresolved required files in {commit}: {paths}")
+    if any(path.endswith(MARKER_SUFFIX) for path in files):
+        raise RecoveryError("Recovered snapshots must not contain BFG removal markers")
     for path, entry in files.items():
         if entry["mode"] not in ("100644", "100755", "120000", "160000"):
             raise RecoveryError(f"Unsupported file mode {entry['mode']}: {path}")
         for parent in PurePosixPath(path).parents:
             if parent.as_posix() in files:
                 raise RecoveryError(f"Recovery file/directory collision: {path}")
+    file_identity = [
+        (path, entry["mode"], objectHash("blob", entry["content"]) if "content" in entry else entry["blob"])
+        for path, entry in sorted(files.items())
+    ]
+    fingerprint = hashlib.sha256(json.dumps(file_identity, separators=(",", ":")).encode()).hexdigest()
     return files, {
         "sourceCommit": commit,
         "sourceTree": tree,
         "status": "incomplete" if unresolved else "complete",
+        "restoredFilesFingerprint": fingerprint,
         "restored": restored,
         "excluded": excluded,
         "unresolved": unresolved,
@@ -491,13 +499,16 @@ def writeTree(repo_root, files):
     return writeDirectory(directories)
 
 
-def replayHistory(repo_root, catalog, overrides=None):
+def replayHistory(repo_root, catalog, overrides=None, tips=None):
     # Resolve every required reconstruction before writing any recovery object.
     prepared = {}
     with GitObjects(repo_root) as objects:
         validateReplayCatalog(objects, catalog)
         metadata = {item["commit"]: item for item in catalog["commits"]}
-        required, pending = set(), list(catalog["damagedTips"])
+        selected_tips = sorted(set(tips or catalog["damagedTips"]))
+        if any(tip not in metadata or not metadata[tip]["damaged"] for tip in selected_tips):
+            raise RecoveryError("Replay tips must identify damaged commits in the original catalog")
+        required, pending = set(), list(selected_tips)
         while pending:
             commit = pending.pop()
             if commit not in required:
@@ -533,10 +544,12 @@ def replayHistory(repo_root, catalog, overrides=None):
             mapping[commit] = (
                 gitCommand(repo_root, "hash-object", "-t", "commit", "-w", "--stdin", data=replacement).decode().strip()
             )
-    refs = {"refs/heads/recovery/bfg/" + tip: mapping[tip] for tip in catalog["damagedTips"]}
+    refs = {"refs/heads/recovery/bfg/" + tip: mapping[tip] for tip in selected_tips}
     return {
         "schemaVersion": 1,
         "status": "complete",
+        "completeDamagedHistory": selected_tips == catalog["damagedTips"],
+        "selectedOriginalTips": selected_tips,
         "originalRefs": catalog["originalRefs"],
         "commitMap": dict(sorted(mapping.items())),
         "recoveryRefs": refs,
@@ -588,6 +601,8 @@ def main(argv=None):
             child.add_argument("--original-manifest", type=Path)
         if command in ("restore", "replay"):
             child.add_argument("--overrides", type=Path)
+        if command == "replay":
+            child.add_argument("--tip", action="append", help="Replay this damaged commit and its ancestors")
         if command == "restore":
             child.add_argument("--commit", required=True)
             child.add_argument("--output-dir", type=Path, required=True)
@@ -616,7 +631,7 @@ def main(argv=None):
             if args.report:
                 writeJson(args.report, result)
         elif args.command == "replay":
-            result = replayHistory(args.repo_root, readJson(args.catalog), loadOverrides(args.overrides))
+            result = replayHistory(args.repo_root, readJson(args.catalog), loadOverrides(args.overrides), args.tip)
             writeJson(args.output, result)
             result = {
                 "status": result["status"],

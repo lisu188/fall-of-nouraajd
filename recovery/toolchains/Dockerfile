@@ -9,7 +9,8 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && \
         ca-certificates curl xz-utils bzip2 make python3 \
         git=1:2.7.4-0ubuntu1.10 libssl-dev=1.0.2g-1ubuntu4.20 \
         zlib1g-dev=1:1.2.8.dfsg-2ubuntu4.3 libffi-dev libbz2-dev libreadline-dev \
-        libsqlite3-dev libncurses5-dev uuid-dev libgl1-mesa-dri libgl1-mesa-glx xvfb xauth && \
+        libsqlite3-dev libncurses5-dev uuid-dev libgl1-mesa-dri libgl1-mesa-glx \
+        fonts-dejavu-core xvfb xauth && \
     dpkg-query -W > /opt/recovery-installed-packages.txt && \
     rm -rf /var/lib/apt/lists/*
 

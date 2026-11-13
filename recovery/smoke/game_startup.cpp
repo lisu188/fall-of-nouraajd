@@ -87,6 +87,9 @@ class RecoveryStartupProbe : public QObject {
             for (QWidget *widget : QApplication::topLevelWidgets()) {
                 view = dynamic_cast<RecoveryView *>(widget);
                 if (view) {
+                    view->setWindowState(Qt::WindowNoState);
+                    view->QWidget::resize(1280, 720);
+                    view->show();
                     view->viewport()->installEventFilter(this);
                     break;
                 }

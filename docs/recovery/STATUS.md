@@ -67,3 +67,20 @@ locally; historical native compilation has not run.
 Local Qt installation is blocked: `sudo -n apt-get install -y qtbase5-dev
 libqt5opengl5-dev` requires interactive authentication. The CI toolchain is the
 primary historical build path.
+
+## Earliest version verified
+
+The December-2013 root (`b9ae428b`) has passed real compilation/linking and
+headless startup with a loaded map/player and rendered 1278x718 screenshot.
+Evidence is in `recovery/evidence/earliest/`. This focused local reproduction
+used rootless Qt 5.15.18 and GCC 15.2; it does not establish the pinned historical
+Qt 5.5.1/GCC 5.4 container or the remaining historical versions.
+
+The generator currently proposes 5,420 tree/path replacements; 7,783 required
+file occurrences still lack donors, mostly bundled upstream libraries. These
+proposals remain unverified until the corresponding builds/startups pass.
+
+Every published repaired version must include a README and its actual startup
+screenshot. Publication must reject any remaining `.REMOVED.git-id` marker.
+
+Draft PR: https://github.com/lisu188/fall-of-nouraajd/pull/1653
