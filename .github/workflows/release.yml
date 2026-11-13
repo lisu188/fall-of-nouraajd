@@ -79,7 +79,7 @@ jobs:
       - name: package
         run: cmake --build cmake-build-gcc15-release --target package -j"$(nproc)"
       - name: Upload release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           files: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
         env:
@@ -158,7 +158,7 @@ jobs:
           if-no-files-found: error
 
       - name: Attach Android APK to release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           files: ${{ env.ANDROID_RELEASE_APK }}
         env:
