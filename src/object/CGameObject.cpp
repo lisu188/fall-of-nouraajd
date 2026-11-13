@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CPythonOverrides.h"
 #include "gui/CAnimation.h"
+#include "object/CTile.h"
 
 #include <any>
 #include <map>
@@ -474,6 +475,12 @@ void CGameObject::invalidateCachedPropertyState(const std::set<std::string> &nam
 
 bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }
 
-void CGameObject::setTypeId(std::string _typeId) { typeId = _typeId; }
+void CGameObject::setTypeId(std::string _typeId) {
+    if (typeId == _typeId)
+        return;
+    typeId = std::move(_typeId);
+    if (auto tile = dynamic_cast<CTile *>(this); tile && tile->getTileType().empty())
+        tile->notifyTerrainChanged();
+}
 
 std::string CGameObject::getTypeId() { return typeId; }

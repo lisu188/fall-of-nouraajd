@@ -2175,6 +2175,472 @@ void test_minimap_bounds_normal_map_renders() {
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
+void testMinimapFreshTraversalPreservesTerrainUpdates() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 3}, {1, 3}});
+    map->setYBounds({{0, 3}, {1, 3}});
+    map->setDefaultTiles({{0, "GroundTile"}, {1, "GroundTile"}});
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("grass");
+    map->addTile(tile, 2, 2, 0);
+    auto upstairs = std::make_shared<CTile>();
+    upstairs->setTileType("water");
+    map->addTile(upstairs, 2, 2, 1);
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render_pixel = [&] {
+        minimap->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect sample{80, 80, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "fresh minimap regression must read an actual terrain pixel from the isolated renderer");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(render_pixel() == 0x002d6f37u, "native minimap must initially draw the registered grass tile");
+    const auto initial_builds = minimap->getTerrainTextureBuildCount();
+    upstairs->setTileType("road");
+    expect_true(render_pixel() == 0x002d6f37u && minimap->getTerrainTextureBuildCount() == initial_builds,
+                "terrain edits on another elevation must preserve the current level's cached terrain");
+    upstairs->setTileType("water");
+    tile->setTileType("water");
+    expect_true(render_pixel() == 0x001d5694u, "direct native tileType changes must appear on the next minimap frame");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(render_pixel() == 0x00766748u,
+                "empty tileType must continue to use the current native typeId fallback");
+    const auto stable_builds = minimap->getTerrainTextureBuildCount();
+    tile->setCanStep(false);
+    tile->setAnimation("images/tiles/water");
+    expect_true(render_pixel() == 0x00766748u && minimap->getTerrainTextureBuildCount() == stable_builds,
+                "walkability and animation changes must preserve the existing type-based minimap color contract");
+    map->removeTile(2, 2, 0);
+    expect_true(render_pixel() == 0x00564830u, "removed native tiles must reveal the current authored default terrain");
+    auto replacement = std::make_shared<CTile>();
+    replacement->setTileType("grass");
+    map->addTile(replacement, 2, 2, 0);
+    expect_true(render_pixel() == 0x002d6f37u, "actual replacement tiles must appear without a stale cached signature");
+    map->moveTile(replacement, 3, 2, 0);
+    expect_true(render_pixel() == 0x00564830u, "moving a registered native tile must clear its previous minimap cell");
+    map->setDefaultTiles({{0, "WaterTile"}, {1, "GroundTile"}});
+    expect_true(render_pixel() == 0x001d5694u, "changed authored default terrain must refresh uncovered cells");
+    harness.player->setPosZ(1);
+    expect_true(harness.player->getCoords().z == 1 && render_pixel() == 0x001d5694u,
+                "the minimap must freshly read the actual player level and only draw that level's tile");
+    upstairs->setTileType("grass");
+    expect_true(render_pixel() == 0x002d6f37u,
+                "in-place upstairs changes must refresh after an actual level transition");
+    map->setXBounds({});
+    map->setYBounds({});
+    expect_true(render_pixel() != 0 && minimap->getTerrainTextureBuildCount() > stable_builds,
+                "removing metadata bounds must retain the existing native derived-bounds render path");
+    harness.game->getContext()->shutdown();
+}
+
+void testMinimapTerrainRevisionTracksNormalizedTileMutations() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 9}, {1, 9}});
+    map->setYBounds({{0, 5}, {1, 5}});
+    map->setWrapX({{0, 1}, {1, 1}});
+    auto make_tile = [] {
+        auto tile = std::make_shared<CTile>();
+        tile->setPosx(11);
+        tile->setPosy(2);
+        tile->setTileType("grass");
+        return tile;
+    };
+    auto tile = make_tile();
+    map->setTiles({tile});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render = [&] { minimap->renderObject(harness.gui, rect, 0); };
+    render();
+    const auto original_revision = map->getTerrainRevision(0);
+    const auto original_builds = minimap->getTerrainTextureBuildCount();
+    tile->setPosx(1);
+    render();
+    expect_true(tile->getPosx() == 1 && map->getTerrainRevision(0) > original_revision &&
+                    minimap->getTerrainTextureBuildCount() == original_builds + 1,
+                "canonicalizing raw tile coordinates within one normalized cell must refresh the terrain");
+
+    tile = make_tile();
+    map->setTiles({tile});
+    map->setXBounds({{0, 7}, {1, 7}});
+    expect_true(!map->hasRegisteredTile(tile.get()) && map->getTiles().contains(tile),
+                "the normalization fixture must retain a tile under neither its raw nor current normalized key");
+    render();
+    auto expect_refresh = [&](auto mutation, const char *message) {
+        const auto revision = map->getTerrainRevision(0);
+        const auto builds = minimap->getTerrainTextureBuildCount();
+        mutation();
+        render();
+        expect_true(map->getTerrainRevision(0) > revision && minimap->getTerrainTextureBuildCount() == builds + 1,
+                    message);
+    };
+    expect_refresh([&] { tile->setTileType("water"); },
+                   "a retained tile's type mutation must refresh after normalization changes");
+    expect_refresh(
+        [&] {
+            tile->setTileType("");
+            tile->setTypeId("RoadTile");
+        },
+        "a retained tile's typeId fallback must refresh after normalization changes");
+    expect_refresh([&] { tile->setPosx(12); }, "a retained tile's direct x mutation must refresh its old raster");
+    expect_refresh([&] { tile->setPosy(3); }, "a retained tile's direct y mutation must refresh its old raster");
+    const auto other_level = map->getTerrainRevision(1);
+    expect_refresh([&] { tile->setPosz(1); }, "a retained tile's level mutation must clear its previous terrain");
+    expect_true(map->getTerrainRevision(1) > other_level,
+                "a retained tile's direct level mutation must also invalidate its destination elevation");
+
+    const auto unchanged = map->getTerrainRevision(1);
+    tile->setPosx(12);
+    tile->setPosy(3);
+    tile->setPosz(1);
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(map->getTerrainRevision(1) == unchanged,
+                "unchanged native tile setters must preserve terrain revisions");
+    map->setTiles({});
+    const auto detached_revision = map->getTerrainRevision(1);
+    tile->setGame(harness.game);
+    tile->setTileType("water");
+    tile->setPosx(4);
+    tile->setTypeId("GroundTile");
+    expect_true(map->getTerrainRevision(1) == detached_revision,
+                "detached tiles must not invalidate the active map through their fallback game association");
+    harness.game->getContext()->shutdown();
+}
+
+void testSharedMinimapTilesInvalidateEveryRetainingMap() {
+    auto first = make_minimap_harness();
+    auto second = make_minimap_harness();
+    for (const auto &map : {first.map, second.map}) {
+        map->setXBounds({{0, 3}, {1, 3}});
+        map->setYBounds({{0, 3}, {1, 3}});
+        map->setDefaultTiles({{0, "GroundTile"}, {1, "GroundTile"}});
+    }
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("grass");
+    expect_true(first.map->addTile(tile, 2, 2, 0) && second.map->addTile(tile, 2, 2, 0),
+                "shared terrain fixture must retain the same tile in both map registries");
+    expect_true(tile->getMap() == second.map && first.map->getTiles().contains(tile),
+                "tile adoption must preserve the original registry while changing the current owner");
+    auto firstView = std::make_shared<CMinimapGraphicsObject>();
+    auto secondView = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto readPixel = [&](MinimapHarness &harness, const std::shared_ptr<CMinimapGraphicsObject> &view, int x = 80) {
+        view->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect sample{x, 80, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "shared terrain regression must read actual isolated-renderer pixels");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(readPixel(first, firstView) == 0x002d6f37u && readPixel(second, secondView) == 0x002d6f37u,
+                "both minimaps must initially display the shared grass tile");
+    const auto firstBuilds = firstView->getTerrainTextureBuildCount();
+    const auto secondBuilds = secondView->getTerrainTextureBuildCount();
+    tile->setTileType("water");
+    expect_true(readPixel(first, firstView) == 0x001d5694u && readPixel(second, secondView) == 0x001d5694u &&
+                    firstView->getTerrainTextureBuildCount() == firstBuilds + 1 &&
+                    secondView->getTerrainTextureBuildCount() == secondBuilds + 1,
+                "an adopted tile's appearance change must refresh every retaining map exactly once");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(readPixel(first, firstView) == 0x00766748u && readPixel(second, secondView) == 0x00766748u,
+                "empty-type fallback changes must reach both terrain observers");
+    tile->setPosx(3);
+    expect_true(readPixel(first, firstView) == 0x00564830u && readPixel(second, secondView) == 0x00564830u &&
+                    readPixel(first, firstView, 112) == 0x00766748u &&
+                    readPixel(second, secondView, 112) == 0x00766748u,
+                "moving through the current owner must clear and redraw the tile in every retaining map");
+    const auto firstUpper = first.map->getTerrainRevision(1);
+    const auto secondUpper = second.map->getTerrainRevision(1);
+    tile->setPosz(1);
+    expect_true(readPixel(first, firstView, 112) == 0x00564830u && readPixel(second, secondView, 112) == 0x00564830u &&
+                    first.map->getTerrainRevision(1) > firstUpper && second.map->getTerrainRevision(1) > secondUpper,
+                "a shared tile's elevation change must invalidate both its old and new visible levels");
+    first.player->setPosZ(1);
+    second.player->setPosZ(1);
+    expect_true(readPixel(first, firstView, 112) == 0x00766748u && readPixel(second, secondView, 112) == 0x00766748u,
+                "both minimaps must show the shared tile at its actual elevation despite retained old keys");
+    const auto beforeRemoval = first.map->getTerrainRevision(1);
+    first.map->removeTile(2, 2, 0);
+    expect_true(first.map->getTerrainRevision(1) > beforeRemoval && readPixel(first, firstView, 112) == 0x00564830u,
+                "removing an old registry key must invalidate the tile's current visible elevation");
+    const auto removedBuilds = firstView->getTerrainTextureBuildCount();
+    tile->setTileType("water");
+    expect_true(readPixel(first, firstView, 112) == 0x00564830u &&
+                    firstView->getTerrainTextureBuildCount() == removedBuilds &&
+                    readPixel(second, secondView, 112) == 0x001d5694u,
+                "removed observers must stop rebuilding while the remaining owner still receives appearance changes");
+    first.game->getContext()->shutdown();
+    second.game->getContext()->shutdown();
+}
+
+void testTerrainObserversTrackDuplicateKeysAndWeakMaps() {
+    auto map = std::make_shared<CMap>();
+    auto tile = std::make_shared<CTile>();
+    expect_true(map->addTile(tile, 1, 1, 0) && map->addTile(tile, 2, 2, 0),
+                "duplicate-key terrain fixture must retain the same pointer at two stored coordinates");
+    const auto beforeDuplicateChange = map->getTerrainRevision(0);
+    tile->setTileType("grass");
+    expect_true(map->getTerrainRevision(0) == beforeDuplicateChange + 1,
+                "multiple registry keys must still notify a retaining map only once per appearance change");
+    map->removeTile(2, 2, 0);
+    const auto retainedRevision = map->getTerrainRevision(0);
+    tile->setTileType("water");
+    expect_true(map->getTiles().contains(tile) && map->getTerrainRevision(0) == retainedRevision + 1,
+                "removing one duplicate key must preserve terrain observation for the remaining key");
+    map->removeTile(1, 1, 0);
+    const auto removedRevision = map->getTerrainRevision(0);
+    tile->setTileType("grass");
+    tile->setPosz(1);
+    expect_true(map->getTerrainRevision(0) == removedRevision && map->getTerrainRevision(1) == 1,
+                "removing the last key must release observation for later appearance and position mutations");
+
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    auto third = std::make_shared<CMap>();
+    first->addTile(tile, 1, 1, 0);
+    second->addTile(tile, 1, 1, 0);
+    third->addTile(tile, 1, 1, 0);
+    const std::weak_ptr<CMap> firstLifetime = first;
+    const std::weak_ptr<CMap> thirdLifetime = third;
+    first.reset();
+    third.reset();
+    expect_true(firstLifetime.expired() && thirdLifetime.expired(),
+                "primary and additional terrain observers must not keep maps alive");
+    const auto survivingRevision = second->getTerrainRevision(0);
+    tile->setTileType("water");
+    expect_true(second->getTerrainRevision(0) == survivingRevision + 1,
+                "expired observers must be discarded without losing or duplicating the remaining map");
+    const std::weak_ptr<CMap> secondLifetime = second;
+    second.reset();
+    expect_true(secondLifetime.expired(), "the last observed map must also expire while its tile remains alive");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    auto replacement = std::make_shared<CMap>();
+    replacement->addTile(tile, 3, 3, 0);
+    const auto replacementRevision = replacement->getTerrainRevision(0);
+    tile->setTypeId("WaterTile");
+    expect_true(replacement->getTerrainRevision(0) == replacementRevision + 1,
+                "a surviving tile must accept a fresh observer after all previous maps expire");
+}
+
+void testTerrainObserversDoNotAcquireNavigationLocks() {
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    auto tile = std::make_shared<CTile>();
+    first->addTile(tile, 1, 1, 0);
+    second->addTile(tile, 1, 1, 0);
+    const auto firstRevision = first->getTerrainRevision(0);
+    const auto secondRevision = second->getTerrainRevision(0);
+    std::future<void> mutation;
+    bool completedWhileLocked = false;
+    {
+        std::scoped_lock lock(first->getNavigationMutex(), second->getNavigationMutex());
+        mutation = std::async(std::launch::async, [tile] { tile->setTileType("water"); });
+        completedWhileLocked = mutation.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+    }
+    mutation.get();
+    expect_true(completedWhileLocked && first->getTerrainRevision(0) == firstRevision + 1 &&
+                    second->getTerrainRevision(0) == secondRevision + 1,
+                "shared terrain notifications must complete without acquiring any retaining map's navigation lock");
+}
+
+void testTerrainObserversTrackFinalBulkMembership() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 3}});
+    map->setWrapX({{0, 1}});
+    auto lower = std::make_shared<CTile>();
+    auto upper = std::make_shared<CTile>();
+    lower->setPosx(1);
+    upper->setPosx(5);
+    const std::set<std::shared_ptr<CTile>> ordered{lower, upper};
+    map->setTiles(ordered);
+    auto retained = *map->getTiles().begin();
+    auto displaced = retained == lower ? upper : lower;
+    expect_true(map->getTiles().size() == 1, "bulk replacement must collapse the fixture's normalized-key collision");
+    const auto beforeDisplacedChange = map->getTerrainRevision(0);
+    displaced->setTileType("water");
+    expect_true(map->getTerrainRevision(0) == beforeDisplacedChange,
+                "a tile displaced while building a replacement registry must never subscribe to its terrain");
+    retained->setTileType("water");
+    expect_true(map->getTerrainRevision(0) == beforeDisplacedChange + 1,
+                "the final stored tile must receive exactly one observer registration");
+    map->setTiles({});
+    const auto clearedRevision = map->getTerrainRevision(0);
+    retained->setTileType("grass");
+    expect_true(map->getTerrainRevision(0) == clearedRevision,
+                "bulk clearing must unsubscribe the previously retained tile");
+    const std::vector<std::shared_ptr<CTile>> installation{lower, upper};
+    expect_true(map->installTiles(installation) == 1, "bulk installation must retain only its first collision winner");
+    retained = *map->getTiles().begin();
+    displaced = retained == lower ? upper : lower;
+    const auto installedRevision = map->getTerrainRevision(0);
+    displaced->setTileType("lava");
+    expect_true(map->getTerrainRevision(0) == installedRevision,
+                "rejected installation entries must not receive terrain observers");
+    retained->setTileType("lava");
+    expect_true(map->getTerrainRevision(0) == installedRevision + 1,
+                "successful bulk installation must subscribe its final tile exactly once");
+}
+
+void testMinimapMarkerSnapshotTracksMembershipAndElevation() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 3}, {1, 3}});
+    map->setYBounds({{0, 3}, {1, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render = [&] { minimap->renderObject(harness.gui, rect, 0); };
+    render();
+    const auto initial_snapshots = minimap->getObjectSnapshotBuildCount();
+    const auto initial_terrain = minimap->getTerrainTextureBuildCount();
+    auto marker = std::make_shared<CMapObject>();
+    marker->setName("minimapMarkerRevision");
+    marker->setPosX(2);
+    marker->setPosY(2);
+    map->addObject(marker);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 1 &&
+                    minimap->getTerrainTextureBuildCount() == initial_terrain,
+                "adding a marker must refresh membership while retaining unchanged terrain");
+    marker->setPosZ(1);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 2,
+                "moving a marker to another elevation must invalidate the current level's membership");
+    marker->setPosZ(0);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 3,
+                "returning a marker to the current elevation must rebuild its filtered snapshot");
+    const std::weak_ptr<CMapObject> removed = marker;
+    map->setObjects({harness.player});
+    marker.reset();
+    drain_event_loop();
+    expect_true(removed.expired(), "a cached minimap marker must not retain a removed map object");
+    render();
+    const auto removed_snapshots = minimap->getObjectSnapshotBuildCount();
+    render();
+    expect_true(removed_snapshots == initial_snapshots + 4 &&
+                    minimap->getObjectSnapshotBuildCount() == removed_snapshots,
+                "marker removal must rebuild once and preserve the next unchanged snapshot");
+    harness.game->getContext()->shutdown();
+}
+
+void testCollapsedMinimapPreservesOrderedRasterWinner() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 223}});
+    map->setYBounds({{0, 191}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    auto grass = std::make_shared<CTile>();
+    auto water = std::make_shared<CTile>();
+    grass->setTileType("grass");
+    water->setTileType("water");
+    map->addTile(grass, 100, 100, 0);
+    map->addTile(water, 101, 100, 0);
+    auto visitor_last = [&] {
+        std::shared_ptr<CTile> last;
+        map->forTiles([&](std::shared_ptr<CTile> tile) { last = std::move(tile); });
+        return last;
+    };
+    auto snapshot = map->getTiles();
+    auto ordered_last = *snapshot.rbegin();
+    if (visitor_last() == ordered_last) {
+        map->removeTile(100, 100, 0);
+        map->removeTile(101, 100, 0);
+        map->addTile(water, 100, 100, 0);
+        map->addTile(grass, 101, 100, 0);
+    }
+    const auto unordered_last = visitor_last();
+    expect_true(unordered_last != ordered_last,
+                "collapsed collision fixture must distinguish native visitor order from the ordered snapshot");
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    Uint32 pixel = 0;
+    const SDL_Rect shared_pixel{57, 66, 1, 1};
+    expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &shared_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                     sizeof(pixel)) == 0,
+                "collapsed native terrain overlap must support actual isolated-renderer pixel readback");
+    const Uint32 expected = ordered_last == grass ? 0x002d6f37u : 0x001d5694u;
+    const Uint32 unordered = unordered_last == grass ? 0x002d6f37u : 0x001d5694u;
+    expect_true((pixel & 0x00ffffffu) == expected && (pixel & 0x00ffffffu) != unordered,
+                "collapsed overlapping cells must retain the original owning-set raster order and last-cell color");
+    const auto builds = minimap->getTerrainTextureBuildCount();
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == builds,
+                "preserving the original collapsed raster must still reuse an unchanged warmed texture");
+    harness.game->getContext()->shutdown();
+}
+
+void testMinimapReplacementIdentityRefreshesCollapsedRaster() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 223}});
+    map->setYBounds({{0, 191}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    std::set<std::shared_ptr<CTile>> pointer_order{std::make_shared<CTile>(), std::make_shared<CTile>(),
+                                                   std::make_shared<CTile>()};
+    auto ordered = pointer_order.begin();
+    auto old_grass = *ordered++;
+    auto water = *ordered++;
+    auto new_grass = *ordered;
+    const std::less<std::shared_ptr<CTile>> less;
+    expect_true(pointer_order.size() == 3 && less(old_grass, water) && less(water, new_grass),
+                "replacement fixture retains three distinct tiles in the original raster's total pointer order");
+    old_grass->setTileType("grass");
+    new_grass->setTileType("grass");
+    water->setTileType("water");
+    expect_true(map->addTile(old_grass, 100, 100, 0) && map->addTile(water, 101, 100, 0),
+                "replacement fixture must install the original two overlapping native terrain cells");
+    auto traversal = [&] {
+        std::vector<std::pair<Coords, std::string>> result;
+        map->forTiles(
+            [&](std::shared_ptr<CTile> tile) { result.emplace_back(tile->getCoords(), tile->getTileType()); });
+        return result;
+    };
+    const auto original_traversal = traversal();
+    expect_true(*map->getTiles().rbegin() == water,
+                "the initial ordered raster must paint water after the lower-address grass instance");
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render_pixel = [&] {
+        minimap->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect shared_pixel{57, 66, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &shared_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "replacement collision regression must read its actual isolated renderer pixel");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(render_pixel() == 0x001d5694u, "the initial collapsed water winner must be visibly blue");
+    const auto warm_builds = minimap->getTerrainTextureBuildCount();
+    expect_true(render_pixel() == 0x001d5694u && minimap->getTerrainTextureBuildCount() == warm_builds,
+                "the original unchanged collapsed terrain must reuse its warmed texture");
+    map->removeTile(100, 100, 0);
+    map->removeTile(101, 100, 0);
+    expect_true(map->addTile(new_grass, 100, 100, 0) && map->addTile(water, 101, 100, 0),
+                "replacement fixture must reinstall the same coordinate keys in the same insertion order");
+    expect_true(traversal() == original_traversal,
+                "same-type replacement must preserve the complete fresh coordinate and type traversal sequence");
+    expect_true(*map->getTiles().rbegin() == new_grass,
+                "the replacement grass instance must now paint last under the original ordered raster");
+    const auto refreshed_pixel = render_pixel();
+    expect_true(refreshed_pixel == 0x002d6f37u,
+                "same-type tile replacement must refresh the collapsed raster's changed pointer-order winner");
+    expect_true(minimap->getTerrainTextureBuildCount() == warm_builds + 1,
+                "same-type instance replacement must rebuild the warmed terrain texture exactlyonce");
+    const auto replacement_builds = minimap->getTerrainTextureBuildCount();
+    expect_true(render_pixel() == refreshed_pixel && minimap->getTerrainTextureBuildCount() == replacement_builds,
+                "repeating the unchanged replacement frame must retain its color and reuse the fresh texture");
+    harness.game->getContext()->shutdown();
+}
+
 void testRetainedMinimapTextureDoesNotOutliveItsRenderer() {
     auto harness = make_minimap_harness();
     harness.map->setXBounds({{0, 3}});
@@ -5019,6 +5485,15 @@ int main() {
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    testMinimapFreshTraversalPreservesTerrainUpdates();
+    testMinimapTerrainRevisionTracksNormalizedTileMutations();
+    testSharedMinimapTilesInvalidateEveryRetainingMap();
+    testTerrainObserversTrackDuplicateKeysAndWeakMaps();
+    testTerrainObserversDoNotAcquireNavigationLocks();
+    testTerrainObserversTrackFinalBulkMembership();
+    testMinimapMarkerSnapshotTracksMembershipAndElevation();
+    testCollapsedMinimapPreservesOrderedRasterWinner();
+    testMinimapReplacementIdentityRefreshesCollapsedRaster();
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();
     testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();

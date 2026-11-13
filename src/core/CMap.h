@@ -269,6 +269,10 @@ class CMap : public CGameObject {
 
     std::uint64_t getNavigationRevision() const;
 
+    std::uint64_t getTerrainRevision(int level) const;
+
+    void terrainChanged(std::optional<int> level = std::nullopt);
+
     std::uint64_t getRoutingEpoch() const;
     std::recursive_mutex &getNavigationMutex() const;
     std::shared_ptr<CNavigationService> getNavigationService();
@@ -353,6 +357,10 @@ class CMap : public CGameObject {
     std::uint64_t simulationRegionRevision = 0;
     std::string combatHistory;
     std::uint64_t navigationRevision = 0;
+    std::uint64_t terrainRevision = 1;
+    std::uint64_t terrainConfigurationRevision = 1;
+    std::unordered_map<int, std::uint64_t> terrainLevelRevisions;
+    mutable std::mutex terrainMutex;
     mutable std::recursive_mutex navigationMutex;
     mutable std::uint64_t routingEpoch = 1;
     mutable std::uint64_t routingConfigRevision = 0;
@@ -407,6 +415,14 @@ class CMap : public CGameObject {
 };
 
 namespace performance_guard {
+struct MapTileTraversalWork {
+    std::size_t snapshots = 0;
+    std::size_t snapshotReferences = 0;
+    std::size_t directVisits = 0;
+};
+void resetMapTileTraversalProbe();
+MapTileTraversalWork mapTileTraversalWork();
+void disableMapTileTraversalProbe();
 void resetMapCoordinateLookupProbe();
 std::size_t mapCoordinateLookupProbeCount();
 void disableMapCoordinateLookupProbe();
