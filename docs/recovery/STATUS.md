@@ -13,7 +13,8 @@ separately. Compiled binaries, installers, and IDE state are inventoried rather
 than recreated.
 
 The read-only audit found 367 affected commits and 365 distinct trees. There are
-1,958 removed blob hashes across 412 paths; 72 originals still exist locally.
+1,958 removed blob hashes across 747 historical paths; 72 originals still exist locally.
+The earlier 412-path estimate used representative object names and missed renames.
 `git fsck --full --no-reflogs --unreachable` found no unreachable objects.
 
 The affected history is a closed graph with these maximal tips:
@@ -55,3 +56,14 @@ establish the build recipes, reconstruct missing required inputs, and run all
 historical build/startup checks. Publish the repaired graph under versioned
 `recovery/bfg/` refs and verify a portable bundle. The tooling PR remains draft
 until its required checks and the historical acceptance checks have succeeded.
+
+## Latest checkpoint
+
+The complete audit is in `recovery/catalog.json`, frozen to the original refs in
+`recovery/original-refs.json`. It identifies 636 generated/IDE blob versions and
+1,250 unresolved required blob versions. Recovery and smoke regression tests pass
+locally; historical native compilation has not run.
+
+Local Qt installation is blocked: `sudo -n apt-get install -y qtbase5-dev
+libqt5opengl5-dev` requires interactive authentication. The CI toolchain is the
+primary historical build path.
