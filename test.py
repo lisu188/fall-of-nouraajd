@@ -158,6 +158,8 @@ FAST_TEST_PREFIXES = (
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
     "BaldursGateCityLedgerFixtureTest.",
+    "BaldursGatePoisonFollowupTest.",
+    "BaldursGatePoisonSourceTest.",
     "BaldursGateCityRegionTest.",
     "BaldursGateCityGeometryTest.",
     "MultilevelRuinsContentTest.",
@@ -204,6 +206,7 @@ FAST_TEST_PREFIXES = (
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "McpEngineThreadTest.",
+    "McpHandleLifetimeTest.",
     "McpNativeUiOwnershipSourceTest.",
     "UsurpergateEntryDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
@@ -243,6 +246,8 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
     "McpServerTest.test_engine_handle_call_rejects_private_methods",
     "McpServerTest.test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation",
+    "McpServerTest.testMapMovementStatusReadPreservesPendingTurn",
+    "McpServerTest.testMapMovementStatusDoesNotAuthorizeUnrelatedGetters",
     "McpServerTest.test_engine_handle_call_serializes_player_quest_sets_as_handles",
     "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
     "McpServerTest.test_http_notification_response_declares_empty_body",
@@ -27951,6 +27956,148 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertEqual("./scripts/run_coverage.sh", workflowScalar(coverage, "run", 8))
         self.assertEqual("60", workflowScalar(coverage, "timeout-minutes", 8))
 
+    def cmakeNativeRuntimeEnvironment(self, *, windows, declared_runtime):
+        cmake_executable = shutil.which("cmake")
+        if cmake_executable is None:
+            self.skipTest("CMake is unavailable for the native-test runtime environment check")
+        ninja_executable = shutil.which("ninja")
+        if ninja_executable is None:
+            self.skipTest("Ninja is unavailable for the compile-free CMake runtime environment check")
+        ctest_executable = Path(cmake_executable).with_name("ctest" + Path(cmake_executable).suffix)
+        if not ctest_executable.is_file():
+            self.skipTest("Matching CTest is unavailable for the native-test runtime environment check")
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        setup_start = cmake.index("set(GAME_UNIT_TEST_TARGETS)\n")
+        function_start = cmake.index("function(add_game_unit_test target_name)", setup_start)
+        setup = cmake[setup_start:function_start]
+        function_end = cmake.index("endfunction()", function_start)
+        function_body = cmake[function_start:function_end]
+        environment_start = function_body.index("    if (WIN32)\n        if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)")
+        environment_end = function_body.index("    set(GAME_UNIT_TEST_TARGETS", environment_start)
+        unit_environment = function_body[environment_start:environment_end]
+        performance_start = cmake.index('add_test(NAME "performance.performance_guard_tests"')
+        performance_start = cmake.index("if (WIN32)", performance_start)
+        performance_end = cmake.index("add_game_unit_test(vstd_unit_tests", performance_start)
+        performance_environment = cmake[performance_start:performance_end]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-python-runtime-") as temporary:
+            root = Path(temporary).resolve()
+            self.assertEqual(root.parent, Path(tempfile.gettempdir()).resolve())
+            self.assertTrue(root.name.startswith("nouraajd-python-runtime-"))
+            interpreter_directory = root / "configured interpreter"
+            runtime_directory = root / "selected runtime"
+            dependency_root = root / "dependency provider"
+            dependency_directory = dependency_root / "x64-windows" / "bin"
+            inherited_directory = root / "inherited tools"
+            for directory in (
+                interpreter_directory,
+                runtime_directory,
+                dependency_directory,
+                inherited_directory,
+            ):
+                directory.mkdir(parents=True)
+            runtime_directories = [root / "missing runtime", runtime_directory] if declared_runtime else []
+            quote = lambda value: "[==[" + str(value).replace("\\", "/") + "]==]"
+            environment_reference = lambda name: "$" + "ENV{" + name + "}"
+            command_reference = "$" + "{CMAKE_COMMAND}"
+            output_paths = {name: root / (name + ".txt") for name in ("unit", "performance")}
+            for name, result_path in output_paths.items():
+                (root / (name + ".cmake")).write_text(
+                    "file(WRITE "
+                    + quote(result_path)
+                    + ' "'
+                    + environment_reference("PATH")
+                    + "\\n"
+                    + environment_reference("PYTHONHOME")
+                    + '\\n")\n',
+                    encoding="utf-8",
+                )
+            project = "\n".join(
+                (
+                    "cmake_minimum_required(VERSION 3.22)",
+                    "project(native_runtime_environment LANGUAGES NONE)",
+                    "enable_testing()",
+                    "set(WIN32 " + ("TRUE" if windows else "FALSE") + ")",
+                    "set(Python3_EXECUTABLE " + quote(interpreter_directory / "python.exe") + ")",
+                    "set(Python3_RUNTIME_LIBRARY_DIRS "
+                    + quote(";".join(str(path).replace("\\", "/") for path in runtime_directories))
+                    + ")",
+                    "set(_VCPKG_INSTALLED_DIR " + quote(dependency_root) + ")",
+                    "set(VCPKG_TARGET_TRIPLET x64-windows)",
+                    setup,
+                    'add_test(NAME native_runtime_probe COMMAND "'
+                    + command_reference
+                    + '" -P '
+                    + quote(root / "unit.cmake")
+                    + ")",
+                    "set(test_name native_runtime_probe)",
+                    unit_environment,
+                    'add_test(NAME performance.performance_guard_tests COMMAND "'
+                    + command_reference
+                    + '" -P '
+                    + quote(root / "performance.cmake")
+                    + ")",
+                    performance_environment,
+                )
+            )
+            (root / "CMakeLists.txt").write_text(project + "\n", encoding="utf-8")
+            environment = os.environ.copy()
+            environment.update(PATH=str(inherited_directory), PYTHONHOME=sys.base_prefix)
+            build = root / "build"
+            for command in (
+                [
+                    cmake_executable,
+                    "-S",
+                    str(root),
+                    "-B",
+                    str(build),
+                    "-G",
+                    "Ninja",
+                    "-DCMAKE_MAKE_PROGRAM=" + ninja_executable,
+                ],
+                [str(ctest_executable), "--test-dir", str(build), "--output-on-failure"],
+            ):
+                completed = subprocess.run(
+                    command,
+                    cwd=root,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            results = {}
+            for name, path in output_paths.items():
+                actual_path, actual_home = path.read_text(encoding="utf-8").splitlines()
+                results[name] = ([Path(entry) for entry in actual_path.split(os.pathsep)], actual_home)
+            expected_runtime = runtime_directory if declared_runtime else interpreter_directory
+            return results, expected_runtime, dependency_directory, inherited_directory, interpreter_directory
+
+    def testCmakeNativeTestsPreferDiscoveredPythonRuntimeOverDependencyProvider(self):
+        results, runtime, dependency, inherited, interpreter = self.cmakeNativeRuntimeEnvironment(
+            windows=True, declared_runtime=True
+        )
+        for target, (actual_path, actual_home) in results.items():
+            with self.subTest(target=target):
+                self.assertEqual([runtime, dependency, inherited], actual_path)
+                self.assertEqual(interpreter, Path(actual_home))
+
+    def testCmakeNativeTestsUseInterpreterDirectoryWhenRuntimeDirsAreUnavailable(self):
+        results, runtime, dependency, inherited, interpreter = self.cmakeNativeRuntimeEnvironment(
+            windows=True, declared_runtime=False
+        )
+        for target, (actual_path, actual_home) in results.items():
+            with self.subTest(target=target):
+                self.assertEqual([runtime, dependency, inherited], actual_path)
+                self.assertEqual(interpreter, Path(actual_home))
+
+    def testCmakeNativeRuntimePolicyLeavesLinuxEnvironmentUnchanged(self):
+        results, _, _, inherited, _ = self.cmakeNativeRuntimeEnvironment(windows=False, declared_runtime=True)
+        for target, (actual_path, actual_home) in results.items():
+            with self.subTest(target=target):
+                self.assertEqual([inherited], actual_path)
+                self.assertEqual(sys.base_prefix, actual_home)
+
     def testCmakeCopiesCanonicalRunnerWithoutInterpretingWorkflowExpressions(self):
         cmake_executable = shutil.which("cmake")
         if cmake_executable is None:
@@ -28210,6 +28357,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_baldurs_gate_city_ledger import (
         BaldursGateCityLedgerFixtureTest as _BaldursGateCityLedgerFixtureTest,
     )
+    from tests.test_baldurs_gate_poison_followup import BaldursGatePoisonFollowupTest as _BaldursGatePoisonFollowupTest
+    from tests.test_baldurs_gate_poison_source import BaldursGatePoisonSourceTest as _BaldursGatePoisonSourceTest
     from tests.test_baldurs_gate_city_regions import BaldursGateCityRegionTest as _BaldursGateCityRegionTest
     from tests.test_baldurs_gate_city_geometry import BaldursGateCityGeometryTest as _BaldursGateCityGeometryTest
     from tests.test_candlekeep_content import CandlekeepContentTest as _CandlekeepContentTest
@@ -28227,6 +28376,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
+    from tests.test_mcp_handle_lifetime import McpHandleLifetimeTest as _McpHandleLifetimeTest
     from tests.test_mcp_http_native_ui import McpNativeUiOwnershipSourceTest as _McpNativeUiOwnershipSourceTest
     from tests.test_usurpergate_entry_diagnostics import (
         UsurpergateEntryDiagnosticsTest as _UsurpergateEntryDiagnosticsTest,
@@ -28357,6 +28507,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class BaldursGateCityLedgerFixtureTest(_BaldursGateCityLedgerFixtureTest):
+        pass
+
+    class BaldursGatePoisonFollowupTest(_BaldursGatePoisonFollowupTest):
+        pass
+
+    class BaldursGatePoisonSourceTest(_BaldursGatePoisonSourceTest):
         pass
 
     class BaldursGateCityRegionTest(_BaldursGateCityRegionTest):
@@ -28526,6 +28682,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class McpEngineThreadTest(_McpEngineThreadTest):
+        pass
+
+    class McpHandleLifetimeTest(_McpHandleLifetimeTest):
         pass
 
     class McpNativeUiOwnershipSourceTest(_McpNativeUiOwnershipSourceTest):
@@ -28701,7 +28860,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _CandlekeepMetadataSourceTest, _CandlekeepMetadataRuntimeTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
-    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
+    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest, _McpHandleLifetimeTest
     del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
     del _PermanentPlayerDefeatSourceTest, _PermanentDefeatJsonSyntaxTest
     del _DefeatContinuationSourceTest
@@ -28739,6 +28898,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BaldursGateCityRoutesTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
+    del _BaldursGatePoisonFollowupTest
+    del _BaldursGatePoisonSourceTest
     del _BaldursGateCityRegionTest
     del _BaldursGateCityGeometryTest
     del _CandlekeepContentTest, _CandlekeepModelTest, _CandlekeepSourceParserTest, _CandlekeepSourceAuditTest
@@ -29331,6 +29492,55 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(
             response["structuredContent"], {"error": "Method `__getattribute__` is not exported for handle calls"}
         )
+
+    def testMapMovementStatusReadPreservesPendingTurn(self):
+        server = self.make_stub_server()
+
+        class CMap:
+            def __init__(self):
+                self.pending = False
+                self.reads = 0
+                self.turns = 7
+
+            def isMoving(self):
+                self.reads += 1
+                return self.pending
+
+            def moveAsync(self):
+                self.turns += 1
+
+        game_map = CMap()
+        handle = server._serialize_result(game_map)
+        advertised = {entry["name"] for entry in handle.get("pythonMethods", ())}
+        self.assertIn("isMoving", advertised)
+        for pending in (False, True, True, False):
+            game_map.pending = pending
+            response = server._engine_handle_call({"handle": handle["__handle__"], "method": "isMoving"})
+            self.assertFalse(response["isError"])
+            self.assertIs(pending, response["structuredContent"]["result"])
+        self.assertEqual(4, game_map.reads)
+        self.assertEqual(7, game_map.turns)
+        denied = server._engine_handle_call({"handle": handle["__handle__"], "method": "moveAsync"})
+        self.assertTrue(denied["isError"])
+        self.assertEqual({"error": "Method `moveAsync` is not exported for handle calls"}, denied["structuredContent"])
+        self.assertEqual(7, game_map.turns)
+
+    def testMapMovementStatusDoesNotAuthorizeUnrelatedGetters(self):
+        server = self.make_stub_server()
+        probes = []
+
+        class CGameObject:
+            @property
+            def isMoving(self):
+                probes.append("dereferenced")
+                return lambda: True
+
+        handle = server._serialize_result(CGameObject())
+        self.assertNotIn("isMoving", {entry["name"] for entry in handle.get("pythonMethods", ())})
+        response = server._engine_handle_call({"handle": handle["__handle__"], "method": "isMoving"})
+        self.assertTrue(response["isError"])
+        self.assertEqual({"error": "Method `isMoving` is not exported for handle calls"}, response["structuredContent"])
+        self.assertEqual([], probes)
 
     def test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation(self):
         server = self.make_stub_server()
@@ -30611,6 +30821,8 @@ class McpServerTest(unittest.TestCase):
         path.write_text(json.dumps(log, indent=2, sort_keys=True))
 
     def _mcp_tool(self, session, name, arguments, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
+        if name in {"engine_call", "engine_handle_call"}:
+            arguments = {**arguments, "include_text_content": False}
         request_id = session["next_request_id"]
         session["next_request_id"] += 1
         return self._call_tool(session["proc"], request_id, name, arguments, timeout=timeout)

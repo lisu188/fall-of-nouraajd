@@ -751,6 +751,20 @@ class TownDialog:
             if entry["implementation"]["status"] != "excluded"
         }
         self.assertTrue(expected)
+        followup_ids = {"TENYA2.DLG:state" + str(index) for index in range(12)}
+        followup_ids.update("TENYA2.DLG:edge" + str(index) for index in range(23))
+        followup_ids.update(
+            (
+                "BDMAREK.SPL:header",
+                "BDMAREK.SPL:ability0",
+                "BDMAREK.SPL:effect0",
+                "BDMAREK.SPL:effect1",
+                "GTIMES.IDS:ONE_DAY",
+                "GTIMES.IDS:TEN_DAYS",
+            )
+        )
+        self.assertEqual(41, len(followup_ids))
+        self.assertTrue({"baldursGate.source." + key for key in followup_ids} <= set(expected))
         pending = {
             branch: evidence
             for branch, evidence in catalog.pendingGameplayObligations().items()

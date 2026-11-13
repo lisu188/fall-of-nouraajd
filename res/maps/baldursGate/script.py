@@ -2,6 +2,332 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One persistent city; original-resource facts and native adaptation rules remain distinct."""
 
+"""Private source-model prototype. Native activation and shipping UI are deliberately closed.
+
+Only json is imported so the pure evaluator can eventually live in a map plugin's load closure.
+ModelWorld is an internal port, not an assertion that similarly named engine APIs exist.
+"""
+
+import json
+
+
+class SourceGap(RuntimeError):
+    pass
+
+
+class UncertainAction(SourceGap):
+    pass
+
+
+def require(value, message):
+    if not value:
+        raise SourceGap(message)
+
+
+def copyData(value):
+    return json.loads(json.dumps(value, sort_keys=True))
+
+
+CONDITIONS = {
+    "Dead": ("identifier",),
+    "False": (),
+    "True": (),
+    "Global": ("identifier", "identifier", "integer"),
+    "GlobalGT": ("identifier", "identifier", "integer"),
+    "GlobalLT": ("identifier", "identifier", "integer"),
+    "GlobalTimerNotExpired": ("identifier", "identifier"),
+    "HasItem": ("identifier", "symbol"),
+    "NumberOfTimesTalkedTo": ("integer",),
+    "OR": ("integer",),
+    "PartyGoldGT": ("integer",),
+    "PartyHasItem": ("identifier",),
+    "ReactionGT": ("symbol", "symbol"),
+    "ReactionLT": ("symbol", "symbol"),
+    "StateCheck": ("symbol", "symbol"),
+}
+ACTIONS = {
+    "ActionOverride": ("identifier", "action"),
+    "AddexperienceParty": ("integer",),
+    "CreateCreature": ("identifier", "point", "symbol"),
+    "CreateItem": ("identifier", "integer", "integer", "integer"),
+    "Dialog": ("selectorSymbol",),
+    "DialogueInterrupt": ("symbol",),
+    "Enemy": (),
+    "EscapeArea": (),
+    "EscapeAreaMove": ("identifier", "integer", "integer", "symbol"),
+    "Face": ("symbol",),
+    "GiveItem": ("identifier", "recipient"),
+    "GiveItemCreate": ("identifier", "recipient", "integer", "integer", "integer"),
+    "MoveToPoint": ("point",),
+    "SetGlobal": ("identifier", "identifier", "integer"),
+    "SetGlobalTimer": ("identifier", "identifier", "symbol"),
+    "Shout": ("integer",),
+    "StartStore": ("identifier", "recipient"),
+    "TakePartyGold": ("integer",),
+    "TakePartyItem": ("identifier",),
+    "Wait": ("integer",),
+}
+GLOBAL_NAMES = {
+    "boybody",
+    "chapter",
+    "divinerasked",
+    "helpjalantha",
+    "helplothander",
+    "helptenya",
+    "helptremain",
+    "jalappear",
+    "lothandermove",
+    "marekmove",
+    "returnedbook",
+    "tenappear",
+    "talkedtotenya",
+    "talkedtoulbright",
+    "tremainquest",
+    "partycured",
+    "poisonwarning",
+    "poisonpartyicon",
+}
+TIMERS = {"diviner", "poisonparty", "poisonparty2"}
+ITEMS = {"BOOK08", "LOPOTN20", "MISC54", "POTN47", "SCRLJALA"}
+DEATH_NAMES = {"jalantha", "jebadoh", "rieltar", "tenya", "tenya2", "pumberl", "marek", "lothander"}
+TIMER_CONSTANTS = {"ONE_DAY": 7200, "TEN_DAYS": 72000}
+
+# Exact dialogue identity projection of the retained eight-CRE fixture dc91ffb9.
+CRE_DIALOGUE_BINDINGS = {
+    "MAREK": ("MAREK.DLG", "Marek", "729e111011af223a067351ff53d6cfe0c5ae1c78656aa3be7da2a58954b443e9"),
+    "MAREK1": ("MAREK.DLG", "Marek", "b8fbac2cb9b1da5aca5f47d83b148e496498b0287be90f635f4f1f5f54da26b5"),
+    "LOTHAN": ("LOTHAN.DLG", "Lothander", "7fe53962a8fb41b909803946b20568e968adf67d70a86df41f7cb90a93283eaa"),
+    "DIVINE": ("DIVINE.DLG", "None", "49963dad72be7a3aa92e36b9034d3621423f04ae478e1cc21989e578812a74e1"),
+    "JALANT": ("JALANT.DLG", "Jalantha", "bfa02cdc0445a4005be37e9adef0469260563f06e30829cd130036eb9f651b66"),
+    "PUMBERL": ("PUMBERL.DLG", "pumberl", "be4e5fed1c0ba1fff92696d99ef541d4d3d905da0ebfdeab00157e3ce67754da"),
+    "CHANTH": ("CHANTH.DLG", "None", "294cd5c1722c4ac31688c2ee7c211b5f1632760530bd52d173686029e2ab8296"),
+    "TENYA2": ("TENYA2.DLG", "Tenya2", "a5bc5c9091c5b0a48d4855feca65b663b0c75e30375714c817622e0b0b5aee0e"),
+}
+
+
+class SourceGraphs:
+    """Validate every retained record, including False and unlinked branches, before execution."""
+
+    def __init__(self, dialogues):
+        self.graphs = {}
+        self.condition_operations = set()
+        self.action_operations = set()
+        for raw in copyData(dialogues):
+            resource = raw["resource"]
+            require(resource not in self.graphs and resource.endswith(".DLG"), "duplicate or invalid graph")
+            states, edges = raw["states"], raw["edges"]
+            require([s["index"] for s in states] == list(range(len(states))), "noncanonical states")
+            require([e["index"] for e in edges] == list(range(len(edges))), "noncanonical edges")
+            source_ids = set()
+            for state in states:
+                require(state["sourceId"] == resource + ":state" + str(state["index"]), "state identity")
+                require(state["sourceId"] not in source_ids, "duplicate source identity")
+                source_ids.add(state["sourceId"])
+                self.validateConditions(state["entryConditions"])
+                require(len(state["edges"]) == len(set(state["edges"])), "duplicate state edge")
+                for index in state["edges"]:
+                    require(type(index) is int and 0 <= index < len(edges), "invalid state edge")
+            for edge in edges:
+                require(edge["sourceId"] == resource + ":edge" + str(edge["index"]), "edge identity")
+                require(edge["sourceId"] not in source_ids, "duplicate source identity")
+                source_ids.add(edge["sourceId"])
+                expected = [s["index"] for s in states if edge["index"] in s["edges"]]
+                require(edge["owners"] == expected, "edge owner mismatch")
+                self.validateConditions(edge["conditions"])
+                for action in edge["actions"]:
+                    self.validateCall(action, False)
+                target = edge["targetState"]
+                if target is not None:
+                    require(edge["targetResource"] == resource[:-4], "unmapped external graph")
+                    require(type(target) is int and 0 <= target < len(states), "invalid target state")
+                else:
+                    require(not edge["targetResource"], "terminal edge with external target")
+                require(type(edge["rawFlags"]) is int, "invalid edge flags")
+            if "entryPriority" in raw:
+                priority = raw["entryPriority"]
+                indices = [row["conditionIndex"] for row in priority]
+                require(indices == sorted(set(indices)), "invalid condition-index priority")
+                entries = [i for row in priority for i in row["states"]]
+                require(len(entries) == len(set(entries)), "duplicate entry state")
+                require(set(entries) == {s["index"] for s in states if s["entryConditions"]}, "entry coverage")
+                require(all(len(row["states"]) == 1 for row in priority), "unresolved tied entry priority")
+                raw["compiledEntries"] = entries
+                raw["priorityProven"] = True
+            else:
+                entries = raw["entryCandidatesInStateOrder"]
+                require(entries == [s["index"] for s in states if s.get("hasEntryTrigger")], "entry coverage")
+                require(raw["nullEntryTriggerIsNotTrue"] is True, "null entry semantics missing")
+                raw["compiledEntries"] = entries
+                raw["priorityProven"] = False
+            self.graphs[resource] = raw
+
+    def validateArgument(self, node, kind):
+        require(type(node) is dict, "invalid typed argument")
+        if kind == "action":
+            self.validateCall(node, False)
+            return
+        if kind == "recipient":
+            if node.get("type") == "symbol":
+                require(node.get("value") == "LastTalkedToBy", "unmapped recipient")
+            else:
+                require(
+                    node.get("type") == "call"
+                    and node.get("operation") == "LastTalkedToBy"
+                    and node.get("negated") is False,
+                    "unmapped recipient call",
+                )
+                require(node.get("arguments") == [{"type": "symbol", "value": "Myself"}], "recipient owner")
+                self.action_operations.add("LastTalkedToBy")
+            return
+        require(node.get("type") == kind, "argument type mismatch: " + kind)
+        if kind == "integer":
+            require(type(node.get("value")) is int, "boolean or absent integer")
+        elif kind == "point":
+            require(type(node.get("x")) is int and type(node.get("y")) is int, "invalid point")
+        else:
+            require(type(node.get("value")) is str and bool(node["value"]), "invalid identifier/symbol")
+
+    def validateCall(self, node, condition):
+        require(type(node) is dict and node.get("type") == "call", "untyped source operation")
+        operation = node.get("operation")
+        signatures = CONDITIONS if condition else ACTIONS
+        require(operation in signatures, "unmapped source operation: " + str(operation))
+        require(type(node.get("negated")) is bool and (condition or not node["negated"]), "action negation")
+        args = node.get("arguments")
+        require(type(args) is list and len(args) == len(signatures[operation]), "source operation arity")
+        for index, arg in enumerate(args):
+            self.validateArgument(arg, signatures[operation][index])
+        (self.condition_operations if condition else self.action_operations).add(operation)
+        values = [arg.get("value") for arg in args]
+        if operation in ("Global", "GlobalGT", "GlobalLT", "SetGlobal"):
+            require(values[1] == "GLOBAL" and values[0].casefold() in GLOBAL_NAMES, "unmapped global scope/name")
+        if operation in ("GlobalTimerNotExpired", "SetGlobalTimer"):
+            require(values[1] == "GLOBAL" and values[0].casefold() in TIMERS, "unmapped timer scope/name")
+        if operation == "SetGlobalTimer":
+            require(values[2] in TIMER_CONSTANTS, "unmapped timer constant")
+        if operation in ("HasItem", "PartyHasItem", "GiveItem", "GiveItemCreate", "CreateItem", "TakePartyItem"):
+            require(values[0] in ITEMS, "unmapped item")
+        if operation == "HasItem":
+            require(values[1] == "Myself", "unmapped item holder")
+        if operation == "StateCheck":
+            require(values == ["Myself", "STATE_CHARMED"], "unmapped state check")
+        if operation == "Dead":
+            require(values[0].casefold() in DEATH_NAMES, "unmapped death lineage")
+        if operation in ("ReactionGT", "ReactionLT"):
+            bounds = (
+                ("HOSTILE_UPPER", "NEUTRAL_UPPER") if operation == "ReactionGT" else ("NEUTRAL_LOWER", "FRIENDLY_LOWER")
+            )
+            require(values[0] == "LastTalkedToBy" and values[1] in bounds, "unmapped reaction comparison")
+        if operation == "OR":
+            require(not node["negated"] and values[0] in (2, 3), "unmapped OR")
+        if operation == "ActionOverride":
+            require(values[0] in ("Jalantha", "Lothander", "Tenya2"), "unmapped override owner")
+        if operation == "CreateCreature":
+            require(values[0] in ("JALANT", "TENYA2") and values[2] == "S", "unmapped creature factory")
+        if operation in ("CreateItem", "GiveItemCreate"):
+            require(values[-3:] == [0, 0, 0], "unmapped source item creation parameters")
+        if operation == "DialogueInterrupt":
+            require(values == ["FALSE"], "unmapped dialogue interrupt")
+        if operation == "Dialog":
+            require(values == ["PC"], "unmapped dialogue selector")
+        if operation == "StartStore":
+            require(values[0] == "tem0132", "unmapped store")
+        if operation == "Face":
+            require(values == ["SSW"], "unmapped facing")
+        if operation == "EscapeAreaMove":
+            require(values == ["AR0106", 259, 198, "S"], "unmapped area move")
+        if operation == "Shout":
+            require(values == [99], "unmapped shout")
+        finite_numbers = {
+            "AddexperienceParty": (1500,),
+            "TakePartyGold": (50, 100, 500, 2000),
+            "PartyGoldGT": (49, 99, 499, 1999),
+            "NumberOfTimesTalkedTo": (0,),
+            "Wait": (10,),
+        }
+        if operation in finite_numbers:
+            require(values[0] in finite_numbers[operation], "unmapped numeric operation variant")
+
+    def validateConditions(self, nodes):
+        require(type(nodes) is list, "invalid conditions")
+        cursor = 0
+        while cursor < len(nodes):
+            node = nodes[cursor]
+            self.validateCall(node, True)
+            if node["operation"] == "OR":
+                count = node["arguments"][0]["value"]
+                require(cursor + count < len(nodes), "incomplete OR group")
+                for child in nodes[cursor + 1 : cursor + count + 1]:
+                    self.validateCall(child, True)
+                    require(child["operation"] != "OR", "unmapped nested OR group")
+                cursor += count
+            cursor += 1
+
+    def matches(self, nodes, world, speaker):
+        cursor, result = 0, True
+        while cursor < len(nodes):
+            node = nodes[cursor]
+            if node["operation"] == "OR":
+                count = node["arguments"][0]["value"]
+                matches = [self.matchOne(c, world, speaker) for c in nodes[cursor + 1 : cursor + 1 + count]]
+                value = any(matches)
+                cursor += count
+            else:
+                value = self.matchOne(node, world, speaker)
+            result = result and value
+            cursor += 1
+        return result
+
+    def matchOne(self, node, world, speaker):
+        op, args = node["operation"], [a.get("value") for a in node["arguments"]]
+        actor = world.actor(speaker)
+        if op == "True":
+            result = True
+        elif op == "False":
+            result = False
+        elif op in ("Global", "GlobalGT", "GlobalLT"):
+            value = world.globalValue(args[0])
+            result = value == args[2] if op == "Global" else value > args[2] if op == "GlobalGT" else value < args[2]
+        elif op == "Dead":
+            result = world.isDead(args[0])
+        elif op == "GlobalTimerNotExpired":
+            result = world.timerNotExpired(args[0])
+        elif op == "HasItem":
+            result = bool(world.ownedItems(speaker, args[0]))
+        elif op == "PartyHasItem":
+            result = bool(world.partyItems(args[0]))
+        elif op == "PartyGoldGT":
+            result = world.data["gold"] > args[0]
+        elif op == "NumberOfTimesTalkedTo":
+            result = actor["talks"] == args[0]
+        elif op == "StateCheck":
+            result = actor["charmed"]
+        elif op in ("ReactionGT", "ReactionLT"):
+            score = world.data["social"]
+            threshold = 7 if args[1] in ("HOSTILE_UPPER", "NEUTRAL_LOWER") else 12
+            result = score >= threshold if op == "ReactionGT" else score < threshold
+        else:
+            raise SourceGap("unmapped condition evaluation: " + op)
+        return not result if node["negated"] else result
+
+    def entry(self, resource, world, speaker):
+        graph = self.graphs[resource]
+        candidates = [
+            i for i in graph["compiledEntries"] if self.matches(graph["states"][i]["entryConditions"], world, speaker)
+        ]
+        if not graph["priorityProven"]:
+            require(len(candidates) <= 1, "TENYA2 entry priority not retained; ambiguous admission refused")
+        return candidates[0] if candidates else None
+
+    def coverage(self):
+        return {
+            "graphs": len(self.graphs),
+            "states": sum(len(d["states"]) for d in self.graphs.values()),
+            "edges": sum(len(d["edges"]) for d in self.graphs.values()),
+            "conditionOperations": sorted(self.condition_operations),
+            "actionOperations": sorted(self.action_operations),
+        }
+
 
 CITY_JSON_PREFIX = "city-json:"
 
@@ -38,10 +364,243 @@ def pairedValues(left, right):
 def load(self, context):
     import json
 
-    from game import CBuilding, CCreature, CDialog, CEvent, CQuest, CTrigger, Coords
+    from game import CBuilding, CCreature, CDialog, CEvent, CScrollBase, CQuest, CTrigger, Coords
     from game import claim_once, flowGame, mapQuest, register, resumableHook, uiRequest
 
     region_indices = {}
+    poison_compiled = {}
+    poison_live_actors = {}
+
+    class NativePoisonPort:
+        def __init__(self, coordinator, binding, state):
+            self.clock, self.binding, self.state = coordinator, binding, state
+            self.native = binding["objectClass"]
+            self.last_created = {}
+            stats = CCreature.getStats(binding["player"])
+            self.data = {
+                "gold": CCreature.getGold(binding["player"]),
+                "social": self.native.getNumericProperty(stats, "intelligence")
+                + self.native.getNumericProperty(binding["map"], "plugin_cityStanding"),
+            }
+            coordinator.poisonRequire(binding)
+
+        def resolve(self, identity, active=True, witness_required=True):
+            row = self.state["actors"].get(identity)
+            if not row:
+                raise SourceGap("Source actor was not enrolled by its placement/factory")
+            expected = CRE_DIALOGUE_BINDINGS.get(row["resource"])
+            actor = self.binding["mapClass"].getObjectByName(self.binding["map"], identity)
+            self.clock.poisonRequire(self.binding)
+            if (
+                expected is None
+                or not isinstance(actor, CCreature)
+                or self.native.getTypeId(actor) != row["typeId"]
+                or self.native.getGame(actor) is not self.binding["game"].resolve()
+                or self.binding["mapObjectClass"].getMap(actor) is not self.binding["map"]
+                or self.native.getStringProperty(actor, "sourceCreature") != row["resource"]
+                or self.native.getStringProperty(actor, "sourceDialogue") + ".DLG" != expected[0]
+                or self.native.getStringProperty(actor, "plugin_cityPoisonOwnerCreation") != row["lineage"]
+                or self.native.getStringProperty(actor, "sourceArea") != row["area"]
+                or active
+                and (row.get("retired") or row.get("dead") or not CCreature.isAlive(actor))
+            ):
+                raise SourceGap("Genuine source actor binding changed")
+            witness = poison_live_actors.get(row["lineage"])
+            if witness_required and (
+                witness is None
+                or witness["actor"] is not actor
+                or witness["game"].resolve() is not self.binding["game"].resolve()
+                or witness["epoch"] != self.binding["epoch"]
+            ):
+                raise SourceGap("Actual source actor differs from its prospective native owner witness")
+            return actor
+
+        def actor(self, identity):
+            actor = self.resolve(identity)
+            from game import CEffect
+
+            # Only a real active native effect can satisfy STATE_CHARMED. No dialogue/debug boolean qualifies.
+            charmed = any(
+                self.native.hasTag(effect, "cityPoisonCharmed")
+                and self.native.getNumericProperty(effect, "timeLeft") > 0
+                for effect in CCreature.getEffects(actor)
+                if isinstance(effect, CEffect)
+            )
+            row = self.state["actors"][identity]
+            return {
+                "resource": row["resource"],
+                "lineage": row["lineage"],
+                "area": row["area"],
+                "talks": self.native.getNumericProperty(actor, "plugin_cityPoisonTalkCount"),
+                "charmed": charmed,
+            }
+
+        def globalValue(self, name):
+            if name == "Chapter":
+                return self.native.getNumericProperty(self.binding["map"], "plugin_cityPhase") or 5
+            keys = [key for key in self.state["globals"] if key.casefold() == name.casefold()]
+            if len(keys) > 1:
+                raise SourceGap("Ambiguous saved source global aliases")
+            return self.state["globals"].get(keys[0], 0) if keys else 0
+
+        def setGlobal(self, name, value):
+            if type(value) is not int or name.casefold() not in GLOBAL_NAMES:
+                raise SourceGap("Unmapped source global mutation")
+            keys = [key for key in self.state["globals"] if key.casefold() == name.casefold()]
+            if len(keys) > 1:
+                raise SourceGap("Ambiguous saved source global aliases")
+            self.state["globals"][keys[0] if keys else name] = value
+
+        def ownedItems(self, identity, resref):
+            actor = self.resolve(identity)
+            return [
+                item
+                for item in self.clock.poisonItems(self.binding, actor)
+                if self.native.getStringProperty(item, "plugin_citySourceItem") == resref
+                and not self.native.getBoolProperty(item, "plugin_citySoldToStore")
+            ]
+
+        def partyItems(self, resref):
+            return [
+                (owner, item)
+                for owner in self.clock.poisonPartyOwners(self.binding)
+                for item in self.clock.poisonItems(self.binding, owner)
+                if self.native.getStringProperty(item, "plugin_citySourceItem") == resref
+            ]
+
+        def isDead(self, script_name):
+            # Only prospective actual owner death events or separately authored outside-history transformations write this.
+            return bool(self.state["deadAliases"].get(script_name.casefold(), []))
+
+        def ownerFor(self, script_name, speaker):
+            area = self.state["actors"][speaker]["area"]
+            recent = self.last_created.get(script_name.casefold())
+            if recent:
+                self.resolve(recent)
+                return recent
+            rows = [
+                identity
+                for identity, row in self.state["actors"].items()
+                if row["scriptName"].casefold() == script_name.casefold()
+                and row["area"] == area
+                and not row.get("retired")
+                and not row.get("dead")
+            ]
+            if len(rows) != 1:
+                raise SourceGap("Source named owner selector is missing or ambiguous")
+            self.resolve(rows[0])
+            return rows[0]
+
+        def timerNotExpired(self, name):
+            deadline = self.state["timers"].get(name.casefold())
+            if deadline is None:
+                return False  # Explicit native conversion: an unset timer has not been started.
+            return self.clock.poisonSourceTime(self.binding) < deadline
+
+        def applyAction(self, node, speaker, operation):
+            op, raw = node["operation"], node["arguments"]
+            args = [value.get("value") for value in raw]
+            actor = self.resolve(speaker)
+            player = self.binding["player"]
+            result = {"operation": op}
+            if op == "ActionOverride":
+                return self.applyAction(raw[1], self.ownerFor(args[0], speaker), operation + ":override")
+            if op == "SetGlobal":
+                self.setGlobal(args[0], args[2])
+            elif op == "SetGlobalTimer":
+                self.state["timers"][args[0].casefold()] = (
+                    self.clock.poisonSourceTime(self.binding) + TIMER_CONSTANTS[args[2]]
+                )
+            elif op == "AddexperienceParty":
+                CCreature.addExp(player, args[0])
+            elif op == "TakePartyGold":
+                # Source choices have strict PartyGoldGT guards; a later insolvency is a separate unresolved admission case.
+                if CCreature.getGold(player) < args[0]:
+                    raise SourceGap("Post-admission insufficient-gold action semantics need source reconciliation")
+                CCreature.addGold(player, -args[0])
+            elif op == "TakePartyItem":
+                items = self.partyItems(args[0])
+                if items:
+                    owner, item = items[0]
+                    self.clock.poisonRemoveOwnedItem(self.binding, owner, item)
+                    CCreature.addItem(actor, item)
+                    result["transferred"] = self.native.getName(item)
+                    result["toActor"] = speaker
+                else:
+                    result["missing"] = args[0]  # No new XP guard and no rollback of a preceding award.
+            elif op == "GiveItem":
+                items = self.ownedItems(speaker, args[0])
+                if items:
+                    item = items[0]
+                    self.clock.poisonRemoveOwnedItem(self.binding, actor, item)
+                    CCreature.addItem(player, item)
+                    result["transferred"] = self.native.getName(item)
+                else:
+                    result["missing"] = args[0]  # Actual donor stock is shared with theft. Never mint a replacement.
+            elif op in ("GiveItemCreate", "CreateItem"):
+                if operation in self.state["itemCreations"]:
+                    raise SourceGap("Source creation action was replayed under a different receipt")
+                recipient = actor if op == "CreateItem" else player
+                item = makeSourceItem(self.clock, {"item": args[0], "charges": [0, 0, 0], "flags": 0, "expiration": 0})
+                self.native.setStringProperty(item, "plugin_cityPoisonCreation", operation)
+                CCreature.addItem(recipient, item)
+                self.state["itemCreations"][operation] = {"item": args[0], "name": self.native.getName(item)}
+            elif op == "CreateCreature":
+                identity = self.clock.poisonCreateSourceActor(
+                    self.binding,
+                    self.state,
+                    args[0],
+                    operation,
+                    self.state["actors"][speaker]["area"],
+                    [raw[1]["x"], raw[1]["y"]],
+                )
+                self.last_created[self.state["actors"][identity]["scriptName"].casefold()] = identity
+                result["createdActor"] = identity
+            elif op == "Dialog":
+                self.state["queuedDialogs"].append(speaker)
+            elif op == "DialogueInterrupt":
+                self.native.setBoolProperty(actor, "plugin_cityPoisonDialogueInterrupt", False)
+            elif op == "Enemy":
+                self.native.setBoolProperty(actor, "npc", False)
+                self.native.setStringProperty(actor, "affiliation", "cityHostile")
+                controller = self.binding["game"].resolve().createObject("CTargetController")
+                self.native.setStringProperty(controller, "target", "player")
+                CCreature.setController(actor, controller)
+            elif op in ("MoveToPoint", "EscapeAreaMove"):
+                from game import CMapObject
+
+                destination = self.state["actors"][speaker]["area"] if op == "MoveToPoint" else args[0]
+                point = [raw[0]["x"], raw[0]["y"]] if op == "MoveToPoint" else args[1:3]
+                coords = self.clock.poisonSourcePosition(self.binding, destination, point)
+                CMapObject.relocateWithoutMoveHooks(actor, Coords(*coords))
+                self.state["actors"][speaker]["area"] = destination
+                self.native.setStringProperty(actor, "sourceArea", destination)
+                self.native.setStringProperty(actor, "simulationRegion", destination)
+            elif op == "Face":
+                self.native.setStringProperty(actor, "plugin_citySourceFacing", args[0])
+            elif op == "EscapeArea":
+                self.state["actors"][speaker]["retired"] = True
+                self.native.setBoolProperty(actor, "plugin_cityDeparted", True)
+                self.clock.poisonWrite(self.binding, self.state)
+                self.binding["mapClass"].removeObject(self.binding["map"], actor)
+                poison_live_actors.pop(self.state["actors"][speaker]["lineage"], None)
+            elif op == "StartStore":
+                if self.native.getStringProperty(actor, "sourceStore").upper() != args[0].upper():
+                    raise SourceGap("Source StartStore has no matching staged native service dialog")
+                self.state["queuedStores"].append({"actorId": speaker, "store": args[0].upper()})
+            elif op == "Wait":
+                # Explicit native conversion; no nested event loop is pumped inside an ordered source receipt.
+                self.state["nativeWaitRequests"].append(
+                    {"sourceUnits": args[0], "actorId": speaker, "operation": operation}
+                )
+                result["waitUntil"] = self.clock.poisonSourceTime(self.binding) + args[0]
+            elif op == "Shout":
+                raise SourceGap("Retained Shout99 listeners have not been bound to genuine native source owners")
+            else:
+                raise SourceGap("Unmapped native poison source action: " + op)
+            self.clock.poisonRequire(self.binding)
+            return result
+
     custody_definitions = {}
 
     def world(obj):
@@ -52,6 +611,13 @@ def load(self, context):
 
     def clock(obj):
         return world(obj).getObjectByName("cityClock")
+
+    def optionalObjectProperty(owner, key, getter=None):
+        if not hasattr(owner, key):
+            return None
+        if getter is not None:
+            return getter(owner, key)
+        return owner.getObjectProperty(key)
 
     def read(obj, key, default):
         return decodeData(obj.getStringProperty(key) or json.dumps(default))
@@ -178,7 +744,9 @@ def load(self, context):
         item.setNumericProperty("plugin_cityExpiration", row.get("expiration", 0))
         write(item, "plugin_cityCharges", row.get("charges", [0, 0, 0]))
         item.setBoolProperty("plugin_cityUnstealable", bool(row.get("flags", 0) & 2))
-        item.setBoolProperty("plugin_cityUndroppable", bool(row.get("flags", 0) & 8))
+        item.setBoolProperty(
+            "plugin_cityUndroppable", item.getBoolProperty("plugin_cityItemImmovable") or bool(row.get("flags", 0) & 8)
+        )
         item.setBoolProperty("plugin_cityStolen", bool(row.get("flags", 0) & 4))
         item.setBoolProperty("plugin_cityUnidentified", not bool(row.get("flags", 0) & 1))
         if row.get("flags", 0) & 8:
@@ -348,6 +916,14 @@ def load(self, context):
             return
         required = {}
         for entry in definitions(obj):
+            if clock(obj).getBoolProperty("plugin_cityPoisonSourceEnabled") and entry["id"] in (
+                "marekPoison",
+                "lothanderGeas",
+                "jalanthaBook",
+                "chanthalasTome",
+                "divinerPoison",
+            ):
+                continue
             effects = []
             if any(matches(actor, selector) for selector in entry.get("givers", [])):
                 effects.append(entry.get("acceptEffects", {}))
@@ -422,6 +998,7 @@ def load(self, context):
                     actor.equipItem(native_slot, item)
                     break
         actor.setBoolProperty("plugin_cityInventoryInitialized", True)
+
     def custody(obj):
         return world(obj).getObjectByName("cityCustody")
 
@@ -696,7 +1273,7 @@ def load(self, context):
                 requireCurrent()
                 current = game_map.getObjectByName(native_id)
                 requireCurrent()
-                cached = self.getObjectProperty("plugin_cityActor_" + native_id)
+                cached = optionalObjectProperty(self, "plugin_cityActor_" + native_id)
                 requireCurrent()
                 if (
                     actor_game is not game
@@ -737,7 +1314,7 @@ def load(self, context):
                 actor = game_map.getObjectByName(native_id)
                 requireCurrent()
                 if not actor:
-                    actor = self.getObjectProperty("plugin_cityActor_" + native_id)
+                    actor = optionalObjectProperty(self, "plugin_cityActor_" + native_id)
                     requireCurrent()
                 if actor:
                     requirePatrol(actor, native_id)
@@ -1431,7 +2008,7 @@ def load(self, context):
             self.requireCustodyBinding(binding)
             name = actor.getName()
             registered = binding["map"].getObjectByName(name)
-            retained = self.getObjectProperty("plugin_cityActor_" + name)
+            retained = optionalObjectProperty(self, "plugin_cityActor_" + name)
             departed = actor.getBoolProperty("plugin_cityDeparted")
             self.requireCustodyBinding(binding)
             if registered is not actor and not (registered is None and retained is actor and departed):
@@ -1593,7 +2170,6 @@ def load(self, context):
                 staged["name"] = value
             self.requireCustodyStage(binding, actor)
 
-
     @register(context)
     @mapQuest("baldursGate")
     class BaldursGateQuest(CQuest):
@@ -1601,14 +2177,23 @@ def load(self, context):
             return stage(self, self.getStringProperty("questKey")) in ("completed", "failed", "refused")
 
         def getObjective(self):
+            source_row = clock(self).poisonQuestPresentation(self.getStringProperty("questKey"))
+            if source_row is not None:
+                return source_row["objective"]
             row = quest(self, self.getStringProperty("questKey")) or {}
             return row.get("title", self.getStringProperty("description")) + ": " + stage(self, row.get("id", ""))
 
         def getReward(self):
+            source_row = clock(self).poisonQuestPresentation(self.getStringProperty("questKey"))
+            if source_row is not None:
+                return source_row["reward"]
             return self.getStringProperty("rewardText") or "The recorded choice determines the reward."
 
         def getHint(self):
-            return self.getStringProperty("hint") or "Follow the named people, source items and city journal."
+            source_row = clock(self).poisonQuestPresentation(self.getStringProperty("questKey"))
+            if source_row is not None and source_row.get("hint"):
+                return source_row["hint"]
+            return self.getStringProperty("hintText") or "Follow the named people, source items and city journal."
 
         def onComplete(self):
             pass
@@ -1619,6 +2204,7 @@ def load(self, context):
         def onEnter(self, event):
             if not event or not event.getCause() or not event.getCause().isPlayer():
                 return
+            clock(self).ensureCitySourceKillXp()
             if claim_once(world(self), "plugin_cityInitialized"):
                 world(self).setBoolProperty("plugin_cityFlag_custodyHearing", False)
                 player = hero(self)
@@ -1666,6 +2252,8 @@ def load(self, context):
                 if not player.getStringProperty("affiliation"):
                     player.setStringProperty("affiliation", "cityParty")
                 clock(self).initializeActors()
+                if clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled"):
+                    clock(self).poisonInitializeSource()
                 observeArea(self, currentArea(self))
                 clock(self).applySchedules()
                 yield uiRequest(
@@ -1806,6 +2394,14 @@ def load(self, context):
             return here.z == there.z and abs(here.x - there.x) + abs(here.y - there.y) <= 1
 
         def canAcceptQuest(self, key):
+            if clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled") and key in (
+                "marekPoison",
+                "lothanderGeas",
+                "jalanthaBook",
+                "chanthalasTome",
+                "divinerPoison",
+            ):
+                return False
             row = quest(self, key)
             if not row or not self.canInteract() or stage(self, key) != "notStarted":
                 return False
@@ -1838,6 +2434,14 @@ def load(self, context):
             return True
 
         def canQuestOutcome(self, key, outcome_key):
+            if clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled") and key in (
+                "marekPoison",
+                "lothanderGeas",
+                "jalanthaBook",
+                "chanthalasTome",
+                "divinerPoison",
+            ):
+                return False
             row = quest(self, key)
             if not row or not self.canInteract() or stage(self, key) != "active":
                 return False
@@ -1878,6 +2482,13 @@ def load(self, context):
 
         @resumableHook
         def talk(self):
+            if (
+                clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled")
+                and self.canInteract()
+                and self.actor().getBoolProperty("plugin_cityPoisonManaged")
+            ):
+                yield from clock(self).poisonDialogueFlow(self.actor())
+                return
             if not self.canInteract(resume_custody=True):
                 return
             actor = self.actor()
@@ -1981,8 +2592,11 @@ def load(self, context):
             ):
                 crime(self, owner)
                 return False
-            owner.removeQuestItem(lambda candidate: candidate == item)
-            hero(self).addItem(item)
+            if clock(self).getBoolProperty("plugin_cityPoisonSourceEnabled") and sourceCode(item) == "POTN47":
+                clock(self).transferPoisonSourceItem(owner, hero(self), item)
+            else:
+                owner.removeQuestItem(lambda candidate: candidate == item)
+                hero(self).addItem(item)
             item.setBoolProperty("plugin_cityStolen", True)
             world(self).setBoolProperty("plugin_cityTheft_" + owner.getName(), True)
             return True
@@ -2477,9 +3091,12 @@ def load(self, context):
             yield uiRequest("showReader", flowGame(self.getGame()), row["title"], outcome["text"])
             return True
 
+        def canCityInterlude(self):
+            return self.canInteract() and world(self).getBoolProperty("plugin_cityFlag_cityInterludeReady")
+
         @resumableHook
         def cityInterlude(self):
-            if not self.canInteract() or not world(self).getBoolProperty("plugin_cityFlag_cityInterludeReady"):
+            if not self.canCityInterlude():
                 return False
             world(self).setBoolProperty("plugin_cityFlag_interludeOffered", True)
             yield uiRequest(
@@ -2492,10 +3109,15 @@ def load(self, context):
             )
             return True
 
+        def canReturnFromInterlude(self):
+            return (
+                self.canInteract()
+                and world(self).getBoolProperty("plugin_cityFlag_interludeOffered")
+                and world(self).getNumericProperty("plugin_cityPhase") != 7
+            )
+
         def returnFromInterlude(self):
-            if not self.canInteract() or not world(self).getBoolProperty("plugin_cityFlag_interludeOffered"):
-                return False
-            if world(self).getNumericProperty("plugin_cityPhase") == 7:
+            if not self.canReturnFromInterlude():
                 return False
             world(self).setNumericProperty("plugin_cityPhase", 7)
             world(self).setBoolProperty("plugin_cityFlag_fugitive", True)
@@ -5475,11 +6097,33 @@ def load(self, context):
         # QUEST_CALLBACKS_END
 
     @register(context)
+    class BaldursGateUnderstandingTome(CScrollBase):
+        def onUse(self, event):
+            from game import CGame, CGameObject, CMap
+
+            game = CGameObject.getGame(self)
+            game_map = CGame.getMap(game) if game else None
+            if game_map is None or CGameObject.getStringProperty(game_map, "mapName") != "baldursGate":
+                return False
+            coordinator = CMap.getObjectByName(game_map, "cityClock")
+            if coordinator is None or not CGameObject.getBoolProperty(
+                coordinator, "plugin_cityBook08NativeConversionEnabled"
+            ):
+                return False
+            return coordinator.poisonUseUnderstandingTome(self, event.getCause() if event else None)
+
+    @register(context)
     class BaldursGatePersonTrigger(CTrigger):
         @resumableHook
         def trigger(self, actor, event):
             if event and event.getCause() and event.getCause().isPlayer():
-                yield uiRequest("gui.showDialog", actor.getGame().createObject(actor.getName() + "Dialog"))
+                if clock(actor).getBoolProperty("plugin_cityPoisonSourceEnabled") and actor.getBoolProperty(
+                    "plugin_cityPoisonManaged"
+                ):
+                    dialog = clock(actor).poisonMakeActorDialog(actor)
+                else:
+                    dialog = actor.getGame().createObject(actor.getName() + "Dialog")
+                yield uiRequest("gui.showDialog", dialog)
 
     @register(context)
     class BaldursGateDeathTrigger(CTrigger):
@@ -5488,12 +6132,16 @@ def load(self, context):
             if actor.isAlive():
                 return
             owner, game_map = clock(actor), world(actor)
+            if owner.getBoolProperty("plugin_cityPoisonSourceEnabled"):
+                owner.poisonRecordDeath(actor)
             if not claim_once(game_map, "plugin_cityDeath_" + actor.getName()):
                 return
             records = read(game_map, "plugin_cityDeaths", {})
             records[actor.getName()] = actorRecord(actor)
             write(game_map, "plugin_cityDeaths", records)
             owner.setObjectProperty("plugin_cityCorpse_" + actor.getName(), actor)
+            if owner.getBoolProperty("plugin_cityPoisonSourceEnabled"):
+                owner.observePoisonAcquisition()
             plot_execution = actor.getBoolProperty("plugin_cityPlotExecution")
             if not plot_execution:
                 game_map.setBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"), True)
@@ -5523,6 +6171,1317 @@ def load(self, context):
 
     @register(context)
     class BaldursGateClock(CBuilding):
+        class PoisonBindingChanged(RuntimeError):
+            pass
+
+        def poisonCapture(self):
+            from game import CGame, CGameObject, CMap, CMapObject, CPlayer
+
+            game = self.getGame()
+            game_map = CGame.getMap(game)
+            player = CMap.getAssignedPlayer(game_map)
+            context = game.getContext()
+            binding = {
+                "game": flowGame(game),
+                "map": game_map,
+                "player": player,
+                "context": context,
+                "epoch": CGame.getMapBindingEpoch(game),
+                "generation": context.getTransitionGeneration(),
+                "gameClass": CGame,
+                "objectClass": CGameObject,
+                "mapClass": CMap,
+                "mapObjectClass": CMapObject,
+                "playerClass": CPlayer,
+                "stateText": CGameObject.getStringProperty(self, "plugin_cityPoisonSourceState"),
+                "definitionText": CGameObject.getStringProperty(self, "poisonSourceDefinitions"),
+                "authoredText": CGameObject.getStringProperty(self, "poisonAuthoredText"),
+                "enabled": CGameObject.getBoolProperty(self, "plugin_cityPoisonSourceEnabled"),
+                "atlasText": CGameObject.getStringProperty(self, "areaAtlas"),
+                "actorText": CGameObject.getStringProperty(self, "actorDefinitions"),
+                "rosterText": CGameObject.getStringProperty(self, "plugin_cityRoster"),
+            }
+            self.poisonRequire(binding)
+            return binding
+
+        def poisonRequire(self, binding):
+            game = binding["game"].resolve()
+            native, native_map = binding["objectClass"], binding["mapClass"]
+            player, game_map = binding["player"], binding["map"]
+            if (
+                not game
+                or binding["gameClass"].getMapBindingEpoch(game) != binding["epoch"]
+                or binding["gameClass"].getMap(game) is not game_map
+                or game.getContext() is not binding["context"]
+                or not binding["context"].isTransitionGenerationCurrent(binding["generation"])
+                or not isinstance(player, binding["playerClass"])
+                or native_map.getAssignedPlayer(game_map) is not player
+                or native_map.getObjectByName(game_map, "player") is not player
+                or native_map.getObjectByName(game_map, "cityClock") is not self
+                or native.getStringProperty(game_map, "mapName") != "baldursGate"
+                or native.getGame(self) is not game
+                or binding["mapObjectClass"].getMap(self) is not game_map
+                or native.getGame(player) is not game
+                or binding["mapObjectClass"].getMap(player) is not game_map
+                or not CCreature.isAlive(player)
+                or native.getStringProperty(self, "plugin_cityPoisonSourceState") != binding["stateText"]
+                or native.getStringProperty(self, "poisonSourceDefinitions") != binding["definitionText"]
+                or native.getStringProperty(self, "poisonAuthoredText") != binding["authoredText"]
+                or native.getBoolProperty(self, "plugin_cityPoisonSourceEnabled") != binding["enabled"]
+                or native.getStringProperty(self, "areaAtlas") != binding["atlasText"]
+                or native.getStringProperty(self, "actorDefinitions") != binding["actorText"]
+                or native.getStringProperty(self, "plugin_cityRoster") != binding["rosterText"]
+            ):
+                raise self.PoisonBindingChanged("Poison source operation lost its actual map/player binding")
+
+        def poisonValidateState(self, binding, data):
+            if not data.get("sourceVersion"):
+                return
+            definitions = decodeData(binding["definitionText"] or "{}")
+            initial = {row["id"]: row for row in definitions["initialActors"]}
+            for identity, row in data["actors"].items():
+                expected = CRE_DIALOGUE_BINDINGS.get(row["resource"])
+                declared = initial.get(identity)
+                if declared is None:
+                    declared = definitions["factories"].get(row["resource"])
+                    if declared is None:
+                        raise self.PoisonBindingChanged("Saved source owner has no authored placement or factory")
+                    stem = declared["typeId"]
+                    suffix = identity.removeprefix(stem + "Created")
+                    serial = 1 if identity == stem else int(suffix) if suffix.isdigit() else 0
+                    if serial < 1 or serial > data.get("factorySerials", {}).get(row["resource"], 0):
+                        raise self.PoisonBindingChanged("Saved source owner lost its distinct creation serial")
+                elif row["resource"] != declared["resource"] or row["lineage"] != declared["sourceActor"]:
+                    raise self.PoisonBindingChanged("Saved initial source owner changed its placement lineage")
+                if (
+                    expected is None
+                    or row["scriptName"] != expected[1]
+                    or row["sha256"] != expected[2]
+                    or row["typeId"] != declared["typeId"]
+                    or not row["lineage"]
+                    or row["originArea"] != declared["area"]
+                ):
+                    raise self.PoisonBindingChanged("Saved source owner changed its finite CRE/dialogue binding")
+            for alias, proofs in data["deadAliases"].items():
+                for proof in proofs:
+                    row = data["actors"].get(proof["actorId"])
+                    if (
+                        row is None
+                        or not row["dead"]
+                        or row["scriptName"].casefold() != alias
+                        or row["lineage"] != proof["lineage"]
+                        or row["resource"] != proof["resource"]
+                        or row["sha256"] != proof["sha256"]
+                        or proof["producer"] != "prospectiveNativeOwnerOnDestroy"
+                    ):
+                        raise self.PoisonBindingChanged("Saved source death alias changed its genuine owner proof")
+            for cursor in data["cursors"].values():
+                row = data["actors"].get(cursor["actorId"])
+                if (
+                    row is None
+                    or cursor["lineage"] != row["lineage"]
+                    or cursor["resource"] != CRE_DIALOGUE_BINDINGS[row["resource"]][0]
+                ):
+                    raise self.PoisonBindingChanged("Saved source conversation changed its CRE/dialogue binding")
+
+        def poisonRead(self, binding):
+            self.poisonRequire(binding)
+            data = decodeData(binding["stateText"] or "{}")
+            if not data:
+                data = {"schema": 1, "globals": {}, "receipts": {}, "antidoteStock": {}, "journal": []}
+            if data.get("schema") != 1:
+                raise ValueError("Unsupported poison source state")
+            self.poisonValidateState(binding, data)
+            if any(row.get("status") == "pending" for row in data["receipts"].values()):
+                raise self.PoisonBindingChanged("An uncertain poison effect remains quarantined")
+            return data
+
+        def poisonWrite(self, binding, data):
+            self.poisonRequire(binding)
+            encoded = CITY_JSON_PREFIX + json.dumps(data, separators=(",", ":"))
+            binding["stateText"] = encoded
+            binding["objectClass"].setStringProperty(self, "plugin_cityPoisonSourceState", encoded)
+            self.poisonRequire(binding)
+
+        def poisonItems(self, binding, owner):
+            self.poisonRequire(binding)
+            items = list(CCreature.getItems(owner))
+            for item in CCreature.getEquipped(owner).values():
+                if item and not any(candidate is item for candidate in items):
+                    items.append(item)
+            self.poisonRequire(binding)
+            return sorted(items, key=lambda item: binding["objectClass"].getName(item))
+
+        def poisonReadItemData(self, binding, item, key, default):
+            self.poisonRequire(binding)
+            encoded = binding["objectClass"].getStringProperty(item, key)
+            self.poisonRequire(binding)
+            return decodeData(encoded or json.dumps(default))
+
+        def poisonWriteItemData(self, binding, item, key, value):
+            self.poisonRequire(binding)
+            binding["objectClass"].setStringProperty(
+                item, key, CITY_JSON_PREFIX + json.dumps(value, separators=(",", ":"))
+            )
+            self.poisonRequire(binding)
+
+        def poisonUseUnderstandingTome(self, item, owner):
+            """Opt-in adaptation: identified BOOK08 has one effective use, granting owned base Intelligence+1."""
+            from game import CGameObject
+
+            if not CGameObject.getBoolProperty(
+                self, "plugin_cityBook08NativeConversionEnabled"
+            ) or not CGameObject.getBoolProperty(self, "plugin_cityPoisonSourceEnabled"):
+                return False
+            binding = self.poisonCapture()
+            native, native_map = binding["objectClass"], binding["mapClass"]
+            data = self.poisonRead(binding)
+            if not data.get("sourceVersion") or not isinstance(owner, CCreature) or not CCreature.isAlive(owner):
+                return False
+            party = self.poisonPartyOwners(binding)
+            if not any(candidate is owner for candidate in party):
+                return False
+            if (
+                item is None
+                or native.getGame(item) is not binding["game"].resolve()
+                or native.getTypeId(item) != "cityItemBook08"
+                or native.getStringProperty(item, "plugin_citySourceItem") != "BOOK08"
+                or native.getBoolProperty(item, "plugin_cityUnidentified")
+                or native.getBoolProperty(item, "plugin_cityBook08Consumed")
+                or native.getNumericProperty(item, "plugin_cityQuantity") != 1
+                or not any(candidate is item for candidate in CCreature.getItems(owner))
+                or any(candidate is item for candidate in CCreature.getEquipped(owner).values())
+            ):
+                return False
+            item_name = native.getName(item)
+            charges = self.poisonReadItemData(binding, item, "plugin_cityCharges", [])
+            if (
+                not item_name
+                or charges not in ([0, 0, 0], [1, 0, 0])
+                or any(type(value) is not int for value in charges)
+            ):
+                return False
+            # Local ordinary-load conversion: retained CRE zeros denote one usable BOOK08 charge.
+            # No counter is recharged; the stored triple is preserved in the same-instance use receipt.
+            charge_policy = "ordinaryBook08SingleUse" if charges == [0, 0, 0] else "explicitSingleCharge"
+            holders = list(native_map.getObjects(binding["map"])) + party
+            for identity in data.get("actors", {}):
+                for prefix in ("plugin_cityCorpse_", "plugin_cityParked_"):
+                    retained = optionalObjectProperty(self, prefix + identity, native.getObjectProperty)
+                    if retained:
+                        if native.getGame(retained) is not binding["game"].resolve():
+                            raise self.PoisonBindingChanged("Retained tome holder belongs to another session")
+                        holders.append(retained)
+            distinct_holders, matches = [], []
+            for holder in holders:
+                if native.getStringProperty(holder, "plugin_citySourceItem") == "BOOK08" and (
+                    holder is item or native.getName(holder) == item_name
+                ):
+                    matches.append((holder, holder))
+                if not isinstance(holder, CCreature) or any(candidate is holder for candidate in distinct_holders):
+                    continue
+                distinct_holders.append(holder)
+                for candidate in self.poisonItems(binding, holder):
+                    if candidate is item or native.getName(candidate) == item_name:
+                        matches.append((holder, candidate))
+            if len(matches) != 1 or matches[0][0] is not owner or matches[0][1] is not item:
+                return False
+            base_stats = native.getObjectProperty(owner, "baseStats")
+            self.poisonRequire(binding)
+            if base_stats is None:
+                return False
+            base_before = native.getNumericProperty(base_stats, "intelligence")
+            current_stats = CCreature.getStats(owner)
+            composed_before = native.getNumericProperty(current_stats, "intelligence")
+            self.poisonRequire(binding)
+            if (
+                type(base_before) is not int
+                or type(composed_before) is not int
+                or not -2147483648 <= base_before < 2147483647
+                or not -2147483648 <= composed_before < 2147483647
+            ):
+                return False
+
+            def requireOwner(require_owned=True):
+                self.poisonRequire(binding)
+                if (
+                    not native.getBoolProperty(self, "plugin_cityBook08NativeConversionEnabled")
+                    or native.getGame(owner) is not binding["game"].resolve()
+                    or binding["mapObjectClass"].getMap(owner) is not binding["map"]
+                    or native_map.getObjectByName(binding["map"], native.getName(owner)) is not owner
+                    or not CCreature.isAlive(owner)
+                    or native.getObjectProperty(owner, "baseStats") is not base_stats
+                    or native.getName(item) != item_name
+                    or require_owned
+                    and not any(candidate is item for candidate in CCreature.getItems(owner))
+                ):
+                    raise self.PoisonBindingChanged("The tome lost its actual user/base-stat binding")
+
+            requireOwner()
+            receipt_key = "book08Use:" + item_name
+            if receipt_key in data["receipts"] or native.getNumericProperty(base_stats, "intelligence") != base_before:
+                return False
+            data["receipts"][receipt_key] = {
+                "status": "pending",
+                "item": item_name,
+                "owner": native.getName(owner),
+                "chargeBefore": 1,
+                "storedChargesBefore": list(charges),
+                "chargePolicy": charge_policy,
+                "sourceEffect": "BOOK08.ITM:effect0",
+                "conversion": "ownedBaseIntelligencePlusOne",
+                "baseBefore": base_before,
+                "composedBefore": composed_before,
+                "steps": [],
+            }
+            self.poisonWrite(binding, data)
+            native.setBoolProperty(item, "plugin_cityBook08Consumed", True)
+            requireOwner()
+            self.poisonWriteItemData(binding, item, "plugin_cityCharges", [0, 0, 0])
+            data["receipts"][receipt_key]["steps"].append("singleEffectiveChargeReserved")
+            self.poisonWrite(binding, data)
+            requireOwner()
+            native.setNumericProperty(base_stats, "intelligence", base_before + 1)
+            requireOwner()
+            if native.getNumericProperty(CCreature.getStats(owner), "intelligence") != composed_before + 1:
+                raise self.PoisonBindingChanged("The tome's current native stat result needs reconciliation")
+            data["receipts"][receipt_key]["steps"].append("permanentOwnedBaseIntelligence")
+            self.poisonWrite(binding, data)
+            self.poisonRemoveOwnedItem(binding, owner, item)
+            requireOwner(False)
+            data["receipts"][receipt_key]["steps"].append("actualUsedInstanceRemoved")
+            data["receipts"][receipt_key]["status"] = "complete"
+            self.poisonWrite(binding, data)
+            notify(self, "The tome's lessons take hold. Your Intelligence permanently increases by 1.")
+            return True
+
+        def poisonRegisterAntidoteStock(self, actor, binding=None, data=None):
+            """Called once by the AR0115 source factory after its original inventory is installed."""
+            binding = binding if binding is not None else self.poisonCapture()
+            native = binding["objectClass"]
+            data = data if data is not None else self.poisonRead(binding)
+            name = native.getName(actor)
+            if (
+                not isinstance(actor, CCreature)
+                or not CCreature.isAlive(actor)
+                or binding["mapClass"].getObjectByName(binding["map"], name) is not actor
+                or native.getGame(actor) is not binding["game"].resolve()
+                or binding["mapObjectClass"].getMap(actor) is not binding["map"]
+                or native.getTypeId(actor) != "cityPoisonMarek1"
+                or native.getStringProperty(actor, "sourceCreature") != "MAREK1"
+                or native.getStringProperty(actor, "sourceArea") != "AR0115"
+                or native.getStringProperty(actor, "sourceDialogue") != "MAREK"
+                or native.getStringProperty(actor, "sourceSpawnFact") != "AR0115.BCS#spawn0"
+            ):
+                raise self.PoisonBindingChanged("Antidote registration requires the genuine source-created MAREK1")
+            stock = [
+                item
+                for item in self.poisonItems(binding, actor)
+                if native.getStringProperty(item, "plugin_citySourceItem") == "POTN47"
+            ]
+            if len(stock) != 1 or self.poisonReadItemData(binding, stock[0], "plugin_cityCharges", []) != [10, 0, 0]:
+                raise ValueError("MAREK1 must own exactly one original ten-charge antidote")
+            token = "AR0115.BCS#spawn0/MAREK1.CRE/slot6/POTN47"
+            if data["antidoteStock"]:
+                raise self.PoisonBindingChanged("Antidote source stock has already been registered")
+            self.poisonRequire(binding)
+            native.setStringProperty(stock[0], "plugin_cityPoisonCreation", token)
+            self.poisonRequire(binding)
+            data["antidoteStock"][token] = {"actorId": name, "sourceSpawnFact": "AR0115.BCS#spawn0", "slot": 6}
+            self.poisonWrite(binding, data)
+            return stock[0]
+
+        def poisonPartyOwners(self, binding):
+            """Native conversion: Player1 is the hero; source Player2..6 are saved roster slots0..4."""
+            self.poisonRequire(binding)
+            party = [binding["player"]]
+            roster = decodeData(binding["rosterText"] or "[]")
+            for name in roster[:5]:
+                member = binding["objectClass"].getObjectProperty(self, "plugin_cityCompanion_" + name)
+                self.poisonRequire(binding)
+                if member:
+                    native = binding["objectClass"]
+                    if (
+                        not isinstance(member, CCreature)
+                        or native.getGame(member) is not binding["game"].resolve()
+                        or binding["mapObjectClass"].getMap(member) is not binding["map"]
+                        or binding["mapClass"].getObjectByName(binding["map"], native.getName(member)) is not member
+                    ):
+                        raise self.PoisonBindingChanged("Source party slot changed")
+                    if any(candidate is member for candidate in party):
+                        raise ValueError("Duplicate source party slot")
+                    party.append(member)
+            return party
+
+        def poisonRemoveOwnedItem(self, binding, owner, item):
+            """Inventory-only: never accept an equal name or manufacture a replacement object."""
+            if not any(candidate is item for candidate in self.poisonItems(binding, owner)):
+                raise self.PoisonBindingChanged("The actual source item is no longer owned by its transfer donor")
+            for slot, candidate in CCreature.getEquipped(owner).items():
+                if candidate is item:
+                    self.poisonRequire(binding)
+                    CCreature.equipItem(owner, slot, None)
+                    self.poisonRequire(binding)
+
+            def matches(candidate):
+                self.poisonRequire(binding)
+                return candidate is item
+
+            self.poisonRequire(binding)
+            CCreature.removeQuestItem(owner, matches)
+            self.poisonRequire(binding)
+            if any(candidate is item for candidate in self.poisonItems(binding, owner)):
+                raise self.PoisonBindingChanged("Source item removal did not commit")
+
+        def poisonOwnedAntidote(self, binding, data):
+            native = binding["objectClass"]
+            inventory = self.poisonItems(binding, binding["player"])
+            candidates = [
+                item for item in inventory if native.getStringProperty(item, "plugin_citySourceItem") == "POTN47"
+            ]
+            self.poisonRequire(binding)
+            if not candidates:
+                return None
+            if len(candidates) != 1:
+                raise ValueError("Multiple actual antidote instances need explicit source-ownership reconciliation")
+            item = candidates[0]
+            token = native.getStringProperty(item, "plugin_cityPoisonCreation")
+            self.poisonRequire(binding)
+            if token not in data["antidoteStock"]:
+                raise self.PoisonBindingChanged("Uncertified/legacy antidote cannot be silently adopted")
+            # Only run this whole-source ownership sweep on an actual candidate acquisition, never every empty turn.
+            instances = self.poisonIssuedInstances(binding, data, token)
+            if len(instances) != 1 or instances[0] is not item:
+                raise self.PoisonBindingChanged("Antidote creation token has distinct actual owned instances")
+            return item
+
+        def poisonIssuedInstances(self, binding, data, token):
+            native, native_map = binding["objectClass"], binding["mapClass"]
+            self.poisonRequire(binding)
+            holders = list(native_map.getObjects(binding["map"]))
+            holders.extend(self.poisonPartyOwners(binding))
+            names = [record["actorId"] for record in data["antidoteStock"].values()]
+            names.extend(data.get("actors", {}))
+            names.extend(row["id"] for row in decodeData(binding["actorText"] or "[]"))
+            for name in names:
+                registered = native_map.getObjectByName(binding["map"], name)
+                if registered:
+                    holders.append(registered)
+                for prefix in ("plugin_cityCorpse_", "plugin_cityParked_", "plugin_cityCompanion_"):
+                    retained = optionalObjectProperty(self, prefix + name, native.getObjectProperty)
+                    if retained:
+                        if native.getGame(retained) is not binding["game"].resolve():
+                            raise self.PoisonBindingChanged("Retained source holder belongs to another session")
+                        holders.append(retained)
+            unique_holders, instances = [], []
+            for holder in holders:
+                if any(candidate is holder for candidate in unique_holders):
+                    continue
+                unique_holders.append(holder)
+                owned = self.poisonItems(binding, holder) if isinstance(holder, CCreature) else [holder]
+                for candidate in owned:
+                    if native.getStringProperty(candidate, "plugin_cityPoisonCreation") == token and not any(
+                        existing is candidate for existing in instances
+                    ):
+                        instances.append(candidate)
+            self.poisonRequire(binding)
+            return instances
+
+        def poisonAwaitingMarekDeath(self, binding, data):
+            if not data.get("sourceVersion"):
+                return False
+            for row in data["actors"].values():
+                if row["resource"] not in ("MAREK", "MAREK1") or row["dead"] or row["retired"]:
+                    continue
+                witness = poison_live_actors.get(row["lineage"])
+                if (
+                    witness is None
+                    or witness["game"].resolve() is not binding["game"].resolve()
+                    or witness["epoch"] != binding["epoch"]
+                ):
+                    raise self.PoisonBindingChanged("Shared Marek alias needs its genuine prospective death witness")
+                if not CCreature.isAlive(witness["actor"]):
+                    return True  # Wait for the actual producer; absence/HP alone never writes Dead(Marek).
+            return False
+
+        def observePoisonAcquisition(self, binding=None, data=None):
+            """Guide-backed acquisition producer followed by the separate source LOCAL-driven cure consumer."""
+            binding = binding if binding is not None else self.poisonCapture()
+            data = data if data is not None else self.poisonRead(binding)
+            native = binding["objectClass"]
+            if data["globals"].get("PartyCured", 0) != 0:
+                return False
+            if self.poisonAwaitingMarekDeath(binding, data):
+                return False
+            # Source BALDUR43/44 do not require quest acceptance, timers, either half, or current POTN47 ownership.
+            if native.getNumericProperty(binding["player"], "plugin_cityBdmarek") == 1:
+                return self.poisonResolveSourceCure(binding, data)
+            item = self.poisonOwnedAntidote(binding, data)
+            if item is None:
+                return False
+            self.poisonCurePresentation(binding, data)
+            token = native.getStringProperty(item, "plugin_cityPoisonCreation")
+            receipt_key = "acquire:" + token
+            if native.getBoolProperty(item, "plugin_cityPoisonAcquisitionConsumed") or receipt_key in data["receipts"]:
+                raise self.PoisonBindingChanged("The actual item acquisition already has an uncompleted source result")
+            charges = self.poisonReadItemData(binding, item, "plugin_cityCharges", [])
+            if len(charges) != 3 or type(charges[0]) is not int or not 1 <= charges[0] <= 10:
+                raise ValueError("Invalid actual antidote charge state")
+            self.poisonPartyOwners(binding)
+            data["receipts"][receipt_key] = {"status": "pending", "steps": [], "chargeBefore": charges[0]}
+            self.poisonWrite(binding, data)
+            native.setBoolProperty(item, "plugin_cityPoisonAcquisitionConsumed", True)
+            self.poisonRequire(binding)
+            self.poisonWriteItemData(binding, item, "plugin_cityCharges", [charges[0] - 1, charges[1], charges[2]])
+            data["receipts"][receipt_key]["steps"].append("automaticSourceItemCharge")
+            self.poisonWrite(binding, data)
+            native.setNumericProperty(binding["player"], "plugin_cityBdmarek", 1)
+            self.poisonRequire(binding)
+            data["receipts"][receipt_key]["steps"].append("bdmarekPlayer1Local")
+            data["receipts"][receipt_key]["status"] = "complete"
+            self.poisonWrite(binding, data)
+            return self.poisonResolveSourceCure(binding, data)
+
+        def poisonCurePresentation(self, binding, data):
+            text = decodeData(binding["authoredText"] or "{}")
+            notice = text.get("notices", {}).get("cure", "")
+            if not notice:
+                raise ValueError("Authored poison cure notice is required before native mutation")
+            journal = None
+            if data.get("sourceVersion"):
+                aliases = data["deadAliases"].get("marek", [])
+                for proof in aliases:
+                    row = data["actors"].get(proof["actorId"])
+                    if (
+                        not row
+                        or not row["dead"]
+                        or row["resource"] not in ("MAREK", "MAREK1")
+                        or row["lineage"] != proof["lineage"]
+                        or row["sha256"] != proof["sha256"]
+                        or proof["producer"] != "prospectiveNativeOwnerOnDestroy"
+                    ):
+                        raise self.PoisonBindingChanged(
+                            "The shared Marek death alias has no genuine source-owner producer"
+                        )
+                dead_marek = bool(aliases)
+                journal_id = 27253 if dead_marek else 31188
+                authored = text.get("journals", {}).get("cureDead" if dead_marek else "cureAlive")
+                if not authored or not authored.get("text"):
+                    raise ValueError("Missing authored source cure journal")
+                journal = {
+                    "strref": journal_id,
+                    "section": 2,
+                    "text": authored["text"],
+                    "sourceConsumer": 43 if dead_marek else 44,
+                    "meaningBasis": authored.get("basis"),
+                    "classicNoticeMeaningVerified": False,
+                }
+            self.poisonRequire(binding)
+            return notice, journal
+
+        def poisonResolveSourceCure(self, binding, data):
+            native = binding["objectClass"]
+            if (
+                data["globals"].get("PartyCured", 0) != 0
+                or native.getNumericProperty(binding["player"], "plugin_cityBdmarek") != 1
+            ):
+                return False
+            notice, journal = self.poisonCurePresentation(binding, data)
+            party = self.poisonPartyOwners(binding)
+            halves = []
+            for owner in party:
+                owned = [
+                    item
+                    for item in self.poisonItems(binding, owner)
+                    if native.getStringProperty(item, "plugin_citySourceItem") == "LOPOTN20"
+                ]
+                if owned:
+                    halves.append((owner, owned[0]))  # Source DestroyItem169 removes one instance (stack_size is1).
+            receipt_key = "cure:bdmarek"
+            if receipt_key in data["receipts"]:
+                raise self.PoisonBindingChanged("Source cure receipt cannot be replayed without terminal PartyCured")
+            data["receipts"][receipt_key] = {"status": "pending", "steps": []}
+            self.poisonWrite(binding, data)
+            data["globals"]["PartyCured"] = 1
+            self.poisonWrite(binding, data)
+            for owner, item in halves:
+                self.poisonRemoveOwnedItem(binding, owner, item)
+                data["receipts"][receipt_key]["steps"].append("DestroyItemLOPOTN20PartySlot")
+                self.poisonWrite(binding, data)
+            if journal is not None:
+                data["journal"].append(journal)
+                erased = (26793, 26982, 27240, 27241, 27242, 27243, 27183)
+                data["journal"] = [entry for entry in data["journal"] if entry.get("strref") not in erased]
+            else:
+                data["journal"].append({"kind": "cured", "sourceConsumer": "BALDUR43or44", "uiTextAuthored": True})
+            self.poisonWrite(binding, data)
+            notify(self, notice)
+            self.poisonRequire(binding)
+            data["receipts"][receipt_key]["steps"].append("displayCureNotice")
+            self.poisonWrite(binding, data)
+            CCreature.addExp(binding["player"], 10000)
+            self.poisonRequire(binding)
+            data["receipts"][receipt_key]["steps"].append("AddexperienceParty10000")
+            self.poisonWrite(binding, data)
+            native.setBoolProperty(binding["map"], "plugin_cityFlag_poisonCured", True)
+            native.setBoolProperty(binding["map"], "plugin_cityFlag_partyPoisoned", False)
+            data["receipts"][receipt_key]["status"] = "complete"
+            if data.get("sourceVersion"):
+                self.poisonSetQuestStage(binding, "marekPoison", "completed")
+            self.poisonWrite(binding, data)
+            # Journal capture invokes the real quest callbacks only after ordered source effects are terminal.
+            if data.get("sourceVersion"):
+                binding["playerClass"].checkQuests(binding["player"])
+                self.poisonRequire(binding)
+            return True
+
+        def transferPoisonSourceItem(self, donor, recipient, item):
+            """Exact-instance authored gift/theft bridge; native defeat loot is covered by the turn observer."""
+            binding = self.poisonCapture()
+            native = binding["objectClass"]
+            data = self.poisonRead(binding)
+            if recipient is not binding["player"]:
+                raise self.PoisonBindingChanged("The source transfer recipient is no longer Player1")
+            if not isinstance(donor, CCreature) or native.getGame(donor) is not binding["game"].resolve():
+                raise self.PoisonBindingChanged("Source transfer donor lost its session")
+            token = native.getStringProperty(item, "plugin_cityPoisonCreation")
+            if token not in data["antidoteStock"]:
+                raise self.PoisonBindingChanged("Authored transfer has no finite antidote source certificate")
+            transfer_key = "transfer:" + token + ":" + str(len(data["receipts"]))
+            data["receipts"][transfer_key] = {"status": "pending", "from": native.getName(donor), "to": "player"}
+            self.poisonWrite(binding, data)
+            self.poisonRemoveOwnedItem(binding, donor, item)
+            CCreature.addItem(recipient, item)
+            self.poisonRequire(binding)
+            if not any(candidate is item for candidate in self.poisonItems(binding, recipient)):
+                raise self.PoisonBindingChanged("Source transfer did not preserve the actual item")
+            data["receipts"][transfer_key]["status"] = "complete"
+            self.poisonWrite(binding, data)
+            return self.observePoisonAcquisition()
+
+        @resumableHook
+        def showPoisonSourceState(self, state_id, edge_ids, held_edges=None):
+            """Actual existing UI requests; caller supplies eligible source edges from the strict evaluator."""
+            binding = self.poisonCapture()
+            text = decodeData(binding["authoredText"] or "{}")
+            state = text.get("states", {}).get(state_id)
+            if not state or not state.get("text") or not state.get("speaker"):
+                raise ValueError("Missing authored source dialogue text")
+            choices = []
+            held_edges = held_edges or {}
+            for edge_id in edge_ids:
+                edge = text.get("edges", {}).get(edge_id)
+                if not edge or not edge.get("label"):
+                    raise ValueError("Missing authored source reply; automatic transitions are not choices")
+                choice_row = {"id": edge_id, "label": edge["label"]}
+                if edge_id in held_edges:
+                    choice_row.update(enabled=False, detail="Unavailable in this development build.")
+                choices.append(choice_row)
+            yield uiRequest("showReader", binding["game"], state["speaker"], state["text"])
+            self.poisonRequire(binding)
+            choice = yield uiRequest("choose", binding["game"], state["text"], choices, "Answer", "Continue later")
+            self.poisonRequire(binding)
+            return choice if choice in edge_ids and choice not in held_edges else None
+
+        def ensureCitySourceKillXp(self):
+            from game import CGame, CGameObject, CMap, CMapObject
+
+            game = CGameObject.getGame(self)
+            if game is None:
+                return False
+            game_map = CGame.getMap(game)
+            if game_map is None or CGameObject.getStringProperty(game_map, "mapName") != "baldursGate":
+                return False
+            game_ref = flowGame(game)
+            context = CGame.getContext(game)
+            epoch = CGame.getMapBindingEpoch(game)
+            generation = context.getTransitionGeneration()
+
+            def requireCurrent():
+                owner = game_ref.resolve()
+                if (
+                    owner is not game
+                    or CGame.getMap(owner) is not game_map
+                    or CGame.getMapBindingEpoch(owner) != epoch
+                    or CGame.getContext(owner) is not context
+                    or not context.isTransitionGenerationCurrent(generation)
+                    or CGameObject.getGame(game_map) is not owner
+                    or CGameObject.getGame(self) is not owner
+                    or CMapObject.getMap(self) is not game_map
+                    or CMap.getObjectByName(game_map, "cityClock") is not self
+                    or CGameObject.getStringProperty(game_map, "mapName") != "baldursGate"
+                ):
+                    raise self.PoisonBindingChanged("City experience policy lost its actual game/map/clock binding")
+
+            requireCurrent()
+            CGameObject.setBoolProperty(game_map, "plugin_citySourceKillXp", True)
+            requireCurrent()
+            return True
+
+        def poisonGraphs(self, binding=None):
+            binding = binding if binding is not None else self.poisonCapture()
+            self.poisonRequire(binding)
+            encoded = binding["definitionText"]
+            if encoded not in poison_compiled:
+                document = decodeData(encoded or "{}")
+                graphs = SourceGraphs(document["dialogues"])
+                if graphs.coverage()["states"] != 84 or graphs.coverage()["edges"] != 135:
+                    raise SourceGap("Incomplete retained poison graph inventory")
+                poison_compiled.clear()
+                poison_compiled[encoded] = graphs
+            return poison_compiled[encoded]
+
+        def poisonSourceTime(self, binding):
+            self.poisonRequire(binding)
+            return binding["objectClass"].getNumericProperty(binding["map"], "plugin_cityTicks") * 6
+
+        def poisonSetQuestStage(self, binding, key, value):
+            self.poisonRequire(binding)
+            native, player_class, player = binding["objectClass"], binding["playerClass"], binding["player"]
+            native.setStringProperty(binding["map"], "plugin_cityQuest_" + key, value)
+            self.poisonRequire(binding)
+            existing = list(player_class.getQuests(player)) + list(player_class.getCompletedQuests(player))
+            self.poisonRequire(binding)
+            if not any(native.getTypeId(quest_object) == questId(key) for quest_object in existing):
+                player_class.addQuest(player, questId(key))
+                self.poisonRequire(binding)
+
+        def poisonQuestPresentation(self, key):
+            from game import CGameObject
+
+            if not CGameObject.getBoolProperty(self, "plugin_cityPoisonSourceEnabled"):
+                return None
+            binding = self.poisonCapture()
+            if not binding["enabled"]:
+                return None
+            state = self.poisonRead(binding)
+            if not state.get("sourceVersion"):
+                return None
+            if key == "marekPoison" and state["globals"].get("PartyCured", 0) == 1:
+                entries = [row for row in state["journal"] if row.get("sourceConsumer") in (43, 44)]
+                if not entries or not entries[-1].get("text"):
+                    raise SourceGap("A completed source cure needs its genuine branch journal")
+                return {"objective": entries[-1]["text"], "reward": "The cure grants 10,000 experience once."}
+            if key == "lothanderGeas":
+                if state.get("geasOutcome") == "scrollReturned":
+                    return {
+                        "objective": "The geas-removal scroll was returned to Lothander; he left an antidote half.",
+                        "reward": "Returning the scroll grants 1,500 experience and an antidote half.",
+                    }
+                if state.get("geasOutcome") == "priestsDeadNoRelease":
+                    return {
+                        "objective": "The priests could not provide the scroll. Lothander left an antidote half and departed.",
+                        "reward": "The geas remains unresolved. This fallback grants an antidote half and no experience.",
+                    }
+            globals_ = state["globals"]
+            asked = globals_.get("DivinerAsked", 0)
+            quest_stage = stage(self, key)
+            if key == "divinerPoison" and quest_stage == "completed" and asked in (1, 2):
+                return {
+                    "objective": "The Diviner named Jalantha Mistmyr at the Water Queen's House as the priestess who can lift the geas.",
+                    "reward": "The reading cost 50 gold and grants no experience.",
+                    "hint": (
+                        "Tell Lothander what the Diviner revealed."
+                        if asked == 1
+                        else "Follow the Diviner's lead to Jalantha at the Water Queen's House."
+                    ),
+                }
+            if key not in ("marekPoison", "lothanderGeas") or quest_stage != "active":
+                return None
+            if key == "marekPoison" and state.get("geasOutcome") in ("scrollReturned", "priestsDeadNoRelease"):
+                return {
+                    "objective": "Lothander left his antidote half; recover the rest from Marek at the Blushing Mermaid Inn.",
+                    "reward": "A successful cure grants 10,000 experience once.",
+                    "hint": "Lothander named the Blushing Mermaid Inn. Find Marek there and obtain his antidote.",
+                }
+            if asked in (1, 2):
+                objective = (
+                    "Seek Jalantha Mistmyr at the Water Queen's House to arrange Lothander's release from the geas."
+                )
+                hint = (
+                    "Tell Lothander that the Diviner named Jalantha at the Water Queen's House."
+                    if asked == 1
+                    else "Ask Jalantha for help, then return to Lothander at the Blade and Stars Inn with her remedy."
+                )
+            elif globals_.get("HelpLothander", 0) == 1:
+                objective = "Help Lothander escape his geas so he can tell you how to find the antidote."
+                hint = "Ask the Diviner in the market square how to lift Lothander's geas."
+                if globals_.get("LothanderMove", 0) == 9:
+                    objective = "The Diviner answered another question; Lothander's geas is still unresolved."
+                    hint = "The Diviner can answer only one question each day. Return for a reading about Lothander's geas."
+            else:
+                objective = "Speak with Lothander about Marek's threat."
+                hint = "Lothander may know how to survive Marek's threat; hear what he has to say."
+            return {
+                "objective": objective,
+                "reward": (
+                    "A successful cure grants 10,000 experience once."
+                    if key == "marekPoison"
+                    else "Lothander has offered information about the antidote in exchange for your help."
+                ),
+                "hint": hint,
+            }
+
+        def poisonSyncSourceQuests(self, binding, state, edge_id):
+            mapping = {
+                "LOTHAN.DLG:edge0": ("marekPoison", "active"),
+                "LOTHAN.DLG:edge1": ("marekPoison", "active"),
+                "LOTHAN.DLG:edge14": ("lothanderGeas", "active"),
+                "DIVINE.DLG:edge11": ("divinerPoison", "completed"),
+                "JALANT.DLG:edge12": ("jalanthaBook", "active"),
+                "JALANT.DLG:edge19": ("jalanthaBook", "completed"),
+                "JALANT.DLG:edge21": ("jalanthaBook", "completed"),
+                "CHANTH.DLG:edge7": ("chanthalasTome", "completed"),
+                "CHANTH.DLG:edge9": ("chanthalasTome", "completed"),
+                "LOTHAN.DLG:edge23": ("lothanderGeas", "completed"),
+                "LOTHAN.DLG:edge26": ("lothanderGeas", "failed"),
+            }
+            if edge_id in mapping:
+                key, value = mapping[edge_id]
+                self.poisonSetQuestStage(binding, key, value)
+            if edge_id in ("LOTHAN.DLG:edge23", "LOTHAN.DLG:edge26"):
+                state["geasOutcome"] = "scrollReturned" if edge_id.endswith("23") else "priestsDeadNoRelease"
+
+        def poisonInitializeSource(self):
+            binding = self.poisonCapture()
+            data = self.poisonRead(binding)
+            if data.get("sourceVersion") == 1:
+                self.poisonRebindOwners(binding, data)
+                return data
+            migration = self.poisonMigrationPlan(binding, data)
+            if migration["blocked"]:
+                raise SourceGap(
+                    "Existing poison progress is preserved pending explicit migration: "
+                    + "; ".join(migration["blocked"])
+                )
+            self.poisonGraphs()
+            definitions = decodeData(binding["definitionText"] or "{}")
+            authored = decodeData(binding["authoredText"] or "{}")
+            if len(authored.get("states", {})) != 84 or len(authored.get("edges", {})) != 135:
+                raise SourceGap("All retained state/reply meanings must be authored before presentation")
+            graphs = self.poisonGraphs().graphs
+            if (
+                set(authored["states"]) != {row["sourceId"] for graph in graphs.values() for row in graph["states"]}
+                or set(authored["edges"]) != {row["sourceId"] for graph in graphs.values() for row in graph["edges"]}
+                or not authored.get("notices", {}).get("cure")
+                or not authored.get("journals", {}).get("cureDead", {}).get("text")
+                or not authored.get("journals", {}).get("cureAlive", {}).get("text")
+            ):
+                raise SourceGap("Source dialogue/cure presentation mapping is incomplete")
+            data.update(
+                sourceVersion=1,
+                factorySerials={},
+                creationOccurrences={},
+                actors={},
+                deadAliases={},
+                itemCreations={},
+                timers={},
+                cursors={},
+                queuedDialogs=[],
+                queuedStores=[],
+                continuations={},
+                nextSession=1,
+                nativeWaitRequests=[],
+                migration=migration,
+            )
+            data["receipts"]["sourceInitialization"] = {"status": "pending", "steps": []}
+            self.poisonWrite(binding, data)
+            for row in definitions["initialActors"]:
+                actor = binding["mapClass"].getObjectByName(binding["map"], row["id"])
+                if actor is None:
+                    raise SourceGap("Initial source owner is not registered before activation")
+                self.poisonEnrollOwner(binding, data, actor, row, row["sourceActor"])
+                data["receipts"]["sourceInitialization"]["steps"].append(row["id"])
+                self.poisonWrite(binding, data)
+            data["receipts"]["sourceInitialization"]["status"] = "complete"
+            self.poisonWrite(binding, data)
+            return data
+
+        def poisonMigrationPlan(self, binding, data):
+            """A read-only decision first: unknown old rewards/cures are preserved and refuse destructive migration."""
+            blocked = []
+            related = ("marekPoison", "lothanderGeas", "jalanthaBook", "chanthalasTome", "divinerPoison")
+            progress = {key: stage(self, key) for key in related}
+            if any(value != "notStarted" for value in progress.values()):
+                blocked.append("condensed quest progress has no complete source action receipts")
+            if data["antidoteStock"] or data["receipts"] or data["globals"]:
+                blocked.append("existing poison ownership/effect receipts must not be reset")
+            native = binding["objectClass"]
+            if any(
+                native.getBoolProperty(binding["map"], "plugin_cityFlag_" + name)
+                for name in ("poisonCured", "partyPoisoned", "poisonFatal")
+            ):
+                blocked.append("legacy poison outcome flags require a preserved outcome import")
+            definitions = decodeData(binding["definitionText"] or "{}")
+            owners = self.poisonPartyOwners(binding)
+            owners.extend(
+                actor for actor in binding["mapClass"].getObjects(binding["map"]) if isinstance(actor, CCreature)
+            )
+            for row in definitions.get("initialActors", []):
+                actor = binding["mapClass"].getObjectByName(binding["map"], row["id"])
+                if not isinstance(actor, CCreature) or not CCreature.isAlive(actor):
+                    blocked.append("a prior source owner death/absence needs a genuine legacy producer import")
+                elif (
+                    native.getTypeId(actor) != row["typeId"]
+                    or native.getStringProperty(actor, "sourceCreature") != row["resource"]
+                ):
+                    blocked.append("a source placement identity no longer matches the retained declaration")
+            initial_ids = {row["id"] for row in definitions.get("initialActors", [])}
+            for owner in binding["mapClass"].getObjects(binding["map"]):
+                if (
+                    isinstance(owner, CCreature)
+                    and native.getStringProperty(owner, "sourceCreature") in CRE_DIALOGUE_BINDINGS
+                    and native.getName(owner) not in initial_ids
+                ):
+                    blocked.append("an additional source graph owner needs its genuine creation lineage imported")
+            for row in definitions.get("factories", {}).values():
+                if binding["mapClass"].getObjectByName(binding["map"], row["typeId"]) is not None:
+                    blocked.append("an existing source factory owner needs a nonduplicating creation import")
+            for owner in owners:
+                for item in self.poisonItems(binding, owner):
+                    code = native.getStringProperty(item, "plugin_citySourceItem")
+                    if code == "LOPOTN20" and not native.getStringProperty(item, "plugin_cityPoisonCreation"):
+                        blocked.append("preexisting half-antidote ownership needs a nonduplicating import")
+                    if code == "POTN47":
+                        blocked.append("preexisting antidote needs exact instance/charge/source reconciliation")
+            self.poisonRequire(binding)
+            return {
+                "kind": "newOrUnstartedScenario",
+                "legacyQuestStages": progress,
+                "blocked": sorted(set(blocked)),
+                "oldNativeGenericTalkIsNotOriginalDialogueProgress": True,
+                "sourceProgressInvented": False,
+            }
+
+        def poisonEnrollOwner(self, binding, state, actor, row, lineage):
+            native = binding["objectClass"]
+            resource = row["resource"]
+            expected = CRE_DIALOGUE_BINDINGS.get(resource)
+            name = native.getName(actor)
+            if (
+                expected is None
+                or not isinstance(actor, CCreature)
+                or not CCreature.isAlive(actor)
+                or native.getTypeId(actor) != row["typeId"]
+                or native.getGame(actor) is not binding["game"].resolve()
+                or binding["mapObjectClass"].getMap(actor) is not binding["map"]
+                or binding["mapClass"].getObjectByName(binding["map"], name) is not actor
+                or native.getStringProperty(actor, "sourceCreature") != resource
+                or native.getStringProperty(actor, "sourceDialogue") + ".DLG" != expected[0]
+                or native.getStringProperty(actor, "sourceArea") != row["area"]
+            ):
+                raise SourceGap("Source factory/placement did not produce its genuine configured owner")
+            existing = state["actors"].get(name)
+            if existing and existing["lineage"] != lineage:
+                raise SourceGap("Source owner name already belongs to a different creation event")
+            native.setStringProperty(actor, "plugin_cityPoisonOwnerCreation", lineage)
+            native.setBoolProperty(actor, "plugin_cityPoisonManaged", True)
+            self.poisonRequire(binding)
+            state["actors"][name] = {
+                "resource": resource,
+                "scriptName": expected[1],
+                "sha256": expected[2],
+                "typeId": row["typeId"],
+                "area": row["area"],
+                "originArea": row["area"],
+                "lineage": lineage,
+                "retired": False,
+                "dead": False,
+            }
+            poison_live_actors[lineage] = {"actor": actor, "game": binding["game"], "epoch": binding["epoch"]}
+
+        def poisonRebindOwners(self, binding, state):
+            """Called by the verified-load receiver before its first yield; never reconstruct death from absence."""
+            port = NativePoisonPort(self, binding, state)
+            for identity, row in state["actors"].items():
+                if row.get("retired") or row.get("dead"):
+                    continue
+                actor = port.resolve(identity, witness_required=False)
+                prior = poison_live_actors.get(row["lineage"])
+                if (
+                    prior is not None
+                    and prior["game"].resolve() is binding["game"].resolve()
+                    and prior["epoch"] == binding["epoch"]
+                    and prior["actor"] is not actor
+                ):
+                    raise SourceGap("A registered source owner was replaced within the same live map epoch")
+                poison_live_actors[row["lineage"]] = {
+                    "actor": actor,
+                    "game": binding["game"],
+                    "epoch": binding["epoch"],
+                }
+
+        @resumableHook
+        def resumeAfterVerifiedLoad(self):
+            if not self.ensureCitySourceKillXp():
+                return
+            if self.getBoolProperty("plugin_cityPoisonSourceEnabled"):
+                self.poisonInitializeSource()
+            if False:
+                yield None
+
+        def poisonRecordDeath(self, actor):
+            """Native onDestroy producer must match a prospective actual-instance witness despite registry erasure."""
+            binding = self.poisonCapture()
+            if not binding["objectClass"].getBoolProperty(actor, "plugin_cityPoisonManaged"):
+                return False
+            state = self.poisonRead(binding)
+            if not state.get("sourceVersion"):
+                return False
+            native = binding["objectClass"]
+            identity = native.getName(actor)
+            row = state["actors"].get(identity)
+            if row is None or row.get("dead"):
+                return False
+            witness = poison_live_actors.get(row["lineage"])
+            if (
+                witness is None
+                or witness["actor"] is not actor
+                or witness["game"].resolve() is not binding["game"].resolve()
+                or witness["epoch"] != binding["epoch"]
+                or native.getGame(actor) is not binding["game"].resolve()
+                or CCreature.isAlive(actor)
+                or native.getTypeId(actor) != row["typeId"]
+                or native.getStringProperty(actor, "sourceCreature") != row["resource"]
+                or native.getStringProperty(actor, "plugin_cityPoisonOwnerCreation") != row["lineage"]
+            ):
+                raise SourceGap("Unbound or replaced source death producer; verified-load rebind must run first")
+            if row.get("dead"):
+                return False
+            row["dead"] = True
+            aliases = state["deadAliases"].setdefault(row["scriptName"].casefold(), [])
+            aliases.append(
+                {
+                    "actorId": identity,
+                    "lineage": row["lineage"],
+                    "resource": row["resource"],
+                    "sha256": row["sha256"],
+                    "producer": "prospectiveNativeOwnerOnDestroy",
+                }
+            )
+            del poison_live_actors[row["lineage"]]
+            self.poisonWrite(binding, state)
+            return True
+
+        def poisonSourcePosition(self, binding, area_id, point):
+            definitions = decodeData(binding["definitionText"] or "{}")
+            key = area_id + "#" + str(point[0]) + "," + str(point[1])
+            coords = definitions.get("positions", {}).get(key)
+            if coords is None or len(coords) != 3:
+                raise SourceGap("No authored walkable-cell conversion for this exact source action point")
+            tile = binding["mapClass"].getTile(binding["map"], *coords)
+            self.poisonRequire(binding)
+            if tile is None or not binding["objectClass"].getBoolProperty(tile, "canStep"):
+                raise SourceGap("Source point needs the existing builder's reviewed walkable-cell projection")
+            return coords
+
+        def poisonCreateSourceActor(self, binding, state, resource, operation, area_id, point):
+            rows = decodeData(binding["definitionText"] or "{}")["factories"]
+            row = rows.get(resource)
+            if row is None:
+                raise SourceGap("No staged source factory for " + resource)
+            existing = [identity for identity, value in state["actors"].items() if value["lineage"] == operation]
+            if existing:
+                raise SourceGap("Creation event was replayed instead of resumed from its ordered receipt")
+            position = self.poisonSourcePosition(binding, area_id, point)
+            native = binding["objectClass"]
+            actor = binding["game"].resolve().createObject(row["typeId"])
+            self.poisonRequire(binding)
+            serials = state.setdefault("factorySerials", {})
+            serial = serials.get(resource, 0) + 1
+            name = row["typeId"] if serial == 1 else row["typeId"] + "Created" + str(serial)
+            if name in state["actors"] or binding["mapClass"].getObjectByName(binding["map"], name) is not None:
+                raise SourceGap("A source creation serial already belongs to a different actual owner")
+            serials[resource] = serial
+            native.setStringProperty(actor, "name", name)
+            native.setStringProperty(actor, "sourceArea", area_id)
+            native.setStringProperty(actor, "simulationRegion", area_id)
+            for key, value in ("posx", position[0]), ("posy", position[1]), ("posz", position[2]):
+                native.setNumericProperty(actor, key, value)
+            binding["mapClass"].addObject(binding["map"], actor)
+            self.poisonRequire(binding)
+            self.initializeActor(actor)
+            self.poisonRequire(binding)
+            self.poisonEnrollOwner(
+                binding, state, actor, {"typeId": row["typeId"], "resource": resource, "area": area_id}, operation
+            )
+            if resource == "MAREK1":
+                native.setNumericProperty(actor, "plugin_cityPoisonTalkCount", 1)
+                self.poisonWrite(binding, state)
+                self.poisonRegisterAntidoteStock(actor, binding=binding, data=state)
+            return name
+
+        def poisonMakeActorDialog(self, actor):
+            binding = self.poisonCapture()
+            state = self.poisonRead(binding)
+            self.poisonRebindOwners(binding, state)
+            identity = binding["objectClass"].getName(actor)
+            port = NativePoisonPort(self, binding, state)
+            if port.resolve(identity) is not actor:
+                raise SourceGap("Source dialog no longer belongs to the clicked actual actor")
+            definitions = decodeData(binding["definitionText"] or "{}")
+            declared = firstMatch((row for row in definitions["initialActors"] if row["id"] == identity), None)
+            if declared is None:
+                declared = definitions["factories"][state["actors"][identity]["resource"]]
+            template = declared["dialogId"]
+            dialog = binding["game"].resolve().createObject(template)
+            self.poisonRequire(binding)
+            binding["objectClass"].setStringProperty(dialog, "actorId", identity)
+            self.poisonRequire(binding)
+            return dialog
+
+        def poisonCursorActor(self, binding, state, cursor):
+            actor = NativePoisonPort(self, binding, state).resolve(cursor["actorId"])
+            row = state["actors"][cursor["actorId"]]
+            expected = CRE_DIALOGUE_BINDINGS[row["resource"]]
+            if cursor["lineage"] != row["lineage"] or cursor["resource"] != expected[0]:
+                raise SourceGap("Saved source cursor belongs to a different actor or dialogue")
+            return actor
+
+        def poisonUpdateCreations(self):
+            binding = self.poisonCapture()
+            state = self.poisonRead(binding)
+            if not state.get("sourceVersion"):
+                return
+            port = NativePoisonPort(self, binding, state)
+            here = currentArea(self)
+            for resource, source_area, source_point, operation, global_name, required_value, forbidden in (
+                ("LOTHAN", "AR0700", [2361, 1090], "AR0700.BCS#spawn4", "LothanderMove", 3, ("Lothander", "Marek")),
+                ("MAREK1", "AR0115", [406, 344], "AR0115.BCS#spawn0", "MarekMove", 1, ("Marek",)),
+            ):
+                if (
+                    here != source_area
+                    or port.globalValue(global_name) != required_value
+                    or any(port.isDead(name) for name in forbidden)
+                ):
+                    continue
+                alias = CRE_DIALOGUE_BINDINGS[resource][1]
+                if any(
+                    row["scriptName"] == alias and row["area"] == source_area and not row["dead"] and not row["retired"]
+                    for row in state["actors"].values()
+                ):
+                    continue
+                source_rule = operation
+                occurrences = state.setdefault("creationOccurrences", {})
+                occurrence = occurrences.get(source_rule, 0) + 1
+                operation = source_rule + "#instance" + str(occurrence)
+                if operation in state["receipts"]:
+                    raise SourceGap("An area creation occurrence was replayed instead of resumed")
+                occurrences[source_rule] = occurrence
+                state["receipts"][operation] = {"status": "pending", "steps": [], "sourceRule": source_rule}
+                self.poisonWrite(binding, state)
+                identity = self.poisonCreateSourceActor(binding, state, resource, operation, source_area, source_point)
+                state["receipts"][operation].update(status="complete", actorId=identity)
+                self.poisonWrite(binding, state)
+
+        def poisonBeginDialogue(self, actor, binding=None):
+            binding = binding if binding is not None else self.poisonCapture()
+            state = self.poisonRead(binding)
+            if not state.get("sourceVersion"):
+                raise SourceGap("Source runtime has not passed new-game/migration admission")
+            self.poisonRebindOwners(binding, state)
+            identity = binding["objectClass"].getName(actor)
+            port = NativePoisonPort(self, binding, state)
+            if port.resolve(identity) is not actor:
+                raise SourceGap("Source conversation actor instance changed")
+            row = state["actors"][identity]
+            resource = CRE_DIALOGUE_BINDINGS[row["resource"]][0]
+            for key, cursor in state["cursors"].items():
+                if cursor["actorId"] == identity and not cursor["done"]:
+                    self.poisonCursorActor(binding, state, cursor)
+                    return key
+            entry = self.poisonGraphs().entry(resource, port, identity)
+            if entry is None:
+                return None
+            key = "sourceDialogue" + str(state["nextSession"])
+            state["nextSession"] += 1
+            state["cursors"][key] = {
+                "actorId": identity,
+                "lineage": row["lineage"],
+                "resource": resource,
+                "state": entry,
+                "done": False,
+                "sequence": 0,
+            }
+            native = binding["objectClass"]
+            native.setNumericProperty(
+                actor, "plugin_cityPoisonTalkCount", native.getNumericProperty(actor, "plugin_cityPoisonTalkCount") + 1
+            )
+            self.poisonWrite(binding, state)
+            return key
+
+        def poisonEdgeHoldReason(self, edge, graph=None, visited=None):
+            def inspect(node):
+                if node["operation"] == "Shout":
+                    return "The audited Shout99 listener behavior has not been ported."
+                if node["operation"] == "ActionOverride":
+                    return inspect(node["arguments"][1])
+                return ""
+
+            for action in edge["actions"]:
+                reason = inspect(action)
+                if reason:
+                    return reason
+            if graph is not None and edge["targetState"] is not None:
+                visited = set() if visited is None else visited
+                if edge["index"] in visited:
+                    raise SourceGap("Source hold admission encountered an automatic cycle")
+                visited.add(edge["index"])
+                outgoing = graph["states"][edge["targetState"]]["edges"]
+                if len(outgoing) == 1:
+                    following = graph["edges"][outgoing[0]]
+                    if following["replyStrref"] is None and not following["conditions"]:
+                        return self.poisonEdgeHoldReason(following, graph, visited)
+            return ""
+
+        def poisonChooseEdge(self, session_id, edge_index, binding=None):
+            binding = binding if binding is not None else self.poisonCapture()
+            state = self.poisonRead(binding)
+            cursor = state["cursors"][session_id]
+            self.poisonCursorActor(binding, state, cursor)
+            if cursor["done"] or cursor.get("waiting"):
+                raise SourceGap("Source dialogue has no current choice")
+            graph = self.poisonGraphs().graphs[cursor["resource"]]
+            if edge_index not in graph["states"][cursor["state"]]["edges"]:
+                raise SourceGap("Edge does not belong to the current source state")
+            edge = graph["edges"][edge_index]
+            if self.poisonEdgeHoldReason(edge, graph):
+                return False  # A held branch must not leave a pending effect receipt or mutate source state.
+            port = NativePoisonPort(self, binding, state)
+            if not self.poisonGraphs().matches(edge["conditions"], port, cursor["actorId"]):
+                return False
+            operation = session_id + ":edge" + str(edge_index) + ":sequence" + str(cursor["sequence"])
+            if operation in state["receipts"]:
+                raise SourceGap("Repeated source edge receipt")
+            receipt = {"status": "pending", "source": edge["sourceId"], "steps": []}
+            state["receipts"][operation] = receipt
+            self.poisonWrite(binding, state)
+            return self.poisonRunActions(binding, state, cursor, edge, operation, 0)
+
+        def poisonRunActions(self, binding, state, cursor, edge, operation, first_action):
+            port = NativePoisonPort(self, binding, state)
+            receipt = state["receipts"][operation]
+            for index in range(first_action, len(edge["actions"])):
+                action = edge["actions"][index]
+                self.poisonCursorActor(binding, state, cursor)
+                result = port.applyAction(action, cursor["actorId"], operation + ":action" + str(index))
+                receipt["steps"].append({"index": index, "operation": action["operation"], "result": result})
+                if "waitUntil" in result:
+                    receipt["status"] = "waiting"
+                    cursor["waiting"] = operation
+                    sessions = [key for key, item in state["cursors"].items() if item is cursor]
+                    if len(sessions) != 1:
+                        raise SourceGap("Delayed source action lost its unique session owner")
+                    state["continuations"][operation] = {
+                        "sessionId": sessions[0],
+                        "resource": cursor["resource"],
+                        "edge": edge["index"],
+                        "nextAction": index + 1,
+                        "due": result["waitUntil"],
+                    }
+                    self.poisonWrite(binding, state)
+                    return True
+                self.poisonWrite(binding, state)
+            if edge["journalStrref"] is not None:
+                state["journal"].append(
+                    {"source": edge["sourceId"], "strref": edge["journalStrref"], "rawFlags": edge["rawFlags"]}
+                )
+            cursor.update(state=edge["targetState"], done=edge["targetState"] is None, sequence=cursor["sequence"] + 1)
+            cursor.pop("waiting", None)
+            receipt["status"] = "complete"
+            self.poisonSyncSourceQuests(binding, state, edge["sourceId"])
+            self.poisonWrite(binding, state)
+            if binding["enabled"]:
+                self.observePoisonAcquisition(binding=binding, data=state)
+            return True
+
+        def poisonResumeContinuations(self):
+            binding = self.poisonCapture()
+            state = self.poisonRead(binding)
+            if not state.get("sourceVersion"):
+                return
+            now = self.poisonSourceTime(binding)
+            for operation, continuation in list(state["continuations"].items()):
+                if now < continuation["due"]:
+                    continue
+                cursor = state["cursors"][continuation["sessionId"]]
+                if state["actors"][cursor["actorId"]]["dead"]:
+                    state["receipts"][operation]["status"] = "cancelledByOwnerDeath"
+                    cursor.update(done=True)
+                    cursor.pop("waiting", None)
+                else:
+                    state["receipts"][operation]["status"] = "pending"
+                    self.poisonWrite(binding, state)
+                    edge = self.poisonGraphs().graphs[continuation["resource"]]["edges"][continuation["edge"]]
+                    self.poisonRunActions(binding, state, cursor, edge, operation, continuation["nextAction"])
+                del state["continuations"][operation]
+                self.poisonWrite(binding, state)
+
+        @resumableHook
+        def poisonDialogue(self, actor):
+            session_id = self.poisonBeginDialogue(actor)
+            if session_id is None:
+                return
+            for _step in range(64):
+                binding = self.poisonCapture()
+                state = self.poisonRead(binding)
+                cursor = state["cursors"][session_id]
+                if cursor.get("waiting"):
+                    return
+                if cursor["done"]:
+                    if state["queuedDialogs"]:
+                        identity = state["queuedDialogs"].pop(0)
+                        self.poisonWrite(binding, state)
+                        queued_actor = NativePoisonPort(self, binding, state).resolve(identity)
+                        session_id = self.poisonBeginDialogue(queued_actor, binding=binding)
+                        if session_id is None:
+                            return
+                        continue
+                    if state["queuedStores"]:
+                        request = state["queuedStores"].pop(0)
+                        self.poisonWrite(binding, state)
+                        NativePoisonPort(self, binding, state).resolve(request["actorId"])
+                        dialog_id = "cityPoisonStore" + request["store"] + "Dialog"
+                        dialog = binding["game"].resolve().createObject(dialog_id)
+                        self.poisonRequire(binding)
+                        yield uiRequest("gui.showDialog", dialog)
+                        self.poisonRequire(binding)
+                    return
+                self.poisonCursorActor(binding, state, cursor)
+                graph = self.poisonGraphs().graphs[cursor["resource"]]
+                source_state = graph["states"][cursor["state"]]
+                port = NativePoisonPort(self, binding, state)
+                eligible = [
+                    graph["edges"][index]
+                    for index in source_state["edges"]
+                    if self.poisonGraphs().matches(graph["edges"][index]["conditions"], port, cursor["actorId"])
+                ]
+                automatic = [edge for edge in eligible if edge["replyStrref"] is None]
+                if automatic:
+                    if len(automatic) != 1:
+                        raise SourceGap("Ambiguous automatic source transition priority")
+                    authored = decodeData(binding["authoredText"] or "{}")["states"][source_state["sourceId"]]
+                    yield uiRequest("showReader", binding["game"], authored["speaker"], authored["text"])
+                    self.poisonRequire(binding)
+                    edge = automatic[0]
+                else:
+                    reply_ids = [edge["sourceId"] for edge in eligible]
+                    held = {
+                        edge["sourceId"]: self.poisonEdgeHoldReason(edge, graph)
+                        for edge in eligible
+                        if self.poisonEdgeHoldReason(edge, graph)
+                    }
+                    choice = yield from self.showPoisonSourceStateFlow(source_state["sourceId"], reply_ids, held)
+                    self.poisonRequire(binding)
+                    edge = firstMatch((edge for edge in eligible if edge["sourceId"] == choice), None)
+                    if edge is None:
+                        return  # Saved cursor remains resumable; no fresh source entry or talk-count increment.
+                if not self.poisonChooseEdge(session_id, edge["index"], binding=binding):
+                    return
+                yield uiRequest("gui.checkQuests", binding["player"])
+                self.poisonRequire(binding)
+            raise SourceGap("Source dialogue exceeded its retained transition bound")
+
         @resumableHook
         def observeRegions(self):
             definition_text = self.getStringProperty("regionDefinitions")
@@ -5616,6 +7575,11 @@ def load(self, context):
                 row["sourceCreature"]: row["canonicalActorId"] for row in read(self, "relocationDefinitions", [])
             }
             for row in read(self, "actorDefinitions", []):
+                if (
+                    self.getBoolProperty("plugin_cityPoisonSourceEnabled")
+                    and row.get("sourceCreature") in CRE_DIALOGUE_BINDINGS
+                ):
+                    continue
                 if row.get("custodyRole"):
                     continue
                 if row.get("sourceCreature") in canonical and row["id"] != canonical[row["sourceCreature"]]:
@@ -5679,10 +7643,10 @@ def load(self, context):
             for row in read(self, "relocationDefinitions", []):
                 name, key = row["canonicalActorId"], row["id"]
                 actor = (
-                    self.getObjectProperty("plugin_cityRelocationActor_" + key)
+                    optionalObjectProperty(self, "plugin_cityRelocationActor_" + key)
                     or game_map.getObjectByName(name)
-                    or self.getObjectProperty("plugin_cityParked_" + name)
-                    or self.getObjectProperty("plugin_cityCorpse_" + name)
+                    or optionalObjectProperty(self, "plugin_cityParked_" + name)
+                    or optionalObjectProperty(self, "plugin_cityCorpse_" + name)
                 )
                 if not actor:
                     continue
@@ -5769,6 +7733,10 @@ def load(self, context):
             parked = read(self, "plugin_cityParkedActors", [])
             active_area = game_map.getStringProperty("activeSimulationRegion")
             for actor in tuple(game_map.getObjects()):
+                if self.getBoolProperty("plugin_cityPoisonSourceEnabled") and actor.getBoolProperty(
+                    "plugin_cityPoisonManaged"
+                ):
+                    continue
                 if (
                     (not isinstance(actor, CCreature) and not actor.getBoolProperty("sourceCorpse"))
                     or (isinstance(actor, CCreature) and actor.isPlayer())
@@ -5814,8 +7782,14 @@ def load(self, context):
                 point, origin = hero(self).getCoords(), start.getCoords()
                 if point.z != origin.z or abs(point.x - origin.x) + abs(point.y - origin.y) > 1:
                     freezeHistory(self)
+            if self.getBoolProperty("plugin_cityPoisonSourceEnabled"):
+                self.poisonInitializeSource()
+                self.poisonUpdateCreations()
+                self.observePoisonAcquisition()
             was_fatal = game_map.getBoolProperty("plugin_cityFlag_poisonFatal")
             self.advanceTicks(1)
+            if self.getBoolProperty("plugin_cityPoisonSourceEnabled"):
+                self.poisonResumeContinuations()
             coordinator = custody(self)
             if coordinator:
                 coordinator.updatePatrols()

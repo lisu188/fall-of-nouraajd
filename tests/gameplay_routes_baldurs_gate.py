@@ -371,29 +371,142 @@ def cityTour(d):
     )
 
 
+def historyDialogUi(d, action=None):
+    """Inspect or select actual filtered history replies through the isolated native panel."""
+    from tests.gameplay_branch_driver import readNewNativeTrace
+
+    gui = d.enableIsolatedGui()
+    d.test.assertIsNotNone(d.trace_path, "Native history choices require the actual option trace")
+    d.test.assertIsNone(d.nativePanel("CGameDialogPanel", required=False), "An earlier dialog is still open")
+    dialog_id = "cityStartDialog"
+    dialog = d.call(d.game, "createObject", dialog_id)
+    options = [
+        row["properties"]
+        for row in sorted(d._dialogStates(dialog_id)["ENTRY"]["options"], key=lambda row: row["properties"]["number"])
+        if not row["properties"].get("condition") or d.call(dialog, "invokeCondition", row["properties"]["condition"])
+    ]
+    d.test.assertLessEqual(len(options), 32, "Bounded native history reply inspection")
+    for method in ("canCityInterlude", "canReturnFromInterlude"):
+        d.test.assertFalse(d.call(dialog, "invokeCondition", method), "An unearned interlude offer became available")
+    d.test.assertFalse({"cityInterlude", "returnFromInterlude"} & {row.get("action") for row in options})
+    d.assertNativeCombatOutcomes()
+    after_seq = d._combat_trace_seq
+    handler = d.call(d.game, "getGuiHandler")
+    panel = d.call(handler, "openDialog", dialog)
+    d.test.assertEqual(panel, d.nativePanel("CGameDialogPanel"))
+    actual_dialog = d.call(panel, "getObjectProperty", "dialog")
+    d.test.assertEqual(dialog_id, d.call(actual_dialog, "getTypeId"))
+    observed = {}
+
+    def inspectButtons():
+        for child in d.call(panel, "getChildren"):
+            if d.call(child, "getType") != "CButton":
+                continue
+            click = d.call(child, "getStringProperty", "click")
+            if not click.startswith("chooseReply"):
+                continue
+            suffix = click.removeprefix("chooseReply")
+            d.test.assertTrue(suffix.isdecimal(), ("Unexpected native reply callback", click))
+            index = int(suffix)
+            d.test.assertLess(index, len(options), "A native reply is absent from the filtered authored catalog")
+            row = options[index]
+            text = str(index + 1) + "  " + (row.get("actionLabel", "") + "\n" if row.get("actionLabel") else "")
+            text += row["text"]
+            d.test.assertEqual(text, d.call(child, "getStringProperty", "text"), "Native reply text/action mismatch")
+            observed[index] = {"action": row.get("action", ""), "text": row["text"], "number": row["number"]}
+
+    inspectButtons()
+    if action is None:
+        for _ in options:
+            d.call(panel, "keyboardEvent", gui, 768, 1073741905)
+            inspectButtons()
+        d.test.assertEqual(set(range(len(options))), set(observed), "Native history pagination omitted a reply")
+    else:
+        indexes = [index for index, row in enumerate(options) if row.get("action") == action]
+        d.test.assertEqual(1, len(indexes), ("Expected one available native history action", action))
+        index = indexes[0]
+        for _ in range(index + 1):
+            d.call(panel, "keyboardEvent", gui, 768, 1073741905)
+        inspectButtons()
+        d.test.assertIn(index, observed, "The selected reply must be present in the actual native viewport")
+        d.call(panel, "keyboardEvent", gui, 768, 13)
+        d.pump()
+    d.call(panel, "keyboardEvent", gui, 768, 27)
+    d.pump()
+    d.test.assertIsNone(d.call(panel, "getParent"), "Native history inspection left its dialog open")
+    records = readNewNativeTrace(d.trace_path, {}, after_seq)
+    selections = [row for row in records if row.get("event") == "dialog_option_selected"]
+    if action is None:
+        d.test.assertFalse(selections, "Inspecting and cancelling must not choose an authored reply")
+    else:
+        d.test.assertEqual(1, len(selections), "Native history choice requires exactly one input receipt")
+        selection = selections[0]
+        d.test.assertEqual(
+            (dialog_id, "ENTRY", action, options[index]["number"]),
+            (
+                selection.get("dialog", {}).get("typeId"),
+                selection.get("stateId"),
+                selection.get("action"),
+                selection.get("optionNumber"),
+            ),
+            "Native history receipt does not identify the selected authored reply",
+        )
+    witness = {
+        "kind": "nativeHistoryChoice" if action else "nativeUnofferedHistoryInspection",
+        "dialog": dialog_id,
+        "action": action,
+        "replies": [observed[index] for index in sorted(observed)],
+        "nativeOptionSeq": selections[0]["seq"] if selections else None,
+    }
+    d.record({"nativeHistoryUi": witness}, replay=True)
+    return witness
+
+
 def history(d, outcome):
     start(d)
     d.navigateTo("cityStart")
-    d.choose("cityStartDialog", "historyAldeth" + outcome)
-    d.choose("cityStartDialog", "historyTenya" + outcome)
+    origin = d.coords()
+    walkable, portals = cityMovementCells()
+    neighbors = [(origin[0] + dx, origin[1] + dy, origin[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+    neighbor = next((point for point in neighbors if point in walkable - portals and d.canStep(point)), None)
+    d.test.assertIsNotNone(neighbor, "The real hero needs an authored step away from the starting event")
+    d.navigateCoords(neighbor, limit=8)
+    d.test.assertEqual(neighbor, d.coords())
+    d.navigateTo("cityStart")
+    d.test.assertEqual(origin, d.coords())
+    before = resources(d)
+    historyDialogUi(d)
+    d.test.assertEqual(before, resources(d))
+    d.test.assertEqual({}, read(d, d.game_map, "plugin_cityHistory", {}))
+    d.test.assertEqual(5, d.number("plugin_cityPhase"))
+    historyDialogUi(d, "historyAldeth" + outcome)
+    historyDialogUi(d, "historyTenya" + outcome)
     expected = {"aldeth": outcome.lower(), "tenya": outcome.lower()}
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
     other = "Killed" if outcome == "Helped" else "Helped"
-    d.choose("cityStartDialog", "historyAldeth" + other)
-    d.choose("cityStartDialog", "historyTenya" + other)
+    historyDialogUi(d, "historyAldeth" + other)
+    historyDialogUi(d, "historyTenya" + other)
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
-    d.choose("cityStartDialog", "finishHistoryChoices")
-    d.choose("cityStartDialog", "historyEldothAbsent")
+    historyDialogUi(d, "finishHistoryChoices")
+    historyDialogUi(d, "historyEldothAbsent")
+    expected["eldoth"] = "unspecified"
     d.test.assertTrue(d.flag("plugin_cityHistoryFrozen"))
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityStartingProfile", {})["history"])
-    before = resources(d)
-    d.choose("cityStartDialog", "returnFromInterlude")
+    historyDialogUi(d)
     d.test.assertEqual(5, d.number("plugin_cityPhase"))
     d.test.assertEqual(before, resources(d))
     d.saveAndReload("city-history-" + outcome.lower())
+    d.test.assertEqual(before, resources(d))
+    d.test.assertFalse(d.condition("cityStartDialog", "canCityInterlude"))
+    d.test.assertFalse(d.condition("cityStartDialog", "canReturnFromInterlude"))
     d.check("baldursGate.history." + outcome.lower(), expected == read(d, d.game_map, "plugin_cityHistory", {}))
-    d.check("baldursGate.interlude.earlyReturnRefused", d.number("plugin_cityPhase") == 5)
+    d.check(
+        "baldursGate.interlude.earlyReturnRefused",
+        d.number("plugin_cityPhase") == 5,
+        outcome="unavailable-unoffered",
+        nativeInspection=True,
+    )
 
 
 def openContainer(d, name, *, forced=False):
@@ -508,6 +621,76 @@ def nativeVictory(d, name):
     d.combats += 1
 
 
+def alatosOwnedItems(d, owner):
+    owned = {}
+    items = [*d.call(owner, "getItems"), *d.call(owner, "getEquipped").values()]
+    for item in items:
+        if item is None:
+            continue
+        name = d.call(item, "getName")
+        if name in owned:
+            d.test.assertEqual(owned[name]["__handle__"], item["__handle__"], "Distinct possessions share one name")
+        owned[name] = item
+    return owned
+
+
+def captureAlatosBetrayal(d, planner, outcome):
+    d.test.assertEqual([{"label": "Resar"}], outcome["effects"]["hostile"])
+    name = planner.actorName(outcome["effects"]["hostile"])
+    actor = d.object(name)
+    d.test.assertTrue(d.call(actor, "isAlive"), "Capture Resar's actual possessions before the betrayal")
+    owned = alatosOwnedItems(d, actor)
+    expected = Counter()
+    for row in read(d, actor, "sourceInventory", []):
+        expected[row["item"]] += sourceQuantity(row)
+    actual = Counter()
+    profile = []
+    for item_name, item in owned.items():
+        d.test.assertFalse(d.call(item, "getBoolProperty", "plugin_cityUndroppable"))
+        code = d.call(item, "getStringProperty", "plugin_citySourceItem")
+        quantity = d.call(item, "getNumericProperty", "plugin_cityQuantity")
+        actual[code] += max(1, quantity)
+        profile.append((item_name, code, quantity))
+    d.test.assertTrue(expected, "Resar's authored native possessions must be initialized")
+    d.test.assertEqual(expected, actual, "Capture all actual inventory and equipped source possessions")
+    d.test.assertTrue(set(owned).isdisjoint(alatosOwnedItems(d, d.player)))
+    d.assertNativeCombatOutcomes()
+    return {"name": name, "actor": actor, "items": owned, "profile": sorted(profile), "after_seq": d._combat_trace_seq}
+
+
+def finishAlatosBetrayal(d, witness):
+    name, actor = witness["name"], witness["actor"]
+    current = d.object(name, required=False)
+    if current is not None:
+        d.test.assertEqual(actor["__handle__"], current["__handle__"], "Resar's captured native identity changed")
+        nativeVictory(d, name)
+    else:
+        d.assertNativeCombatOutcomes()
+        d.test.assertFalse(d.call(actor, "isAlive"), "A removed living actor is not a native victory")
+        d.test.assertIsNotNone(
+            d.playerVictoryAgainst(MAP, name, after_seq=witness["after_seq"]),
+            "Missing fresh native Resar victory before settlement",
+        )
+        d.combats += 1
+    d.test.assertIsNone(d.object(name, required=False), "The betrayal must finish before the reward baseline")
+    d.test.assertFalse(d.call(actor, "isAlive"), "Resar must actually die in native combat")
+    victory = d.playerVictoryAgainst(MAP, name, after_seq=witness["after_seq"])
+    d.test.assertIsNotNone(victory, "Missing fresh native Resar victory before settlement")
+    remaining, player = alatosOwnedItems(d, actor), alatosOwnedItems(d, d.player)
+    for item_name, item in witness["items"].items():
+        d.test.assertNotIn(item_name, remaining, "Defeated Resar retained a transferred possession")
+        d.test.assertIn(item_name, player, "Resar's actual possession was not transferred")
+        d.test.assertEqual(item["__handle__"], player[item_name]["__handle__"], "A new item replaced owned Resar loot")
+    for item_name, code, quantity in witness["profile"]:
+        d.test.assertEqual(code, d.call(player[item_name], "getStringProperty", "plugin_citySourceItem"))
+        d.test.assertEqual(quantity, d.call(player[item_name], "getNumericProperty", "plugin_cityQuantity"))
+    return {
+        "resarOpponent": name,
+        "resarNativeVictorySeq": victory["seq"],
+        "resarSourcePossessions": witness["profile"],
+    }
+
+
 class QuestRoute:
     """Finite dependency planner whose only mutations are normal movement and authored choices."""
 
@@ -519,6 +702,7 @@ class QuestRoute:
         self.pending_outcomes = set()
         self.actions = 0
         self.tamoko_refuse = False
+        self.alatos_betrayal = None
 
     def bounded(self, goal):
         self.actions += 1
@@ -581,6 +765,11 @@ class QuestRoute:
         self.conditions(row.get("acceptConditions", {}))
         name = self.actorName(row["givers"])
         self.contact(name)
+        if self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"):
+            self.item({"item": "SCRLPET"})
+            self.contact(name)
+            self.d.choose(name + "Dialog", "restoreStatue")
+            self.d.test.assertFalse(self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"))
         self.d.choose(name + "Dialog", "accept" + upperFirst(key))
         self.d.test.assertEqual("active", state(self.d, key), key)
         self.d.test.assertIn("city" + upperFirst(key) + "Quest", self.d.questNames())
@@ -891,6 +1080,8 @@ class QuestRoute:
             before = resources(self.d)
             standing = self.d.number("plugin_cityStanding")
             action = "quest" + upperFirst(key) + upperFirst(outcome["id"])
+            if key == "alatosTheft" and outcome["id"] == "complete":
+                self.alatos_betrayal = captureAlatosBetrayal(self.d, self, outcome)
             self.d.choose(name + "Dialog", action)
             effects = outcome.get("effects", {})
             self.d.test.assertEqual(before[0] + effects.get("gold", 0), self.d.gold())
@@ -921,14 +1112,26 @@ def questRoute(d, key, outcome_key, *, item_first=False):
     name, result = planner.settle(key, outcome_key)
     if key == "tamokoMercy" and outcome_key == "fight":
         nativeVictory(d, name)
+    betrayal = {}
+    if key == "alatosTheft" and outcome_key == "complete":
+        d.test.assertIsNotNone(planner.alatos_betrayal)
+        betrayal = finishAlatosBetrayal(d, planner.alatos_betrayal)
     prefix = "baldursGate.quest." + key + "." + outcome_key
     before = resources(d)
     d.saveAndReload("city-quest-" + key + "-" + outcome_key)
+    if betrayal:
+        d.test.assertIsNone(d.object(betrayal["resarOpponent"], required=False))
+        owned = alatosOwnedItems(d, d.player)
+        for item_name, code, quantity in betrayal["resarSourcePossessions"]:
+            d.test.assertIn(item_name, owned, "Resar loot did not survive native reload")
+            d.test.assertEqual(code, d.call(owned[item_name], "getStringProperty", "plugin_citySourceItem"))
+            d.test.assertEqual(quantity, d.call(owned[item_name], "getNumericProperty", "plugin_cityQuantity"))
     d.check(
         prefix,
         state(d, key) == ("completed" if result.get("terminal", True) and not row.get("repeatable") else "active"),
         sourceId="quest:" + key + ":" + outcome_key,
         itemBeforeAccept=item_first,
+        **betrayal,
     )
     if not outcome.get("effects", {}).get("finale") and d.object(name, required=False):
         planner.contact(name)
@@ -1367,6 +1570,187 @@ def inventoryReaderLines(d, owner):
     ] or ["No carried belongings."]
 
 
+BOOK08_PENDING_OUTCOMES = ("successfulUse", "handInBeforeUse", "useBeforeHandIn", "originalParity")
+
+
+def book08StatsSnapshot(d, stats):
+    values = d.properties(stats)
+    fields = (
+        "strength",
+        "agility",
+        "stamina",
+        "intelligence",
+        "armor",
+        "block",
+        "dmgMin",
+        "dmgMax",
+        "attack",
+        "hit",
+        "crit",
+        "fireResist",
+        "frostResist",
+        "normalResist",
+        "thunderResist",
+        "shadowResist",
+        "damage",
+        "mainStat",
+    )
+    d.test.assertTrue(set(fields) <= set(values), "A complete native CStats snapshot is required")
+    return {key: values[key] for key in fields}
+
+
+def book08DisabledSnapshot(d, name):
+    clock = d.object("cityClock")
+    for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+        d.test.assertIs(
+            d.call(clock, "getBoolProperty", flag), False, "The public route requires disabled source flags"
+        )
+    items = itemInstances(d, d.player)
+    d.test.assertIn(name, items, "Disabled use must retain the actual carried tome")
+    book = items[name]
+    d.test.assertEqual("cityItemBook08", d.call(book, "getTypeId"))
+    d.test.assertEqual(
+        "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
+    )
+    d.test.assertEqual("BOOK08", d.call(book, "getStringProperty", "plugin_citySourceItem"))
+    d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityBook08Consumed"))
+    d.test.assertEqual(
+        1, sum(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in items.values())
+    )
+    source_state = read(d, clock, "plugin_cityPoisonSourceState", {})
+    d.test.assertNotIn("book08Use:" + name, source_state.get("receipts", {}), "Disabled use must create no use receipt")
+    owner_items = itemInstances(d, d.object("cityAr0132Actor1"))
+    d.test.assertNotIn(name, owner_items, "The original owner must not retain a duplicate tome")
+    d.test.assertFalse(
+        any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in owner_items.values())
+    )
+    base = d.call(d.player, "getObjectProperty", "baseStats")
+    d.test.assertIsNotNone(base)
+    return {
+        "book": {
+            "name": name,
+            "type": d.call(book, "getTypeId"),
+            "nativeType": d.call(book, "getType"),
+            "quantity": d.call(book, "getNumericProperty", "plugin_cityQuantity"),
+            "charges": read(d, book, "plugin_cityCharges", []),
+            "unidentified": d.call(book, "getBoolProperty", "plugin_cityUnidentified"),
+            "stolen": d.call(book, "getBoolProperty", "plugin_cityStolen"),
+        },
+        "baseStats": book08StatsSnapshot(d, base),
+        "composedStats": book08StatsSnapshot(d, d.call(d.player, "getStats")),
+        "inventory": {key: d.call(item, "getTypeId") for key, item in items.items()},
+        "ownerInventory": {key: d.call(item, "getTypeId") for key, item in owner_items.items()},
+        "equipment": {
+            slot: d.call(item, "getName") if item else None for slot, item in d.call(d.player, "getEquipped").items()
+        },
+        "resources": resources(d),
+        "activeQuests": sorted(d.questNames()),
+        "completedQuests": sorted(d.questNames(completed=True)),
+        "phase": d.number("plugin_cityPhase"),
+        "standing": d.number("plugin_cityStanding"),
+        "crimes": d.number("plugin_cityCrimes"),
+        "history": read(d, d.game_map, "plugin_cityHistory", {}),
+        "sourceState": source_state,
+    }
+
+
+def book08DisabledUse(d):
+    """A normal-source denial witness; successful use and hand-in outcomes remain pending."""
+    start(d)
+    for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+        d.test.assertIs(d.call(d.object("cityClock"), "getBoolProperty", flag), False)
+    name = "cityAr0132Actor1"
+    QuestRoute(d).contact(name)
+    owner = d.object(name)
+    d.test.assertEqual("AR0132", currentArea(d))
+    d.test.assertEqual("CHANTH", d.call(owner, "getStringProperty", "sourceCreature"))
+    before_owner, before_player = itemInstances(d, owner), itemInstances(d, d.player)
+    books = [
+        item for item in before_owner.values() if d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08"
+    ]
+    d.test.assertEqual(1, len(books), "Chanthalas must own his one actual source tome")
+    book = books[0]
+    selected = d.call(book, "getName")
+    d.test.assertTrue(selected)
+    d.test.assertEqual("cityItemBook08", d.call(book, "getTypeId"))
+    d.test.assertEqual(
+        "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
+    )
+    d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
+    d.test.assertNotIn(selected, before_player)
+    d.test.assertFalse(
+        any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in before_player.values())
+    )
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityUnstealable"))
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityUndroppable"))
+    d.test.assertFalse(d.call(owner, "getBoolProperty", "plugin_cityUnavoidableDetection"))
+    d.test.assertGreaterEqual(
+        d.call(d.call(d.player, "getStats"), "getNumericProperty", "agility"),
+        d.call(owner, "getNumericProperty", "plugin_cityTheftAgility") or 16,
+    )
+    before = resources(d)
+    crime, standing = d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")
+    theft = d.chooseUi(name + "Dialog", "pickPocket", selected_id=selected)
+    after_player, after_owner = itemInstances(d, d.player), itemInstances(d, owner)
+    d.test.assertEqual(set(before_player) | {selected}, set(after_player))
+    d.test.assertEqual(set(before_owner) - {selected}, set(after_owner))
+    d.test.assertEqual(
+        book["__handle__"], after_player[selected]["__handle__"], "The chooser must transfer the exact original tome"
+    )
+    d.test.assertEqual(before[:2], resources(d)[:2])
+    d.test.assertEqual(before[2] + Counter({"BOOK08": 1}), resources(d)[2])
+    d.test.assertEqual((crime, standing), (d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")))
+    initial = book08DisabledSnapshot(d, selected)
+    d.test.assertEqual([0, 0, 0], initial["book"]["charges"], "Retain the original source charge triple")
+    for checkpoint in ("before-use", "after-use"):
+        d.saveAndReload("city-book08-disabled-" + checkpoint)
+        d.test.assertEqual(
+            initial, book08DisabledSnapshot(d, selected), "Reload must preserve the exact disabled-use state"
+        )
+        d.enableIsolatedGui()
+        for repeat in range(2):
+            for panel in ("CGameTextPanel", "CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                d.test.assertIsNone(
+                    d.nativePanel(panel, required=False), "A prior native modal would hide the use outcome"
+                )
+            carried = itemInstances(d, d.player)[selected]
+            d.call(d.player, "useItem", carried)
+            d.pump()
+            for panel in ("CGameTextPanel", "CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                d.test.assertIsNone(
+                    d.nativePanel(panel, required=False),
+                    "Disabled tome use must not run the default native scroll text action",
+                )
+            d.test.assertEqual(
+                initial, book08DisabledSnapshot(d, selected), "Disabled use changed tome, stats or city progress"
+            )
+            d.record(
+                {
+                    "nativeBook08DisabledUse": {
+                        "item": selected,
+                        "checkpoint": checkpoint,
+                        "repeat": repeat + 1,
+                        "outcome": "disabledUseNoMutation",
+                        "successfulUse": False,
+                        "noDefaultTextPanel": True,
+                    }
+                },
+                replay=True,
+            )
+    d.check(
+        "baldursGate.book08.disabledUseNoMutation",
+        True,
+        sourceActor="AR0132#actor1",
+        item=selected,
+        nativeTheft=theft,
+        nativeUses=4,
+        saveCheckpoints=2,
+        sourceFlagsEnabled=False,
+        pendingOutcomes=BOOK08_PENDING_OUTCOMES,
+    )
+
+
 def inventoryUi(d, *, failed=False):
     start(d)
     name = "cityAr0800Actor73"  # Niklos's authored backpack holds a Potion of Master Thievery.
@@ -1657,6 +2041,7 @@ CASES = (
             classes=("Wayfarer",),
             sources=SOURCES,
             duration_seconds=90,
+            isolated_gui=True,
         ),
         RouteCase(
             "baldurs-gate-history-killed",
@@ -1667,6 +2052,7 @@ CASES = (
             classes=("Inquisitor",),
             sources=SOURCES,
             duration_seconds=90,
+            isolated_gui=True,
         ),
         RouteCase(
             "baldurs-gate-ownership",
@@ -1864,8 +2250,24 @@ CASES += (
         isolated_gui=True,
     ),
 )
+CASES += (
+    RouteCase(
+        "baldurs-gate-book08-disabled-use",
+        MAP,
+        (MAP,),
+        ("baldursGate.book08.disabledUseNoMutation",),
+        book08DisabledUse,
+        classes=("Assasin",),
+        race="wandererRace",
+        sources=SOURCES,
+        duration_seconds=300,
+        isolated_gui=True,
+    ),
+)
+
 
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse": ("baldursGate.book08.disabledUseNoMutation",),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (
@@ -1920,7 +2322,8 @@ SOURCE_BRANCHES = {
             ("historyAldethKilled", "baldursGate.history.killed"),
             ("historyTenyaHelped", "baldursGate.history.helped"),
             ("historyTenyaKilled", "baldursGate.history.killed"),
-            ("returnFromInterlude", "baldursGate.interlude.earlyReturnRefused"),
+            ("canCityInterlude", "baldursGate.interlude.earlyReturnRefused"),
+            ("canReturnFromInterlude", "baldursGate.interlude.earlyReturnRefused"),
             ("unlock", "baldursGate.locks.picked"),
             ("force", "baldursGate.locks.forced"),
             ("open", "baldursGate.ownership.exactLootAndReload"),
@@ -1977,6 +2380,9 @@ SOURCE_BRANCHES.update(
         "res/maps/baldursGate/script.py:BaldursGateDialog.close": ("baldursGate.doors.openAndClose",),
         "res/maps/baldursGate/script.py:BaldursGateDialog.disarm": ("baldursGate.traps.disarmed",),
         "res/maps/baldursGate/script.py:BaldursGateDialog.cityInterlude": (
+            "baldursGate.quest.cythandriaDiary.complete",
+        ),
+        "res/maps/baldursGate/script.py:BaldursGateDialog.returnFromInterlude": (
             "baldursGate.quest.cythandriaDiary.complete",
         ),
         "res/maps/baldursGate/script.py:BaldursGateDialog.warnNarlen": ("baldursGate.quest.narlenLookout.complete",),

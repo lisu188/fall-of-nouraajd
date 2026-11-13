@@ -3,16 +3,325 @@
 """Real staged city construction/fallback regression; no model or original-parity credit."""
 
 import ast
+from contextlib import contextmanager
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+import tempfile
 import textwrap
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
+from tests.test_python_callback_lifecycle import ROOT, PythonCallbackLifecycleTest
+
+
+@contextmanager
+def book08RuntimeFixture(root):
+    """Enable the component only in a bounded private copy of the active staged runtime."""
+    root = Path(root).resolve(strict=True)
+    tree = ast.parse((root / "play.py").read_text(encoding="utf8"))
+    functions = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in {"_default_build_name", "_find_build_dir"}
+    ]
+    if len(functions) != 2:
+        raise AssertionError("The pure play build-discovery helpers must be available")
+    namespace = {"Path": Path, "os": os}
+    exec(compile(ast.Module(body=functions, type_ignores=[]), "<actual-play-build-discovery>", "exec"), namespace)
+    build = namespace["_find_build_dir"](root)
+    if build is None or not Path(build).is_dir():
+        raise unittest.SkipTest("The compiled _game build is unavailable")
+    build = Path(build).resolve(strict=True)
+    configurations = ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")
+    selected_config = os.environ.get("GAME_BUILD_CONFIG")
+    candidates = (
+        [build / selected_config, build] if selected_config else [build / name for name in configurations] + [build]
+    )
+    native = None
+    for directory in candidates:
+        extensions = list(directory.glob("_game*.so")) + list(directory.glob("_game*.pyd"))
+        if len(extensions) > 1:
+            raise AssertionError("The active native module is ambiguous")
+        if extensions:
+            native = directory
+            break
+    if native is None:
+        raise unittest.SkipTest("The compiled _game module is unavailable in the active build")
+    resource_candidates = [build]
+    if build.name in configurations:
+        resource_candidates.append(build.parent)
+    resources = next(
+        (
+            directory
+            for directory in resource_candidates
+            if all((directory / name).is_dir() for name in ("config", "maps", "plugins"))
+        ),
+        None,
+    )
+    if resources is None:
+        raise AssertionError("The active build must contain staged config, maps and plugins")
+    files = {}
+    for name in ("config", "maps", "plugins", "images", "fonts", "campaigns"):
+        folder = resources / name
+        if folder.is_dir():
+            for path in sorted(folder.rglob("*")):
+                if path.is_file():
+                    if path.is_symlink() or not path.resolve().is_relative_to(resources):
+                        raise AssertionError("Staged resource links cannot escape the fixture input")
+                    files[path.relative_to(resources)] = path
+    for path in resources.glob("*.py"):
+        files[Path(path.name)] = path
+    for directory in dict.fromkeys((resources, native)):
+        for path in sorted(directory.iterdir()):
+            if path.is_file() and (path.suffix in {".dll", ".pyd", ".dylib"} or ".so" in path.suffixes):
+                files[Path(path.name)] = path
+    if len(files) > 2000 or sum(path.stat().st_size for path in files.values()) > 512 * 1024 * 1024:
+        raise AssertionError("The staged BOOK08 fixture exceeds its 2000-file/512-MiB copy bound")
+    config_name = Path("maps/baldursGate/config.json")
+    original = json.loads(files[config_name].read_text(encoding="utf8"))
+    config = json.loads(json.dumps(original))
+    properties = config["cityClock"]["properties"]
+    if (
+        properties["plugin_cityPoisonSourceEnabled"] is not False
+        or properties.get("plugin_cityBook08NativeConversionEnabled", False) is not False
+    ):
+        raise AssertionError("BOOK08 component tests require the disabled shipping defaults")
+    properties["plugin_cityPoisonSourceEnabled"] = True
+    properties["plugin_cityBook08NativeConversionEnabled"] = True
+    private = Path(tempfile.mkdtemp(prefix="book08-native-fixture-", dir=resources))
+
+    def requireOwnedPrivate():
+        if (
+            private.parent != resources
+            or not private.name.startswith("book08-native-fixture-")
+            or private.is_symlink()
+            or not private.is_dir()
+            or private.resolve(strict=True) != private
+        ):
+            raise AssertionError("BOOK08 fixture retention and cleanup require the original owned directory")
+
+    requireOwnedPrivate()
+    try:
+        for relative, source in files.items():
+            target = private / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        for name in ("config", "maps", "plugins", "save"):
+            (private / name).mkdir(exist_ok=True)
+        (private / config_name).write_text(
+            json.dumps(config, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf8"
+        )
+        with patch.dict(os.environ, GAME_BUILD_DIR=str(private), GAME_BUILD_CONFIG=""):
+            yield private
+    except BaseException:
+        requireOwnedPrivate()
+        print(f"Retained failed BOOK08 native fixture: {private}", file=sys.stderr, flush=True)
+        raise
+    else:
+        requireOwnedPrivate()
+        shutil.rmtree(private)
 
 
 class CityNativeLoadingRuntimeTest(unittest.TestCase):
     runChild = PythonCallbackLifecycleTest.runChild
+
+    def runBook08Child(self, code, *, return_stderr=False, expected_marker=None):
+        with book08RuntimeFixture(ROOT):
+            result = self.runChild(code, return_stderr=return_stderr)
+            if expected_marker is not None:
+                self.assertTrue(return_stderr, "BOOK08 parent acceptance requires diagnostic stderr")
+                output, errors = result
+                self.assertIn(expected_marker, output)
+                self.assertNotIn("Traceback", errors)
+                self.assertNotIn("PoisonBindingChanged", errors)
+                self.assertNotIn("Python callback failed", errors)
+                self.assertNotIn("IndexError", errors)
+                for line in output.splitlines():
+                    if line.startswith("book08-native-"):
+                        self.assertLess(len(line), 8192)
+                        print(line, flush=True)
+            return result
+
+    def testCityQuestHintNativeDispatchReadsNonvirtualBackingTextOnce(self):
+        output, errors = self.runChild(
+            """
+
+        import json
+        import os
+        from pathlib import Path
+        import sys
+        import types
+        instance = game.CGameLoader.loadGame()
+        try:
+            game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior')
+            loop.run()
+            world = instance.getMap()
+            player = world.getPlayer()
+            candidate = instance.createObject('cityQuinnDaggerQuest')
+            assert isinstance(candidate, game.CQuest)
+            assert candidate.getGame() is instance
+            assert candidate.getStringProperty('questKey') == 'quinnDagger'
+            logical_script = 'maps/baldursGate/script.py'
+            module_dir = Path(game.__file__).resolve().parent
+            roots = ([Path(os.environ['GAME_BUILD_DIR'])] if os.environ.get('GAME_BUILD_DIR') else [])
+            roots += [module_dir, module_dir.parent]
+            source_path = next((root / logical_script for root in roots if (root / logical_script).is_file()), None)
+            if source_path is None:
+                raise AssertionError('staged city script is required for profiler source identity')
+            source_text = source_path.read_text(encoding='utf8')
+            # Match CPluginLoader/pybind exec framing; compile only, never execute a replacement plugin.
+            compiled = compile('# -*- coding: utf-8 -*-\\n' + source_text + '\\n', '<string>', 'exec', dont_inherit=True)
+            def codes(value):
+                result = [value]
+                for child in value.co_consts:
+                    if isinstance(child, types.CodeType):
+                        result.extend(codes(child))
+                return result
+            expected = [code for code in codes(compiled) if code.co_qualname == 'load.<locals>.BaldursGateQuest.getHint']
+            if len(expected) != 1:
+                raise AssertionError(('staged authored getHint code must be unique', len(expected)))
+            expected_code = expected[0]
+            native_identity = game.CGameObject.ptr(candidate)
+            candidate_name = game.CGameObject.getName(candidate)
+            candidate_type = game.CGameObject.getTypeId(candidate)
+            if not candidate_name or game.CGameObject.ptr(candidate) is not native_identity:
+                raise AssertionError('candidate canonical native identity is unstable')
+            def snapshot():
+                return (world.getTurn(), tuple(player.getNumericProperty(key) for key in ('hp', 'mana', 'gold', 'exp')),
+                        sorted(item.getName() for item in player.getItems()),
+                        sorted((slot, item.getName() if item else None) for slot, item in player.getEquipped().items()),
+                        sorted(quest.getName() for quest in player.getQuests()),
+                        sorted(quest.getName() for quest in player.getCompletedQuests()))
+            before = snapshot()
+            for custom, expected_hint in (
+                ('', 'Follow the named people, source items and city journal.'),
+                ('Ask the named contact about the keepsake.', 'Ask the named contact about the keepsake.'),
+            ):
+                if custom:
+                    candidate.setStringProperty('hintText', custom)
+                calls, observed_codes, mismatches = [], [], []
+                previous = sys.getprofile()
+                def count(frame, event, argument):
+                    code = frame.f_code
+                    if event != 'call' or code.co_qualname != expected_code.co_qualname:
+                        return
+                    if (code.co_filename != expected_code.co_filename or code.co_firstlineno != expected_code.co_firstlineno
+                            or code != expected_code or frame.f_globals.get('__file__') != logical_script):
+                        if len(mismatches) < 8:
+                            mismatches.append('source code identity')
+                        return
+                    owner = frame.f_locals.get('self')
+                    if owner is None or game.CGameObject.ptr(owner) is not native_identity:
+                        return
+                    if (game.CGameObject.getName(owner) != candidate_name
+                            or game.CGameObject.getTypeId(owner) != candidate_type
+                            or game.CGameObject.getGame(owner) is not instance):
+                        if len(mismatches) < 8:
+                            mismatches.append('native quest ownership')
+                        return
+                    if observed_codes and code is not observed_codes[0]:
+                        if len(mismatches) < 8:
+                            mismatches.append('multiple actual code objects')
+                        return
+                    if not observed_codes:
+                        observed_codes.append(code)
+                    calls.append(1)
+                game.set_logger_sink('stderr')
+                try:
+                    sys.setprofile(count)
+                    try:
+                        actual = game.CQuest.getHint(candidate)
+                    finally:
+                        sys.setprofile(previous)
+                finally:
+                    game.set_logger_sink('disabled')
+                assert sys.getprofile() is previous, 'quest hint probe must restore the prior profiler'
+                print('native city quest hint override calls=' + str(len(calls)), flush=True)
+                print('native city quest hint identity=' + json.dumps(dict(
+                    filename=expected_code.co_filename, qualname=expected_code.co_qualname,
+                    firstLine=expected_code.co_firstlineno, pluginFile=logical_script,
+                    nativeName=candidate_name, nativeType=candidate_type,
+                    codeObjects=len(observed_codes), mismatches=mismatches)), flush=True)
+                if not calls or mismatches:
+                    raise AssertionError(('actual authored profiler target was not uniquely bound', len(calls), mismatches))
+                if len(calls) != 1:
+                    raise AssertionError(('native CQuest.getHint must call the authored override once', len(calls)))
+                assert actual == expected_hint, (actual, expected_hint)
+                assert snapshot() == before, 'reading a hint must preserve native progress, resources and ownership'
+            print('native city quest hint fallback and authored text passed', flush=True)
+        finally:
+            instance.getContext().shutdown()
+                """,
+            return_stderr=True,
+        )
+        self.assertEqual(2, output.count("native city quest hint override calls=1"))
+        self.assertIn("native city quest hint fallback and authored text passed", output)
+        self.assertNotIn("RecursionError", errors)
+
+    def testOptionalCityReferencesRespectActualNativeMissingPropertyContract(self):
+        output = self.runChild("""
+            import json
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior')
+                loop.run()
+                world = instance.getMap()
+                assert world.getStringProperty('mapName') == 'baldursGate'
+                clock = world.getObjectByName('cityClock')
+                assert clock is not None
+                probe = instance.createObject('CGameObject')
+                assert not hasattr(probe, 'optionalNativeReference')
+                try:
+                    game.CGameObject.getObjectProperty(probe, 'optionalNativeReference')
+                except IndexError as error:
+                    assert 'property not found' in str(error)
+                    print('actual native absent object getter throws IndexError', flush=True)
+                else:
+                    raise AssertionError('native absent object getter contract changed')
+                probe.setObjectProperty('optionalNativeReference', None)
+                assert hasattr(probe, 'optionalNativeReference')
+                assert game.CGameObject.getObjectProperty(probe, 'optionalNativeReference') is None
+                probe.setNumericProperty('wrongNativeReference', 17)
+                assert hasattr(probe, 'wrongNativeReference')
+                try:
+                    game.CGameObject.getObjectProperty(probe, 'wrongNativeReference')
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError('present wrong native type was hidden')
+                # A fresh optional row is absent in both phases even if initialization cached Narlen.
+                original_definitions = clock.getStringProperty('relocationDefinitions')
+                rows = json.loads(original_definitions.removeprefix('city-json:'))
+                probe_id = 'optionalNativeProbe'
+                probe_cache = 'plugin_cityRelocationActor_' + probe_id
+                assert all(row['id'] != probe_id for row in rows)
+                assert not hasattr(clock, probe_cache)
+                rows.append(dict(id=probe_id, canonicalActorId='optionalNativeMissingActor', sourceCreature='NARLEN', scenes=[]))
+                clock.setStringProperty('relocationDefinitions', 'city-json:' + json.dumps(rows))
+                try:
+                    # Genuine registered city clock and actual production method; no replacement owner or map.
+                    clock.relocateActors()
+                    assert not hasattr(clock, probe_cache)
+                    row = next(row for row in rows if row['id'] == 'narlen')
+                    narlen = clock.getObjectProperty('plugin_cityRelocationActor_narlen')
+                    assert isinstance(narlen, game.CCreature)
+                    assert narlen.getName() == row['canonicalActorId']
+                    assert narlen.getGame() is instance
+                    assert narlen.getBoolProperty('plugin_cityRelocationManaged')
+                    clock.relocateActors()
+                    assert clock.getObjectProperty('plugin_cityRelocationActor_narlen') is narlen
+                finally:
+                    clock.setStringProperty('relocationDefinitions', original_definitions)
+                print('actual city clock relocation/native property cases passed', flush=True)
+            finally:
+                instance.getContext().shutdown()
+            """)
+        self.assertIn("actual native absent object getter throws IndexError", output)
+        self.assertIn("actual city clock relocation/native property cases passed", output)
 
     def testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback(self):
         output = self.runChild("""
@@ -234,8 +543,1194 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             )
         )
 
+    def testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce(self):
+        self.runBook08Child(
+            """
+            import json
+            import os
+            from pathlib import Path
+
+            if not __debug__:
+                raise AssertionError('Native BOOK08 assertions require an unoptimized child')
+            def decode(value):
+                return json.loads(value.removeprefix('city-json:'))
+            def numeric(value, key):
+                return game.CGameObject.getNumericProperty(value, key)
+            def objectProperty(value, key):
+                return game.CGameObject.getObjectProperty(value, key)
+            def inventory(owner):
+                return {item.getName(): item for item in owner.getItems()}
+            def equipment(owner):
+                return {slot: item for slot, item in owner.getEquipped().items() if item is not None}
+            def sameObjects(actual, expected):
+                return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
+            stat_keys = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
+                'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                'shadowResist', 'damage')
+            def stats(value):
+                return {key: numeric(value, key) for key in stat_keys}
+            def resources(owner):
+                active_map = game.CMapObject.getMap(owner)
+                return tuple(numeric(owner, key) for key in ('hp', 'mana', 'gold', 'exp')) + tuple(
+                    numeric(active_map, key) for key in ('plugin_cityStanding', 'plugin_cityReputation'))
+            def use(owner, item):
+                game.set_logger_sink('stderr')
+                try:
+                    owner.useItem(item)
+                    for unused in range(3):
+                        loop.run()
+                finally:
+                    game.set_logger_sink('disabled')
+
+            fixture_root = Path(os.environ['GAME_BUILD_DIR']).resolve(strict=True)
+            config_path = Path(game.CResourcesProvider.getInstance().getPath('maps/baldursGate/config.json'))
+            assert config_path.resolve(strict=True) == (fixture_root / 'maps/baldursGate/config.json').resolve(strict=True), (
+                'BOOK08 must use the explicit, fresh private initial-config fixture', str(config_path))
+            initial = json.loads(config_path.read_text(encoding='utf8'))['cityClock']['properties']
+            assert initial['plugin_cityPoisonSourceEnabled'] is True, 'Source poison must be enabled before map creation'
+            assert initial['plugin_cityBook08NativeConversionEnabled'] is True, 'BOOK08 must be enabled before map creation'
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior', 'wandererRace')
+                loop.run()
+                world = instance.getMap()
+                player = world.getPlayer()
+                clock = world.getObjectByName('cityClock')
+                assert player.isAlive() and player.getGame() is instance
+                assert clock.getBoolProperty('plugin_cityPoisonSourceEnabled')
+                assert clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                clock.poisonInitializeSource()
+                state = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert state['sourceVersion'] == 1 and state['receipts']['sourceInitialization']['status'] == 'complete'
+                definitions = decode(clock.getStringProperty('poisonSourceDefinitions'))
+                rows = [row for row in definitions['initialActors'] if row['resource'] == 'CHANTH']
+                assert len(rows) == 1
+                donor = world.getObjectByName(rows[0]['id'])
+                assert donor is not None and donor.getGame() is instance and donor.isAlive()
+                donor_before = inventory(donor)
+                books = [item for item in donor_before.values() if item.getStringProperty('plugin_citySourceItem') == 'BOOK08']
+                assert len(books) == 1, 'The actual initialized CHANTH must own exactly one original BOOK08'
+                book = books[0]
+                book_name = book.getName()
+                assert book.getTypeId() == 'cityItemBook08' and book.getGame() is instance
+                assert numeric(book, 'plugin_cityQuantity') == 1 and numeric(book, 'plugin_citySourceFlags') == 0
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityUnidentified')
+                assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                assert not book.getBoolProperty('plugin_cityBook08Consumed')
+                donor.removeQuestItem(lambda candidate: candidate is book)
+                player.addItem(book)
+                assert inventory(player)[book_name] is book
+                assert sameObjects(inventory(donor), {key: value for key, value in donor_before.items() if value is not book})
+                race = objectProperty(player, 'race')
+                assert player.getRaceId() == 'wandererRace'
+                assert game.CGameObject.getTypeId(race) == 'wandererRace'
+                assert numeric(objectProperty(race, 'baseStats'), 'intelligence') == 1
+                assert player.getItemAtSlot('2') is None
+                without_helmet = numeric(player.getStats(), 'intelligence')
+                helmet = instance.createObject('CHelmet')
+                assert isinstance(helmet, game.CHelmet) and helmet.getGame() is instance
+                game.CGameObject.setStringProperty(helmet, 'name', 'book08-native-helmet-' + str(os.getpid()))
+                numeric_bonus = objectProperty(helmet, 'bonus')
+                game.CGameObject.setNumericProperty(numeric_bonus, 'intelligence', 4)
+                player.addItem(helmet)
+                player.equipItem('2', helmet)
+                assert player.getItemAtSlot('2') is helmet
+                assert numeric(player.getStats(), 'intelligence') == without_helmet + 4
+                player.setHp(player.getHpMax())
+                player.setMana(player.getManaMax())
+                assert player.getHp() == player.getHpMax() and player.getMana() == player.getManaMax()
+                base = objectProperty(player, 'baseStats')
+                base_before = stats(base)
+                base_main_stat = base.getStringProperty('mainStat')
+                cached = player.getStats()
+                composed_before = stats(cached)
+                composed_main_stat = cached.getStringProperty('mainStat')
+                resources_before = resources(player)
+                inventory_before = inventory(player)
+                equipped_before = equipment(player)
+                state_before = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert not any(key.startswith('book08Use:') for key in state_before['receipts'])
+                print('book08-native-admitted ' + json.dumps({
+                    'item': book_name, 'itemType': book.getType(), 'sourceActor': rows[0]['id'],
+                    'sourceVersion': state_before['sourceVersion'], 'raceIntelligence': 1, 'equipmentIntelligence': 4,
+                    'storedCharges': [0, 0, 0], 'baseIntelligence': base_before['intelligence'],
+                    'composedIntelligence': composed_before['intelligence'],
+                    'hp': player.getHp(), 'hpMax': player.getHpMax(), 'mana': player.getMana(),
+                    'manaMax': player.getManaMax()}, sort_keys=True), flush=True)
+                book.setBoolProperty('plugin_cityUnidentified', False)
+                clock.setBoolProperty('plugin_cityBook08NativeConversionEnabled', False)
+                use(player, book)
+                assert stats(base) == base_before and stats(player.getStats()) == composed_before
+                assert sameObjects(inventory(player), inventory_before) and sameObjects(equipment(player), equipped_before)
+                assert resources(player) == resources_before
+                assert not book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                book.setBoolProperty('plugin_cityUnidentified', True)
+                clock.setBoolProperty('plugin_cityBook08NativeConversionEnabled', True)
+                use(player, book)
+                assert stats(base) == base_before, 'An unidentified BOOK08 must not alter base stats'
+                assert sameObjects(inventory(player), inventory_before) and resources(player) == resources_before
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                book.setBoolProperty('plugin_cityUnidentified', False)
+                use(player, book)
+                print('book08-native-effect ' + json.dumps({
+                    'baseBefore': base_before['intelligence'], 'baseAfter': numeric(base, 'intelligence'),
+                    'composedBefore': composed_before['intelligence'],
+                    'composedAfter': numeric(player.getStats(), 'intelligence'),
+                    'ownedAfter': any(item is book for item in player.getItems()),
+                    'consumedAfter': book.getBoolProperty('plugin_cityBook08Consumed')}, sort_keys=True), flush=True)
+                assert numeric(base, 'intelligence') == base_before['intelligence'] + 1, (
+                    'BOOK08 native use must increment owned base Intelligence exactly once')
+                expected_base = dict(base_before, intelligence=base_before['intelligence'] + 1)
+                expected_composed = dict(composed_before, intelligence=composed_before['intelligence'] + 1)
+                assert objectProperty(player, 'baseStats') is base and stats(base) == expected_base
+                assert base.getStringProperty('mainStat') == base_main_stat
+                assert stats(cached) == composed_before and stats(player.getStats()) == expected_composed
+                assert player.getStats().getStringProperty('mainStat') == composed_main_stat
+                assert resources(player) == resources_before
+                assert sameObjects(inventory(player), {key: value for key, value in inventory_before.items() if value is not book})
+                assert sameObjects(equipment(player), equipped_before)
+                assert book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                state_after = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                receipt_key = 'book08Use:' + book_name
+                receipt = state_after['receipts'][receipt_key]
+                assert receipt == {
+                    'status': 'complete', 'item': book_name, 'owner': player.getName(), 'chargeBefore': 1,
+                    'storedChargesBefore': [0, 0, 0], 'chargePolicy': 'ordinaryBook08SingleUse',
+                    'sourceEffect': 'BOOK08.ITM:effect0', 'conversion': 'ownedBaseIntelligencePlusOne',
+                    'baseBefore': base_before['intelligence'], 'composedBefore': composed_before['intelligence'],
+                    'steps': ['singleEffectiveChargeReserved', 'permanentOwnedBaseIntelligence', 'actualUsedInstanceRemoved']}
+                expected_state = json.loads(json.dumps(state_before))
+                expected_state['receipts'][receipt_key] = receipt
+                assert state_after == expected_state, 'BOOK08 must not grant unrelated quest progress or rewards'
+                player.equipItem('2', None)
+                assert numeric(player.getStats(), 'intelligence') == composed_before['intelligence'] - 4 + 1
+                player.equipItem('2', helmet)
+                assert player.getItemAtSlot('2') is helmet and stats(player.getStats()) == expected_composed
+                for unused in range(3):
+                    loop.run()
+                assert instance.getMap() is world and stats(player.getStats()) == expected_composed
+                # Reintroduce only the same spent instance as an explicit adversarial unit fixture.
+                player.addItem(book)
+                for clear_spent_marker in (False, True):
+                    if clear_spent_marker:
+                        book.setBoolProperty('plugin_cityBook08Consumed', False)
+                    use(player, book)
+                    assert stats(base) == expected_base and stats(player.getStats()) == expected_composed
+                    assert inventory(player)[book_name] is book and resources(player) == resources_before
+                    assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                    assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_after
+                assert sameObjects(equipment(player), equipped_before)
+                print('book08-native-use-once passed', flush=True)
+            finally:
+                instance.getContext().shutdown()
+            """,
+            return_stderr=True,
+            expected_marker="book08-native-use-once passed",
+        )
+
+    def testBook08SpentStateSurvivesNativeSaveReload(self):
+        self.runBook08Child(
+            """
+            import json
+            import os
+            from pathlib import Path
+
+            if not __debug__:
+                raise AssertionError('Native BOOK08 assertions require an unoptimized child')
+            def decode(value):
+                return json.loads(value.removeprefix('city-json:'))
+            def numeric(value, key):
+                return game.CGameObject.getNumericProperty(value, key)
+            def objectProperty(value, key):
+                return game.CGameObject.getObjectProperty(value, key)
+            def inventory(owner):
+                return {item.getName(): item for item in owner.getItems()}
+            def equipment(owner):
+                return {slot: item for slot, item in owner.getEquipped().items() if item is not None}
+            def sameObjects(actual, expected):
+                return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
+            stat_keys = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
+                'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                'shadowResist', 'damage')
+            def stats(value):
+                return {key: numeric(value, key) for key in stat_keys}
+            def resources(owner):
+                active_map = game.CMapObject.getMap(owner)
+                return tuple(numeric(owner, key) for key in ('hp', 'mana', 'gold', 'exp')) + tuple(
+                    numeric(active_map, key) for key in ('plugin_cityStanding', 'plugin_cityReputation'))
+            def use(owner, item):
+                game.set_logger_sink('stderr')
+                try:
+                    owner.useItem(item)
+                    for unused in range(3):
+                        loop.run()
+                finally:
+                    game.set_logger_sink('disabled')
+
+            fixture_root = Path(os.environ['GAME_BUILD_DIR']).resolve(strict=True)
+            config_path = Path(game.CResourcesProvider.getInstance().getPath('maps/baldursGate/config.json'))
+            assert config_path.resolve(strict=True) == (fixture_root / 'maps/baldursGate/config.json').resolve(strict=True), (
+                'BOOK08 must use the explicit, fresh private initial-config fixture', str(config_path))
+            initial = json.loads(config_path.read_text(encoding='utf8'))['cityClock']['properties']
+            assert initial['plugin_cityPoisonSourceEnabled'] is True, 'Source poison must be enabled before map creation'
+            assert initial['plugin_cityBook08NativeConversionEnabled'] is True, 'BOOK08 must be enabled before map creation'
+
+            import time
+            slot = 'city-book08-spent-' + str(os.getpid()) + '-' + str(time.time_ns())
+            restored = None
+            completed = False
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior', 'wandererRace')
+                loop.run()
+                world = instance.getMap()
+                player = world.getPlayer()
+                clock = world.getObjectByName('cityClock')
+                assert player.isAlive() and player.getGame() is instance
+                assert clock.getBoolProperty('plugin_cityPoisonSourceEnabled')
+                assert clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                clock.poisonInitializeSource()
+                state = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert state['sourceVersion'] == 1 and state['receipts']['sourceInitialization']['status'] == 'complete'
+                definitions = decode(clock.getStringProperty('poisonSourceDefinitions'))
+                rows = [row for row in definitions['initialActors'] if row['resource'] == 'CHANTH']
+                assert len(rows) == 1
+                donor = world.getObjectByName(rows[0]['id'])
+                assert donor is not None and donor.getGame() is instance and donor.isAlive()
+                donor_before = inventory(donor)
+                books = [item for item in donor_before.values() if item.getStringProperty('plugin_citySourceItem') == 'BOOK08']
+                assert len(books) == 1, 'The actual initialized CHANTH must own exactly one original BOOK08'
+                book = books[0]
+                book_name = book.getName()
+                assert book.getTypeId() == 'cityItemBook08' and book.getGame() is instance
+                assert numeric(book, 'plugin_cityQuantity') == 1 and numeric(book, 'plugin_citySourceFlags') == 0
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityUnidentified')
+                assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                assert not book.getBoolProperty('plugin_cityBook08Consumed')
+                donor.removeQuestItem(lambda candidate: candidate is book)
+                player.addItem(book)
+                assert inventory(player)[book_name] is book
+                assert sameObjects(inventory(donor), {key: value for key, value in donor_before.items() if value is not book})
+                race = objectProperty(player, 'race')
+                assert player.getRaceId() == 'wandererRace'
+                assert game.CGameObject.getTypeId(race) == 'wandererRace'
+                assert numeric(objectProperty(race, 'baseStats'), 'intelligence') == 1
+                assert player.getItemAtSlot('2') is None
+                without_helmet = numeric(player.getStats(), 'intelligence')
+                helmet = instance.createObject('CHelmet')
+                assert isinstance(helmet, game.CHelmet) and helmet.getGame() is instance
+                game.CGameObject.setStringProperty(helmet, 'name', 'book08-native-helmet-' + str(os.getpid()))
+                numeric_bonus = objectProperty(helmet, 'bonus')
+                game.CGameObject.setNumericProperty(numeric_bonus, 'intelligence', 4)
+                player.addItem(helmet)
+                player.equipItem('2', helmet)
+                assert player.getItemAtSlot('2') is helmet
+                assert numeric(player.getStats(), 'intelligence') == without_helmet + 4
+                player.setHp(player.getHpMax())
+                player.setMana(player.getManaMax())
+                assert player.getHp() == player.getHpMax() and player.getMana() == player.getManaMax()
+                base = objectProperty(player, 'baseStats')
+                base_before = stats(base)
+                base_main_stat = base.getStringProperty('mainStat')
+                cached = player.getStats()
+                composed_before = stats(cached)
+                composed_main_stat = cached.getStringProperty('mainStat')
+                resources_before = resources(player)
+                inventory_before = inventory(player)
+                equipped_before = equipment(player)
+                state_before = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert not any(key.startswith('book08Use:') for key in state_before['receipts'])
+                print('book08-native-admitted ' + json.dumps({
+                    'item': book_name, 'itemType': book.getType(), 'sourceActor': rows[0]['id'],
+                    'sourceVersion': state_before['sourceVersion'], 'raceIntelligence': 1, 'equipmentIntelligence': 4,
+                    'storedCharges': [0, 0, 0], 'baseIntelligence': base_before['intelligence'],
+                    'composedIntelligence': composed_before['intelligence'],
+                    'hp': player.getHp(), 'hpMax': player.getHpMax(), 'mana': player.getMana(),
+                    'manaMax': player.getManaMax()}, sort_keys=True), flush=True)
+                book.setBoolProperty('plugin_cityUnidentified', False)
+                clock.setBoolProperty('plugin_cityBook08NativeConversionEnabled', False)
+                use(player, book)
+                assert stats(base) == base_before and stats(player.getStats()) == composed_before
+                assert sameObjects(inventory(player), inventory_before) and sameObjects(equipment(player), equipped_before)
+                assert resources(player) == resources_before
+                assert not book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                book.setBoolProperty('plugin_cityUnidentified', True)
+                clock.setBoolProperty('plugin_cityBook08NativeConversionEnabled', True)
+                use(player, book)
+                assert stats(base) == base_before, 'An unidentified BOOK08 must not alter base stats'
+                assert sameObjects(inventory(player), inventory_before) and resources(player) == resources_before
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                book.setBoolProperty('plugin_cityUnidentified', False)
+                use(player, book)
+                print('book08-native-effect ' + json.dumps({
+                    'baseBefore': base_before['intelligence'], 'baseAfter': numeric(base, 'intelligence'),
+                    'composedBefore': composed_before['intelligence'],
+                    'composedAfter': numeric(player.getStats(), 'intelligence'),
+                    'ownedAfter': any(item is book for item in player.getItems()),
+                    'consumedAfter': book.getBoolProperty('plugin_cityBook08Consumed')}, sort_keys=True), flush=True)
+                assert numeric(base, 'intelligence') == base_before['intelligence'] + 1, (
+                    'BOOK08 native use must increment owned base Intelligence exactly once')
+                expected_base = dict(base_before, intelligence=base_before['intelligence'] + 1)
+                expected_composed = dict(composed_before, intelligence=composed_before['intelligence'] + 1)
+                assert objectProperty(player, 'baseStats') is base and stats(base) == expected_base
+                assert base.getStringProperty('mainStat') == base_main_stat
+                assert stats(cached) == composed_before and stats(player.getStats()) == expected_composed
+                assert player.getStats().getStringProperty('mainStat') == composed_main_stat
+                assert resources(player) == resources_before
+                assert sameObjects(inventory(player), {key: value for key, value in inventory_before.items() if value is not book})
+                assert sameObjects(equipment(player), equipped_before)
+                assert book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                state_after = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                receipt_key = 'book08Use:' + book_name
+                receipt = state_after['receipts'][receipt_key]
+                assert receipt == {
+                    'status': 'complete', 'item': book_name, 'owner': player.getName(), 'chargeBefore': 1,
+                    'storedChargesBefore': [0, 0, 0], 'chargePolicy': 'ordinaryBook08SingleUse',
+                    'sourceEffect': 'BOOK08.ITM:effect0', 'conversion': 'ownedBaseIntelligencePlusOne',
+                    'baseBefore': base_before['intelligence'], 'composedBefore': composed_before['intelligence'],
+                    'steps': ['singleEffectiveChargeReserved', 'permanentOwnedBaseIntelligence', 'actualUsedInstanceRemoved']}
+                expected_state = json.loads(json.dumps(state_before))
+                expected_state['receipts'][receipt_key] = receipt
+                assert state_after == expected_state, 'BOOK08 must not grant unrelated quest progress or rewards'
+                player.equipItem('2', None)
+                assert numeric(player.getStats(), 'intelligence') == composed_before['intelligence'] - 4 + 1
+                player.equipItem('2', helmet)
+                assert player.getItemAtSlot('2') is helmet and stats(player.getStats()) == expected_composed
+                for unused in range(3):
+                    loop.run()
+                assert instance.getMap() is world and stats(player.getStats()) == expected_composed
+
+                assert game.CMapLoader.saveWithResult(world, slot), 'Actual native BOOK08 save must succeed'
+                restored = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(restored, slot)
+                loop.run()
+                saved_world = restored.getMap()
+                saved_player = saved_world.getPlayer()
+                saved_clock = saved_world.getObjectByName('cityClock')
+                saved_donor = saved_world.getObjectByName(rows[0]['id'])
+                assert saved_world.getStringProperty('mapName') == 'baldursGate'
+                assert saved_player.getGame() is restored and saved_player.isAlive()
+                assert saved_clock.getBoolProperty('plugin_cityPoisonSourceEnabled')
+                assert saved_clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                assert saved_player.getRaceId() == 'wandererRace'
+                assert game.CGameObject.getTypeId(objectProperty(saved_player, 'race')) == 'wandererRace'
+                assert numeric(objectProperty(objectProperty(saved_player, 'race'), 'baseStats'), 'intelligence') == 1
+                assert saved_player.getItemAtSlot('2').getName() == helmet.getName()
+                assert numeric(objectProperty(saved_player.getItemAtSlot('2'), 'bonus'), 'intelligence') == 4
+                assert saved_donor is not None and saved_donor.getGame() is restored
+                assert sorted(inventory(saved_donor)) == sorted(key for key, value in donor_before.items() if value is not book)
+                assert not any(item.getStringProperty('plugin_citySourceItem') == 'BOOK08' for item in saved_donor.getItems())
+
+                assert stats(objectProperty(saved_player, 'baseStats')) == expected_base
+                assert stats(saved_player.getStats()) == expected_composed
+                assert objectProperty(saved_player, 'baseStats').getStringProperty('mainStat') == base_main_stat
+                assert resources(saved_player) == resources_before
+                assert sorted(inventory(saved_player)) == sorted(key for key, value in inventory_before.items() if value is not book)
+                assert sorted((slot_id, item.getName()) for slot_id, item in equipment(saved_player).items()) == sorted(
+                    (slot_id, item.getName()) for slot_id, item in equipped_before.items())
+                assert not any(item.getStringProperty('plugin_citySourceItem') == 'BOOK08' for item in saved_player.getItems())
+                assert decode(saved_clock.getStringProperty('plugin_cityPoisonSourceState')) == state_after
+                # The retained spent original is the sole replay fixture; no new tome or charge is minted.
+                assert book.getGame() is instance and book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                print('book08-native-spent-reload ' + json.dumps({
+                    'baseIntelligence': numeric(objectProperty(saved_player, 'baseStats'), 'intelligence'),
+                    'composedIntelligence': numeric(saved_player.getStats(), 'intelligence'),
+                    'bookOwned': False, 'receipt': decode(saved_clock.getStringProperty('plugin_cityPoisonSourceState'))[
+                        'receipts'][receipt_key]}, sort_keys=True), flush=True)
+                completed = True
+                print('book08-native-spent-save-reload passed', flush=True)
+
+            finally:
+                if restored is not None:
+                    restored.getContext().shutdown()
+                instance.getContext().shutdown()
+            """,
+            return_stderr=True,
+            expected_marker="book08-native-spent-save-reload passed",
+        )
+
+    def testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses(self):
+        self.runBook08Child(
+            """
+            import json
+            import os
+            from pathlib import Path
+
+            if not __debug__:
+                raise AssertionError('Native BOOK08 assertions require an unoptimized child')
+            def decode(value):
+                return json.loads(value.removeprefix('city-json:'))
+            def numeric(value, key):
+                return game.CGameObject.getNumericProperty(value, key)
+            def objectProperty(value, key):
+                return game.CGameObject.getObjectProperty(value, key)
+            def inventory(owner):
+                return {item.getName(): item for item in owner.getItems()}
+            def equipment(owner):
+                return {slot: item for slot, item in owner.getEquipped().items() if item is not None}
+            def sameObjects(actual, expected):
+                return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
+            stat_keys = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
+                'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                'shadowResist', 'damage')
+            def stats(value):
+                return {key: numeric(value, key) for key in stat_keys}
+            def resources(owner):
+                active_map = game.CMapObject.getMap(owner)
+                return tuple(numeric(owner, key) for key in ('hp', 'mana', 'gold', 'exp')) + tuple(
+                    numeric(active_map, key) for key in ('plugin_cityStanding', 'plugin_cityReputation'))
+            def use(owner, item):
+                game.set_logger_sink('stderr')
+                try:
+                    owner.useItem(item)
+                    for unused in range(3):
+                        loop.run()
+                finally:
+                    game.set_logger_sink('disabled')
+
+            fixture_root = Path(os.environ['GAME_BUILD_DIR']).resolve(strict=True)
+            config_path = Path(game.CResourcesProvider.getInstance().getPath('maps/baldursGate/config.json'))
+            assert config_path.resolve(strict=True) == (fixture_root / 'maps/baldursGate/config.json').resolve(strict=True), (
+                'BOOK08 must use the explicit, fresh private initial-config fixture', str(config_path))
+            initial = json.loads(config_path.read_text(encoding='utf8'))['cityClock']['properties']
+            assert initial['plugin_cityPoisonSourceEnabled'] is True, 'Source poison must be enabled before map creation'
+            assert initial['plugin_cityBook08NativeConversionEnabled'] is True, 'BOOK08 must be enabled before map creation'
+
+            import time
+            slot = 'city-book08-unspent-' + str(os.getpid()) + '-' + str(time.time_ns())
+            restored = None
+            completed = False
+            instance = game.CGameLoader.loadGame()
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior', 'wandererRace')
+                loop.run()
+                world = instance.getMap()
+                player = world.getPlayer()
+                clock = world.getObjectByName('cityClock')
+                assert player.isAlive() and player.getGame() is instance
+                assert clock.getBoolProperty('plugin_cityPoisonSourceEnabled')
+                assert clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                clock.poisonInitializeSource()
+                state = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert state['sourceVersion'] == 1 and state['receipts']['sourceInitialization']['status'] == 'complete'
+                definitions = decode(clock.getStringProperty('poisonSourceDefinitions'))
+                rows = [row for row in definitions['initialActors'] if row['resource'] == 'CHANTH']
+                assert len(rows) == 1
+                donor = world.getObjectByName(rows[0]['id'])
+                assert donor is not None and donor.getGame() is instance and donor.isAlive()
+                donor_before = inventory(donor)
+                books = [item for item in donor_before.values() if item.getStringProperty('plugin_citySourceItem') == 'BOOK08']
+                assert len(books) == 1, 'The actual initialized CHANTH must own exactly one original BOOK08'
+                book = books[0]
+                book_name = book.getName()
+                assert book.getTypeId() == 'cityItemBook08' and book.getGame() is instance
+                assert numeric(book, 'plugin_cityQuantity') == 1 and numeric(book, 'plugin_citySourceFlags') == 0
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityUnidentified')
+                assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                assert not book.getBoolProperty('plugin_cityBook08Consumed')
+                donor.removeQuestItem(lambda candidate: candidate is book)
+                player.addItem(book)
+                assert inventory(player)[book_name] is book
+                assert sameObjects(inventory(donor), {key: value for key, value in donor_before.items() if value is not book})
+                race = objectProperty(player, 'race')
+                assert player.getRaceId() == 'wandererRace'
+                assert game.CGameObject.getTypeId(race) == 'wandererRace'
+                assert numeric(objectProperty(race, 'baseStats'), 'intelligence') == 1
+                assert player.getItemAtSlot('2') is None
+                without_helmet = numeric(player.getStats(), 'intelligence')
+                helmet = instance.createObject('CHelmet')
+                assert isinstance(helmet, game.CHelmet) and helmet.getGame() is instance
+                game.CGameObject.setStringProperty(helmet, 'name', 'book08-native-helmet-' + str(os.getpid()))
+                numeric_bonus = objectProperty(helmet, 'bonus')
+                game.CGameObject.setNumericProperty(numeric_bonus, 'intelligence', 4)
+                player.addItem(helmet)
+                player.equipItem('2', helmet)
+                assert player.getItemAtSlot('2') is helmet
+                assert numeric(player.getStats(), 'intelligence') == without_helmet + 4
+                player.setHp(player.getHpMax())
+                player.setMana(player.getManaMax())
+                assert player.getHp() == player.getHpMax() and player.getMana() == player.getManaMax()
+                base = objectProperty(player, 'baseStats')
+                base_before = stats(base)
+                base_main_stat = base.getStringProperty('mainStat')
+                cached = player.getStats()
+                composed_before = stats(cached)
+                composed_main_stat = cached.getStringProperty('mainStat')
+                resources_before = resources(player)
+                inventory_before = inventory(player)
+                equipped_before = equipment(player)
+                state_before = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert not any(key.startswith('book08Use:') for key in state_before['receipts'])
+                print('book08-native-admitted ' + json.dumps({
+                    'item': book_name, 'itemType': book.getType(), 'sourceActor': rows[0]['id'],
+                    'sourceVersion': state_before['sourceVersion'], 'raceIntelligence': 1, 'equipmentIntelligence': 4,
+                    'storedCharges': [0, 0, 0], 'baseIntelligence': base_before['intelligence'],
+                    'composedIntelligence': composed_before['intelligence'],
+                    'hp': player.getHp(), 'hpMax': player.getHpMax(), 'mana': player.getMana(),
+                    'manaMax': player.getManaMax()}, sort_keys=True), flush=True)
+
+                expected_class = type(book).__name__
+                assert expected_class == 'BaldursGateUnderstandingTome', 'Fresh AFTER tome must be the actual registered subclass'
+                unspent_name = book.getName()
+                unspent_source_fields = (
+                    book.getStringProperty('plugin_citySourceItem'), numeric(book, 'plugin_cityQuantity'),
+                    numeric(book, 'plugin_citySourceFlags'), book.getBoolProperty('plugin_cityUnidentified'),
+                    book.getBoolProperty('plugin_cityAbilitiesPending'))
+
+                assert game.CMapLoader.saveWithResult(world, slot), 'Actual native BOOK08 save must succeed'
+                restored = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(restored, slot)
+                loop.run()
+                saved_world = restored.getMap()
+                saved_player = saved_world.getPlayer()
+                saved_clock = saved_world.getObjectByName('cityClock')
+                saved_donor = saved_world.getObjectByName(rows[0]['id'])
+                assert saved_world.getStringProperty('mapName') == 'baldursGate'
+                assert saved_player.getGame() is restored and saved_player.isAlive()
+                assert saved_clock.getBoolProperty('plugin_cityPoisonSourceEnabled')
+                assert saved_clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                assert saved_player.getRaceId() == 'wandererRace'
+                assert game.CGameObject.getTypeId(objectProperty(saved_player, 'race')) == 'wandererRace'
+                assert numeric(objectProperty(objectProperty(saved_player, 'race'), 'baseStats'), 'intelligence') == 1
+                assert saved_player.getItemAtSlot('2').getName() == helmet.getName()
+                assert numeric(objectProperty(saved_player.getItemAtSlot('2'), 'bonus'), 'intelligence') == 4
+                assert saved_donor is not None and saved_donor.getGame() is restored
+                assert sorted(inventory(saved_donor)) == sorted(key for key, value in donor_before.items() if value is not book)
+                assert not any(item.getStringProperty('plugin_citySourceItem') == 'BOOK08' for item in saved_donor.getItems())
+
+                assert stats(objectProperty(saved_player, 'baseStats')) == base_before
+                assert stats(saved_player.getStats()) == composed_before and resources(saved_player) == resources_before
+                assert decode(saved_clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                assert sorted(inventory(saved_player)) == sorted(inventory_before)
+                restored_books = [item for item in saved_player.getItems() if item.getName() == unspent_name]
+                assert len(restored_books) == 1
+                saved_book = restored_books[0]
+                assert saved_book is not book and saved_book.getGame() is restored
+                assert type(saved_book).__name__ == expected_class and saved_book.getTypeId() == 'cityItemBook08'
+                assert decode(saved_book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert not saved_book.getBoolProperty('plugin_cityBook08Consumed')
+                assert (saved_book.getStringProperty('plugin_citySourceItem'), numeric(saved_book, 'plugin_cityQuantity'),
+                        numeric(saved_book, 'plugin_citySourceFlags'), saved_book.getBoolProperty('plugin_cityUnidentified'),
+                        saved_book.getBoolProperty('plugin_cityAbilitiesPending')) == unspent_source_fields
+                world, player, clock, book = saved_world, saved_player, saved_clock, saved_book
+                helmet = player.getItemAtSlot('2')
+                base = objectProperty(player, 'baseStats')
+                cached = player.getStats()
+                inventory_before = inventory(player)
+                equipped_before = equipment(player)
+                book.setBoolProperty('plugin_cityUnidentified', False)
+                clock.setBoolProperty('plugin_cityBook08NativeConversionEnabled', False)
+                use(player, book)
+                assert stats(base) == base_before and stats(player.getStats()) == composed_before
+                assert sameObjects(inventory(player), inventory_before) and sameObjects(equipment(player), equipped_before)
+                assert resources(player) == resources_before
+                assert not book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                book.setBoolProperty('plugin_cityUnidentified', True)
+                clock.setBoolProperty('plugin_cityBook08NativeConversionEnabled', True)
+                use(player, book)
+                assert stats(base) == base_before and sameObjects(inventory(player), inventory_before)
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState')) == state_before
+                book.setBoolProperty('plugin_cityUnidentified', False)
+                use(player, book)
+                print('book08-native-effect ' + json.dumps({
+                    'baseBefore': base_before['intelligence'], 'baseAfter': numeric(base, 'intelligence'),
+                    'composedBefore': composed_before['intelligence'],
+                    'composedAfter': numeric(player.getStats(), 'intelligence'),
+                    'ownedAfter': any(item is book for item in player.getItems()),
+                    'consumedAfter': book.getBoolProperty('plugin_cityBook08Consumed')}, sort_keys=True), flush=True)
+                assert numeric(base, 'intelligence') == base_before['intelligence'] + 1, (
+                    'BOOK08 native use must increment owned base Intelligence exactly once')
+                expected_base = dict(base_before, intelligence=base_before['intelligence'] + 1)
+                expected_composed = dict(composed_before, intelligence=composed_before['intelligence'] + 1)
+                assert objectProperty(player, 'baseStats') is base and stats(base) == expected_base
+                assert base.getStringProperty('mainStat') == base_main_stat
+                assert stats(cached) == composed_before and stats(player.getStats()) == expected_composed
+                assert player.getStats().getStringProperty('mainStat') == composed_main_stat
+                assert resources(player) == resources_before
+                assert sameObjects(inventory(player), {key: value for key, value in inventory_before.items() if value is not book})
+                assert sameObjects(equipment(player), equipped_before)
+                assert book.getBoolProperty('plugin_cityBook08Consumed')
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                state_after = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                receipt_key = 'book08Use:' + book_name
+                receipt = state_after['receipts'][receipt_key]
+                assert receipt == {
+                    'status': 'complete', 'item': book_name, 'owner': player.getName(), 'chargeBefore': 1,
+                    'storedChargesBefore': [0, 0, 0], 'chargePolicy': 'ordinaryBook08SingleUse',
+                    'sourceEffect': 'BOOK08.ITM:effect0', 'conversion': 'ownedBaseIntelligencePlusOne',
+                    'baseBefore': base_before['intelligence'], 'composedBefore': composed_before['intelligence'],
+                    'steps': ['singleEffectiveChargeReserved', 'permanentOwnedBaseIntelligence', 'actualUsedInstanceRemoved']}
+                expected_state = json.loads(json.dumps(state_before))
+                expected_state['receipts'][receipt_key] = receipt
+                assert state_after == expected_state, 'BOOK08 must not grant unrelated quest progress or rewards'
+                player.equipItem('2', None)
+                assert numeric(player.getStats(), 'intelligence') == composed_before['intelligence'] - 4 + 1
+                player.equipItem('2', helmet)
+                assert player.getItemAtSlot('2') is helmet and stats(player.getStats()) == expected_composed
+                for unused in range(3):
+                    loop.run()
+                assert restored.getMap() is world and stats(player.getStats()) == expected_composed
+
+                completed = True
+                print('book08-native-unspent-save-reload-use passed', flush=True)
+
+            finally:
+                if restored is not None:
+                    restored.getContext().shutdown()
+                instance.getContext().shutdown()
+            """,
+            return_stderr=True,
+            expected_marker="book08-native-unspent-save-reload-use passed",
+        )
+
+    def runBook08HandInOrder(self, order):
+        """Native components in the existing private initial-config fixture; no public source activation."""
+        code = "order = " + repr(order) + "\n" + textwrap.dedent(r"""
+            import json
+            import os
+            from pathlib import Path
+            import time
+
+            if not __debug__:
+                raise AssertionError('Native BOOK08 order assertions require an unoptimized child')
+            assert order in ('useBeforeHandIn', 'handInBeforeUse')
+
+
+            def decode(value):
+                return json.loads(value.removeprefix('city-json:'))
+
+
+            def numeric(value, key):
+                return game.CGameObject.getNumericProperty(value, key)
+
+
+            def inventory(owner):
+                return {item.getName(): item for item in owner.getItems()}
+
+
+            def sourceItems(owner, code):
+                return [item for item in owner.getItems() if item.getStringProperty('plugin_citySourceItem') == code]
+
+
+            def sameObjects(actual, expected):
+                return actual.keys() == expected.keys() and all(actual[key] is expected[key] for key in actual)
+
+
+            def stats(value):
+                fields = ('strength', 'agility', 'stamina', 'intelligence', 'armor', 'block', 'dmgMin', 'dmgMax',
+                            'attack', 'hit', 'crit', 'fireResist', 'frostResist', 'normalResist', 'thunderResist',
+                            'shadowResist', 'damage')
+                return {key: numeric(value, key) for key in fields} | {'mainStat': value.getStringProperty('mainStat')}
+
+
+            def resources(owner):
+                active_map = game.CMapObject.getMap(owner)
+                return tuple(numeric(owner, key) for key in ('hp', 'mana', 'gold', 'exp')) + tuple(
+                    numeric(active_map, key) for key in ('plugin_cityPhase', 'plugin_cityStanding', 'plugin_cityCrimes'))
+
+
+            def use(owner, item):
+                game.set_logger_sink('stderr')
+                try:
+                    owner.useItem(item)
+                    for unused in range(3):
+                        loop.run()
+                finally:
+                    game.set_logger_sink('disabled')
+
+
+            def notOwnedUseMustFail(owner, item):
+                try:
+                    use(owner, item)
+                except (ValueError, RuntimeError) as error:
+                    assert 'not in inventory' in str(error), str(error)
+                else:
+                    raise AssertionError('Native use must reject the tome transferred to Jalantha')
+
+
+            def noHandInEntry(clock, priest):
+                session = clock.poisonBeginDialogue(priest)
+                if session is not None:
+                    cursor = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))['cursors'][session]
+                    assert cursor['state'] != 7, 'Jalantha cannot offer the PartyHasItem BOOK08 entry without the actual party book'
+
+
+            fixture_root = Path(os.environ['GAME_BUILD_DIR']).resolve(strict=True)
+            config_path = Path(game.CResourcesProvider.getInstance().getPath('maps/baldursGate/config.json'))
+            assert config_path.resolve(strict=True) == (fixture_root / 'maps/baldursGate/config.json').resolve(strict=True)
+            initial = json.loads(config_path.read_text(encoding='utf8'))['cityClock']['properties']
+            assert initial['plugin_cityPoisonSourceEnabled'] is True
+            assert initial['plugin_cityBook08NativeConversionEnabled'] is True
+            slot = 'city-book08-order-' + order + '-' + str(os.getpid()) + '-' + str(time.time_ns())
+            instances = []
+            completed = False
+            instance = game.CGameLoader.loadGame()
+            instances.append(instance)
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior', 'wandererRace')
+                loop.run()
+                world, player = instance.getMap(), instance.getMap().getPlayer()
+                clock = world.getObjectByName('cityClock')
+                assert player.isAlive() and clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                assert clock.getBoolProperty('plugin_cityPoisonSourceEnabled')
+                clock.poisonInitializeSource()
+                binding = clock.poisonCapture()
+                state = clock.poisonRead(binding)
+                assert state['sourceVersion'] == 1
+                # Explicit component prerequisite; this is not played outside-city history or a natural MCP route.
+                state['globals']['HelpJalantha'] = 1
+                clock.poisonWrite(binding, state)
+                definitions = decode(clock.getStringProperty('poisonSourceDefinitions'))
+                donor_rows = [row for row in definitions['initialActors'] if row['resource'] == 'CHANTH']
+                assert len(donor_rows) == 1
+                donor = world.getObjectByName(donor_rows[0]['id'])
+                donor_before, hero_before = inventory(donor), inventory(player)
+                books = sourceItems(donor, 'BOOK08')
+                assert len(books) == 1 and not sourceItems(player, 'BOOK08')
+                book = books[0]
+                book_name = book.getName()
+                assert book.getType() == 'BaldursGateUnderstandingTome' and book.getTypeId() == 'cityItemBook08'
+                assert type(book).__name__ == 'BaldursGateUnderstandingTome'
+                assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                assert book.getBoolProperty('plugin_cityUnidentified') and not book.getBoolProperty('plugin_cityBook08Consumed')
+                acquisition_before = resources(player)
+                session = clock.poisonBeginDialogue(donor)
+                for edge in (2, 4, 9):
+                    assert clock.poisonChooseEdge(session, edge)
+                assert inventory(player)[book_name] is book and book.getGame() is instance
+                assert sameObjects(inventory(donor), {key: value for key, value in donor_before.items() if value is not book})
+                assert sameObjects(inventory(player), dict(hero_before, **{book_name: book}))
+                assert resources(player) == acquisition_before[:2] + (acquisition_before[2] - 500,) + acquisition_before[3:]
+                assert decode(clock.getStringProperty('plugin_cityPoisonSourceState'))['globals']['TalkedToUlbright'] == 1
+                binding = clock.poisonCapture()
+                state = clock.poisonRead(binding)
+                priest_name = clock.poisonCreateSourceActor(binding, state, 'JALANT', 'book08NativeOrderJalantha', 'AR0609', [216, 677])
+                clock.poisonWrite(binding, state)
+                priest = world.getObjectByName(priest_name)
+                assert priest is not None and priest.getGame() is instance and priest.isAlive()
+                priest_before = inventory(priest)
+                scrolls = sourceItems(priest, 'SCRLJALA')
+                assert len(scrolls) == 1 and not sourceItems(player, 'SCRLJALA') and not sourceItems(priest, 'BOOK08')
+                scroll, scroll_name = scrolls[0], scrolls[0].getName()
+                base = game.CGameObject.getObjectProperty(player, 'baseStats')
+                base_before, composed_before, resources_before = stats(base), stats(player.getStats()), resources(player)
+                equipment_before = {slot: item for slot, item in player.getEquipped().items() if item is not None}
+                player_before = inventory(player)
+                receipt_key = 'book08Use:' + book_name
+                state_before = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                assert receipt_key not in state_before['receipts']
+                if order == 'useBeforeHandIn':
+                    book.setBoolProperty('plugin_cityUnidentified', False)
+                    use(player, book)
+                    expected_base = dict(base_before, intelligence=base_before['intelligence'] + 1)
+                    expected_composed = dict(composed_before, intelligence=composed_before['intelligence'] + 1)
+                    assert stats(base) == expected_base and stats(player.getStats()) == expected_composed
+                    assert game.CGameObject.getObjectProperty(player, 'baseStats') is base
+                    assert sameObjects(inventory(player), {key: value for key, value in player_before.items() if value is not book})
+                    assert sameObjects(inventory(priest), priest_before)
+                    assert book.getBoolProperty('plugin_cityBook08Consumed')
+                    assert book.getBoolProperty('plugin_cityAbilitiesPending')
+                    assert not sourceItems(player, 'BOOK08') and not sourceItems(priest, 'BOOK08')
+                    state_used = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                    receipt = state_used['receipts'][receipt_key]
+                    assert receipt['status'] == 'complete' and receipt['item'] == book_name and receipt['owner'] == player.getName()
+                    assert receipt['storedChargesBefore'] == [0, 0, 0] and receipt['conversion'] == 'ownedBaseIntelligencePlusOne'
+                    expected_state = json.loads(json.dumps(state_before))
+                    expected_state['receipts'][receipt_key] = receipt
+                    assert state_used == expected_state
+                    noHandInEntry(clock, priest)
+                    assert not sourceItems(player, 'SCRLJALA') and sourceItems(priest, 'SCRLJALA') == [scroll]
+                    assert decode(clock.getStringProperty('plugin_cityPoisonSourceState'))['globals'].get('ReturnedBook', 0) == 0
+                else:
+                    session = clock.poisonBeginDialogue(priest)
+                    assert decode(clock.getStringProperty('plugin_cityPoisonSourceState'))['cursors'][session]['state'] == 7
+                    for edge in (14, 19):
+                        assert clock.poisonChooseEdge(session, edge)
+                    assert inventory(priest)[book_name] is book and inventory(player)[scroll_name] is scroll
+                    assert sameObjects(inventory(priest), {key: value for key, value in priest_before.items() if value is not scroll} | {book_name: book})
+                    assert sameObjects(inventory(player), {key: value for key, value in player_before.items() if value is not book} | {scroll_name: scroll})
+                    assert stats(base) == base_before and stats(player.getStats()) == composed_before
+                    assert book.getBoolProperty('plugin_cityUnidentified') and not book.getBoolProperty('plugin_cityBook08Consumed')
+                    assert decode(book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                    assert decode(clock.getStringProperty('plugin_cityPoisonSourceState'))['globals']['ReturnedBook'] == 1
+                    notOwnedUseMustFail(player, book)
+                    assert stats(base) == base_before and stats(player.getStats()) == composed_before
+                    assert inventory(priest)[book_name] is book and not sourceItems(player, 'BOOK08')
+                    assert receipt_key not in decode(clock.getStringProperty('plugin_cityPoisonSourceState'))['receipts']
+                    expected_base, expected_composed = base_before, composed_before
+                    noHandInEntry(clock, priest)
+                assert resources(player) == resources_before
+                assert sameObjects({slot: item for slot, item in player.getEquipped().items() if item is not None}, equipment_before)
+                before_save_state = decode(clock.getStringProperty('plugin_cityPoisonSourceState'))
+                expected_player = {key: item.getTypeId() for key, item in inventory(player).items()}
+                expected_priest = {key: item.getTypeId() for key, item in inventory(priest).items()}
+                assert game.CMapLoader.saveWithResult(world, slot)
+                restored = game.CGameLoader.loadGame()
+                instances.append(restored)
+                game.CGameLoader.loadSavedGame(restored, slot)
+                loop.run()
+                saved_world, saved_player = restored.getMap(), restored.getMap().getPlayer()
+                saved_clock, saved_priest = saved_world.getObjectByName('cityClock'), saved_world.getObjectByName(priest_name)
+                assert saved_player is not player and saved_player.getGame() is restored and saved_player.isAlive()
+                assert saved_priest is not priest and saved_priest.getGame() is restored
+                assert saved_clock.getBoolProperty('plugin_cityPoisonSourceEnabled') and saved_clock.getBoolProperty('plugin_cityBook08NativeConversionEnabled')
+                assert stats(game.CGameObject.getObjectProperty(saved_player, 'baseStats')) == expected_base
+                assert stats(saved_player.getStats()) == expected_composed and resources(saved_player) == resources_before
+                assert {key: item.getTypeId() for key, item in inventory(saved_player).items()} == expected_player
+                assert {key: item.getTypeId() for key, item in inventory(saved_priest).items()} == expected_priest
+                assert decode(saved_clock.getStringProperty('plugin_cityPoisonSourceState')) == before_save_state
+                assert not sourceItems(saved_player, 'BOOK08')
+                if order == 'useBeforeHandIn':
+                    assert not sourceItems(saved_priest, 'BOOK08')
+                    assert len(sourceItems(saved_priest, 'SCRLJALA')) == 1 and not sourceItems(saved_player, 'SCRLJALA')
+                    assert decode(saved_clock.getStringProperty('plugin_cityPoisonSourceState'))['receipts'][receipt_key] == receipt
+                else:
+                    saved_book = inventory(saved_priest)[book_name]
+                    assert saved_book is not book and saved_book.getGame() is restored
+                    assert type(saved_book).__name__ == 'BaldursGateUnderstandingTome' and saved_book.getTypeId() == 'cityItemBook08'
+                    assert decode(saved_book.getStringProperty('plugin_cityCharges')) == [0, 0, 0]
+                    assert saved_book.getBoolProperty('plugin_cityUnidentified') and not saved_book.getBoolProperty('plugin_cityBook08Consumed')
+                    assert len(sourceItems(saved_player, 'SCRLJALA')) == 1 and sourceItems(saved_player, 'SCRLJALA')[0].getName() == scroll_name
+                    notOwnedUseMustFail(saved_player, saved_book)
+                    assert stats(saved_player.getStats()) == expected_composed
+                    assert receipt_key not in decode(saved_clock.getStringProperty('plugin_cityPoisonSourceState'))['receipts']
+                noHandInEntry(saved_clock, saved_priest)
+                assert {key: item.getTypeId() for key, item in inventory(saved_player).items()} == expected_player
+                assert {key: item.getTypeId() for key, item in inventory(saved_priest).items()} == expected_priest
+                assert resources(saved_player) == resources_before
+                print('book08-native-order ' + json.dumps({'order': order, 'book': book_name, 'scroll': scroll_name,
+                        'baseBefore': base_before['intelligence'], 'baseAfter': expected_base['intelligence'],
+                        'actualSaveReload': True, 'nativeOwnershipOnly': True, 'publicMcp': False, 'originalParity': False}, sort_keys=True), flush=True)
+                completed = True
+                print('book08-native-' + order + ' passed', flush=True)
+            finally:
+                for current in reversed(instances):
+                    current.getContext().shutdown()
+            """)
+        self.runBook08Child(code, return_stderr=True, expected_marker="book08-native-" + order + " passed")
+
+    def testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave(self):
+        self.runBook08HandInOrder("useBeforeHandIn")
+
+    def testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave(self):
+        self.runBook08HandInOrder("handInBeforeUse")
+
 
 class CityNativeLoadingSourceTest(unittest.TestCase):
+    def book08ParentAcceptanceFixture(self, method_name, marker, mode):
+        from contextlib import redirect_stderr, redirect_stdout
+        import io
+
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_bytes()
+        with tempfile.TemporaryDirectory(prefix="nouraajd-book08-parent-source-") as temporary:
+            root = Path(temporary).resolve(strict=True)
+            build = root / "cmake-build-release"
+            for name in ("config", "maps/baldursGate", "plugins"):
+                (build / name).mkdir(parents=True, exist_ok=True)
+            (root / "play.py").write_bytes(play_source)
+            config = {
+                "cityClock": {
+                    "properties": {
+                        "plugin_cityPoisonSourceEnabled": False,
+                        "plugin_cityBook08NativeConversionEnabled": False,
+                    }
+                }
+            }
+            (build / "maps/baldursGate/config.json").write_bytes(json.dumps(config).encode())
+            (build / "_game.cpython-fixture.so").write_bytes(b"synthetic module; never import")
+            original = {path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            case = CityNativeLoadingRuntimeTest(method_name)
+            observed = {}
+
+            def child(code, **kwargs):
+                self.assertEqual({"return_stderr": True}, kwargs, "Keep the shared30-second native child contract")
+                observed["private"] = private = Path(os.environ["GAME_BUILD_DIR"])
+                observed["save"] = private / "save/parent-evidence.json"
+                observed["backup"] = private / "save/parent-evidence.json.bak"
+                observed["save"].write_bytes(b"unique zero-exit parent-rejected save")
+                observed["backup"].write_bytes(b"unique zero-exit parent-rejected backup")
+                output = marker + "\n"
+                errors = "Python callback failed" if mode == "callback" else ""
+                if mode == "missing-marker":
+                    output = "child exited without the required completion marker\n"
+                elif mode == "long-line":
+                    output += "book08-native-" + "x" * 8192 + "\n"
+                return output, errors
+
+            diagnostics = io.StringIO()
+            with patch.dict(globals(), {"ROOT": root}), patch.dict(
+                os.environ, GAME_BUILD_DIR=str(build), GAME_BUILD_CONFIG=""
+            ), patch.object(case, "runChild", side_effect=child) as runner, redirect_stderr(
+                diagnostics
+            ), redirect_stdout(
+                io.StringIO()
+            ):
+                environment = {key: os.environ[key] for key in ("GAME_BUILD_DIR", "GAME_BUILD_CONFIG")}
+                if mode == "accepted":
+                    getattr(case, method_name)()
+                else:
+                    with self.assertRaises(AssertionError):
+                        getattr(case, method_name)()
+                self.assertEqual(environment, {key: os.environ[key] for key in environment})
+            runner.assert_called_once()
+            private = observed["private"]
+            self.assertEqual(build.resolve(strict=True), private.parent)
+            if mode == "accepted":
+                self.assertFalse(private.exists(), "Only parent-accepted components may clean their fixture")
+                self.assertEqual("", diagnostics.getvalue())
+            else:
+                self.assertTrue(private.is_dir(), "Parent-rejected zero-exit child must retain its owned fixture")
+                self.assertEqual(b"unique zero-exit parent-rejected save", observed["save"].read_bytes())
+                self.assertEqual(b"unique zero-exit parent-rejected backup", observed["backup"].read_bytes())
+                self.assertIn(f"Retained failed BOOK08 native fixture: {private}\n", diagnostics.getvalue())
+            self.assertEqual(
+                original,
+                {
+                    path.relative_to(root): path.read_bytes()
+                    for path in root.rglob("*")
+                    if path.is_file() and not path.is_relative_to(private)
+                },
+            )
+
+    def testBook08AllFiveParentCallbackRejectionsRetainOwnedFixtureAndSave(self):
+        for method, marker in (
+            ("testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce", "book08-native-use-once passed"),
+            ("testBook08SpentStateSurvivesNativeSaveReload", "book08-native-spent-save-reload passed"),
+            (
+                "testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
+                "book08-native-unspent-save-reload-use passed",
+            ),
+            ("testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave", "book08-native-useBeforeHandIn passed"),
+            ("testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave", "book08-native-handInBeforeUse passed"),
+        ):
+            with self.subTest(method=method):
+                self.book08ParentAcceptanceFixture(method, marker, "callback")
+
+    def testBook08ParentMarkerAndLineFailuresRetainButAcceptedResultCleans(self):
+        for mode in ("missing-marker", "long-line", "accepted"):
+            with self.subTest(mode=mode):
+                self.book08ParentAcceptanceFixture(
+                    "testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave",
+                    "book08-native-useBeforeHandIn passed",
+                    mode,
+                )
+
+    def testBook08AllFiveCapturedProgramsKeepSavesUntilParentAcceptance(self):
+        import io
+        from contextlib import redirect_stdout
+
+        for method, marker in (
+            ("testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce", "book08-native-use-once passed"),
+            ("testBook08SpentStateSurvivesNativeSaveReload", "book08-native-spent-save-reload passed"),
+            (
+                "testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
+                "book08-native-unspent-save-reload-use passed",
+            ),
+            ("testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave", "book08-native-useBeforeHandIn passed"),
+            ("testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave", "book08-native-handInBeforeUse passed"),
+        ):
+            with self.subTest(method=method):
+                case = CityNativeLoadingRuntimeTest(method)
+                programs = []
+
+                def capture(program, **kwargs):
+                    programs.append((program, kwargs))
+                    return marker, ""
+
+                with patch.object(case, "runBook08Child", side_effect=capture), redirect_stdout(io.StringIO()):
+                    getattr(case, method)()
+                self.assertEqual(1, len(programs))
+                program, kwargs = programs[0]
+                tree = ast.parse(textwrap.dedent(program))
+                calls = [ast.unparse(node.func) for node in ast.walk(tree) if isinstance(node, ast.Call)]
+                self.assertTrue(any(call.endswith(".shutdown") for call in calls), "Retain native context shutdown")
+                self.assertFalse(
+                    any(call.endswith((".unlink", ".rmdir", ".rmtree")) for call in calls),
+                    "Child saves must survive until parent acceptance and owned fixture cleanup",
+                )
+                self.assertEqual({"return_stderr": True, "expected_marker": marker}, kwargs)
+
+    def testBook08RuntimeFixtureRetainsActualFailedSaveAndReportsOwnedPath(self):
+        from contextlib import redirect_stderr
+        import io
+        import subprocess
+
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        for failure in (AssertionError("native child failed"), subprocess.TimeoutExpired(["synthetic-child"], 30)):
+            with self.subTest(failure=type(failure).__name__), tempfile.TemporaryDirectory(
+                prefix="nouraajd-book08-failed-source-"
+            ) as temporary:
+                root = Path(temporary).resolve(strict=True)
+                build = root / "cmake-build-release"
+                for directory in ("config", "maps/baldursGate", "plugins"):
+                    (build / directory).mkdir(parents=True, exist_ok=True)
+                (root / "play.py").write_text(
+                    "raise AssertionError('discovery must never import play')\n" + play_source, encoding="utf8"
+                )
+                config = {
+                    "cityClock": {
+                        "properties": {
+                            "plugin_cityPoisonSourceEnabled": False,
+                            "plugin_cityBook08NativeConversionEnabled": False,
+                        }
+                    }
+                }
+                (build / "maps/baldursGate/config.json").write_text(json.dumps(config), encoding="utf8")
+                (build / "_game.cpython-fixture.so").write_bytes(b"synthetic extension; never load")
+                source_before = {
+                    path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
+                }
+                with patch.dict(os.environ, GAME_BUILD_DIR=str(build), GAME_BUILD_CONFIG=""):
+                    environment_before = {key: os.environ.get(key) for key in ("GAME_BUILD_DIR", "GAME_BUILD_CONFIG")}
+                    diagnostics = io.StringIO()
+                    with redirect_stderr(diagnostics), self.assertRaises(type(failure)) as caught:
+                        with book08RuntimeFixture(root) as private:
+                            failed_save = private / "save/failed-book-order.json"
+                            failed_backup = private / "save/failed-book-order.json.bak"
+                            failed_save.write_bytes(b'{"failedState":"unique-native-save"}')
+                            failed_backup.write_bytes(b"unique-before-save-backup")
+                            raise failure
+                    self.assertIs(failure, caught.exception)
+                    self.assertEqual(environment_before, {key: os.environ.get(key) for key in environment_before})
+                self.assertEqual(build.resolve(strict=True), private.parent)
+                self.assertTrue(private.is_dir(), "A failed native child must retain its unique fixture and save")
+                self.assertFalse(private.is_symlink())
+                self.assertEqual(private.resolve(strict=True), private)
+                self.assertEqual(b'{"failedState":"unique-native-save"}', failed_save.read_bytes())
+                self.assertEqual(b"unique-before-save-backup", failed_backup.read_bytes())
+                self.assertIn(f"Retained failed BOOK08 native fixture: {private}\n", diagnostics.getvalue())
+                self.assertEqual(
+                    source_before,
+                    {
+                        path.relative_to(root): path.read_bytes()
+                        for path in root.rglob("*")
+                        if path.is_file() and not path.is_relative_to(private)
+                    },
+                )
+
+    def testBook08RuntimeFixtureRejectsAnUnownedDirectoryBeforeCopyOrCleanup(self):
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-book08-owned-source-") as temporary:
+            root = Path(temporary).resolve(strict=True)
+            build = root / "cmake-build-release"
+            for directory in ("config", "maps/baldursGate", "plugins"):
+                (build / directory).mkdir(parents=True, exist_ok=True)
+            (root / "play.py").write_text(play_source, encoding="utf8")
+            config = {
+                "cityClock": {
+                    "properties": {
+                        "plugin_cityPoisonSourceEnabled": False,
+                        "plugin_cityBook08NativeConversionEnabled": False,
+                    }
+                }
+            }
+            (build / "maps/baldursGate/config.json").write_text(json.dumps(config), encoding="utf8")
+            (build / "_game.cpython-fixture.so").write_bytes(b"synthetic extension; never load")
+            unrelated = root / "unrelated-owned-test-fixture"
+            unrelated.mkdir()
+            marker = unrelated / "preserve.txt"
+            marker.write_bytes(b"unrelated disposable test marker")
+            before = {path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            with patch.dict(os.environ, GAME_BUILD_DIR=str(build), GAME_BUILD_CONFIG=""), patch.object(
+                tempfile, "mkdtemp", return_value=str(unrelated)
+            ):
+                with self.assertRaisesRegex(AssertionError, "original owned directory"):
+                    with book08RuntimeFixture(root):
+                        pass
+            self.assertEqual(
+                before, {path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            )
+
+    def book08NativeOrderProgram(self, method_name, order):
+        self.assertTrue(hasattr(CityNativeLoadingRuntimeTest, method_name), "Native order coverage must be registered")
+        case = CityNativeLoadingRuntimeTest(method_name)
+        programs = []
+
+        def capture(program, **kwargs):
+            programs.append((program, kwargs))
+            return "book08-native-" + order + " passed", ""
+
+        with patch.object(case, "runBook08Child", side_effect=capture), patch("builtins.print"):
+            getattr(case, method_name)()
+        self.assertEqual(1, len(programs), "Each component case retains one bounded native child")
+        program, kwargs = programs[0]
+        self.assertEqual(
+            {"return_stderr": True, "expected_marker": "book08-native-" + order + " passed"},
+            kwargs,
+            "Preserve the shared30-second child deadline and validate inside the fixture",
+        )
+        tree = ast.parse(program)
+        self.assertIsInstance(tree.body[0], ast.Assign)
+        self.assertEqual(order, ast.literal_eval(tree.body[0].value))
+        return program, tree
+
+    def testBook08NativeHandInOrdersKeepActualNativeUseTransfersAndSaveBoundaries(self):
+        for method, order in (
+            ("testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave", "useBeforeHandIn"),
+            ("testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave", "handInBeforeUse"),
+        ):
+            with self.subTest(order=order):
+                program, tree = self.book08NativeOrderProgram(method, order)
+                calls = {ast.unparse(node.func) for node in ast.walk(tree) if isinstance(node, ast.Call)}
+                self.assertTrue(
+                    {
+                        "owner.useItem",
+                        "clock.poisonChooseEdge",
+                        "clock.poisonBeginDialogue",
+                        "clock.poisonCreateSourceActor",
+                        "game.CMapLoader.saveWithResult",
+                        "game.CGameLoader.loadSavedGame",
+                    }
+                    <= calls
+                )
+                self.assertIn("for edge in (2, 4, 9)", program)
+                self.assertIn("for edge in (14, 19)", program)
+                self.assertIn("assert inventory(player)[book_name] is book", program)
+                self.assertIn("assert inventory(priest)[book_name] is book", program)
+                self.assertIn("assert saved_book is not book", program)
+                self.assertIn("notOwnedUseMustFail(saved_player, saved_book)", program)
+                self.assertNotIn("book.onUse(", program, "Use the actual native event dispatcher")
+
+    def testBook08NativeHandInOrdersKeepPrivateEnablementAndPositiveMcpParityHolds(self):
+        for method, order in (
+            ("testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave", "useBeforeHandIn"),
+            ("testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave", "handInBeforeUse"),
+        ):
+            with self.subTest(order=order):
+                program, tree = self.book08NativeOrderProgram(method, order)
+                self.assertIn("if not __debug__", program)
+                self.assertIn("config_path.resolve(strict=True)", program)
+                self.assertIn("'publicMcp': False", program)
+                self.assertIn("'originalParity': False", program)
+                self.assertIn("receipt_key not in", program)
+                self.assertIn("assert resources(player) == resources_before", program)
+                self.assertIn("noHandInEntry(saved_clock, saved_priest)", program)
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                        continue
+                    if node.func.attr == "setBoolProperty" and node.args and isinstance(node.args[0], ast.Constant):
+                        self.assertNotIn(
+                            node.args[0].value,
+                            {"plugin_cityPoisonSourceEnabled", "plugin_cityBook08NativeConversionEnabled"},
+                        )
+
     def program(self, method_name, marker):
         case = CityNativeLoadingRuntimeTest(method_name)
         programs = []
@@ -248,6 +1743,43 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         ast.parse(textwrap.dedent(program))
         self.assertEqual({}, kwargs, "Keep the shared bounded child timeout")
         return program
+
+    def testCityQuestHintFallbackNeverReadsItsReflectedVirtualProperty(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / "res/maps/baldursGate/script.py").read_text(encoding="utf8")
+        load = next(
+            node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name == "load"
+        )
+        quest = next(node for node in load.body if isinstance(node, ast.ClassDef) and node.name == "BaldursGateQuest")
+        hint = next(node for node in quest.body if isinstance(node, ast.FunctionDef) and node.name == "getHint")
+        state = {}
+        namespace = {"clock": lambda _quest: SimpleNamespace(poisonQuestPresentation=lambda _key: state.get("source"))}
+        exec(compile(ast.Module(body=[hint], type_ignores=[]), "<actual-city-quest-hint>", "exec"), namespace)
+
+        class ReflectedQuest:
+            def __init__(self, values):
+                self.values, self.reads = values, []
+
+            def getStringProperty(self, name):
+                self.reads.append(name)
+                if name == "hint":
+                    raise AssertionError("CQuest.hint reflects virtual getHint and must not be its backing field")
+                return self.values.get(name, "")
+
+        for source_row, custom, expected in (
+            (None, "", "Follow the named people, source items and city journal."),
+            (None, "Authored contact.", "Authored contact."),
+            ({"hint": "Heard clue."}, "Other text.", "Heard clue."),
+            ({"hint": ""}, "Authored contact.", "Authored contact."),
+        ):
+            with self.subTest(source_row=source_row, custom=custom):
+                state["source"] = source_row
+                candidate = ReflectedQuest({"questKey": "quinnDagger", "hintText": custom})
+                self.assertEqual(expected, namespace["getHint"](candidate))
+                self.assertEqual(
+                    ["questKey"] + ([] if source_row and source_row.get("hint") else ["hintText"]), candidate.reads
+                )
 
     def testChildCanReturnDiagnosticStderrWithoutChangingItsDefaultResultOrDeadline(self):
         import subprocess
@@ -471,6 +2003,209 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         self.assertIn("game.CGameLoader.loadSavedGame(restored, slot)", program)
         self.assertIn("assert snapshot(saved_actor) == before", program)
         self.assertIn("if completed:", program)
+
+    def testBook08RuntimeFixtureIsPrivateForLinuxAndWindowsResourceLayouts(self):
+        import json
+        import os
+        from pathlib import Path
+        import tempfile
+
+        helper = globals().get("book08RuntimeFixture")
+        self.assertTrue(callable(helper), "A self-contained native BOOK08 fixture helper is required")
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        for layout in ("linux", "windows-release", "windows-native-root"):
+            with self.subTest(layout=layout), tempfile.TemporaryDirectory(
+                prefix="nouraajd-book08-source-"
+            ) as temporary:
+                root = Path(temporary)
+                build = root / "cmake-build-release"
+                native = build / "Release" if layout != "linux" else build
+                native.mkdir(parents=True)
+                for directory in ("config", "maps/baldursGate", "plugins"):
+                    (build / directory).mkdir(parents=True, exist_ok=True)
+                # This source must be parsed, never imported or bootstrapped in a source test.
+                (root / "play.py").write_text(
+                    "raise AssertionError('play must not execute during fixture discovery')\n" + play_source,
+                    encoding="utf8",
+                )
+                source_config = {
+                    "cityClock": {
+                        "class": "Clock",
+                        "properties": {
+                            "plugin_cityPoisonSourceEnabled": False,
+                            "unrelated": {"sourceIds": ["CHANTH", "BOOK08"], "value": 17},
+                        },
+                    },
+                    "other": {"class": "CItem", "properties": {"nested": [0, False, "preserve"]}},
+                }
+                if layout == "linux":
+                    source_config["cityClock"]["properties"]["plugin_cityBook08NativeConversionEnabled"] = False
+                config_path = build / "maps/baldursGate/config.json"
+                config_path.write_text(json.dumps(source_config, indent=2), encoding="utf8")
+                (build / "config/native-fixture.json").write_text('{"keep": 7}', encoding="utf8")
+                (build / "maps/baldursGate/script.py").write_text(
+                    "raise AssertionError('not executed')\n", encoding="utf8"
+                )
+                (build / "plugins/native_fixture.py").write_text(
+                    "raise AssertionError('not executed')\n", encoding="utf8"
+                )
+                (build / "game.py").write_text("raise AssertionError('game must not be imported')\n", encoding="utf8")
+                extension = "_game.cp312-win_amd64.pyd" if layout != "linux" else "_game.cpython-test.so"
+                shared_core = "game_core.dll" if layout != "linux" else "libgame_core.so"
+                shared_dependency = "SDL2.dll" if layout != "linux" else "libSDL2.so"
+                (native / extension).write_bytes(b"synthetic extension; never load")
+                (native / shared_core).write_bytes(b"synthetic core; never load")
+                (build / shared_dependency).write_bytes(b"synthetic dependency; never load")
+                before = {
+                    path.relative_to(root).as_posix(): path.read_bytes() for path in root.rglob("*") if path.is_file()
+                }
+                before_paths = sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
+                configuration = "Release" if layout == "windows-release" else ""
+                with patch.dict(os.environ, {"GAME_BUILD_CONFIG": configuration}, clear=False):
+                    # Exercise the actual play fallback search on Linux, and its explicit override on Windows.
+                    if layout == "linux":
+                        os.environ.pop("GAME_BUILD_DIR", None)
+                    else:
+                        os.environ["GAME_BUILD_DIR"] = str(native if layout == "windows-native-root" else build)
+                    previous = {key: os.environ.get(key) for key in ("GAME_BUILD_DIR", "GAME_BUILD_CONFIG")}
+                    with helper(root) as private:
+                        self.assertIsInstance(private, Path)
+                        private = private.resolve()
+                        self.assertNotEqual(build.resolve(), private)
+                        self.assertTrue(private.is_relative_to(build.resolve()))
+                        self.assertEqual(str(private), os.environ["GAME_BUILD_DIR"])
+                        self.assertEqual("", os.environ["GAME_BUILD_CONFIG"])
+                        self.assertEqual(b"synthetic extension; never load", (private / extension).read_bytes())
+                        self.assertEqual(b"synthetic core; never load", (private / shared_core).read_bytes())
+                        self.assertEqual(
+                            b"synthetic dependency; never load", (private / shared_dependency).read_bytes()
+                        )
+                        self.assertTrue((private / "save").is_dir())
+                        self.assertEqual([], list((private / "save").iterdir()))
+                        self.assertEqual((build / "game.py").read_bytes(), (private / "game.py").read_bytes())
+                        self.assertEqual(
+                            (build / "config/native-fixture.json").read_bytes(),
+                            (private / "config/native-fixture.json").read_bytes(),
+                        )
+                        self.assertEqual(
+                            (build / "maps/baldursGate/script.py").read_bytes(),
+                            (private / "maps/baldursGate/script.py").read_bytes(),
+                        )
+                        self.assertEqual(
+                            (build / "plugins/native_fixture.py").read_bytes(),
+                            (private / "plugins/native_fixture.py").read_bytes(),
+                        )
+                        changed = json.loads((private / "maps/baldursGate/config.json").read_text(encoding="utf8"))
+                        self.assertIs(True, changed["cityClock"]["properties"]["plugin_cityPoisonSourceEnabled"])
+                        self.assertIs(
+                            True, changed["cityClock"]["properties"]["plugin_cityBook08NativeConversionEnabled"]
+                        )
+                        changed["cityClock"]["properties"]["plugin_cityPoisonSourceEnabled"] = False
+                        if "plugin_cityBook08NativeConversionEnabled" in source_config["cityClock"]["properties"]:
+                            changed["cityClock"]["properties"]["plugin_cityBook08NativeConversionEnabled"] = False
+                        else:
+                            del changed["cityClock"]["properties"]["plugin_cityBook08NativeConversionEnabled"]
+                        self.assertEqual(source_config, changed, "Only the two declared initial flags may change")
+                    self.assertFalse(private.exists(), "Only the owned temporary fixture must be cleaned")
+                    self.assertEqual(previous, {key: os.environ.get(key) for key in previous})
+                self.assertEqual(before_paths, sorted(path.relative_to(root).as_posix() for path in root.rglob("*")))
+                self.assertEqual(
+                    before,
+                    {
+                        path.relative_to(root).as_posix(): path.read_bytes()
+                        for path in root.rglob("*")
+                        if path.is_file()
+                    },
+                )
+
+    def testBook08RuntimeFixtureSkipsOnlyUnavailableNativeBuild(self):
+        import os
+        from pathlib import Path
+        import tempfile
+
+        helper = globals().get("book08RuntimeFixture")
+        self.assertTrue(callable(helper), "A self-contained native BOOK08 fixture helper is required")
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-book08-no-native-") as temporary:
+            root = Path(temporary)
+            (root / "play.py").write_text(play_source, encoding="utf8")
+            missing = root / "absent-build"
+            with patch.dict(os.environ, {"GAME_BUILD_DIR": str(missing)}, clear=False):
+                with self.assertRaises(unittest.SkipTest):
+                    with helper(root):
+                        self.fail("A missing compiled extension must not create a runnable fixture")
+            self.assertFalse(missing.exists())
+            self.assertEqual(["play.py"], sorted(path.relative_to(root).as_posix() for path in root.rglob("*")))
+
+    def testBook08ChildUsesOneSharedChildWithItsOriginalDeadline(self):
+        from contextlib import contextmanager
+        from pathlib import Path
+
+        method = getattr(CityNativeLoadingRuntimeTest, "runBook08Child", None)
+        self.assertTrue(callable(method), "Native BOOK08 methods must use the self-contained fixture wrapper")
+        calls = []
+
+        @contextmanager
+        def fixture(root):
+            calls.append(("enter", root))
+            try:
+                yield Path("private-unused-fixture")
+            finally:
+                calls.append(("exit", root))
+
+        case = CityNativeLoadingRuntimeTest("testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback")
+        with patch.dict(globals(), {"book08RuntimeFixture": fixture}), patch.object(
+            case, "runChild", return_value=("book08-output", "book08-errors")
+        ) as child:
+            self.assertEqual(
+                ("book08-output", "book08-errors"), case.runBook08Child("native child body", return_stderr=True)
+            )
+        child.assert_called_once_with("native child body", return_stderr=True)
+        expected_root = Path(__file__).resolve().parents[1]
+        self.assertEqual([("enter", expected_root), ("exit", expected_root)], calls)
+
+    def testBook08RuntimeFixtureRejectsAmbiguousNativeAndRespectsRequestedConfig(self):
+        import json
+        import os
+        from pathlib import Path
+        import tempfile
+
+        helper = globals().get("book08RuntimeFixture")
+        self.assertTrue(callable(helper), "A self-contained native BOOK08 fixture helper is required")
+        play_source = (Path(__file__).resolve().parents[1] / "play.py").read_text(encoding="utf8")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-book08-config-") as temporary:
+            root = Path(temporary)
+            build = root / "cmake-build-release"
+            for name in ("config", "maps/baldursGate", "plugins", "Debug", "Release"):
+                (build / name).mkdir(parents=True, exist_ok=True)
+            (root / "play.py").write_text(play_source, encoding="utf8")
+            initial = {
+                "cityClock": {
+                    "properties": {
+                        "plugin_cityPoisonSourceEnabled": False,
+                        "plugin_cityBook08NativeConversionEnabled": False,
+                    }
+                }
+            }
+            config = build / "maps/baldursGate/config.json"
+            config.write_text(json.dumps(initial), encoding="utf8")
+            extension = "_game.cp312-win_amd64.pyd"
+            (build / "Debug" / extension).write_bytes(b"foreign debug")
+            with patch.dict(os.environ, {"GAME_BUILD_DIR": str(build), "GAME_BUILD_CONFIG": "Release"}):
+                with self.assertRaises(unittest.SkipTest):
+                    with helper(root):
+                        pass
+                self.assertFalse(any(path.name.startswith("book08-native-fixture-") for path in build.iterdir()))
+                (build / extension).write_bytes(b"root fallback")
+                (build / "Release" / extension).write_bytes(b"selected release")
+                with helper(root) as private:
+                    self.assertEqual(b"selected release", (private / extension).read_bytes())
+                    self.assertEqual([extension], sorted(path.name for path in private.glob("_game*")))
+                (build / "Release" / "_game.other.pyd").write_bytes(b"ambiguous active native")
+                with self.assertRaises(AssertionError):
+                    with helper(root):
+                        pass
+            self.assertEqual(initial, json.loads(config.read_text(encoding="utf8")))
 
 
 if __name__ == "__main__":

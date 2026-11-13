@@ -57,6 +57,11 @@ class MovementPresentationCleanup {
     std::function<void()> cancel;
 };
 
+std::atomic_bool mapTileTraversalProbeEnabled{false};
+std::atomic_size_t mapTileSnapshotCounter{0};
+std::atomic_size_t mapTileSnapshotReferenceCounter{0};
+std::atomic_size_t mapDirectTileVisitCounter{0};
+
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
 std::atomic_size_t mapCoordinateLookupProbeCounter{0};
 
@@ -654,6 +659,23 @@ void CMap::bumpNavigationRevision() {
     recordDirectPropertyChanged("navigationRevision");
 }
 
+void performance_guard::resetMapTileTraversalProbe() {
+    mapTileSnapshotCounter.store(0, std::memory_order_relaxed);
+    mapTileSnapshotReferenceCounter.store(0, std::memory_order_relaxed);
+    mapDirectTileVisitCounter.store(0, std::memory_order_relaxed);
+    mapTileTraversalProbeEnabled.store(true, std::memory_order_relaxed);
+}
+
+performance_guard::MapTileTraversalWork performance_guard::mapTileTraversalWork() {
+    return {mapTileSnapshotCounter.load(std::memory_order_relaxed),
+            mapTileSnapshotReferenceCounter.load(std::memory_order_relaxed),
+            mapDirectTileVisitCounter.load(std::memory_order_relaxed)};
+}
+
+void performance_guard::disableMapTileTraversalProbe() {
+    mapTileTraversalProbeEnabled.store(false, std::memory_order_relaxed);
+}
+
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     std::lock_guard lock(navigationMutex);
     if (!tile) {
@@ -1015,7 +1037,10 @@ void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                     std::function<bool(std::shared_ptr<CTile>)> predicate) {
+    const bool probing = mapTileTraversalProbeEnabled.load(std::memory_order_relaxed);
     for (std::shared_ptr<CTile> tile : tiles | std::views::values | std::views::filter(predicate)) {
+        if (probing)
+            mapDirectTileVisitCounter.fetch_add(1, std::memory_order_relaxed);
         func(tile);
     }
 }
@@ -1417,6 +1442,10 @@ std::set<std::shared_ptr<CTile>> CMap::getTiles() {
     std::set<std::shared_ptr<CTile>> result;
     for (const auto &[coords, tile] : tiles) {
         result.insert(tile);
+    }
+    if (mapTileTraversalProbeEnabled.load(std::memory_order_relaxed)) {
+        mapTileSnapshotCounter.fetch_add(1, std::memory_order_relaxed);
+        mapTileSnapshotReferenceCounter.fetch_add(result.size(), std::memory_order_relaxed);
     }
     return result;
 }

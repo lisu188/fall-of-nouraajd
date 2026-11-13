@@ -1,4 +1,5 @@
 import ast
+import builtins
 import json
 from pathlib import Path
 import runpy
@@ -120,9 +121,16 @@ def loadQuestClasses(path):
     context = types.SimpleNamespace(getMap=lambda: None, post=queued_work.append)
     context.createWeakResolver = lambda: lambda: context
     installHookFlows(game_stub)
+
+    def resourceImport(name, globals=None, locals=None, fromlist=(), level=0):
+        if not level and name == "game":
+            return game_stub
+        return builtins.__import__(name, globals, locals, fromlist, level)
+
+    resource_globals = {"__builtins__": {**vars(builtins), "__import__": resourceImport}}
     with patch.dict(sys.modules, {"game": game_stub, "campaign": campaign_driver}):
         game_stub.narrative = types.SimpleNamespace(**runpy.run_path(str(REPO_ROOT / "res/narrative.py")))
-        runpy.run_path(str(path))["load"](None, context)
+        runpy.run_path(str(path), init_globals=resource_globals)["load"](None, context)
     return classes
 
 
@@ -187,6 +195,27 @@ CITY_QUEST_KEYS = (
 
 
 class MapQuestJournalTest(unittest.TestCase):
+    def testCityJournalFixtureUsesTheLoadedRealClockAndPersistentResourceApi(self):
+        path = REPO_ROOT / "res/maps/baldursGate/script.py"
+        classes = loadQuestClasses(path)
+        game, source, _destination, player = self.createSession("baldursGate")
+        with self.assertRaisesRegex(ValueError, "already-loaded real clock class"):
+            self.prepareSource("baldursGate", source, player)
+        self.prepareSource("baldursGate", source, player, classes)
+        clock = source.objects["cityClock"]
+        self.assertIs(type(clock), classes["BaldursGateClock"])
+        self.assertEqual(str(path), type(clock).poisonQuestPresentation.__code__.co_filename)
+        self.assertFalse(clock.getBoolProperty("plugin_cityPoisonSourceEnabled"))
+        resource_import = type(clock).poisonQuestPresentation.__globals__["__builtins__"]["__import__"]
+        api = resource_import("game")
+        with patch.dict(sys.modules, game=types.ModuleType("foreignGame")):
+            self.assertIs(api, resource_import("game"))
+            self.assertIsNone(clock.poisonQuestPresentation("marekPoison"))
+        clock.setBoolProperty("plugin_cityPoisonSourceEnabled", True)
+        with patch.object(clock, "poisonCapture", side_effect=RuntimeError("source branch reached")):
+            with self.assertRaisesRegex(RuntimeError, "source branch reached"):
+                clock.poisonQuestPresentation("marekPoison")
+
     def createSession(self, map_name="origin"):
         game = types.SimpleNamespace()
         game.getMap = lambda: game.map
@@ -437,7 +466,7 @@ class MapQuestJournalTest(unittest.TestCase):
                     quest.properties.update(entry.get("properties", {}))
                     quest.properties.update(name=quest_name, typeId=quest_name)
                     player.quests.append(quest)
-                    self.prepareSource(map_dir.name, source, player)
+                    self.prepareSource(map_dir.name, source, player, classes)
                     quest.captureJournal(False)
                     expected = self.journalText(quest)
                     if quest_name == "defendSiegeQuest":
@@ -478,7 +507,7 @@ class MapQuestJournalTest(unittest.TestCase):
                     quest.properties.update(entry.get("properties", {}))
                     quest.properties.update(name=quest_name, typeId=quest_name)
                     player.quests.append(quest)
-                    self.prepareSource(map_dir.name, source, player)
+                    self.prepareSource(map_dir.name, source, player, classes)
                     source.properties.update(
                         victory_reported=True,
                         voss_judged=True,
@@ -598,9 +627,11 @@ class MapQuestJournalTest(unittest.TestCase):
                 self.assertEqual(expected_completed, self.journalText(completed_copy))
                 self.assertEqual([], game.messages)
 
-    def prepareSource(self, map_name, source, player):
+    def prepareSource(self, map_name, source, player, classes=None):
         if map_name == "baldursGate":
-            city_clock = JournalObject(source.game)
+            if classes is None:
+                raise ValueError("The city journal fixture needs its already-loaded real clock class")
+            city_clock = classes["BaldursGateClock"](source.game)
             city_clock.setStringProperty(
                 "questDefinitions",
                 (REPO_ROOT / "tests/fixtures/baldurs_gate_city_quests.json").read_text(encoding="utf-8"),

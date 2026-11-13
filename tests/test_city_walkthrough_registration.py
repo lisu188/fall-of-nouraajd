@@ -57,7 +57,6 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
                 self.assertIs(result, namespace[name](self))
                 self.assertEqual([map_name], seen)
 
-
     def testQueuedWaitPumpsUntilObservedStateAndDoesNotHideErrors(self):
         observed = []
         with patch.object(harness.time, "sleep", side_effect=AssertionError("sleep is not queue progress")):
@@ -187,9 +186,16 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         names = harness.discover_unittest_test_names(["test.py", "CityNativeLoadingRuntimeTest"])
         self.assertEqual(
             {
+                "CityNativeLoadingRuntimeTest.testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce",
+                "CityNativeLoadingRuntimeTest.testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave",
+                "CityNativeLoadingRuntimeTest.testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave",
+                "CityNativeLoadingRuntimeTest.testBook08SpentStateSurvivesNativeSaveReload",
+                "CityNativeLoadingRuntimeTest.testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
                 "CityNativeLoadingRuntimeTest.testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback",
+                "CityNativeLoadingRuntimeTest.testCityQuestHintNativeDispatchReadsNonvirtualBackingTextOnce",
                 "CityNativeLoadingRuntimeTest.testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
                 "CityNativeLoadingRuntimeTest.testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument",
+                "CityNativeLoadingRuntimeTest.testOptionalCityReferencesRespectActualNativeMissingPropertyContract",
             },
             set(names),
         )
@@ -747,7 +753,6 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "siege"):
                 driver.waitForMap("siege", timeout=1)
         self.assertEqual(["pump"], calls)
-
 
     def sceneCommitReady(self, source, *, valid=True, game=True, map_present=True, moving=False):
         """Evaluate only the actual native until predicate against a scheduling double."""

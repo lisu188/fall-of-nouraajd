@@ -140,6 +140,11 @@ class NativeObject:
                 self.completed.append(quest)
 
 
+class NativeScroll(NativeObject):
+    def isDisposable(self):
+        return False
+
+
 class Creature(NativeObject):
     pass
 
@@ -250,6 +255,7 @@ class Fixture:
         selectedSupport(support / "quest_state.py", {"mapQuest"}, quest_generic)
         exports = {
             "CBuilding": NativeObject,
+            "CScrollBase": NativeScroll,
             "CCreature": Creature,
             "CGameObject": NativeObject,
             "CGame": CompactGame,
@@ -1840,7 +1846,9 @@ class BaldursGateCustodySourceTest(unittest.TestCase):
             getStringProperty=lambda key: "cityParty",
         )
         game = SimpleNamespace(createObject=lambda key: key)
-        clock_object = SimpleNamespace(initializeActors=lambda: None, applySchedules=lambda: None)
+        clock_object = NativeObject()
+        clock_object.initializeActors = lambda: None
+        clock_object.applySchedules = lambda: None
         namespace.update(
             game_map=game_map,
             player=player,

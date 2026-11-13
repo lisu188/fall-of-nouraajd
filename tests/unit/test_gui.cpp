@@ -2175,6 +2175,173 @@ void test_minimap_bounds_normal_map_renders() {
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
+void testMinimapFreshTraversalPreservesTerrainUpdates() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 3}, {1, 3}});
+    map->setYBounds({{0, 3}, {1, 3}});
+    map->setDefaultTiles({{0, "GroundTile"}, {1, "GroundTile"}});
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("grass");
+    map->addTile(tile, 2, 2, 0);
+    auto upstairs = std::make_shared<CTile>();
+    upstairs->setTileType("water");
+    map->addTile(upstairs, 2, 2, 1);
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render_pixel = [&] {
+        minimap->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect sample{80, 80, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "fresh minimap regression must read an actual terrain pixel from the isolated renderer");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(render_pixel() == 0x002d6f37u, "native minimap must initially draw the registered grass tile");
+    tile->setTileType("water");
+    expect_true(render_pixel() == 0x001d5694u, "direct native tileType changes must appear on the next minimap frame");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(render_pixel() == 0x00766748u,
+                "empty tileType must continue to use the current native typeId fallback");
+    const auto stable_builds = minimap->getTerrainTextureBuildCount();
+    tile->setCanStep(false);
+    tile->setAnimation("images/tiles/water");
+    expect_true(render_pixel() == 0x00766748u && minimap->getTerrainTextureBuildCount() == stable_builds,
+                "walkability and animation changes must preserve the existing type-based minimap color contract");
+    map->removeTile(2, 2, 0);
+    expect_true(render_pixel() == 0x00564830u, "removed native tiles must reveal the current authored default terrain");
+    auto replacement = std::make_shared<CTile>();
+    replacement->setTileType("grass");
+    map->addTile(replacement, 2, 2, 0);
+    expect_true(render_pixel() == 0x002d6f37u, "actual replacement tiles must appear without a stale cached signature");
+    map->moveTile(replacement, 3, 2, 0);
+    expect_true(render_pixel() == 0x00564830u, "moving a registered native tile must clear its previous minimap cell");
+    map->setDefaultTiles({{0, "WaterTile"}, {1, "GroundTile"}});
+    expect_true(render_pixel() == 0x001d5694u, "changed authored default terrain must refresh uncovered cells");
+    harness.player->setPosZ(1);
+    expect_true(harness.player->getCoords().z == 1 && render_pixel() == 0x001d5694u,
+                "the minimap must freshly read the actual player level and only draw that level's tile");
+    upstairs->setTileType("grass");
+    expect_true(render_pixel() == 0x002d6f37u,
+                "in-place upstairs changes must refresh after an actual level transition");
+    map->setXBounds({});
+    map->setYBounds({});
+    expect_true(render_pixel() != 0 && minimap->getTerrainTextureBuildCount() > stable_builds,
+                "removing metadata bounds must retain the existing native derived-bounds render path");
+    harness.game->getContext()->shutdown();
+}
+
+void testCollapsedMinimapPreservesOrderedRasterWinner() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 223}});
+    map->setYBounds({{0, 191}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    auto grass = std::make_shared<CTile>();
+    auto water = std::make_shared<CTile>();
+    grass->setTileType("grass");
+    water->setTileType("water");
+    map->addTile(grass, 100, 100, 0);
+    map->addTile(water, 101, 100, 0);
+    auto visitor_last = [&] {
+        std::shared_ptr<CTile> last;
+        map->forTiles([&](std::shared_ptr<CTile> tile) { last = std::move(tile); });
+        return last;
+    };
+    auto snapshot = map->getTiles();
+    auto ordered_last = *snapshot.rbegin();
+    if (visitor_last() == ordered_last) {
+        map->removeTile(100, 100, 0);
+        map->removeTile(101, 100, 0);
+        map->addTile(water, 100, 100, 0);
+        map->addTile(grass, 101, 100, 0);
+    }
+    const auto unordered_last = visitor_last();
+    expect_true(unordered_last != ordered_last,
+                "collapsed collision fixture must distinguish native visitor order from the ordered snapshot");
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    Uint32 pixel = 0;
+    const SDL_Rect shared_pixel{57, 66, 1, 1};
+    expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &shared_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                     sizeof(pixel)) == 0,
+                "collapsed native terrain overlap must support actual isolated-renderer pixel readback");
+    const Uint32 expected = ordered_last == grass ? 0x002d6f37u : 0x001d5694u;
+    const Uint32 unordered = unordered_last == grass ? 0x002d6f37u : 0x001d5694u;
+    expect_true((pixel & 0x00ffffffu) == expected && (pixel & 0x00ffffffu) != unordered,
+                "collapsed overlapping cells must retain the original owning-set raster order and last-cell color");
+    const auto builds = minimap->getTerrainTextureBuildCount();
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == builds,
+                "preserving the original collapsed raster must still reuse an unchanged warmed texture");
+    harness.game->getContext()->shutdown();
+}
+
+void testMinimapReplacementIdentityRefreshesCollapsedRaster() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 223}});
+    map->setYBounds({{0, 191}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    std::set<std::shared_ptr<CTile>> pointer_order{std::make_shared<CTile>(), std::make_shared<CTile>(),
+                                                   std::make_shared<CTile>()};
+    auto ordered = pointer_order.begin();
+    auto old_grass = *ordered++;
+    auto water = *ordered++;
+    auto new_grass = *ordered;
+    const std::less<std::shared_ptr<CTile>> less;
+    expect_true(pointer_order.size() == 3 && less(old_grass, water) && less(water, new_grass),
+                "replacement fixture retains three distinct tiles in the original raster's total pointer order");
+    old_grass->setTileType("grass");
+    new_grass->setTileType("grass");
+    water->setTileType("water");
+    expect_true(map->addTile(old_grass, 100, 100, 0) && map->addTile(water, 101, 100, 0),
+                "replacement fixture must install the original two overlapping native terrain cells");
+    auto traversal = [&] {
+        std::vector<std::pair<Coords, std::string>> result;
+        map->forTiles(
+            [&](std::shared_ptr<CTile> tile) { result.emplace_back(tile->getCoords(), tile->getTileType()); });
+        return result;
+    };
+    const auto original_traversal = traversal();
+    expect_true(*map->getTiles().rbegin() == water,
+                "the initial ordered raster must paint water after the lower-address grass instance");
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render_pixel = [&] {
+        minimap->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect shared_pixel{57, 66, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &shared_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "replacement collision regression must read its actual isolated renderer pixel");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(render_pixel() == 0x001d5694u, "the initial collapsed water winner must be visibly blue");
+    const auto warm_builds = minimap->getTerrainTextureBuildCount();
+    expect_true(render_pixel() == 0x001d5694u && minimap->getTerrainTextureBuildCount() == warm_builds,
+                "the original unchanged collapsed terrain must reuse its warmed texture");
+    map->removeTile(100, 100, 0);
+    map->removeTile(101, 100, 0);
+    expect_true(map->addTile(new_grass, 100, 100, 0) && map->addTile(water, 101, 100, 0),
+                "replacement fixture must reinstall the same coordinate keys in the same insertion order");
+    expect_true(traversal() == original_traversal,
+                "same-type replacement must preserve the complete fresh coordinate and type traversal sequence");
+    expect_true(*map->getTiles().rbegin() == new_grass,
+                "the replacement grass instance must now paint last under the original ordered raster");
+    const auto refreshed_pixel = render_pixel();
+    expect_true(refreshed_pixel == 0x002d6f37u,
+                "same-type tile replacement must refresh the collapsed raster's changed pointer-order winner");
+    expect_true(minimap->getTerrainTextureBuildCount() == warm_builds + 1,
+                "same-type instance replacement must rebuild the warmed terrain texture exactlyonce");
+    const auto replacement_builds = minimap->getTerrainTextureBuildCount();
+    expect_true(render_pixel() == refreshed_pixel && minimap->getTerrainTextureBuildCount() == replacement_builds,
+                "repeating the unchanged replacement frame must retain its color and reuse the fresh texture");
+    harness.game->getContext()->shutdown();
+}
+
 void testRetainedMinimapTextureDoesNotOutliveItsRenderer() {
     auto harness = make_minimap_harness();
     harness.map->setXBounds({{0, 3}});
@@ -4138,6 +4305,63 @@ void test_render_context_copy_ex_rotates_and_tracks_stats() {
     expect_true(stats.failedCopies == 0, "render context copyEx should not count failed copies for valid smoke path");
 }
 
+void testEmptyTextMetricsDoNotLoadTexturesOrEvictValidEntries() {
+    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "dummy", SDL_HINT_OVERRIDE);
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
+    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0)
+        expect_true(SDL_Init(SDL_INIT_VIDEO) == 0, "empty text fixture must initialize isolated SDL video");
+    const auto driver = SDL_GetCurrentVideoDriver();
+    const bool isolated = driver && std::string(driver) == "dummy";
+    expect_true(isolated, "empty text fixture must use the dummy video driver");
+    if (!isolated)
+        return;
+    auto gui = std::make_shared<CGui>();
+    auto renderer = gui->getRenderer();
+    SDL_RendererInfo rendererInfo{};
+    const bool software = renderer && SDL_GetRendererInfo(renderer, &rendererInfo) == 0 &&
+                          (rendererInfo.flags & SDL_RENDERER_SOFTWARE) != 0;
+    expect_true(software, "empty text fixture must have a real software renderer");
+    if (!software)
+        return;
+    auto manager = std::make_shared<CTextManager>(gui);
+    const std::string sentinel = "empty text nonempty sentinel";
+    const auto sentinelSize = manager->getTextureSize(sentinel);
+    const bool fontReady = sentinelSize.first > 0 && sentinelSize.second > 0 && manager->getTextureLoadCount() == 1 &&
+                           manager->getCachedFontCount() > 0;
+    expect_true(fontReady, "empty text fixture must first rasterize a real nonempty font texture");
+    if (!fontReady)
+        return;
+    constexpr std::size_t CACHE_CAPACITY = 512;
+    for (std::size_t index = 1; index < CACHE_CAPACITY; ++index)
+        manager->getTextureSize("empty text cache sentinel " + std::to_string(index));
+    expect_true(manager->getCachedTextureCount() == CACHE_CAPACITY,
+                "empty text fixture must reach the unchanged 512-texture boundary");
+    const auto loads = manager->getTextureLoadCount();
+    const auto fonts = manager->getCachedFontCount();
+    SDL_ClearError();
+    const auto emptySize = manager->getTextureSize("");
+    const std::string firstError = SDL_GetError();
+    std::cout << "empty text native observation: renderer=software sentinel=" << sentinelSize.first << "x"
+              << sentinelSize.second << " empty=" << emptySize.first << "x" << emptySize.second
+              << " load-delta=" << manager->getTextureLoadCount() - loads << " cache-before=" << CACHE_CAPACITY
+              << " cache-after=" << manager->getCachedTextureCount() << " first-error=[" << firstError << "]\n";
+    expect_true(emptySize == std::make_pair(0, 0), "empty text must have zero native dimensions");
+    expect_true(firstError.empty(), "empty text must not enter TTF or leave a new SDL error");
+    expect_true(manager->getWrappedTextureSize("", 64) == std::make_pair(0, 0) &&
+                    manager->measureText("", 80, "heading") == std::make_pair(0, 0) && manager->countLines("", 80) == 1,
+                "all public empty metric paths must preserve zero-size and one-line fallback semantics");
+    expect_true(manager->getTextureLoadCount() == loads && manager->getCachedFontCount() == fonts,
+                "empty metrics must perform zero texture loads or font-cache work");
+    expect_true(manager->getCachedTextureCount() == CACHE_CAPACITY,
+                "empty metrics must not insert a null entry or evict a full valid texture cache");
+    expect_true(manager->getTextureSize(sentinel) == sentinelSize && manager->getTextureLoadCount() == loads,
+                "nonempty sentinel must remain cached with unchanged dimensions after empty reads");
+    expect_true(std::string(SDL_GetError()).empty(), "empty wrapped and role metrics must leave SDL error clear");
+    gui.reset();
+    expect_true(manager->getTextureSize("") == std::make_pair(0, 0) && manager->getCachedTextureCount() == 0,
+                "empty metrics after GUI expiry must retain existing renderer-owned cache cleanup");
+}
+
 void testTextMetricsCacheAndExpiredGuiFallbacks() {
     auto gui = std::make_shared<CGui>();
     auto manager = std::make_shared<CTextManager>(gui);
@@ -5019,11 +5243,16 @@ int main() {
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    testMinimapFreshTraversalPreservesTerrainUpdates();
+    testCollapsedMinimapPreservesOrderedRasterWinner();
+    testMinimapReplacementIdentityRefreshesCollapsedRaster();
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();
     testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
     testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
     testRetainedGuiReleasesSdlOwnersAtShutdownBeforeLateTextureAndWorkerCleanup();
     test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
+
+    testEmptyTextMetricsDoNotLoadTexturesOrEvictValidEntries();
 
     return finish_tests();
 }
