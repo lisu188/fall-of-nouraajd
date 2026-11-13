@@ -50,7 +50,7 @@ class CProxyTargetGraphicsObject : public CGameGraphicsObject {
 
     void refreshObject(int x, int y);
 
-    void refreshAll();
+    virtual void refreshAll();
 
     void addProxyObject(std::shared_ptr<CGui> gui, int &x, int &y);
 
