@@ -307,52 +307,58 @@ int initiative_score(const std::shared_ptr<CCreature> &creature) {
     return creature->getStats()->getAgility() * 2 + creature->getLevel();
 }
 
-encounter_type build_turn_order(const std::shared_ptr<CMap> &encounterMap, const std::shared_ptr<CCreature> &attacker,
-                                const encounter_type &opponents, const encounter_type &allies = {}) {
-    encounter_type order;
+struct InitiativeEntry {
+    std::shared_ptr<CCreature> creature;
+    int score;
+};
+
+using InitiativeOrder = std::vector<InitiativeEntry>;
+
+InitiativeOrder build_turn_order(const std::shared_ptr<CMap> &encounterMap, const std::shared_ptr<CCreature> &attacker,
+                                 const encounter_type &opponents, const encounter_type &allies = {}) {
+    InitiativeOrder order;
+    order.reserve(1 + opponents.size() + allies.size());
     if (is_active_participant(encounterMap, attacker)) {
-        order.push_back(attacker);
+        order.push_back({attacker, initiative_score(attacker)});
     }
     for (const auto &opponent : opponents) {
         if (is_active_participant(encounterMap, opponent)) {
-            order.push_back(opponent);
+            order.push_back({opponent, initiative_score(opponent)});
         }
     }
     for (const auto &ally : allies) {
         if (is_active_participant(encounterMap, ally)) {
-            order.push_back(ally);
+            order.push_back({ally, initiative_score(ally)});
         }
     }
     std::stable_sort(order.begin(), order.end(), [attacker](const auto &left, const auto &right) {
-        if (left == right) {
+        if (left.creature == right.creature) {
             return false;
         }
-        const auto leftScore = initiative_score(left);
-        const auto rightScore = initiative_score(right);
-        if (leftScore != rightScore) {
-            return leftScore > rightScore;
+        if (left.score != right.score) {
+            return left.score > right.score;
         }
-        if (left == attacker) {
+        if (left.creature == attacker) {
             return true;
         }
-        if (right == attacker) {
+        if (right.creature == attacker) {
             return false;
         }
-        return combat_name(left) < combat_name(right);
+        return combat_name(left.creature) < combat_name(right.creature);
     });
     return order;
 }
 
-std::string format_turn_order(const encounter_type &turnOrder) {
+std::string format_turn_order(const InitiativeOrder &turnOrder) {
     std::string text = "Initiative: ";
     bool first = true;
-    for (const auto &creature : turnOrder) {
+    for (const auto &entry : turnOrder) {
         if (!first) {
             text += " > ";
         }
-        text += combat_name(creature);
+        text += combat_name(entry.creature);
         text += " (";
-        text += vstd::str(initiative_score(creature));
+        text += vstd::str(entry.score);
         text += ")";
         first = false;
     }
@@ -862,7 +868,8 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         auto before = encounter_state(attacker, opponents, allies);
         const auto turnOrder = build_turn_order(encounterMap, attacker, opponents, allies);
 
-        for (const auto &actor : turnOrder) {
+        for (const auto &entry : turnOrder) {
+            const auto &actor = entry.creature;
             if (result.outcome != CFightOutcome::Invalid || !is_active_participant(encounterMap, attacker) ||
                 opponents.empty()) {
                 break;
@@ -1658,3 +1665,11 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
 }
 
 void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) { apply_effects_with_result(cr); }
+
+namespace performance_guard {
+std::string combatInitiativeText(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &attacker,
+                                 const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                 const std::vector<std::shared_ptr<CCreature>> &allies) {
+    return format_turn_order(build_turn_order(map, attacker, opponents, allies));
+}
+} // namespace performance_guard

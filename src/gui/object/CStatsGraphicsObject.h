@@ -28,6 +28,17 @@ class CStatsGraphicsUtil {
     friend class CStatsGraphicsObject;
 
   public:
+    struct Resources {
+        int hp = 0;
+        int hpMax = 0;
+        int hpRatio = 0;
+        int mana = 0;
+        int manaMax = 0;
+        int manaRatio = 0;
+    };
+
+    static Resources captureResources(const std::shared_ptr<CCreature> &creature);
+
     static void drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreature> creature, int x, int y, int h, int w,
                           bool showNumeric, bool showExp);
 

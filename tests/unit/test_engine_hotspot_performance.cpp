@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
+#include "gui/object/CStatsGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CEffect.h"
@@ -58,6 +59,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <utility>
 #include <vector>
+
+namespace performance_guard {
+std::string combatInitiativeText(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &attacker,
+                                 const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                 const std::vector<std::shared_ptr<CCreature>> &allies);
+}
 
 namespace {
 
@@ -941,6 +948,142 @@ void test_bulk_inventory_property_notifications_are_count_bounded() {
                 "bulk inventory property notification should report only the items property");
     expect_true(probe->inventory_changed_calls == BULK_INVENTORY_ITEM_COUNT,
                 "legacy inventoryChanged remains item-level until GUI refresh migrates to property notifications");
+}
+
+class StatCompositionProbe {
+  public:
+    StatCompositionProbe() { performance_guard::resetStatCompositionProbe(); }
+    ~StatCompositionProbe() { performance_guard::disableStatCompositionProbe(); }
+    std::size_t count() const { return performance_guard::statCompositionProbeCount(); }
+};
+
+void expectResourceSnapshot(const std::shared_ptr<CCreature> &creature) {
+    const int hpMax = creature->getHpMax();
+    const int hpRatio = creature->getHpRatio();
+    const int manaMax = creature->getManaMax();
+    const int manaRatio = creature->getManaRatio();
+    StatCompositionProbe probe;
+    const auto snapshot = CStatsGraphicsUtil::captureResources(creature);
+    expect_true(probe.count() == 1, "one resource snapshot must compose effective stats exactly once");
+    expect_true(snapshot.hp == creature->getHp() && snapshot.hpMax == hpMax && snapshot.hpRatio == hpRatio &&
+                    snapshot.mana == creature->getMana() && snapshot.manaMax == manaMax &&
+                    snapshot.manaRatio == manaRatio,
+                "resource snapshots must retain the public maxima and exact HP/mana ratio semantics");
+}
+
+void testResourceSnapshotsPreserveRatiosAndFreshStatOwnership() {
+    auto creature = std::make_shared<CCreature>();
+    creature->getBaseStats()->setMainStat("intelligence");
+    std::size_t cases = 0;
+    for (const int stamina : {-2, 0, 1, 10}) {
+        for (const int intelligence : {-2, 0, 1, 10}) {
+            creature->getBaseStats()->setStamina(stamina);
+            creature->getBaseStats()->setIntelligence(intelligence);
+            for (const int hp : {-20, -1, 0, 1, 35, 100}) {
+                for (const int mana : {-20, -1, 0, 1, 35, 100}) {
+                    creature->setHp(hp);
+                    creature->setMana(mana);
+                    expectResourceSnapshot(creature);
+                    ++cases;
+                }
+            }
+        }
+    }
+    for (int mode = 0; mode < 7; ++mode) {
+        auto fixture = stat_composition_fixture::make(mode);
+        fixture.creature->setHp(9);
+        fixture.creature->setMana(13);
+        expectResourceSnapshot(fixture.creature);
+        for (const auto &source : fixture.sources) {
+            source->setStamina(source->getStamina() + 2);
+            source->setIntelligence(source->getIntelligence() + 3);
+            source->setStrength(source->getStrength() + 4);
+        }
+        expectResourceSnapshot(fixture.creature);
+        auto first = fixture.creature->getStats();
+        auto second = fixture.creature->getStats();
+        const auto expected = second->modifier();
+        first->setStamina(first->getStamina() + 100);
+        expect_true(first != second && second->modifier() == expected &&
+                        fixture.creature->getStats()->modifier() == expected,
+                    "public stat reads must remain fresh mutable values after snapshot rendering");
+    }
+    StatCompositionProbe probe;
+    const auto empty = CStatsGraphicsUtil::captureResources(nullptr);
+    expect_true(probe.count() == 0 && empty.hp == 0 && empty.mana == 0,
+                "a missing resource actor must not compose stats");
+    std::cout << "resource snapshot guard: ratioCases=" << cases
+              << " compositionModes=7 readsPerSnapshot=1 nestedMutationAndOwnership=preserved\n";
+}
+
+void testStatsHudComposesOncePerDraw() {
+    constexpr std::size_t frames = 64;
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(make_actor_stats());
+    creature->setHp(35);
+    creature->setMana(28);
+    StatCompositionProbe probe;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        CStatsGraphicsUtil::drawStats(gui, creature, 0, 0, 240, 120, true, false);
+    }
+    expect_true(probe.count() == frames,
+                "numeric HP/mana HUD draws must compose once per frame, not once per maximum or ratio");
+    std::cout << "stats HUD work: frames=" << frames << " compositions=" << probe.count() << " budget=" << frames
+              << " legacy=320\n";
+}
+
+void testInitiativeSnapshotsComposeOncePerActiveParticipant() {
+    constexpr std::size_t passes = 64;
+    auto fixture = make_open_map(1, 1);
+    const auto actor = [&](const std::string &name, int agility) {
+        auto result = make_actor(fixture, name, ZERO, "");
+        result->setLabel(name);
+        result->getBaseStats()->setAgility(agility);
+        add_object(fixture, result);
+        return result;
+    };
+    auto hero = actor("Hero", 10);
+    auto alpha = actor("Alpha", 10);
+    auto zulu = actor("Zulu", 10);
+    auto fast = actor("Fast", 20);
+    auto dead = actor("Dead", 50);
+    dead->setHp(0);
+    auto detached = make_actor(fixture, "Detached", ZERO, "");
+    const std::vector<std::shared_ptr<CCreature>> opponents{zulu, dead, nullptr, alpha, detached};
+    const std::vector<std::shared_ptr<CCreature>> allies{fast};
+    std::size_t reads = 0;
+    {
+        StatCompositionProbe probe;
+        for (std::size_t pass = 0; pass < passes; ++pass) {
+            const auto text = performance_guard::combatInitiativeText(fixture.map, hero, opponents, allies);
+            expect_true(text == "Initiative: Fast (41) > Hero (21) > Alpha (21) > Zulu (21)",
+                        "initiative snapshots must preserve scores, attacker tie priority and name tie ordering");
+        }
+        reads = probe.count();
+    }
+    expect_true(reads == passes * 4, "initiative sorting and formatting must share one score per active actor");
+    zulu->getBaseStats()->setAgility(30);
+    {
+        StatCompositionProbe probe;
+        expect_true(performance_guard::combatInitiativeText(fixture.map, hero, opponents, allies) ==
+                            "Initiative: Zulu (61) > Fast (41) > Hero (21) > Alpha (21)" &&
+                        probe.count() == 4,
+                    "each new initiative snapshot must observe nested stat changes immediately");
+    }
+    fast->setHp(0);
+    {
+        StatCompositionProbe probe;
+        expect_true(performance_guard::combatInitiativeText(fixture.map, hero, opponents, allies) ==
+                            "Initiative: Zulu (61) > Hero (21) > Alpha (21)" &&
+                        probe.count() == 3,
+                    "new initiative snapshots must exclude participants that died since the previous pass");
+    }
+    std::cout << "initiative work: passes=" << passes << " activeActors=4 compositions=" << reads
+              << " budget=" << passes * 4 << "\n";
+    fixture.game->getContext()->shutdown();
 }
 
 void test_stat_composition_eliminates_repeated_reflective_increments() {
@@ -1857,6 +2000,9 @@ void run_engine_hotspot_performance_tests() {
     }
 
     test_stat_composition_eliminates_repeated_reflective_increments();
+    testResourceSnapshotsPreserveRatiosAndFreshStatOwnership();
+    testStatsHudComposesOncePerDraw();
+    testInitiativeSnapshotsComposeOncePerActiveParticipant();
     testSuspendedPlayerNavigationWorkIsBounded();
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
     test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
