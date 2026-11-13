@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <stop_token>
 #include <unordered_map>
 #include <vector>
 
@@ -54,6 +55,8 @@ class CPlayerController : public CController {
 
     void setTarget(std::shared_ptr<CPlayer> player, Coords target);
 
+    vstd::task<bool> setTargetAsync(std::shared_ptr<CPlayer> player, Coords target, std::stop_token stop = {});
+
     virtual vstd::task<Coords> controlAsync(std::shared_ptr<CCreature> c);
 
     std::pair<bool, Coords::Direction> isOnPath(std::shared_ptr<CPlayer> player, Coords coords);
@@ -77,8 +80,11 @@ class CPlayerController : public CController {
     std::size_t currentStep = 0;
     std::uint64_t requestSerial = 0;
     std::uint64_t overlayLookupCount = 0;
+    std::optional<std::stop_source> pendingSearch;
 
     CNavigationSearchResult calculatePath(std::shared_ptr<CPlayer> ptr);
+
+    void installPath(std::shared_ptr<CPlayer> player, Coords target, CNavigationSearchResult result);
 
     void clearPath();
 
@@ -187,6 +193,8 @@ class CNpcRandomController : public CController {
     struct NpcRoute;
     std::shared_ptr<NpcRoute> route;
     std::size_t currentStep = 0;
+    std::uint64_t requestSerial = 0;
+    std::optional<std::stop_source> pendingSearch;
 };
 
 class CGroundController : public CController {

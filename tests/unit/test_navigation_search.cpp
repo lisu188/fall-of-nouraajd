@@ -97,6 +97,32 @@ void testDiscoveredGoalDoesNotEscapeLimits() {
                 "next-step failure agrees with full-route failure");
 }
 
+void testStopTokenBoundsCancelledSearchWork() {
+    std::stop_source cancellation;
+    CNavigationSearchLimits limits;
+    limits.stopToken = cancellation.get_token();
+    std::size_t neighborCalls = 0;
+    auto passable = [](Coords c) { return c.z == 0 && c.y == 0 && c.x >= 0 && c.x <= 1000; };
+    auto neighbors = [&](Coords c) {
+        if (++neighborCalls == 8)
+            cancellation.request_stop();
+        return std::vector<Coords>{c + EAST};
+    };
+    auto result = CNavigationSearch::findGenericPath(ZERO, Coords(1000, 0, 0), passable, noWaypoint, neighbors,
+                                                     zeroDistance, CPathFinder::DefaultStepCost{}, {}, limits);
+    expect_true(result.status == CNavigationSearchStatus::Cancelled && result.path.empty() && result.firstStep == ZERO,
+                "a cancelled search must not publish a route or a partial movement step");
+    expect_true(result.statistics.expansions == 8 && neighborCalls == 8,
+                "cancellation must stop before another expansion rather than exhaust the thousand-cell route");
+    auto stopped = CNavigationSearch::findGenericPath(ZERO, Coords(1000, 0, 0), passable, noWaypoint, neighbors,
+                                                      zeroDistance, CPathFinder::DefaultStepCost{}, {}, limits);
+    expect_true(stopped.status == CNavigationSearchStatus::Cancelled && stopped.statistics.expansions == 0 &&
+                    neighborCalls == 8,
+                "an already cancelled request must perform zero graph expansion or callback work");
+    std::cout << "Navigation cancellation: expansions=" << result.statistics.expansions
+              << "/8 preCancelledExpansions=" << stopped.statistics.expansions << "/0\n";
+}
+
 void testLongDetourNoEnvelope() {
     const Coords start(0, 0, 0), goal(1, 0, 0);
     auto passable = [](Coords c) { return c.z == 0 && c.x >= 0 && c.x <= 1 && c.y >= 0 && c.y <= 600; };
@@ -386,6 +412,7 @@ int main() {
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
     testLargeCostsAndFailureSentinels();
     testDiscoveredGoalDoesNotEscapeLimits();
+    testStopTokenBoundsCancelledSearchWork();
     testLongDetourNoEnvelope();
     testReopeningAndDecreaseKey();
     testPathLengthLimitAlsoBoundsNextStep();

@@ -9,6 +9,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CNavigation.h"
+#include "core/CNavigationSearch.h"
 #include "core/CRuntimeBridge.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
@@ -27,6 +28,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <array>
 #include <algorithm>
+#include <atomic>
+#include <future>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -34,6 +37,16 @@ SPDX-License-Identifier: GPL-3.0-or-later
 namespace {
 Coords resolvePlan(vstd::task<Coords> plan) {
     return game_async::run(std::move(plan), game_async::WaitMode::PostedWork);
+}
+
+template <typename Predicate> bool pumpUntil(Predicate ready) {
+    const auto loop = vstd::event_loop<>::instance();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!ready() && std::chrono::steady_clock::now() < deadline) {
+        loop->runReady();
+        game_async::waitForProgress(loop->hasReadyWork());
+    }
+    return ready();
 }
 
 class SolidMovementAnimation : public CStaticAnimation {
@@ -151,7 +164,13 @@ struct PreviewFixture {
 
     ~PreviewFixture() { game->getContext()->shutdown(); }
 
+    void waitForPlanning() {
+        expect_true(pumpUntil([this] { return !world->isTravelling() || map->isMoving(); }),
+                    "worker route planning must finish before movement assertions");
+    }
+
     void frame() {
+        waitForPlanning();
         world->renderObject(gui, world->getLayout()->getRect(world), static_cast<int>(frameTime));
         frameTime += 75;
         auto loop = vstd::event_loop<>::instance();
@@ -160,6 +179,7 @@ struct PreviewFixture {
     }
 
     void finishMovement() {
+        waitForPlanning();
         for (int frames = 0; frames < 128 && (world->isTravelling() || map->isMoving()); ++frames)
             frame();
         expect_true(!world->isTravelling() && !map->isMoving(),
@@ -196,6 +216,290 @@ struct PreviewFixture {
     }
 };
 
+struct RouteFactoryGate {
+    std::atomic_bool entered = false;
+    std::atomic_bool released = false;
+    std::atomic_size_t arrivals = 0;
+    std::size_t blockedCalls = 1;
+    std::promise<void> resume;
+    std::shared_future<void> resumed = resume.get_future().share();
+
+    void release() {
+        if (!released.exchange(true))
+            resume.set_value();
+    }
+
+    std::shared_ptr<CTile> sample() {
+        if (!vstd::event_loop<>::instance()->isMainThread() && arrivals.fetch_add(1) < blockedCalls) {
+            entered.store(true);
+            std::optional<pybind11::gil_scoped_release> releaseGil;
+            if (PyGILState_Check())
+                releaseGil.emplace();
+            resumed.wait();
+        }
+        auto tile = std::make_shared<CTile>();
+        tile->setCanStep(true);
+        return tile;
+    }
+};
+
+std::shared_ptr<RouteFactoryGate> pauseRouteFactory(PreviewFixture &fixture) {
+    auto gate = std::make_shared<RouteFactoryGate>();
+    fixture.game->getObjectHandler()->registerType("pausedRouteFloor", [gate] { return gate->sample(); });
+    fixture.map->setDefaultTiles({{0, "pausedRouteFloor"}});
+    fixture.map->removeTile(1, 0, 0);
+    return gate;
+}
+
+void testAsyncPlayerSearchesYieldAndRejectSupersededResults() {
+    for (int mutation = 0; mutation < 13; ++mutation) {
+        PreviewFixture fixture(5, false);
+        auto gate = pauseRouteFactory(fixture);
+        auto service = fixture.map->getNavigationService();
+        const auto searches = service->searchCount();
+        const auto ownerSearches = service->ownerThreadSearchCount();
+        vstd::task_group requests;
+        const auto loop = vstd::event_loop<>::instance();
+        std::stop_source callerCancellation;
+        auto request = requests.spawn(
+            fixture.controller->setTargetAsync(fixture.player, Coords(4, 0, 0), callerCancellation.get_token()),
+            vstd::loopScheduler(loop));
+        bool ownerCallback = false;
+        auto marker = requests.spawn(game_async::dispatch([&] { ownerCallback = true; }), vstd::loopScheduler(loop));
+        const bool entered = pumpUntil([&] { return gate->entered.load() || request.finished(); });
+        loop->runReady();
+        expect_true(entered && gate->entered.load() && ownerCallback && !request.finished(),
+                    "an owner-loop callback must run while a player search is paused on a worker");
+        expect_true(service->searchCount() == searches + 1 && service->ownerThreadSearchCount() == ownerSearches,
+                    "an asynchronous player route must execute one search and zero searches on the owner thread");
+        std::shared_ptr<CMap> replacementMap;
+        std::shared_ptr<CGame> replacementGame;
+        if (mutation == 1)
+            fixture.controller->interrupt(fixture.player);
+        else if (mutation == 2)
+            fixture.controller->setTarget(fixture.player, Coords(0, 1, 0));
+        else if (mutation == 3)
+            fixture.player->relocateWithoutMoveHooks(Coords(0, 1, 0));
+        else if (mutation == 4)
+            fixture.map->getTile(Coords(2, 0, 0))->setCanStep(false);
+        else if (mutation == 5)
+            fixture.game->getContext()->advanceTransitionGeneration();
+        else if (mutation == 6)
+            fixture.player->setController(std::make_shared<CPlayerController>());
+        else if (mutation == 7)
+            fixture.game->setMap(std::make_shared<CMap>());
+        else if (mutation == 8)
+            callerCancellation.request_stop();
+        else if (mutation == 9)
+            request.requestStop();
+        else if (mutation == 10) {
+            fixture.game->setMap(std::make_shared<CMap>());
+            fixture.game->setMap(fixture.map);
+        } else if (mutation == 11) {
+            replacementMap = std::make_shared<CMap>();
+            replacementMap->setGame(fixture.game);
+            replacementMap->addObject(fixture.player);
+        } else if (mutation == 12) {
+            replacementGame = std::make_shared<CGame>();
+            replacementGame->setMap(fixture.map);
+            fixture.player->setGame(replacementGame);
+        }
+        gate->release();
+        bool accepted = false;
+        bool cancelled = false;
+        try {
+            accepted = game_async::wait(request, game_async::WaitMode::PostedWork);
+        } catch (const vstd::task_cancelled &) {
+            cancelled = true;
+        }
+        expect_true(cancelled == (mutation == 9),
+                    "task cancellation must preserve the coroutine cancellation contract");
+        expect_true(accepted == (mutation == 0), "only a still-current asynchronous route may be installed");
+        if (mutation == 0)
+            expect_true(resolvePlan(fixture.controller->controlAsync(fixture.player)) == EAST,
+                        "a worker-produced route must preserve the exact legal first step");
+        else if (mutation == 2)
+            expect_true(resolvePlan(fixture.controller->controlAsync(fixture.player)) == SOUTH,
+                        "a completed obsolete worker must not clear or replace a newer synchronous target");
+        else
+            expect_true(fixture.controller->isCompleted(fixture.player),
+                        "invalidated asynchronous work must leave no usable stale route");
+    }
+    std::cout << "[async route guard] scenarios=13 worker_searches_per_request=1 owner_searches_per_request=0\n";
+}
+
+void testCancellationBeforePlanningPreservesTheCurrentRoute() {
+    PreviewFixture fixture(5, false);
+    fixture.controller->setTarget(fixture.player, SOUTH);
+    const auto service = fixture.map->getNavigationService();
+    const auto searches = service->searchCount();
+    const auto request = fixture.controller->getRequestSerial();
+    std::stop_source cancellation;
+    cancellation.request_stop();
+    const bool accepted =
+        game_async::run(fixture.controller->setTargetAsync(fixture.player, Coords(4, 0, 0), cancellation.get_token()),
+                        game_async::WaitMode::PostedWork);
+    expect_true(!accepted && service->searchCount() == searches && fixture.controller->getRequestSerial() == request &&
+                    resolvePlan(fixture.controller->controlAsync(fixture.player)) == SOUTH,
+                "a request cancelled before its coroutine starts must leave the existing route untouched");
+}
+
+void testClickSearchStaysResponsiveToEscapeAndReplacement() {
+    for (const bool replace : {false, true}) {
+        PreviewFixture fixture(5);
+        auto gate = pauseRouteFactory(fixture);
+        auto service = fixture.map->getNavigationService();
+        const auto ownerSearches = service->ownerThreadSearchCount();
+        const auto turn = fixture.map->getTurn();
+        fixture.world->startTravel(fixture.gui, Coords(4, 0, 0));
+        const bool entered = pumpUntil([&] { return gate->entered.load() || !fixture.world->isTravelling(); });
+        expect_true(entered && gate->entered.load() && fixture.world->isTravelling() && !fixture.map->isMoving() &&
+                        service->ownerThreadSearchCount() == ownerSearches,
+                    "click-to-move must release the owner loop before searching or advancing a turn");
+        if (replace) {
+            fixture.world->startTravel(fixture.gui, Coords(0, 1, 0));
+        } else {
+            SDL_Event escape{};
+            escape.type = SDL_KEYDOWN;
+            escape.key.keysym.sym = SDLK_ESCAPE;
+            fixture.gui->event(&escape);
+        }
+        gate->release();
+        fixture.finishMovement();
+        expect_true(fixture.player->getCoords() == (replace ? SOUTH : ZERO) &&
+                        fixture.map->getTurn() == turn + (replace ? 1 : 0),
+                    "replacing or cancelling a pending click must not commit any step from its obsolete route");
+        expect_true(service->ownerThreadSearchCount() == ownerSearches,
+                    "replacement clicks must also keep every full search off the owner loop");
+    }
+    std::cout << "[click route guard] owner_searches=0 cancelled_turns=0 replacement_turns=1\n";
+}
+
+void testCancellingAnObsoleteClickPreservesTheReplacementController() {
+    PreviewFixture fixture(5);
+    auto gate = pauseRouteFactory(fixture);
+    fixture.world->startTravel(fixture.gui, Coords(4, 0, 0));
+    expect_true(pumpUntil([&] { return gate->entered.load(); }),
+                "the obsolete-controller fixture must pause its original click on a worker");
+    auto replacement = std::make_shared<CPlayerController>();
+    fixture.player->setController(replacement);
+    replacement->setTarget(fixture.player, SOUTH);
+    const auto request = replacement->getRequestSerial();
+    fixture.world->cancelTravel();
+    gate->release();
+    fixture.finishMovement();
+    expect_true(replacement->getRequestSerial() == request &&
+                    resolvePlan(replacement->controlAsync(fixture.player)) == SOUTH &&
+                    fixture.player->getCoords() == ZERO,
+                "cancelling an old click must stop only its search and preserve a newer controller's route");
+}
+
+void testClickReservesItsRequestBeforeYieldingAndPreservesNewerTargets() {
+    PreviewFixture fixture(5);
+    fixture.controller->setTarget(fixture.player, SOUTH);
+    auto gate = pauseRouteFactory(fixture);
+    const auto previousRequest = fixture.controller->getRequestSerial();
+    const auto turn = fixture.map->getTurn();
+    fixture.world->startTravel(fixture.gui, Coords(4, 0, 0));
+    expect_true(fixture.controller->getRequestSerial() == previousRequest + 1 && fixture.world->isTravelling(),
+                "awaiting a player request must reserve its serial inline before startTravel returns to its caller");
+    expect_true(pumpUntil([&] { return gate->entered.load(); }),
+                "the serial-ownership fixture must suspend its first search on a worker");
+    fixture.world->cancelTravel();
+    fixture.controller->setTarget(fixture.player, SOUTH);
+    const auto replacementRequest = fixture.controller->getRequestSerial();
+    gate->release();
+    fixture.finishMovement();
+    expect_true(replacementRequest == previousRequest + 2 &&
+                    fixture.controller->getRequestSerial() == replacementRequest &&
+                    resolvePlan(fixture.controller->controlAsync(fixture.player)) == SOUTH &&
+                    fixture.player->getCoords() == ZERO && fixture.map->getTurn() == turn,
+                "cancelled GUI cleanup must preserve a newer synchronous target on the same controller");
+}
+
+void testPendingClickRejectsActorAndMapChanges() {
+    for (int mutation = 0; mutation < 4; ++mutation) {
+        PreviewFixture fixture(5);
+        auto gate = pauseRouteFactory(fixture);
+        const auto turn = fixture.map->getTurn();
+        fixture.world->startTravel(fixture.gui, Coords(4, 0, 0));
+        expect_true(pumpUntil([&] { return gate->entered.load(); }),
+                    "the stale-click fixture must pause its original request on a worker");
+        const auto generation = fixture.game->getContext()->captureTransitionGeneration();
+        std::shared_ptr<CMap> replacementMap;
+        std::shared_ptr<CGame> replacementGame;
+        if (mutation == 0) {
+            fixture.game->setMap(std::make_shared<CMap>());
+            fixture.game->setMap(fixture.map);
+        } else if (mutation == 1) {
+            replacementMap = std::make_shared<CMap>();
+            replacementMap->setGame(fixture.game);
+            replacementMap->addObject(fixture.player);
+        } else if (mutation == 2) {
+            replacementGame = std::make_shared<CGame>();
+            replacementGame->setMap(fixture.map);
+            fixture.player->setGame(replacementGame);
+        } else {
+            fixture.player->setHp(0);
+        }
+        expect_true(fixture.game->getContext()->isTransitionGenerationCurrent(generation),
+                    "actor and map changes must be rejected without relying on transition cancellation");
+        gate->release();
+        fixture.finishMovement();
+        expect_true(fixture.player->getCoords() == ZERO && fixture.map->getTurn() == turn &&
+                        fixture.controller->isCompleted(fixture.player),
+                    "an obsolete pending click must not publish or walk after its map or actor changes");
+    }
+}
+
+void testWorkerWorkspaceAdmissionWaitsWithoutDroppingRoutes() {
+    PreviewFixture fixture(5, false);
+    auto gate = pauseRouteFactory(fixture);
+    gate->blockedCalls = 4;
+    auto service = fixture.map->getNavigationService();
+    const auto searches = service->searchCount();
+    const auto ownerSearches = service->ownerThreadSearchCount();
+    std::vector<std::future<CNavigationSearchResult>> active;
+    for (int index = 0; index < 4; ++index)
+        active.push_back(std::async(std::launch::async, [service, map = fixture.map] {
+            return service->findPathResult(map, ZERO, Coords(4, 0, 0), {}, true);
+        }));
+    expect_true(pumpUntil([&] { return gate->arrivals.load() >= 4; }),
+                "workspace admission fixture must hold all four existing search slots");
+    auto queued = std::async(std::launch::async, [service, map = fixture.map] {
+        return service->findPathResult(map, ZERO, Coords(4, 0, 0), {}, true);
+    });
+    std::stop_source cancellation;
+    auto cancelled = std::async(std::launch::async, [service, map = fixture.map, token = cancellation.get_token()] {
+        return service->findPathResult(map, ZERO, Coords(4, 0, 0), token, true);
+    });
+    const auto immediate = service->findPathResult(fixture.map, ZERO, Coords(4, 0, 0));
+    expect_true(immediate.status == CNavigationSearchStatus::Deferred,
+                "synchronous callers must retain nonblocking admission when every workspace is occupied");
+    cancellation.request_stop();
+    bool cancelledWhileBusy;
+    {
+        pybind11::gil_scoped_release releaseGil;
+        cancelledWhileBusy = cancelled.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+    }
+    expect_true(cancelledWhileBusy && service->searchCount() == searches + 4,
+                "cancelling a waiting request must wake it without claiming a workspace or starting a search");
+    gate->release();
+    {
+        pybind11::gil_scoped_release releaseGil;
+        expect_true(cancelled.get().status == CNavigationSearchStatus::Cancelled,
+                    "workspace cancellation must report cancellation rather than an unreachable route");
+        for (auto &request : active)
+            expect_true(request.get().status == CNavigationSearchStatus::Found,
+                        "occupying worker searches must retain their results when another caller waits");
+        expect_true(queued.get().status == CNavigationSearchStatus::Found,
+                    "a queued worker must search successfully after a workspace becomes available");
+    }
+    expect_true(service->searchCount() == searches + 5 && service->ownerThreadSearchCount() == ownerSearches,
+                "five successful worker requests must use exactly five searches and no owner-thread search");
+    std::cout << "[route admission guard] completed=5 cancelled_before_search=1 owner_searches=0 workspace_limit=4\n";
+}
+
 void testPreviewAndCommitReuseOneSearch() {
     PreviewFixture fixture;
     const auto service = fixture.map->getNavigationService();
@@ -222,7 +526,7 @@ void testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination() {
     const auto turn = fixture.map->getTurn();
     const auto searches = fixture.map->getNavigationService()->searchCount();
     expect_true(fixture.clickDestination(Coords(3, 0, 0)), "one left click starts the selected route");
-    vstd::event_loop<>::instance()->runUntilIdle();
+    fixture.waitForPlanning();
     expect_true(fixture.world->isTravelling() && fixture.map->isMoving() && fixture.map->getTurn() == turn &&
                     fixture.player->getCoords() == Coords(1, 0, 0),
                 "posted-work draining must leave the first committed step waiting for its visible animation");
@@ -279,13 +583,13 @@ void testNewClickAndEscapeInterruptAtTheNextStepBoundary() {
     PreviewFixture fixture;
     const auto turn = fixture.map->getTurn();
     fixture.world->startTravel(fixture.gui, Coords(6, 0, 0));
-    vstd::event_loop<>::instance()->runUntilIdle();
+    fixture.waitForPlanning();
     fixture.world->startTravel(fixture.gui, Coords(1, 1, 0));
     fixture.finishMovement();
     expect_true(fixture.player->getCoords() == Coords(1, 1, 0) && fixture.map->getTurn() == turn + 2,
                 "a new destination replaces the old route after the already committed step finishes");
     fixture.world->startTravel(fixture.gui, Coords(6, 1, 0));
-    vstd::event_loop<>::instance()->runUntilIdle();
+    fixture.waitForPlanning();
     SDL_Event escape{};
     escape.type = SDL_KEYDOWN;
     escape.key.keysym.sym = SDLK_ESCAPE;
@@ -721,9 +1025,12 @@ void testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl() {
     }
     vstd::rng() = route_rng;
     const auto searches = service->searchCount();
+    const auto ownerSearches = service->ownerThreadSearchCount();
     const auto first = resolvePlan(controller->controlAsync(fixture.player));
     expect_true(first == Coords(0, 1, 0) && service->searchCount() == searches + 1,
                 "NPC wandering uses one exact session search and the cheaper weighted detour");
+    expect_true(service->ownerThreadSearchCount() == ownerSearches,
+                "NPC route construction must perform zero full searches on the owner thread");
     const auto bytes = budget->used();
     for (int sample = 0; sample < 256; ++sample)
         expect_true(resolvePlan(controller->controlAsync(fixture.player)) == first,
@@ -752,6 +1059,70 @@ void testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl() {
     vstd::rng() = saved_rng;
     std::cout << "[NPC route reuse] warm_reads=256 additional_searches=0 additional_retained_bytes=0\n";
 }
+
+void testNpcWorkerResultsRespectInterruptionAndActorLifetime() {
+    const auto savedRng = vstd::rng();
+    for (int mutation = 0; mutation < 9; ++mutation) {
+        PreviewFixture fixture(5, false);
+        auto controller = std::make_shared<CNpcRandomController>();
+        fixture.player->setController(controller);
+        auto gate = pauseRouteFactory(fixture);
+        bool selected = false;
+        for (unsigned seed = 0; seed < 1024; ++seed) {
+            vstd::rng().seed(seed);
+            const auto state = vstd::rng();
+            const auto dx = vstd::rand(-5, 5);
+            const auto dy = vstd::rand(-5, 5);
+            if (Coords(dx, dy, 0) == Coords(4, 0, 0)) {
+                vstd::rng() = state;
+                selected = true;
+                break;
+            }
+        }
+        expect_true(selected, "NPC worker fixture must choose the fixed destination without an assumed RNG sequence");
+        if (!selected)
+            break;
+        auto service = fixture.map->getNavigationService();
+        const auto ownerSearches = service->ownerThreadSearchCount();
+        vstd::task_group requests;
+        auto request = requests.spawn(controller->controlAsync(fixture.player),
+                                      vstd::loopScheduler(vstd::event_loop<>::instance()));
+        const bool entered = pumpUntil([&] { return gate->entered.load() || request.finished(); });
+        expect_true(entered && gate->entered.load() && !request.finished() &&
+                        service->ownerThreadSearchCount() == ownerSearches,
+                    "NPC route planning must suspend on a worker while leaving the owner thread available");
+        std::shared_ptr<CMap> replacementMap;
+        std::shared_ptr<CGame> replacementGame;
+        if (mutation == 1)
+            controller->interrupt(fixture.player);
+        else if (mutation == 2)
+            fixture.player->relocateWithoutMoveHooks(SOUTH);
+        else if (mutation == 3)
+            fixture.game->getContext()->advanceTransitionGeneration();
+        else if (mutation == 4)
+            fixture.player->setController(std::make_shared<CNpcRandomController>());
+        else if (mutation == 5)
+            fixture.map->getTile(Coords(2, 0, 0))->setMovementCost(2);
+        else if (mutation == 6) {
+            fixture.game->setMap(std::make_shared<CMap>());
+            fixture.game->setMap(fixture.map);
+        } else if (mutation == 7) {
+            replacementMap = std::make_shared<CMap>();
+            replacementMap->setGame(fixture.game);
+            replacementMap->addObject(fixture.player);
+        } else if (mutation == 8) {
+            replacementGame = std::make_shared<CGame>();
+            replacementGame->setMap(fixture.map);
+            fixture.player->setGame(replacementGame);
+        }
+        gate->release();
+        const auto step = game_async::wait(request, game_async::WaitMode::PostedWork);
+        expect_true(step == (mutation == 0 ? EAST : fixture.player->getCoords()),
+                    "only a current NPC worker result may return a movement step");
+    }
+    vstd::rng() = savedRng;
+    std::cout << "[NPC worker guard] scenarios=9 owner_searches=0 stale_movement_steps=0\n";
+}
 } // namespace
 
 int main() {
@@ -768,6 +1139,13 @@ int main() {
     type_registration::registerGuiWidgetTypes();
     type_registration::registerGuiAnimationTypes();
     CRuntimeBridge::set_logger_sink(vstd::logger::sink::disabled, "");
+    testAsyncPlayerSearchesYieldAndRejectSupersededResults();
+    testCancellationBeforePlanningPreservesTheCurrentRoute();
+    testClickSearchStaysResponsiveToEscapeAndReplacement();
+    testCancellingAnObsoleteClickPreservesTheReplacementController();
+    testClickReservesItsRequestBeforeYieldingAndPreservesNewerTargets();
+    testPendingClickRejectsActorAndMapChanges();
+    testWorkerWorkspaceAdmissionWaitsWithoutDroppingRoutes();
     testPreviewAndCommitReuseOneSearch();
     testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination();
     testRouteOverlayReadsPreserveAnAnimatedTurnUntilArrivalCommits();
@@ -782,5 +1160,6 @@ int main() {
     testOverlayLookupsAndRetainedStorageAreBounded();
     testCompletedPollingAbandonsBlockedRouteBeforeMovement();
     testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl();
+    testNpcWorkerResultsRespectInterruptionAndActorLifetime();
     return finish_tests();
 }
