@@ -272,8 +272,11 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
         )
 
         def runProducer(type_id, enabled, seed, pulse):
-            caster = self.actor(type_id + ("Observed" if enabled else "Ordinary") + "Caster")
-            victim = self.actor(type_id + ("Observed" if enabled else "Ordinary") + "Victim")
+            case_id = type_id + str(seed) + ("Observed" if enabled else "Ordinary")
+            caster = self.actor(case_id + "Caster")
+            victim = self.actor(case_id + "Victim")
+            self.assertIs(caster, self.gameMap.getObjectByName(caster.getName()))
+            self.assertIs(victim, self.gameMap.getObjectByName(victim.getName()))
             for actor in (caster, victim):
                 stats = actor.getObjectProperty("baseStats")
                 for name, value in (
@@ -292,6 +295,7 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                 caster.equipItem("0", weapon)
                 self.assertIs(weapon, caster.getWeapon())
             observations = []
+            observers = []
 
             class Observer(engine.CTrigger):
                 def trigger(observer, actor, event):
@@ -307,6 +311,7 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                 observer.setStringProperty("object", victim.getName())
                 observer.setStringProperty("event", kind)
                 self.gameMap.getEventHandler().registerTrigger(observer)
+                observers.append(observer)
             producer = self.game.createObject(type_id)
             self.gameMap.setBoolProperty("nativeCombatFacts", enabled)
             engine._seedRandomForTests(seed)
