@@ -1,0 +1,791 @@
+{
+  "entries": [
+    {
+      "path": "android/posix.c",
+      "provenance": "unverified upstream reconstruction; https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz; renamed posixmodule header to existing android/posix.h; Android compatibility unverified; Linux excludes this source",
+      "sha256": "07b43c6b5ac7a5d406976f8380329ec592e71bdda35b8da182149e0d3bc2ef01",
+      "source": "python-3.3.7/android__posix.c"
+    },
+    {
+      "path": "boost/python/converter/builtin_converters.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "8adae882607bf1f062ad98b5479399103301acbda9eee3b82479dc1f71318eba",
+      "source": "boost-python-1.55.0/boost__python__converter__builtin_converters.cpp"
+    },
+    {
+      "path": "boost/python/converter/from_python.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "05b6609c8d0f96d106cdc0daed11bedadb99b3fca24ef72c104500c93f1155e1",
+      "source": "boost-python-1.55.0/boost__python__converter__from_python.cpp"
+    },
+    {
+      "path": "boost/python/converter/registry.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "fd0ff814aa00789ec9198342306f20d7f66cec0f912169d7fd9ac19dd6187128",
+      "source": "boost-python-1.55.0/boost__python__converter__registry.cpp"
+    },
+    {
+      "path": "boost/python/converter/type_id.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "3932c44b8eb17b2651f4d5a8593296c222b8a9b68bfde8cda3468ad9dabc9158",
+      "source": "boost-python-1.55.0/boost__python__converter__type_id.cpp"
+    },
+    {
+      "path": "boost/python/dict.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "a2f8c9bf72aba01bf9b0a09a9d4371a60b1b3f24001f0d620c6747bee0cf864b",
+      "source": "boost-python-1.55.0/boost__python__dict.cpp"
+    },
+    {
+      "path": "boost/python/exec.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "49e4bed48a8ea472c57654fd033a9d37543daa56db376cb62f987eb7c1deb9f6",
+      "source": "boost-python-1.55.0/boost__python__exec.cpp"
+    },
+    {
+      "path": "boost/python/list.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "a96e649495b0ee48b9b14814d630956c81e2f9e99fc239d080fa0adb759769bd",
+      "source": "boost-python-1.55.0/boost__python__list.cpp"
+    },
+    {
+      "path": "boost/python/numeric.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "86566db76047049568c074cdc7a6a7ccc763591383e0c20c382f8c220ebcd03f",
+      "source": "boost-python-1.55.0/boost__python__numeric.cpp"
+    },
+    {
+      "path": "boost/python/object/class.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "afa9dbe4b854829b83990088fadc7e1927843afc9bf0fd151fad1512a6095222",
+      "source": "boost-python-1.55.0/boost__python__object__class.cpp"
+    },
+    {
+      "path": "boost/python/object/enum.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "70050f6088ff07f3d33e1f1afda0683e55bd64dab5924c8a551daec40f44c649",
+      "source": "boost-python-1.55.0/boost__python__object__enum.cpp"
+    },
+    {
+      "path": "boost/python/object/function.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "5ff5c0b062e51e103f148941c4bf3b097dd141f1b7f0600c4de81a476432e168",
+      "source": "boost-python-1.55.0/boost__python__object__function.cpp"
+    },
+    {
+      "path": "boost/python/object/function_doc_signature.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "2b9ffcb7501bb6f985e1ee37f0aa82ac09bcc9ac7409e3d9c7c435fcabe3331d",
+      "source": "boost-python-1.55.0/boost__python__object__function_doc_signature.cpp"
+    },
+    {
+      "path": "boost/python/object/life_support.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "29173c63d5d688215f57549c9c5c7ce68a0a1dc11193955803089d6f3b2d13ea",
+      "source": "boost-python-1.55.0/boost__python__object__life_support.cpp"
+    },
+    {
+      "path": "boost/python/object_protocol.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "c385134c6db50f5b4983b9085aee3e12f76a1caa14ddbf5d2aeeef70ab5970b1",
+      "source": "boost-python-1.55.0/boost__python__object_protocol.cpp"
+    },
+    {
+      "path": "compression/minizip.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114",
+      "sha256": "254342f2712562d9cd86a1c5a5d7a6875d1d9f87e56a7b39b86d847368f9bebe",
+      "source": "miniz-1.14/compression__minizip.h"
+    },
+    {
+      "path": "include/zconf.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "ed886c15c846d31d2f6e6f5a33d3f6547812d85ec2aff4c3d70e8781e45d0959",
+      "source": "zlib-1.2.7/include__zconf.h"
+    },
+    {
+      "path": "include/zlib.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "31b7ed2b5bceea407626bdbcf16a1efa9770e91b646012906ac8303aa3f1f242",
+      "source": "zlib-1.2.7/include__zlib.h"
+    },
+    {
+      "path": "json/json_batchallocator.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "0b64b404862480c6c5687bf525c6eab5ad3e1a1b6d8d3c91d9aff690ebfe1e9d",
+      "source": "jsoncpp-0.5.0/json__json_batchallocator.h"
+    },
+    {
+      "path": "json/json_internalarray.inl",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
+      "source": "jsoncpp-0.5.0/json__json_internalarray.inl"
+    },
+    {
+      "path": "json/json_internalmap.inl",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
+      "source": "jsoncpp-0.5.0/json__json_internalmap.inl"
+    },
+    {
+      "path": "json/json_reader.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "443f3b657c14477434368c2104bdb64dcf8dc1181ea2d793870050e413444868",
+      "source": "jsoncpp-0.5.0/json__json_reader.cpp"
+    },
+    {
+      "path": "json/json_value.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4",
+      "source": "jsoncpp-0.5.0/json__json_value.cpp"
+    },
+    {
+      "path": "json/json_valueiterator.inl",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc",
+      "source": "jsoncpp-0.5.0/json__json_valueiterator.inl"
+    },
+    {
+      "path": "json/json_writer.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "e7ed1796a07b6589370aa933e7bbf9c14b30168d524d0ce34b109c80344d8bed",
+      "source": "jsoncpp-0.5.0/json__json_writer.cpp"
+    },
+    {
+      "path": "json/reader.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "4f4e7ebd63a95d78aed9ac9d4ff8f3a5ffe5904c49d42e229d76a34b2c8d3da9",
+      "source": "jsoncpp-0.5.0/json__reader.h"
+    },
+    {
+      "path": "json/value.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "a95a47b35004c3fac3e89f50fba51c2d9b17cc927e5000fdd0f2de6de97c0c1d",
+      "source": "jsoncpp-0.5.0/json__value.h"
+    },
+    {
+      "path": "json/writer.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+      "sha256": "5dd8a88630d278e2818e8563925ee81f276b317755ea5d4915d2c1a8e44d459d",
+      "source": "jsoncpp-0.5.0/json__writer.h"
+    },
+    {
+      "path": "lib/json/json_batchallocator.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "0b64b404862480c6c5687bf525c6eab5ad3e1a1b6d8d3c91d9aff690ebfe1e9d",
+      "source": "jsoncpp-0.5.0/lib__json__json_batchallocator.h"
+    },
+    {
+      "path": "lib/json/json_internalarray.inl",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
+      "source": "jsoncpp-0.5.0/lib__json__json_internalarray.inl"
+    },
+    {
+      "path": "lib/json/json_internalmap.inl",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
+      "source": "jsoncpp-0.5.0/lib__json__json_internalmap.inl"
+    },
+    {
+      "path": "lib/json/json_reader.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "6bedc2cf0327fc54c2a127b4ebcd72f76441414d28d355bc85bfc4d061b2ed55",
+      "source": "jsoncpp-0.5.0/lib__json__json_reader.cpp"
+    },
+    {
+      "path": "lib/json/json_value.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2",
+      "source": "jsoncpp-0.5.0/lib__json__json_value.cpp"
+    },
+    {
+      "path": "lib/json/json_valueiterator.inl",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc",
+      "source": "jsoncpp-0.5.0/lib__json__json_valueiterator.inl"
+    },
+    {
+      "path": "lib/json/json_writer.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "fb1d30e61df6c0ce1bffb7482caf7329fef0efbb74c7a62980d3700bf7c662e3",
+      "source": "jsoncpp-0.5.0/lib__json__json_writer.cpp"
+    },
+    {
+      "path": "lib/json/reader.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "4f4e7ebd63a95d78aed9ac9d4ff8f3a5ffe5904c49d42e229d76a34b2c8d3da9",
+      "source": "jsoncpp-0.5.0/lib__json__reader.h"
+    },
+    {
+      "path": "lib/json/value.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "a95a47b35004c3fac3e89f50fba51c2d9b17cc927e5000fdd0f2de6de97c0c1d",
+      "source": "jsoncpp-0.5.0/lib__json__value.h"
+    },
+    {
+      "path": "lib/json/writer.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout",
+      "sha256": "5dd8a88630d278e2818e8563925ee81f276b317755ea5d4915d2c1a8e44d459d",
+      "source": "jsoncpp-0.5.0/lib__json__writer.h"
+    },
+    {
+      "path": "lib/tinyxml/tinystr.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "25cef0d734c2575898950b96c2cfe8987bf05f30951d9f1db15124ed9bd7381f",
+      "source": "tmxparser-2014/lib__tinyxml__tinystr.h"
+    },
+    {
+      "path": "lib/tinyxml/tinyxml.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "aea6de89017d22ef8be7129667612b0844a1c96c4395323b75088c4a4a887d11",
+      "source": "tmxparser-2014/lib__tinyxml__tinyxml.cpp"
+    },
+    {
+      "path": "lib/tinyxml/tinyxml.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "8c5ed61d3964170dc5d0fbfffcf99e5eda2b283d62584837426720e6beb2f587",
+      "source": "tmxparser-2014/lib__tinyxml__tinyxml.h"
+    },
+    {
+      "path": "lib/tinyxml/tinyxmlparser.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "672312a50ccb11ad7d99845091d6621769519b77a6fd314d350428c5b787c5e9",
+      "source": "tmxparser-2014/lib__tinyxml__tinyxmlparser.cpp"
+    },
+    {
+      "path": "lib/tmx/TmxLayer.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "a0d7eb3f13bbbf225d76b40e55b6d288ef63d8bc30574ee170fe11b8b5383d23",
+      "source": "tmxparser-2014/lib__tmx__TmxLayer.cpp"
+    },
+    {
+      "path": "lib/tmx/TmxLayer.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
+      "source": "tmxparser-2014/lib__tmx__TmxLayer.h"
+    },
+    {
+      "path": "lib/tmx/TmxMap.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "943302465e37f4e70f2cd160cf496057e33766b9ab10ba190596d3851740676d",
+      "source": "tmxparser-2014/lib__tmx__TmxMap.cpp"
+    },
+    {
+      "path": "lib/tmx/TmxMap.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
+      "source": "tmxparser-2014/lib__tmx__TmxMap.h"
+    },
+    {
+      "path": "lib/tmx/TmxTileset.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "3ae7da96e141f4bbf18a1eda7d291d622150aee8d86ae6b2a114bdc534018565",
+      "source": "tmxparser-2014/lib__tmx__TmxTileset.cpp"
+    },
+    {
+      "path": "lib/zlib/adler32.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "341d49ae2703037d2d10c8486f1a1ca3b65e0f10cc9e5fead6bfbbc0b34564ba",
+      "source": "zlib-1.2.7/lib__zlib__adler32.c"
+    },
+    {
+      "path": "lib/zlib/crc32.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "3f3daca510273dda74eaf381c46d2551e3a3506891ae063ab451b87744a7a36c",
+      "source": "zlib-1.2.7/lib__zlib__crc32.c"
+    },
+    {
+      "path": "lib/zlib/crc32.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "407af59d0abfea84a6507c603eb29809411797f98249614fe76a661def783ce1",
+      "source": "zlib-1.2.7/lib__zlib__crc32.h"
+    },
+    {
+      "path": "lib/zlib/deflate.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "9be40cc4c595d2ff7dfa3212d6937eea499b6a4514c78fd986bc31c2a777f0f7",
+      "source": "zlib-1.2.7/lib__zlib__deflate.c"
+    },
+    {
+      "path": "lib/zlib/deflate.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "cae804509b4d9a616d8390949bbc8a36162d3a6cbd2865529d2cbc63f16bdd1c",
+      "source": "zlib-1.2.7/lib__zlib__deflate.h"
+    },
+    {
+      "path": "lib/zlib/gzguts.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "c2ad904fd2c99ed19d6443fe8064cba244ceb9567ac36be032c0c0ac16a4a6c1",
+      "source": "zlib-1.2.7/lib__zlib__gzguts.h"
+    },
+    {
+      "path": "lib/zlib/gzlib.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "9ff47173e86673f5b8a39e4911e448aa00c89430aea986191c46c0e1af4d2589",
+      "source": "zlib-1.2.7/lib__zlib__gzlib.c"
+    },
+    {
+      "path": "lib/zlib/gzread.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "f9496f8c3efcc28df02a5fd99f411f69edd52b7126e2b49e4832968c3b240e18",
+      "source": "zlib-1.2.7/lib__zlib__gzread.c"
+    },
+    {
+      "path": "lib/zlib/gzwrite.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "16dcfbd9ec7466183796d5b609ca0d5a23e83628ba7e45c1d1841c59b576d6d0",
+      "source": "zlib-1.2.7/lib__zlib__gzwrite.c"
+    },
+    {
+      "path": "lib/zlib/infback.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "e7d490cdb9ed45c6ede830c50ed6dfe4b9bdb90f04594a590635a91e964d3108",
+      "source": "zlib-1.2.7/lib__zlib__infback.c"
+    },
+    {
+      "path": "lib/zlib/inffast.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "zlib-1.2.7/lib__zlib__inffast.c"
+    },
+    {
+      "path": "lib/zlib/inffixed.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "237ba710f090e432b62ebf963bee8b302867e9691406b2d3f8ee89ee7bfef9b0",
+      "source": "zlib-1.2.7/lib__zlib__inffixed.h"
+    },
+    {
+      "path": "lib/zlib/inflate.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "1af516922a8ee15858f6fb2797c9c98f2f35a55259acd3801fa436dc28a02938",
+      "source": "zlib-1.2.7/lib__zlib__inflate.c"
+    },
+    {
+      "path": "lib/zlib/inflate.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "zlib-1.2.7/lib__zlib__inflate.h"
+    },
+    {
+      "path": "lib/zlib/inftrees.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "a8aafb94c5f816033bf2c449a28fcbc08c5e17a352dcfb04fa5ff90372aca3ca",
+      "source": "zlib-1.2.7/lib__zlib__inftrees.c"
+    },
+    {
+      "path": "lib/zlib/trees.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "d11ac530efc238d69cd44ffd29884a9ab75da347749545c06bb74e607781727c",
+      "source": "zlib-1.2.7/lib__zlib__trees.c"
+    },
+    {
+      "path": "lib/zlib/trees.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "zlib-1.2.7/lib__zlib__trees.h"
+    },
+    {
+      "path": "lib/zlib/zconf.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "ed886c15c846d31d2f6e6f5a33d3f6547812d85ec2aff4c3d70e8781e45d0959",
+      "source": "zlib-1.2.7/lib__zlib__zconf.h"
+    },
+    {
+      "path": "lib/zlib/zlib.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "31b7ed2b5bceea407626bdbcf16a1efa9770e91b646012906ac8303aa3f1f242",
+      "source": "zlib-1.2.7/lib__zlib__zlib.h"
+    },
+    {
+      "path": "lib/zlib/zutil.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "2a04ea6d8cbd602ecc4eef49c4e8aff438ab9497f116cbe4d3bda5c7f3586551",
+      "source": "zlib-1.2.7/lib__zlib__zutil.c"
+    },
+    {
+      "path": "lib/zlib/zutil.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "d2b4691745daea85d212899618ba1f50b338dc3f18975bb44660138f1236a644",
+      "source": "zlib-1.2.7/lib__zlib__zutil.h"
+    },
+    {
+      "path": "minizip/miniz.c",
+      "provenance": "unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114",
+      "sha256": "254342f2712562d9cd86a1c5a5d7a6875d1d9f87e56a7b39b86d847368f9bebe",
+      "source": "miniz-1.14/minizip__miniz.c"
+    },
+    {
+      "path": "python/converter/builtin_converters.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "8adae882607bf1f062ad98b5479399103301acbda9eee3b82479dc1f71318eba",
+      "source": "boost-python-1.55.0/python__converter__builtin_converters.cpp"
+    },
+    {
+      "path": "python/converter/from_python.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "05b6609c8d0f96d106cdc0daed11bedadb99b3fca24ef72c104500c93f1155e1",
+      "source": "boost-python-1.55.0/python__converter__from_python.cpp"
+    },
+    {
+      "path": "python/converter/registry.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "fd0ff814aa00789ec9198342306f20d7f66cec0f912169d7fd9ac19dd6187128",
+      "source": "boost-python-1.55.0/python__converter__registry.cpp"
+    },
+    {
+      "path": "python/converter/type_id.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "3932c44b8eb17b2651f4d5a8593296c222b8a9b68bfde8cda3468ad9dabc9158",
+      "source": "boost-python-1.55.0/python__converter__type_id.cpp"
+    },
+    {
+      "path": "python/dict.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "a2f8c9bf72aba01bf9b0a09a9d4371a60b1b3f24001f0d620c6747bee0cf864b",
+      "source": "boost-python-1.55.0/python__dict.cpp"
+    },
+    {
+      "path": "python/exec.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "49e4bed48a8ea472c57654fd033a9d37543daa56db376cb62f987eb7c1deb9f6",
+      "source": "boost-python-1.55.0/python__exec.cpp"
+    },
+    {
+      "path": "python/list.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "a96e649495b0ee48b9b14814d630956c81e2f9e99fc239d080fa0adb759769bd",
+      "source": "boost-python-1.55.0/python__list.cpp"
+    },
+    {
+      "path": "python/numeric.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "86566db76047049568c074cdc7a6a7ccc763591383e0c20c382f8c220ebcd03f",
+      "source": "boost-python-1.55.0/python__numeric.cpp"
+    },
+    {
+      "path": "python/object/class.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "afa9dbe4b854829b83990088fadc7e1927843afc9bf0fd151fad1512a6095222",
+      "source": "boost-python-1.55.0/python__object__class.cpp"
+    },
+    {
+      "path": "python/object/enum.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "70050f6088ff07f3d33e1f1afda0683e55bd64dab5924c8a551daec40f44c649",
+      "source": "boost-python-1.55.0/python__object__enum.cpp"
+    },
+    {
+      "path": "python/object/function.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "5ff5c0b062e51e103f148941c4bf3b097dd141f1b7f0600c4de81a476432e168",
+      "source": "boost-python-1.55.0/python__object__function.cpp"
+    },
+    {
+      "path": "python/object/function_doc_signature.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "2b9ffcb7501bb6f985e1ee37f0aa82ac09bcc9ac7409e3d9c7c435fcabe3331d",
+      "source": "boost-python-1.55.0/python__object__function_doc_signature.cpp"
+    },
+    {
+      "path": "python/object/life_support.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "29173c63d5d688215f57549c9c5c7ce68a0a1dc11193955803089d6f3b2d13ea",
+      "source": "boost-python-1.55.0/python__object__life_support.cpp"
+    },
+    {
+      "path": "python/object_protocol.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+      "sha256": "c385134c6db50f5b4983b9085aee3e12f76a1caa14ddbf5d2aeeef70ab5970b1",
+      "source": "boost-python-1.55.0/python__object_protocol.cpp"
+    },
+    {
+      "path": "scripts/hashlib.py",
+      "provenance": "unverified upstream reconstruction; https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz",
+      "sha256": "8e789b5a975ebc55a8cb5ce1c57a6284e59611a6b9ad703f65583e0823dbb15f",
+      "source": "python-3.3.7/scripts__hashlib.py"
+    },
+    {
+      "path": "scripts/random.py",
+      "provenance": "unverified upstream reconstruction; https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz",
+      "sha256": "ce14f4589b142203b21d7155ceb2afd1fc8e170d9292313dd81c6e60b9a703ec",
+      "source": "python-3.3.7/scripts__random.py"
+    },
+    {
+      "path": "scripts/types.py",
+      "provenance": "unverified upstream reconstruction; https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz",
+      "sha256": "9a8bdf9bdab0e3c4e85dcfb9486a7a74eb8461e198e281df4cc6b9e5e1ca4a05",
+      "source": "python-3.3.7/scripts__types.py"
+    },
+    {
+      "path": "scripts/warnings.py",
+      "provenance": "unverified upstream reconstruction; https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz",
+      "sha256": "755b74a786a0fea6b7f5eca3af71b9984b2e5251604051a55369c069b88399f1",
+      "source": "python-3.3.7/scripts__warnings.py"
+    },
+    {
+      "path": "tinyxml/tinystr.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "25cef0d734c2575898950b96c2cfe8987bf05f30951d9f1db15124ed9bd7381f",
+      "source": "tmxparser-2014/tinyxml__tinystr.h"
+    },
+    {
+      "path": "tinyxml/tinyxml.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "aea6de89017d22ef8be7129667612b0844a1c96c4395323b75088c4a4a887d11",
+      "source": "tmxparser-2014/tinyxml__tinyxml.cpp"
+    },
+    {
+      "path": "tinyxml/tinyxml.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "8c5ed61d3964170dc5d0fbfffcf99e5eda2b283d62584837426720e6beb2f587",
+      "source": "tmxparser-2014/tinyxml__tinyxml.h"
+    },
+    {
+      "path": "tinyxml/tinyxmlparser.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
+      "sha256": "672312a50ccb11ad7d99845091d6621769519b77a6fd314d350428c5b787c5e9",
+      "source": "tmxparser-2014/tinyxml__tinyxmlparser.cpp"
+    },
+    {
+      "path": "tmx/TmxLayer.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "08b7008aa98f3135a1b05c940ccb70361b31b20ab2a132fb543ea068e8695d18",
+      "source": "tmxparser-2014/tmx__TmxLayer.cpp"
+    },
+    {
+      "path": "tmx/TmxLayer.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
+      "source": "tmxparser-2014/tmx__TmxLayer.h"
+    },
+    {
+      "path": "tmx/TmxMap.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "a7ee60094717d73da9c7dfbaa6bb08e06ed9d44b1a30d7e398cd3eab525a35d8",
+      "source": "tmxparser-2014/tmx__TmxMap.cpp"
+    },
+    {
+      "path": "tmx/TmxMap.h",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
+      "source": "tmxparser-2014/tmx__TmxMap.h"
+    },
+    {
+      "path": "tmx/TmxTileset.cpp",
+      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
+      "sha256": "4b424b1c24e9f68271f8947ad8f946ce05c62b6c74eee5558eb4a44bd9ae0357",
+      "source": "tmxparser-2014/tmx__TmxTileset.cpp"
+    },
+    {
+      "path": "zlib/adler32.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "341d49ae2703037d2d10c8486f1a1ca3b65e0f10cc9e5fead6bfbbc0b34564ba",
+      "source": "zlib-1.2.7/zlib__adler32.c"
+    },
+    {
+      "path": "zlib/crc32.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "3f3daca510273dda74eaf381c46d2551e3a3506891ae063ab451b87744a7a36c",
+      "source": "zlib-1.2.7/zlib__crc32.c"
+    },
+    {
+      "path": "zlib/crc32.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "407af59d0abfea84a6507c603eb29809411797f98249614fe76a661def783ce1",
+      "source": "zlib-1.2.7/zlib__crc32.h"
+    },
+    {
+      "path": "zlib/deflate.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "9be40cc4c595d2ff7dfa3212d6937eea499b6a4514c78fd986bc31c2a777f0f7",
+      "source": "zlib-1.2.7/zlib__deflate.c"
+    },
+    {
+      "path": "zlib/deflate.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "cae804509b4d9a616d8390949bbc8a36162d3a6cbd2865529d2cbc63f16bdd1c",
+      "source": "zlib-1.2.7/zlib__deflate.h"
+    },
+    {
+      "path": "zlib/gzguts.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "c2ad904fd2c99ed19d6443fe8064cba244ceb9567ac36be032c0c0ac16a4a6c1",
+      "source": "zlib-1.2.7/zlib__gzguts.h"
+    },
+    {
+      "path": "zlib/gzlib.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "9ff47173e86673f5b8a39e4911e448aa00c89430aea986191c46c0e1af4d2589",
+      "source": "zlib-1.2.7/zlib__gzlib.c"
+    },
+    {
+      "path": "zlib/gzread.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "f9496f8c3efcc28df02a5fd99f411f69edd52b7126e2b49e4832968c3b240e18",
+      "source": "zlib-1.2.7/zlib__gzread.c"
+    },
+    {
+      "path": "zlib/gzwrite.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "16dcfbd9ec7466183796d5b609ca0d5a23e83628ba7e45c1d1841c59b576d6d0",
+      "source": "zlib-1.2.7/zlib__gzwrite.c"
+    },
+    {
+      "path": "zlib/infback.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "e7d490cdb9ed45c6ede830c50ed6dfe4b9bdb90f04594a590635a91e964d3108",
+      "source": "zlib-1.2.7/zlib__infback.c"
+    },
+    {
+      "path": "zlib/inffast.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "zlib-1.2.7/zlib__inffast.c"
+    },
+    {
+      "path": "zlib/inffixed.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "237ba710f090e432b62ebf963bee8b302867e9691406b2d3f8ee89ee7bfef9b0",
+      "source": "zlib-1.2.7/zlib__inffixed.h"
+    },
+    {
+      "path": "zlib/inflate.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "1af516922a8ee15858f6fb2797c9c98f2f35a55259acd3801fa436dc28a02938",
+      "source": "zlib-1.2.7/zlib__inflate.c"
+    },
+    {
+      "path": "zlib/inflate.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "zlib-1.2.7/zlib__inflate.h"
+    },
+    {
+      "path": "zlib/inftrees.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "a8aafb94c5f816033bf2c449a28fcbc08c5e17a352dcfb04fa5ff90372aca3ca",
+      "source": "zlib-1.2.7/zlib__inftrees.c"
+    },
+    {
+      "path": "zlib/trees.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "d11ac530efc238d69cd44ffd29884a9ab75da347749545c06bb74e607781727c",
+      "source": "zlib-1.2.7/zlib__trees.c"
+    },
+    {
+      "path": "zlib/trees.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "zlib-1.2.7/zlib__trees.h"
+    },
+    {
+      "path": "zlib/zconf.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "ed886c15c846d31d2f6e6f5a33d3f6547812d85ec2aff4c3d70e8781e45d0959",
+      "source": "zlib-1.2.7/zlib__zconf.h"
+    },
+    {
+      "path": "zlib/zlib.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "31b7ed2b5bceea407626bdbcf16a1efa9770e91b646012906ac8303aa3f1f242",
+      "source": "zlib-1.2.7/zlib__zlib.h"
+    },
+    {
+      "path": "zlib/zutil.c",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "2a04ea6d8cbd602ecc4eef49c4e8aff438ab9497f116cbe4d3bda5c7f3586551",
+      "source": "zlib-1.2.7/zlib__zutil.c"
+    },
+    {
+      "path": "zlib/zutil.h",
+      "provenance": "unverified upstream reconstruction; https://zlib.net/fossils/zlib-1.2.7.tar.gz",
+      "sha256": "d2b4691745daea85d212899618ba1f50b338dc3f18975bb44660138f1236a644",
+      "source": "zlib-1.2.7/zlib__zutil.h"
+    },
+    {
+      "add": true,
+      "path": "json/LICENSE",
+      "provenance": "https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license",
+      "sha256": "cca6a2d75a0cda5863d20ee4fc7ddc920d164f66fa3d2d52889e6e72ac5cf100",
+      "source": "jsoncpp-0.5.0/LICENSE",
+      "whenPrefix": "json/"
+    },
+    {
+      "add": true,
+      "path": "lib/json/LICENSE",
+      "provenance": "https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license",
+      "sha256": "cca6a2d75a0cda5863d20ee4fc7ddc920d164f66fa3d2d52889e6e72ac5cf100",
+      "source": "jsoncpp-0.5.0/LICENSE",
+      "whenPrefix": "lib/json/"
+    },
+    {
+      "add": true,
+      "path": "boost/python/LICENSE_1_0.txt",
+      "provenance": "https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+      "source": "boost-python-1.55.0/LICENSE_1_0.txt",
+      "whenPrefix": "boost/python/"
+    },
+    {
+      "add": true,
+      "path": "python/LICENSE_1_0.txt",
+      "provenance": "https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+      "source": "boost-python-1.55.0/LICENSE_1_0.txt",
+      "whenPrefix": "python/"
+    },
+    {
+      "add": true,
+      "path": "scripts/PSF_LICENSE",
+      "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
+      "sha256": "efc0c7f2994f95be25f7ce63a865f870e278ff0aa4f5d52d84d4d6d2a98128bd",
+      "source": "python-3.3.7/LICENSE",
+      "whenPrefix": "scripts/"
+    },
+    {
+      "add": true,
+      "path": "android/PSF_LICENSE",
+      "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
+      "sha256": "efc0c7f2994f95be25f7ce63a865f870e278ff0aa4f5d52d84d4d6d2a98128bd",
+      "source": "python-3.3.7/LICENSE",
+      "whenPrefix": "android/"
+    }
+  ],
+  "packages": {
+    "boost-python-1.55.0": {
+      "evidence": "17 surviving normalized source files match; remaining local changes unknown",
+      "url": "https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9"
+    },
+    "jsoncpp-0.5.0": {
+      "evidence": "23 surviving normalized headers match release0.5.0; none match0.6.0-rc2",
+      "url": "https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6"
+    },
+    "miniz-1.14": {
+      "evidence": "historical miniz source replacement; exact original version unverified",
+      "url": "https://github.com/richgel999/miniz/tree/v114"
+    },
+    "python-3.3.7": {
+      "evidence": "historical Python3.3 stdlib replacement; exact original patch release unverified",
+      "url": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz"
+    },
+    "tmxparser-2014": {
+      "evidence": "78 surviving normalized TMX/TinyXML files match; source includes require local layout adaptation",
+      "url": "https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290"
+    },
+    "zlib-1.2.7": {
+      "evidence": "surviving pre-z_const compress.c/uncompr.c identify pre1.2.8 API; remaining compatibility unverified",
+      "url": "https://zlib.net/fossils/zlib-1.2.7.tar.gz"
+    }
+  },
+  "schemaVersion": 1,
+  "unhandled": [
+    "config/creatures.json",
+    "config/map.tmx",
+    "config/object.json",
+    "images/items/armors/chestplateofnorth/0",
+    "maps/map.tmx",
+    "res/config/map.tmx",
+    "res/config/object.json",
+    "src/CIteraction.cpp"
+  ]
+}

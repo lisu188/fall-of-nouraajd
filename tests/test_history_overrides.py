@@ -125,6 +125,58 @@ class HistoryDonorProposalsTest(unittest.TestCase):
         self.assertEqual(1, report["donorEntryCount"])
         self.assertIn("object/CCreature.cpp", manifest["entries"][0]["provenance"])
 
+    def testHistoricalInteractionTypoUsesMatchingActualClassDonor(self):
+        donor = self.commit({"CInteraction.cpp": b"void CInteraction::onAction() {}\n"})
+        self.commit({"src/CIteraction.cpp" + recovery.MARKER_SUFFIX: b"f" * 40}, [donor])
+        manifest, report, _ = proposals.proposeOverrides(self.repo, recovery.auditHistory(self.repo), [donor], False)
+        self.assertEqual(1, report["donorEntryCount"])
+        self.assertEqual("src/CIteraction.cpp", manifest["entries"][0]["path"])
+
+    def testImageWithoutExtensionUsesMatchingFramedAsset(self):
+        image = proposals.imagePlaceholder("real donor")
+        donor = self.commit({"images/items/armor/0.png": image})
+        self.commit({"images/items/armor/0" + recovery.MARKER_SUFFIX: b"f" * 40}, [donor])
+        manifest, report, _ = proposals.proposeOverrides(self.repo, recovery.auditHistory(self.repo), [donor], False)
+        self.assertEqual(1, report["donorEntryCount"])
+        self.assertEqual(self.blob(image), manifest["entries"][0]["blob"])
+
+    def testUpstreamPayloadsAreVerifiedAndScopedWithTheirLicense(self):
+        commit = self.commit({"json/value.h" + recovery.MARKER_SUFFIX: b"f" * 40})
+        source = self.repo / "recovery" / "upstream" / "jsoncpp"
+        source.mkdir(parents=True)
+        content, license_text = b"class Value {};\n", b"MIT license fixture\n"
+        (source / "value.h").write_bytes(content)
+        (source / "LICENSE").write_bytes(license_text)
+        recovery.writeJson(
+            source / "catalog.json",
+            {
+                "entries": [
+                    {
+                        "path": "json/value.h",
+                        "source": "value.h",
+                        "sha256": hashlib.sha256(content).hexdigest(),
+                        "provenance": "unverified upstream matching release",
+                    },
+                    {
+                        "path": "json/LICENSE",
+                        "source": "LICENSE",
+                        "sha256": hashlib.sha256(license_text).hexdigest(),
+                        "provenance": "upstream distribution license",
+                        "add": True,
+                        "whenPrefix": "json/",
+                    },
+                ]
+            },
+        )
+        manifest, report, payloads = proposals.proposeOverrides(self.repo, recovery.auditHistory(self.repo), [], False)
+        self.assertEqual(0, report["unresolvedCount"])
+        self.assertEqual(2, report["upstreamEntryCount"])
+        self.assertEqual(content, payloads["upstream/jsoncpp/value.h"])
+        self.assertTrue(next(entry for entry in manifest["entries"] if entry["path"] == "json/LICENSE")["add"])
+        (source / "value.h").write_bytes(b"tampered")
+        with self.assertRaisesRegex(recovery.RecoveryError, "SHA-256 mismatch"):
+            proposals.proposeOverrides(self.repo, recovery.auditHistory(self.repo), [], False)
+
 
 if __name__ == "__main__":
     unittest.main()

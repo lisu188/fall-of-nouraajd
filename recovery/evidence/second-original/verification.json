@@ -1,0 +1,553 @@
+{
+  "adapter": {
+    "config": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/observer/recovery_smoke_config.h",
+    "configSha256": "e7fa35193e54841af7a428d081e6283b23d07aeaba55e25ef5e60230106e0c72",
+    "id": "classic-2d",
+    "overlays": [
+      {
+        "afterSha256": "70bdd4e6e4e6c89617ee3eeab36169c33932e75e8db88c211370dd83af1ab580",
+        "beforeSha256": "0cce610cbd71f6f61b4344a8f5f250fac190f53aa916ab26fc928bf7f811b3fa",
+        "path": "view/gamescene.h",
+        "purpose": "smoke-only map accessor"
+      }
+    ],
+    "source": "/home/alis3/git/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
+  },
+  "artifactDir": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/smoke",
+  "build": {
+    "command": [
+      "make",
+      "-j8"
+    ],
+    "log": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/build.log",
+    "returnCode": 0,
+    "seconds": 7.195,
+    "timedOut": false
+  },
+  "configure": {
+    "command": [
+      "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin/qmake",
+      "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/source/Game.pro",
+      "-o",
+      "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/build/Makefile",
+      "-after",
+      "TARGET=RecoveryGame",
+      "DESTDIR=.",
+      "CONFIG-=app_bundle",
+      "SOURCES+=/home/alis3/git/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/source",
+      "INCLUDEPATH+=/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/observer"
+    ],
+    "log": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/configure.log",
+    "returnCode": 0,
+    "seconds": 0.115,
+    "timedOut": false
+  },
+  "evidenceDir": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/evidence/d441dcb5673a684287ee1dea6a6bbc7353e286f9d0e9fb511adc65ef17342a44",
+  "fingerprint": "d441dcb5673a684287ee1dea6a6bbc7353e286f9d0e9fb511adc65ef17342a44",
+  "recipe": {
+    "compilerCommand": "g++",
+    "environment": {
+      "LD_LIBRARY_PATH": "/tmp/nouraajd-recovery-qt/root/usr/lib/x86_64-linux-gnu",
+      "PATH": "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin:/home/alis3/.codex/packages/app-server-daemon/releases/0.169.0-x86_64-unknown-linux-musl/codex-path:/home/alis3/.codex/tmp/arg0-linux/codex-arg0H0o6zt:/home/alis3/.codex/packages/app-server-daemon/releases/0.169.0-x86_64-unknown-linux-musl/codex-path:/home/alis3/.codex/tmp/arg0-linux/codex-arg0s91OM6:/home/alis3/.nvm/versions/node/v24.21.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/alis3/.nvm/versions/node/v24.21.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/MicrosoftCorporationII.WindowsSubsystemForLinux_3.0.5.0_x64__8wekyb3d8bbwe:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0/:/mnt/c/windows/System32/OpenSSH/:/mnt/c/Program Files/KeePassXC/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/WSL/:/mnt/c/Users/alis3/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/alis3/AppData/Local/Python/bin:/snap/bin",
+      "QT_PLUGIN_PATH": "/tmp/nouraajd-recovery-qt/root/usr/lib/x86_64-linux-gnu/qt5/plugins"
+    },
+    "id": "local-qt5-gcc15-diagnostic",
+    "makeCommand": "make",
+    "pythonAbi": "none",
+    "qmakeCommand": "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin/qmake",
+    "toolchainLock": {}
+  },
+  "restoration": {
+    "excluded": [
+      {
+        "markerPath": "7za.exe.REMOVED.git-id",
+        "originalBlob": "bd30a5167ed65d30b32e96536d50d2947fb04be3",
+        "path": "7za.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "Game.pro.user.80120fb.REMOVED.git-id",
+        "originalBlob": "eb7d2522e79006ac0939bbd4521ce0da15641321",
+        "path": "Game.pro.user.80120fb",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Game.pro.user.REMOVED.git-id",
+        "originalBlob": "bfcbafda78341a1aeeca8d5cef41c8dfa0d0c13f",
+        "path": "Game.pro.user",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Game.pro.user.f159572.REMOVED.git-id",
+        "originalBlob": "8d16033cdf5b6532ed0bb0a94b5f4a1bd6364932",
+        "path": "Game.pro.user.f159572",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Makefile.Debug.REMOVED.git-id",
+        "originalBlob": "b3ded45fdf19d997634cfb8507467d0a7debbc62",
+        "path": "Makefile.Debug",
+        "reason": "generated build output"
+      },
+      {
+        "markerPath": "Makefile.REMOVED.git-id",
+        "originalBlob": "be5ed3a1c97d655a4e1c6f18d64a08093730acc1",
+        "path": "Makefile",
+        "reason": "generated build output"
+      },
+      {
+        "markerPath": "Makefile.Release.REMOVED.git-id",
+        "originalBlob": "27ead43489326d8b849801efa7a60a270aba7989",
+        "path": "Makefile.Release",
+        "reason": "generated build output"
+      },
+      {
+        "markerPath": "astyle.exe.REMOVED.git-id",
+        "originalBlob": "49d123f08b607ebdbdff222429dc522b1c261a32",
+        "path": "astyle.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "git/git.exe.REMOVED.git-id",
+        "originalBlob": "fb55799d5b8acb31c2b81d3bf855653b2e8fe6fe",
+        "path": "git/git.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "git/libiconv-2.dll.REMOVED.git-id",
+        "originalBlob": "dbcd667563797799f4232129ed76da5b60644459",
+        "path": "git/libiconv-2.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Core.dll.REMOVED.git-id",
+        "originalBlob": "8f0a5ca6becd577c64dcf3c10976493980fa0dc5",
+        "path": "libraries/Qt5Core.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Gui.dll.REMOVED.git-id",
+        "originalBlob": "2b5baf3c25a5f6488f698f6b9f9e81c160f1c924",
+        "path": "libraries/Qt5Gui.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Widgets.dll.REMOVED.git-id",
+        "originalBlob": "08e21b94311ac7f9cec972447224f4f02726dfb9",
+        "path": "libraries/Qt5Widgets.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icudt51.dll.REMOVED.git-id",
+        "originalBlob": "f78424b6aa529f67ad0f6a76208112d660807a21",
+        "path": "libraries/icudt51.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icuin51.dll.REMOVED.git-id",
+        "originalBlob": "7e199ecb0b30688d731d33ae098d359324dd4db5",
+        "path": "libraries/icuin51.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icuuc51.dll.REMOVED.git-id",
+        "originalBlob": "089ec7d0cad797369fb7e367ec39d7b892a7757f",
+        "path": "libraries/icuuc51.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libgcc_s_dw2-1.dll.REMOVED.git-id",
+        "originalBlob": "82b277632c513c594a9ef41ff8763e36f969479b",
+        "path": "libraries/libgcc_s_dw2-1.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libstdc++-6.dll.REMOVED.git-id",
+        "originalBlob": "fcce1f69da0ba1e7d083b8f159088a516a72bd95",
+        "path": "libraries/libstdc++-6.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libwinpthread-1.dll.REMOVED.git-id",
+        "originalBlob": "22fa8390962b26de53d88a8da73a22dbc272b893",
+        "path": "libraries/libwinpthread-1.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/platforms/qwindows.dll.REMOVED.git-id",
+        "originalBlob": "b403f5d3a030e8614b43890a710cc0b089361aab",
+        "path": "libraries/platforms/qwindows.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      }
+    ],
+    "outputDir": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/source",
+    "restored": [
+      {
+        "markerPath": "Game.pro.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "a159ee450bd4b9de9720b591d28b350f5794a8d2",
+        "path": "Game.pro",
+        "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2",
+        "replacementBlob": "5660ac080c4272536e9f9b3f7d1c57fd592d0d9a"
+      },
+      {
+        "markerPath": "creatures/creature.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "ef44b5df70589d0e652b6b1c5c8456e048e668ba",
+        "path": "creatures/creature.cpp",
+        "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
+        "replacementBlob": "6042f926d4028481bc67d546e36e366483d05241"
+      },
+      {
+        "markerPath": "images/arrows/left/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8",
+        "path": "images/arrows/left/0.png",
+        "replacementBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8"
+      },
+      {
+        "markerPath": "images/arrows/right/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297",
+        "path": "images/arrows/right/0.png",
+        "replacementBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297"
+      },
+      {
+        "markerPath": "images/attacks/attack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1854502273891b7647172605d57723c57803b0b8",
+        "path": "images/attacks/attack/0.png",
+        "replacementBlob": "1854502273891b7647172605d57723c57803b0b8"
+      },
+      {
+        "markerPath": "images/buildings/cave/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
+        "path": "images/buildings/cave/0.png",
+        "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159",
+        "replacementBlob": "f890ee0f00785096c6903db731e492c512342117"
+      },
+      {
+        "markerPath": "images/items/potions/bless/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b376e0642913165abcb73d2a76fde4d51d950527",
+        "path": "images/items/potions/bless/0.png",
+        "replacementBlob": "b376e0642913165abcb73d2a76fde4d51d950527"
+      },
+      {
+        "markerPath": "images/items/potions/life/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664",
+        "path": "images/items/potions/life/0.png",
+        "replacementBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664"
+      },
+      {
+        "markerPath": "images/items/potions/mana/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf",
+        "path": "images/items/potions/mana/0.png",
+        "replacementBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf"
+      },
+      {
+        "markerPath": "images/items/potions/poison/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8",
+        "path": "images/items/potions/poison/0.png",
+        "replacementBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8"
+      },
+      {
+        "markerPath": "images/items/weapons/dagger/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7",
+        "path": "images/items/weapons/dagger/0.png",
+        "replacementBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7"
+      },
+      {
+        "markerPath": "images/items/weapons/staff/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d",
+        "path": "images/items/weapons/staff/0.png",
+        "replacementBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d"
+      },
+      {
+        "markerPath": "images/monsters/pritz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9",
+        "path": "images/monsters/pritz/0.png",
+        "replacementBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9"
+      },
+      {
+        "markerPath": "images/monsters/pritz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc",
+        "path": "images/monsters/pritz/1.png",
+        "replacementBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf",
+        "path": "images/monsters/pritzmage/0.png",
+        "replacementBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2d8bd66481b709af6b6b10323c348ae0de332563",
+        "path": "images/monsters/pritzmage/1.png",
+        "replacementBlob": "2d8bd66481b709af6b6b10323c348ae0de332563"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/2.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72553fb5737309749539c6a2cc74022b2a11844c",
+        "path": "images/monsters/pritzmage/2.png",
+        "replacementBlob": "72553fb5737309749539c6a2cc74022b2a11844c"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/3.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a",
+        "path": "images/monsters/pritzmage/3.png",
+        "replacementBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a"
+      },
+      {
+        "markerPath": "images/players/mage/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d",
+        "path": "images/players/mage/0.png",
+        "replacementBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d"
+      },
+      {
+        "markerPath": "images/players/rogue/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650",
+        "path": "images/players/rogue/0.png",
+        "replacementBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650"
+      },
+      {
+        "markerPath": "images/players/warrior/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c",
+        "path": "images/players/warrior/0.png",
+        "replacementBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c"
+      },
+      {
+        "markerPath": "images/skills/doubleattack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981",
+        "path": "images/skills/doubleattack/0.png",
+        "replacementBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981"
+      },
+      {
+        "markerPath": "images/skills/sneakattack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a",
+        "path": "images/skills/sneakattack/0.png",
+        "replacementBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a"
+      },
+      {
+        "markerPath": "images/skills/strike/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d",
+        "path": "images/skills/strike/0.png",
+        "replacementBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d"
+      },
+      {
+        "markerPath": "images/spells/magicmissile/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "674269a5d6d1ceff668e00ee470a73805de2b770",
+        "path": "images/spells/magicmissile/0.png",
+        "replacementBlob": "674269a5d6d1ceff668e00ee470a73805de2b770"
+      },
+      {
+        "markerPath": "images/tiles/grass/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "6cab0a22e2f71d71b95dfefa7565593528494ab8",
+        "path": "images/tiles/grass/0.png",
+        "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
+        "replacementBlob": "fb2a04dc08174e6e5e695f71374552a4374dfc2d"
+      },
+      {
+        "markerPath": "images/tiles/ground/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "c63b54e718a36c4a43474f293397c19d739f1604",
+        "path": "images/tiles/ground/0.png",
+        "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
+        "replacementBlob": "d48054fd873a7b31be64c8e23af1d8e93092c858"
+      },
+      {
+        "markerPath": "images/tiles/mountain/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "203d08f3f0f153b2fffca654b4049c483906be11",
+        "path": "images/tiles/mountain/0.png",
+        "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155",
+        "replacementBlob": "85d6d5c7c94cab2a5982376341fecaabdba4f4e5"
+      },
+      {
+        "markerPath": "images/tiles/road/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "6a0a6e63b9334f8bce62485daaf6b3dfa0df7a71",
+        "path": "images/tiles/road/0.png",
+        "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155",
+        "replacementBlob": "926e710abc6016a76dbfb9ccd2c9fd035a65e327"
+      },
+      {
+        "markerPath": "images/tiles/water/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "c8576600fa057e55c3f7c4b140fbaf8010b71a93",
+        "path": "images/tiles/water/0.png",
+        "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
+        "replacementBlob": "bcbc39b6caa2bd2dd09bfd4b07220e2f27fe5910"
+      },
+      {
+        "markerPath": "map/map.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "0f2d04cf0f5e9fdc582ff67ae67d31c6365d1d8e",
+        "path": "map/map.cpp",
+        "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp; headerMatch=0; apiOverlap=9500/10000; distance=2",
+        "replacementBlob": "b87f78f0b3e634ad55ca98d98467a75043dff71d"
+      },
+      {
+        "markerPath": "stats/stats.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "afe8cf2e65426bc9e4d11d9912769b9acac6a40b",
+        "path": "stats/stats.cpp",
+        "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
+        "replacementBlob": "db6f11c26618e592b2ac09f89727e1a79de27b4b"
+      },
+      {
+        "markerPath": "view/gamescene.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "5b28e8246cc5109520552d93627eb9d59ff6441b",
+        "path": "view/gamescene.cpp",
+        "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
+        "replacementBlob": "14ad04283dc95bceec84a5ae6125a2b34ae1d9d0"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "animation/animatedobject.h",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "58c384aa05d93c3bf2cf0544883048647804a55b"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "animation/animationprovider.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "883306b0c22d7bc55225738db008027c89fee04a"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "creatures/monsters/pritz.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "0e8a26a276f632f492512d14a1916d93c88ab4ad"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "creatures/monsters/pritzmage.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "328e2e6b5ea9ac9045e1298d1fb455609d67b5fd"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "creatures/players/mage.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "4015f9a76227f3c16d9bba5847613433d520e691"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "creatures/players/player.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "8385e743bd57c41c1e580eb8afbbaccc83cf82af"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "creatures/players/rogue.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "38806847667b510653b7fe6534934d8db59b780f"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "creatures/players/warrior.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "25fe77663ce248af3060200d45a76c069f834aad"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "map/map.h",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "369d282151ef98e260aca94a0afd8ce7928d1d21"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "map/tiles/tile.h",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "55468afe0be6e2d22e6309c6f922160a55beb8d0"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "view/gameview.cpp",
+        "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
+        "replacementBlob": "68e2c22b82abfc298e20a77ec7adab7aca2494e7"
+      }
+    ],
+    "restoredFilesFingerprint": "6e9533789314a17902c072169fd9805d796a29dbeb7180eadb5d6a24a59b0237",
+    "sourceCommit": "afdd8069397059b5ed17285c9338603534ace659",
+    "sourceTree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+    "status": "complete",
+    "submodules": [],
+    "unresolved": []
+  },
+  "smoke": {
+    "command": [
+      "xvfb-run",
+      "-a",
+      "--server-args=-screen 0 1920x1080x24",
+      "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/build/RecoveryGame"
+    ],
+    "log": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/smoke/startup.log",
+    "returnCode": 0,
+    "seconds": 0.368,
+    "startup": {
+      "checks": {
+        "eventLoop": true,
+        "map": true,
+        "player": true,
+        "renderedFrame": true
+      },
+      "frame": {
+        "height": 718,
+        "path": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/smoke/startup.png",
+        "sha256": "ab405ae88d2b74e520694a41fad69bae8f59d4c622ed93caf7bbfa7cf36ae520",
+        "width": 1278
+      },
+      "reason": "",
+      "schemaVersion": 1,
+      "status": "ready"
+    },
+    "startupReport": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/second-original-compat-check/snapshot-13qbpjnx/smoke/startup.json",
+    "status": "success",
+    "timedOut": false
+  },
+  "sourceCommit": "afdd8069397059b5ed17285c9338603534ace659",
+  "sourceCommits": [
+    "afdd8069397059b5ed17285c9338603534ace659"
+  ],
+  "sourceTree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+  "status": "success",
+  "toolchain": {
+    "compilerCommand": {
+      "path": "/usr/bin/g++",
+      "version": "g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0\nCopyright (C) 2025 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    },
+    "makeCommand": {
+      "path": "/usr/bin/make",
+      "version": "GNU Make 4.4.1\nBuilt for x86_64-pc-linux-gnu\nCopyright (C) 1988-2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n"
+    },
+    "qmakeCommand": {
+      "path": "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin/qmake",
+      "version": "QMake version 3.1\nUsing Qt version 5.15.18 in /tmp/nouraajd-recovery-qt/root/usr/lib/x86_64-linux-gnu\n"
+    }
+  }
+}

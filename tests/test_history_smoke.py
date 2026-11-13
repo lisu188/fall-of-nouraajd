@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Regression checks for historical startup evidence and watchdog handling."""
 
+import contextlib
+import io
+import json
 from pathlib import Path
 import struct
 import sys
@@ -154,6 +157,28 @@ class HistoricalSmokeTest(unittest.TestCase):
         selected = verify.selectTrees(catalog, overrides)
         self.assertEqual([["aaa", "ccc"], ["bbb"]], [tree["commits"] for tree in selected])
         self.assertEqual(["bbb"], verify.selectTrees(catalog, overrides, "bb")[0]["commits"])
+
+    def testExplicitMissingOverridesFailRatherThanVerifyDifferentInputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "catalog.json").write_text(json.dumps({"trees": []}))
+            (root / "recipes.json").write_text(json.dumps({"recipes": [{"id": "none", "pythonAbi": "none"}]}))
+            arguments = [
+                "verify_history.py",
+                "--all",
+                "--catalog",
+                str(root / "catalog.json"),
+                "--recipes",
+                str(root / "recipes.json"),
+                "--overrides",
+                str(root / "missing.json"),
+            ]
+            error_output = io.StringIO()
+            with mock.patch.object(sys, "argv", arguments), contextlib.redirect_stderr(error_output):
+                with self.assertRaises(SystemExit) as failure:
+                    verify.main()
+            self.assertEqual(2, failure.exception.code)
+            self.assertIn("Requested recovery overrides do not exist", error_output.getvalue())
 
 
 if __name__ == "__main__":

@@ -518,7 +518,7 @@ def main() -> int:
     selection.add_argument("--commit")
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--catalog", type=Path, default=REPO_ROOT / "recovery/catalog.json")
-    parser.add_argument("--overrides", type=Path, default=REPO_ROOT / "recovery/overrides.json")
+    parser.add_argument("--overrides", type=Path)
     parser.add_argument("--recipes", type=Path, default=REPO_ROOT / "recovery/toolchains/qt5.json")
     parser.add_argument("--recipe")
     parser.add_argument("--output-dir", type=Path, default=REPO_ROOT / ".cache/history-recovery/verification")
@@ -538,9 +538,12 @@ def main() -> int:
         catalog = json.loads(args.catalog.read_text(encoding="utf-8"))
         recipes = loadRecipes(args.recipes)
         overrides = None
-        if args.overrides.exists():
-            overrides = json.loads(args.overrides.read_text(encoding="utf-8"))
-            overrides["_baseDir"] = str(args.overrides.resolve().parent)
+        override_path = args.overrides or REPO_ROOT / "recovery/overrides.json"
+        if args.overrides is not None and not override_path.is_file():
+            raise VerificationError(f"Requested recovery overrides do not exist: {override_path}")
+        if override_path.exists():
+            overrides = json.loads(override_path.read_text(encoding="utf-8"))
+            overrides["_baseDir"] = str(override_path.resolve().parent)
         trees = selectTrees(catalog, overrides, args.commit)
         trees = [tree for index, tree in enumerate(trees) if index % args.shard_count == args.shard_index]
         results = []

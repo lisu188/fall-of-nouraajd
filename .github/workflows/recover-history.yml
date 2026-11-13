@@ -8,9 +8,16 @@ on:
       - .github/workflows/recover-history.yml
       - recovery/**
       - scripts/recover_history.py
+      - scripts/prepare_history_overrides.py
+      - scripts/recovery_readme.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
       - tests/test_history_smoke.py
+      - tests/test_history_overrides.py
+      - tests/test_history_config.py
+      - tests/test_recovery_readme.py
+      - tests/test_recovery_rootfs.py
+      - tests/test_history_resources.py
       - tests/test_recovery_workflow.py
 
 permissions:
@@ -18,7 +25,7 @@ permissions:
 
 concurrency:
   group: historical-recovery-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   inventory:
@@ -32,7 +39,10 @@ jobs:
           persist-credentials: false
       - name: Validate recovery tooling
         run: |
-          python3 -m unittest tests.test_history_recovery tests.test_history_smoke tests.test_recovery_workflow
+          python3 -m unittest tests.test_history_recovery tests.test_history_smoke \
+            tests.test_recovery_workflow tests.test_history_overrides \
+            tests.test_history_config tests.test_recovery_readme \
+            tests.test_recovery_rootfs tests.test_history_resources
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

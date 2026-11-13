@@ -99,3 +99,26 @@ bundle was verified with a fresh clone and `git fsck --full`.
 GitHub Actions is currently blocked by the repository-wide queue (285 queued
 runs, no runner assigned to historical jobs). No historical container or normal
 PR build checks have passed yet. Local focused checks continue meanwhile.
+
+## All reconstruction inputs now present
+
+`recovery/preflight.json` confirms all 365 original damaged trees materialize
+without unresolved required inputs and without BFG markers. This is input
+completeness, not evidence that all versions compile or run.
+
+The current proposal catalog contains 13,727 tree/path entries: 5,219 donors,
+190 image placeholders, 16 earliest compatibility entries, and 8,302 upstream,
+license, or context compatibility entries. Ten additional original blobs are
+identified by exact Git SHA-1 in `recovery/upstream/libraries/exact-originals.json`,
+bringing known recoverable originals to 82. Upstream payloads retain their
+licenses and must not be reformatted.
+
+Three original commits now pass real compilation and startup: `b9ae428b`,
+`108bdcbe`, and `afdd8069`. See `recovery/progress.json` for their proof and links.
+The next original, `4a6a0310`, reaches compilation but needs a first-JSON-era
+Creature/Stats/Interaction reconstruction; its value-based Stats API differs
+from the root game. The 2014 map-editor family is being validated separately.
+
+Rootless Ubuntu 16.04 is running under proot at `/tmp/nouraajd-xenial-root`.
+The dependency bootstrap is in progress; this temporary directory is optional
+and can be reproduced using the committed toolchain/fetcher instructions.

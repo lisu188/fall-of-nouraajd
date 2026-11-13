@@ -29,7 +29,13 @@ IGNORE_METHODS = {"if", "for", "while", "switch", "return", "sizeof", "static_ca
 
 def canonicalName(path):
     name = PurePosixPath(path).name
-    return re.sub(r"^C(?=[A-Z])", "", name).lower()
+    return re.sub(r"^C(?=[A-Z])", "", name).lower().replace("iteraction.", "interaction.")
+
+
+def isImage(path):
+    return PurePosixPath(path).suffix.lower() in IMAGE_EXTENSIONS or (
+        path.startswith("images/") and not PurePosixPath(path).suffix
+    )
 
 
 def assetName(path):
@@ -38,6 +44,7 @@ def assetName(path):
         if normalized.startswith(prefix):
             normalized = normalized[len(prefix) :]
     normalized = re.sub(r"/0\.(png|jpe?g)$", r".\1", normalized)
+    normalized = re.sub(r"/0$", "", normalized)
     return re.sub(r"\.(png|jpe?g)$", "", normalized)
 
 
@@ -75,6 +82,8 @@ def apiShape(content):
 
 def companionHeader(files, path):
     source = PurePosixPath(path)
+    if source.stem == "CIteraction":
+        source = source.with_name("CInteraction.cpp")
     for suffix in (".h", ".hpp"):
         candidate = source.with_suffix(suffix).as_posix()
         if candidate != path and candidate in files:
@@ -133,6 +142,37 @@ def donorScore(objects, candidate, target_path, target_header, distances, shape_
     )
 
 
+def upstreamEntries(repo_root):
+    upstream_root = Path(repo_root).resolve() / "recovery" / "upstream"
+    entries = []
+    for catalog_path in sorted(upstream_root.rglob("catalog.json")):
+        for entry in recovery.readJson(catalog_path).get("entries", []):
+            source = recovery.safePath(entry["source"])
+            payload = (catalog_path.parent / source).resolve()
+            if not payload.is_relative_to(catalog_path.parent.resolve()):
+                raise recovery.RecoveryError(f"Upstream payload escapes catalog: {source}")
+            content = payload.read_bytes()
+            if hashlib.sha256(content).hexdigest() != entry["sha256"]:
+                raise recovery.RecoveryError(f"Upstream payload SHA-256 mismatch: {source}")
+            relative = catalog_path.parent.relative_to(upstream_root) / source
+            entries.append({**entry, "source": "upstream/" + relative.as_posix(), "_content": content})
+    return entries
+
+
+def upstreamForTree(entries, tree):
+    selected = {}
+    for entry in entries:
+        if entry.get("tree") not in (None, tree):
+            continue
+        path = recovery.safePath(entry["path"])
+        previous = selected.get(path)
+        if previous is not None and bool(previous.get("tree")) == bool(entry.get("tree")):
+            raise recovery.RecoveryError(f"Duplicate upstream reconstruction: {tree}:{path}")
+        if previous is None or entry.get("tree"):
+            selected[path] = entry
+    return selected
+
+
 def proposeOverrides(repo_root, catalog, donor_commits=None, earliest_compatibility=True):
     donors = DEFAULT_DONORS if donor_commits is None else donor_commits
     snapshots = {item["tree"]: list(item["commits"]) for item in catalog["trees"]}
@@ -145,14 +185,21 @@ def proposeOverrides(repo_root, catalog, donor_commits=None, earliest_compatibil
     for snapshot in catalog["trees"]:
         for entry in snapshot["entries"]:
             if entry["status"] == "missingOriginal":
-                if PurePosixPath(entry["path"]).suffix.lower() in IMAGE_EXTENSIONS:
+                if isImage(entry["path"]):
                     wanted_assets.add(assetName(entry["path"]))
                 else:
                     wanted_names.add(canonicalName(entry["path"]))
     candidates = defaultdict(dict)
     files_by_tree, commit_trees = {}, {}
     entries, unresolved, payloads = [], [], {}
-    counts = {"donorEntryCount": 0, "placeholderEntryCount": 0, "compatibilityEntryCount": 0, "exactOrExistingCount": 0}
+    upstream = upstreamEntries(repo_root)
+    counts = {
+        "donorEntryCount": 0,
+        "placeholderEntryCount": 0,
+        "compatibilityEntryCount": 0,
+        "exactOrExistingCount": 0,
+        "upstreamEntryCount": 0,
+    }
     with recovery.GitObjects(repo_root) as objects:
         for donor in donors:
             commit = recovery.gitCommand(repo_root, "rev-parse", "--verify", donor + "^{commit}").decode().strip()
@@ -171,7 +218,7 @@ def proposeOverrides(repo_root, catalog, donor_commits=None, earliest_compatibil
             for path, entry in files.items():
                 if path.endswith(recovery.MARKER_SUFFIX) or entry["mode"] not in ("100644", "100755"):
                     continue
-                image = PurePosixPath(path).suffix.lower() in IMAGE_EXTENSIONS
+                image = isImage(path)
                 name = assetName(path) if image else canonicalName(path)
                 if name not in (wanted_assets if image else wanted_names):
                     continue
@@ -215,6 +262,8 @@ def proposeOverrides(repo_root, catalog, donor_commits=None, earliest_compatibil
             tree = snapshot["tree"]
             files = files_by_tree[tree]
             distances = graphDistances(graph, snapshot["commits"])
+            chosen_upstream = upstreamForTree(upstream, tree)
+            applied_upstream = set()
             for entry in snapshot["entries"]:
                 path = entry["path"]
                 if tree == (earliest or {}).get("tree") and path in compatibility:
@@ -227,7 +276,20 @@ def proposeOverrides(repo_root, catalog, donor_commits=None, earliest_compatibil
                 if entry["status"] != "missingOriginal":
                     unresolved.append({"tree": tree, "path": path, "reason": entry["status"]})
                     continue
-                image = PurePosixPath(path).suffix.lower() in IMAGE_EXTENSIONS
+                if path in chosen_upstream:
+                    replacement = chosen_upstream[path]
+                    payloads[replacement["source"]] = replacement["_content"]
+                    entries.append(
+                        {
+                            key: value
+                            for key, value in {**replacement, "tree": tree}.items()
+                            if key not in ("_content", "whenPrefix")
+                        }
+                    )
+                    counts["upstreamEntryCount"] += 1
+                    applied_upstream.add(path)
+                    continue
+                image = isImage(path)
                 name = assetName(path) if image else canonicalName(path)
                 options = list(candidates[(image, name)].values())
                 if options:
@@ -274,6 +336,25 @@ def proposeOverrides(repo_root, catalog, donor_commits=None, earliest_compatibil
                             "reason": "no surviving donor with matching basename or class",
                         }
                     )
+            for path, replacement in sorted(chosen_upstream.items()):
+                if path in applied_upstream:
+                    continue
+                replaces_existing = replacement.get("replaceExisting") and path in files
+                adds_missing = replacement.get("add") and path not in files
+                if not (replaces_existing or adds_missing):
+                    continue
+                prefix = replacement.get("whenPrefix")
+                if prefix and not any(candidate.startswith(prefix) for candidate in files):
+                    continue
+                payloads[replacement["source"]] = replacement["_content"]
+                entries.append(
+                    {
+                        key: value
+                        for key, value in {**replacement, "tree": tree}.items()
+                        if key not in ("_content", "whenPrefix")
+                    }
+                )
+                counts["upstreamEntryCount"] += 1
         entries.extend(compatibility.values())
         counts["compatibilityEntryCount"] = len(compatibility)
     entries.sort(key=lambda entry: (entry["tree"], entry["path"]))

@@ -1,0 +1,90 @@
+{
+  "count": 10,
+  "entries": [
+    {
+      "originalBlob": "01822911c75d4abb27e6d53b74ca053a6e3d3e94",
+      "paths": [
+        "tinyxml/tinyxml.h"
+      ],
+      "sha256": "8c5ed61d3964170dc5d0fbfffcf99e5eda2b283d62584837426720e6beb2f587",
+      "source": "upstream/libraries/tmxparser-2014/tinyxml__tinyxml.h"
+    },
+    {
+      "originalBlob": "19771488d6b632c7e627d005439a025f5b739f75",
+      "paths": [
+        "json/json_internalmap.inl",
+        "lib/json/json_internalmap.inl"
+      ],
+      "sha256": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
+      "source": "upstream/libraries/jsoncpp-0.5.0/lib__json__json_internalmap.inl"
+    },
+    {
+      "originalBlob": "2f1d60b43b8a9deacf22bb5526a979dcc219a68f",
+      "paths": [
+        "zlib/inffast.c"
+      ],
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "upstream/libraries/zlib-1.2.7/zlib__inffast.c"
+    },
+    {
+      "originalBlob": "3c2aa9d54daa7ddafe718a35e54d465479d8caa1",
+      "paths": [
+        "tinyxml/tinystr.h"
+      ],
+      "sha256": "25cef0d734c2575898950b96c2cfe8987bf05f30951d9f1db15124ed9bd7381f",
+      "source": "upstream/libraries/tmxparser-2014/tinyxml__tinystr.h"
+    },
+    {
+      "originalBlob": "666a4f757c4040247444d5fc3f3231d2efea7e21",
+      "paths": [
+        "tinyxml/tinyxmlparser.cpp"
+      ],
+      "sha256": "672312a50ccb11ad7d99845091d6621769519b77a6fd314d350428c5b787c5e9",
+      "source": "upstream/libraries/tmxparser-2014/tinyxml__tinyxmlparser.cpp"
+    },
+    {
+      "originalBlob": "736e260ea0371cd762ebafc84e1b2a0769feff23",
+      "paths": [
+        "json/json_valueiterator.inl",
+        "lib/json/json_valueiterator.inl"
+      ],
+      "sha256": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc",
+      "source": "upstream/libraries/jsoncpp-0.5.0/lib__json__json_valueiterator.inl"
+    },
+    {
+      "originalBlob": "95f4986d400223bad542e5b34a7e6284a039425e",
+      "paths": [
+        "zlib/inflate.h"
+      ],
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "upstream/libraries/zlib-1.2.7/zlib__inflate.h"
+    },
+    {
+      "originalBlob": "9b985d2585faf61a4ca8a3a556dff7aa4ff6a48c",
+      "paths": [
+        "json/json_internalarray.inl",
+        "lib/json/json_internalarray.inl"
+      ],
+      "sha256": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
+      "source": "upstream/libraries/jsoncpp-0.5.0/lib__json__json_internalarray.inl"
+    },
+    {
+      "originalBlob": "9be6c6a66c3e357784c10541eca82ba64a715f28",
+      "paths": [
+        "tinyxml/tinyxml.cpp"
+      ],
+      "sha256": "aea6de89017d22ef8be7129667612b0844a1c96c4395323b75088c4a4a887d11",
+      "source": "upstream/libraries/tmxparser-2014/tinyxml__tinyxml.cpp"
+    },
+    {
+      "originalBlob": "d35639d82a27807e49ea35c334f8bbcf64720f82",
+      "paths": [
+        "zlib/trees.h"
+      ],
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "upstream/libraries/zlib-1.2.7/zlib__trees.h"
+    }
+  ],
+  "schemaVersion": 1,
+  "status": "hash-verified-original-payloads"
+}
