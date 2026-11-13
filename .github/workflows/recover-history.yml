@@ -1,0 +1,125 @@
+name: Historical recovery
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/recover-history.yml
+      - recovery/**
+      - scripts/recover_history.py
+      - scripts/verify_history.py
+      - tests/test_history_recovery.py
+      - tests/test_history_smoke.py
+      - tests/test_recovery_workflow.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: historical-recovery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.shards.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Validate recovery tooling
+        run: |
+          python3 -m unittest tests.test_history_recovery tests.test_history_smoke tests.test_recovery_workflow
+          bash -n recovery/toolchains/build.sh
+      - name: Plan exhaustive bounded shards
+        id: shards
+        run: |
+          matrix="$(python3 recovery/toolchains/plan_shards.py --trees-per-shard 16)"
+          echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
+
+  toolchain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Restore identical pinned toolchain image
+        id: image-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/recovery-image
+          key: historical-qt5-amd64-v1-${{ hashFiles('recovery/toolchains/Dockerfile', 'recovery/toolchains/build.sh', 'recovery/toolchains/sources.json') }}
+      - name: Build and record historical toolchain
+        if: steps.image-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "${RUNNER_TEMP}/recovery-image"
+          docker build --platform linux/amd64 --progress plain --tag nouraajd-recovery:qt5 recovery/toolchains
+          docker image inspect nouraajd-recovery:qt5 > "${RUNNER_TEMP}/recovery-image/image.json"
+          docker run --rm --entrypoint cat nouraajd-recovery:qt5 /opt/recovery-installed-packages.txt \
+            > "${RUNNER_TEMP}/recovery-image/packages.txt"
+          docker save nouraajd-recovery:qt5 | gzip -1 > "${RUNNER_TEMP}/recovery-image/image.tar.gz"
+      - name: Cache complete toolchain
+        if: steps.image-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ runner.temp }}/recovery-image
+          key: historical-qt5-amd64-v1-${{ hashFiles('recovery/toolchains/Dockerfile', 'recovery/toolchains/build.sh', 'recovery/toolchains/sources.json') }}
+      - name: Share toolchain with validation shards
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: historical-qt5-toolchain
+          path: ${{ runner.temp }}/recovery-image/
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+  recover:
+    name: Historical trees ${{ matrix.index }}
+    needs: [inventory, toolchain]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.inventory.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+      - name: Obtain the identical historical toolchain
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: historical-qt5-toolchain
+          path: ${{ runner.temp }}/recovery-image
+      - name: Restore toolchain image
+        run: gunzip -c "${RUNNER_TEMP}/recovery-image/image.tar.gz" | docker load
+      - name: Restore, compile and verify every assigned tree
+        env:
+          SHARD_INDEX: ${{ matrix.index }}
+          SHARD_COUNT: ${{ matrix.count }}
+        run: |
+          output_dir="${RUNNER_TEMP}/historical-results"
+          mkdir -p "${output_dir}"
+          image_id="$(docker image inspect --format '{{.Id}}' nouraajd-recovery:qt5)"
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --env "GAME_RECOVERY_TOOLCHAIN_ID=${image_id}" \
+            --volume "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}:ro" \
+            --volume "${output_dir}:/results" --workdir "${GITHUB_WORKSPACE}" \
+            nouraajd-recovery:qt5 scripts/verify_history.py --all \
+            --recipes recovery/toolchains/qt5.json \
+            --shard-index "${SHARD_INDEX}" --shard-count "${SHARD_COUNT}" \
+            --output-dir /results --timeout 30 --build-timeout 1200 --jobs 2
+      - name: Retain individual build and startup evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: historical-results-${{ matrix.index }}
+          path: ${{ runner.temp }}/historical-results/
+          retention-days: 14
+          if-no-files-found: error

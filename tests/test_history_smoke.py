@@ -7,6 +7,7 @@ import struct
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import zlib
 
 from scripts import verify_history as verify
@@ -121,6 +122,38 @@ class HistoricalSmokeTest(unittest.TestCase):
             (root / "scripting.cpp").write_text("#include <boost/python.hpp>")
             with self.assertRaisesRegex(verify.VerificationError, "cannot be inferred"):
                 verify.selectRecipe([{"id": "none", "pythonAbi": "none"}], root, None)
+
+    def testPythonTwoModuleInitializationSelectsPythonTwo(self):
+        recipes = [{"id": f"python-{abi}", "pythonAbi": abi} for abi in ("none", "2.7", "3.3", "3.4")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Game.pro").write_text("LIBS += -lboost_python")
+            (root / "scripting.cpp").write_text('Py_InitModule("game", methods);')
+            self.assertEqual("2.7", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+
+    def testIncludedProjectFragmentDeclaresPythonThreeMinor(self):
+        recipes = [{"id": f"python-{abi}", "pythonAbi": abi} for abi in ("none", "2.7", "3.3", "3.4")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Game.pro").write_text("include(python.pri)")
+            (root / "python.pri").write_text("LIBS += -lpython3.4m")
+            (root / "scripting.cpp").write_text("PyModuleDef definition;")
+            self.assertEqual("3.4", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+
+    def testQmakeVersionUsesItsSupportedVersionFlag(self):
+        completed = mock.Mock(returncode=0, stdout="QMake version 3.0", stderr="")
+        with mock.patch.object(verify.shutil, "which", return_value="/usr/bin/qmake"), mock.patch.object(
+            verify.subprocess, "run", return_value=completed
+        ) as run:
+            verify.toolchainFingerprint({"qmakeCommand": "qmake"}, {})
+        self.assertEqual(["/usr/bin/qmake", "-v"], run.call_args.args[0])
+
+    def testIdenticalTreesAreSplitWhenCommitRepairsDiffer(self):
+        catalog = {"trees": [{"tree": "same-tree", "commits": ["aaa", "bbb", "ccc"]}]}
+        overrides = {"entries": [{"commit": "bbb", "path": "game.cpp", "source": "repair.cpp"}]}
+        selected = verify.selectTrees(catalog, overrides)
+        self.assertEqual([["aaa", "ccc"], ["bbb"]], [tree["commits"] for tree in selected])
+        self.assertEqual(["bbb"], verify.selectTrees(catalog, overrides, "bb")[0]["commits"])
 
 
 if __name__ == "__main__":

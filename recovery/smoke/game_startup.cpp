@@ -102,7 +102,7 @@ class RecoveryStartupProbe : public QObject {
         if (!view || !view->isVisible()) {
             return;
         }
-        RecoveryScene *scene = dynamic_cast<RecoveryScene *>(view->scene());
+        RecoveryScene *scene = dynamic_cast<RecoveryScene *>(view->QGraphicsView::scene());
         if (!scene) {
             return;
         }

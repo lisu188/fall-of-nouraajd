@@ -278,22 +278,50 @@ def loadRecipes(path: Path) -> list[dict]:
         recipes = [{"id": key, **recipe} for key, recipe in recipes.items()]
     if not recipes:
         raise VerificationError(f"No build recipes in {path}")
-    return recipes
+    lock = {key: item for key, item in value.items() if key != "recipes"}
+    if lock.get("sourceLock"):
+        source_lock = REPO_ROOT / lock["sourceLock"]
+        if not source_lock.is_file():
+            raise VerificationError(f"Pinned historical dependency lock is missing: {source_lock}")
+        lock["sourceLockSha256"] = hashlib.sha256(source_lock.read_bytes()).hexdigest()
+    return [{"toolchainLock": lock, **recipe} for recipe in recipes]
 
 
 def selectRecipe(recipes: list[dict], source_root: Path, selected: str | None) -> dict:
     if selected:
         matching = [recipe for recipe in recipes if recipe["id"] == selected]
     else:
-        projects = sorted(source_root.glob("*.pro"))
+        projects = sorted(path for pattern in ("*.pro", "*.pri") for path in source_root.rglob(pattern))
         text = "\n".join(path.read_text(encoding="utf-8") for path in projects)
         versions = re.findall(r"python([23])(?:\.([0-9]+)|([0-9]))", text, re.IGNORECASE)
-        abi = versions[0][0] + "." + (versions[0][1] or versions[0][2]) if versions else "none"
-        python_used = any(
-            re.search(r"(?:Python\.h|boost/python)", path.read_text(errors="replace"))
+        declared_abis = {version[0] + "." + (version[1] or version[2]) for version in versions}
+        code = "\n".join(
+            path.read_text(errors="replace")
             for pattern in ("*.h", "*.cpp")
             for path in source_root.rglob(pattern)
+            if not any(
+                part.lower() in ("boost", "libraries", "json") for part in path.relative_to(source_root).parts[:-1]
+            )
         )
+        python_used = re.search(r"(?:Python\.h|boost/python|PyModuleDef|Py_InitModule|PyInit_)", code) is not None
+        source_majors = set()
+        if re.search(r"\bPy_InitModule\w*\s*\(", code):
+            source_majors.add("2")
+        if re.search(r"\b(?:PyModuleDef|PyModule_Create\w*|PyInit_\w+)\b", code):
+            source_majors.add("3")
+        if len(declared_abis) > 1:
+            raise VerificationError("Multiple historical Python ABIs are declared; supply --recipe")
+        abi = next(iter(declared_abis), "none")
+        if declared_abis and len(source_majors) == 1 and abi[0] not in source_majors:
+            raise VerificationError("Python initialization API conflicts with the declared ABI; supply --recipe")
+        if abi == "none" and len(source_majors) == 1:
+            compatible_abis = {
+                str(recipe.get("pythonAbi"))
+                for recipe in recipes
+                if str(recipe.get("pythonAbi", "")).startswith(next(iter(source_majors)) + ".")
+            }
+            if len(compatible_abis) == 1:
+                abi = next(iter(compatible_abis))
         if abi == "none" and python_used:
             raise VerificationError("Python is used but the historical ABI cannot be inferred; supply --recipe")
         matching = [recipe for recipe in recipes if str(recipe.get("pythonAbi", "none")) == abi]
@@ -310,8 +338,9 @@ def toolchainFingerprint(recipe: dict, environment: dict[str, str]) -> dict:
             executable = shutil.which(command, path=environment.get("PATH"))
             if executable is None:
                 raise VerificationError(f"Required historical tool is unavailable: {command}")
+            version_flag = "-v" if field == "qmakeCommand" else "--version"
             result = subprocess.run(
-                [executable, "--version"], capture_output=True, text=True, env=environment, timeout=10, check=False
+                [executable, version_flag], capture_output=True, text=True, env=environment, timeout=10, check=False
             )
             if result.returncode != 0:
                 raise VerificationError(f"Cannot identify historical tool: {command}")
@@ -356,11 +385,18 @@ def verifySnapshot(
             "sourceTree": tree["tree"],
             "recipe": recipe,
             "toolchain": toolchain,
+            "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
             "adapter": hashlib.sha256(SMOKE_SOURCE.read_bytes()).hexdigest(),
             "verifier": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "restorer": hashlib.sha256((REPO_ROOT / "scripts/recover_history.py").read_bytes()).hexdigest(),
             "adapterConfig": adapter["configSha256"],
             "overrides": overrides,
+            "overrideContext": [
+                entry
+                for entry in (overrides or {}).get("entries", [])
+                if entry.get("commit", source_commit) == source_commit
+                and entry.get("tree", tree["tree"]) == tree["tree"]
+            ],
         }
         fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         result.update({"fingerprint": fingerprint, "recipe": recipe, "toolchain": toolchain, "adapter": adapter})
@@ -369,7 +405,7 @@ def verifySnapshot(
             cached = json.loads(cached_path.read_text())
             if cached.get("status") == "success":
                 validateSmokeReport(Path(cached["smoke"]["startupReport"]), Path(cached["artifactDir"]))
-                return {**cached, "sourceCommits": tree["commits"], "resumed": True}
+                return {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
         projects = sorted(source_root.glob("*.pro"))
         if len(projects) != 1:
             raise VerificationError(f"Expected one historical qmake project, found {len(projects)}")
@@ -383,6 +419,7 @@ def verifySnapshot(
             *recipe.get("qmakeArguments", []),
             "-after",
             "TARGET=RecoveryGame",
+            "DESTDIR=.",
             "CONFIG-=app_bundle",
             "SOURCES+=" + str(SMOKE_SOURCE),
             "INCLUDEPATH+=" + str(source_root),
@@ -419,6 +456,30 @@ def verifySnapshot(
         return result
 
 
+def selectTrees(catalog: dict, overrides: dict | None, commit_prefix: str | None = None) -> list[dict]:
+    """Reuse identical trees only when commit-scoped repairs also have identical applicability."""
+    trees = sorted(catalog["trees"], key=lambda tree: tree["tree"])
+    if commit_prefix:
+        matching = [(tree, commit) for tree in trees for commit in tree["commits"] if commit.startswith(commit_prefix)]
+        if len(matching) != 1:
+            raise VerificationError("--commit must identify one cataloged damaged commit")
+        tree, commit = matching[0]
+        return [{**tree, "commits": [commit]}]
+    selected = []
+    for tree in trees:
+        contexts = {}
+        for commit in tree["commits"]:
+            context = [
+                entry
+                for entry in (overrides or {}).get("entries", [])
+                if entry.get("commit", commit) == commit and entry.get("tree", tree["tree"]) == tree["tree"]
+            ]
+            key = json.dumps(context, sort_keys=True)
+            contexts.setdefault(key, []).append(commit)
+        selected.extend({**tree, "commits": commits} for commits in contexts.values())
+    return selected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
@@ -449,12 +510,7 @@ def main() -> int:
         if args.overrides.exists():
             overrides = json.loads(args.overrides.read_text(encoding="utf-8"))
             overrides["_baseDir"] = str(args.overrides.resolve().parent)
-        trees = sorted(catalog["trees"], key=lambda tree: tree["tree"])
-        if args.commit:
-            matching = [tree for tree in trees if any(commit.startswith(args.commit) for commit in tree["commits"])]
-            if len(matching) != 1:
-                raise VerificationError("--commit must identify one cataloged damaged project tree")
-            trees = matching
+        trees = selectTrees(catalog, overrides, args.commit)
         trees = [tree for index, tree in enumerate(trees) if index % args.shard_count == args.shard_index]
         results = []
         for tree in trees:

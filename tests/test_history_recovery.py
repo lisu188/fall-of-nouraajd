@@ -8,11 +8,30 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from scripts import recover_history as recovery
 
 
 class HistoricalRecoveryTest(unittest.TestCase):
+    def testInvalidPathTypesFailWithRecoveryError(self):
+        for value in (None, 12, {}, []):
+            with self.subTest(value=value), self.assertRaises(recovery.RecoveryError):
+                recovery.safePath(value)
+
+    def testOldGitWithoutObjectFormatOptionStillReadsSha1Objects(self):
+        original = recovery.gitCommand
+        blob = self.blob(b"old Git compatibility\n")
+
+        def oldGit(repo_root, *args, **kwargs):
+            if args == ("rev-parse", "--show-object-format"):
+                return b"--show-object-format\n"
+            return original(repo_root, *args, **kwargs)
+
+        with patch.object(recovery, "gitCommand", side_effect=oldGit):
+            with recovery.GitObjects(self.repo) as objects:
+                self.assertEqual(b"old Git compatibility\n", objects.read(blob, "blob"))
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="nouraajd-history-test-")
         self.addCleanup(self.temporary.cleanup)

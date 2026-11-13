@@ -77,7 +77,9 @@ def exclusionReason(path):
 class GitObjects:
     def __init__(self, repo_root):
         self.repo_root = Path(repo_root).resolve()
-        if gitCommand(self.repo_root, "rev-parse", "--show-object-format").strip() != b"sha1":
+        object_format = gitCommand(self.repo_root, "rev-parse", "--show-object-format").strip()
+        # Git predating SHA-256 repositories echoes unrecognized rev-parse options.
+        if object_format not in (b"sha1", b"--show-object-format"):
             raise RecoveryError("BFG SHA-1 recovery requires a SHA-1 Git repository")
         self.process = subprocess.Popen(
             ["git", "-C", str(self.repo_root), "cat-file", "--batch"],
