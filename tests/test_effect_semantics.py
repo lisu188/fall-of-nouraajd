@@ -7,7 +7,9 @@ import ast
 import json
 from pathlib import Path
 import runpy
+import subprocess
 import sys
+import tempfile
 import types
 import unittest
 import uuid
@@ -224,6 +226,30 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
         return {name: actor.getStats().getNumericProperty(name) for name in STAT_NAMES}
 
     def testMigratedCombatProducersPreserveNativeResultsAndRandomStreamWhenObserved(self):
+        script = (
+            "import sys; from tests.test_effect_semantics import _writeNativeProducerSnapshot; "
+            "_writeNativeProducerSnapshot(int(sys.argv[1]), sys.argv[2] == '1', sys.argv[3])"
+        )
+        with tempfile.TemporaryDirectory(prefix="native-combat-producers-") as directory:
+            for seed in (188, 991):
+                snapshots = {}
+                for enabled in (False, True):
+                    output = Path(directory) / (str(seed) + str(enabled) + ".json")
+                    result = subprocess.run(
+                        [sys.executable, "-c", script, str(seed), str(int(enabled)), str(output)],
+                        cwd=ROOT,
+                        capture_output=True,
+                        text=True,
+                        timeout=90,
+                    )
+                    self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                    snapshots[enabled] = json.loads(output.read_text(encoding="utf-8"))
+                self.assertEqual(snapshots[False].keys(), snapshots[True].keys())
+                for type_id in snapshots[False]:
+                    with self.subTest(producer=type_id, seed=seed):
+                        self.assertEqual(snapshots[False][type_id], snapshots[True][type_id])
+
+    def nativeProducerSnapshots(self, enabled, seed):
         engine = self.engine
         action_ids = (
             "Attack",
@@ -270,6 +296,9 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
             "MelfsAcidArrowEffect",
             "CloudkillEffect",
         )
+        random_probe = self.actor("NativeRandomContinuationProbe")
+        for name, value in (("dmgMin", 1), ("dmgMax", 1000000), ("damage", 0), ("hit", 1000), ("crit", 0)):
+            random_probe.getObjectProperty("baseStats").setNumericProperty(name, value)
 
         def runProducer(type_id, enabled, seed, pulse):
             case_id = type_id + str(seed) + ("Observed" if enabled else "Ordinary")
@@ -283,12 +312,20 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                     ("stamina", 1000),
                     ("intelligence", 1000),
                     ("hit", 1000),
+                    ("dmgMin", 12),
+                    ("dmgMax", 12),
+                    ("damage", 0),
+                    ("crit", 0),
                     ("block", 0),
                     ("armor", 0),
+                    ("normalResist", 0),
+                    ("shadowResist", 0),
                 ):
                     stats.setNumericProperty(name, value)
                 actor.heal(0)
                 actor.setMana(actor.getManaMax())
+            caster.setHp(caster.getHpMax() // 2)
+            caster_hp_before = caster.getHp()
             if type_id == "Strike":
                 weapon = self.game.createObject("Sword")
                 caster.addItem(weapon)
@@ -305,22 +342,28 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                         (event.getStringProperty("combatKind"), event.getObjectProperty("combatProducer"))
                     )
 
+            observer_type = case_id + "Observer"
+            self.game.getObjectHandler().registerType(observer_type, Observer)
             for kind in ("onCombatAttempt", "onCombatRoll", "onCombatPacket"):
-                observer = Observer()
-                observer.setGame(self.game)
+                observer = self.game.createObject(observer_type)
                 observer.setStringProperty("object", victim.getName())
                 observer.setStringProperty("event", kind)
                 self.gameMap.getEventHandler().registerTrigger(observer)
                 observers.append(observer)
             producer = self.game.createObject(type_id)
+            if not pulse:
+                caster.addAction(producer)
+                self.assertTrue(any(action is producer for action in caster.getEffectiveInteractions()))
             self.gameMap.setBoolProperty("nativeCombatFacts", enabled)
-            engine._seedRandomForTests(seed)
             if pulse:
                 producer.setCaster(caster)
                 producer.setVictim(victim)
                 producer.apply(victim)
             else:
                 caster.useAction(producer, victim)
+            healing = {"Devour": 9, "BloodThirst": 2, "LarlochsMinorDrain": 10, "VampiricTouch": 9}
+            if not pulse and type_id in healing:
+                self.assertEqual(caster_hp_before + healing[type_id], caster.getHp())
             snapshot = (
                 caster.getHp(),
                 caster.getMana(),
@@ -331,11 +374,13 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                 sorted((effect.getTypeId(), effect.getTimeLeft()) for effect in victim.getEffects()),
                 producer.getTimeLeft() if pulse else None,
                 engine.randint(1, 1000000),
+                tuple(random_probe.getDmg(False) for _ in range(8)),
             )
             if enabled:
                 kinds = [kind for kind, _ in observations]
                 self.assertIn("onCombatPacket", kinds)
                 self.assertEqual(0 if pulse else 1, kinds.count("onCombatAttempt"))
+                self.assertTrue(all(owner is producer for kind, owner in observations if kind == "onCombatAttempt"))
                 if pulse:
                     self.assertTrue(all(owner is producer for kind, owner in observations if kind == "onCombatPacket"))
             else:
@@ -343,13 +388,11 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
             return snapshot
 
         self.addCleanup(self.gameMap.setBoolProperty, "nativeCombatFacts", False)
-        for seed in (188, 991):
-            for pulse, type_ids in ((False, action_ids), (True, effect_ids)):
-                for type_id in type_ids:
-                    with self.subTest(producer=type_id, seed=seed):
-                        ordinary = runProducer(type_id, False, seed, pulse)
-                        observed = runProducer(type_id, True, seed, pulse)
-                        self.assertEqual(ordinary, observed)
+        return {
+            type_id: runProducer(type_id, enabled, seed, pulse)
+            for pulse, type_ids in ((False, action_ids), (True, effect_ids))
+            for type_id in type_ids
+        }
 
     def attachTagEffect(self, caster, victim, effect_id):
         # Actor links are native-only fields; the cast pipeline supplies them.
@@ -491,3 +534,18 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                 engine.CFightHandler.fight(caster, victim)
                 self.assertEqual({"attacker": 3, "defender": 1}, turns)
                 self.assertEqual([], list(victim.getEffects()))
+
+
+def _writeNativeProducerSnapshot(seed, enabled, output):
+    import test as harness
+
+    harness.load_game_module()
+    import _game
+
+    _game._seedRandomForTests(seed)
+    case = EffectSemanticRuntimeTest("testMigratedCombatProducersPreserveNativeResultsAndRandomStreamWhenObserved")
+    try:
+        case.setUp()
+        Path(output).write_text(json.dumps(case.nativeProducerSnapshots(enabled, seed)), encoding="utf-8")
+    finally:
+        case.doCleanups()
