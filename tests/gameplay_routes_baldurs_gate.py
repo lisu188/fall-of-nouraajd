@@ -1123,13 +1123,48 @@ def companionState(d, names):
     return result
 
 
+def eldothHistorySnapshot(d):
+    name = "cityCampaignNpc16"
+    clock = d.object("cityClock")
+    actor = d.call(d.game_map, "getObjectByName", name)
+    owned = d.call(clock, "getObjectProperty", "plugin_cityCompanion_" + name)
+    d.test.assertEqual(actor, owned, "The roster must own the currently registered Eldoth")
+    if actor:
+        d.test.assertFalse(d.call(actor, "isPlayer"))
+    return {
+        "history": read(d, d.game_map, "plugin_cityHistory", {}),
+        "frozen": d.flag("plugin_cityHistoryFrozen"),
+        "joined": d.flag("plugin_cityFlag_eldothJoined"),
+        "roster": read(d, clock, "plugin_cityRoster", []),
+        "spawned": read(d, clock, "plugin_citySpawnedActors", []),
+        "allies": d.string("plugin_cityCompanionNames"),
+        "resources": resources(d),
+        "actor": companionState(d, (name,)) if actor else None,
+    }
+
+
 def companionsRoute(d):
     from tests.gameplay_branch_driver import readNewNativeTrace
 
     start(d)
     planner = QuestRoute(d)
     planner.contact("cityStart")
+    d.saveAndReload("city-before-eldoth-history")
     d.choose("cityStartDialog", "historyEldothJoined")
+    eldoth = d.call(d.game_map, "getObjectByName", "cityCampaignNpc16")
+    d.test.assertIsNotNone(eldoth)
+    before = eldothHistorySnapshot(d)
+    d.test.assertEqual("joined", before["history"]["eldoth"])
+    d.test.assertTrue(before["joined"])
+    d.test.assertFalse(before["frozen"])
+    d.choose("cityStartDialog", "historyEldothJoined")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.test.assertEqual(eldoth, d.call(d.game_map, "getObjectByName", "cityCampaignNpc16"))
+    d.test.assertEqual(1, before["roster"].count("cityCampaignNpc16"))
+    d.test.assertEqual(1, before["spawned"].count("cityCampaignNpc16"))
+    d.saveAndReload("city-after-eldoth-history-repeat")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.check("baldursGate.history.eldothJoinedRepeat", True, sourceId="BALDUR.GAM#npc16")
     d.choose("cityStartDialog", "encounterQuayle")
     for name in ("cityCampaignNpc13", "cityCampaignNpc19"):
         planner.contact(name)
@@ -1210,6 +1245,22 @@ def skieRefusal(d):
     planner = QuestRoute(d)
     planner.contact("cityStart")
     d.choose("cityStartDialog", "historyEldothAbsent")
+    before = eldothHistorySnapshot(d)
+    d.test.assertEqual("absent", before["history"]["eldoth"])
+    d.test.assertFalse(before["frozen"])
+    d.test.assertFalse(before["joined"])
+    d.test.assertIsNone(before["actor"])
+    d.choose("cityStartDialog", "historyEldothJoined")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.check("baldursGate.history.eldothAbsentRefusesJoin", True, sourceId="BALDUR.GAM#npc16")
+    d.choose("cityStartDialog", "finishHistoryChoices")
+    d.test.assertTrue(d.flag("plugin_cityHistoryFrozen"))
+    before = eldothHistorySnapshot(d)
+    d.choose("cityStartDialog", "historyEldothJoined")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.saveAndReload("city-after-eldoth-history-refusals")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.check("baldursGate.history.eldothFrozenRefusesJoin", True, sourceId="BALDUR.GAM#npc16")
     planner.contact("cityCampaignNpc15")
     before_crimes = d.number("plugin_cityCrimes")
     d.choose("cityCampaignNpc15Dialog", "recruit")
@@ -1720,6 +1771,7 @@ CASES = (
             (MAP,),
             (
                 "baldursGate.companions.fiveAndReload",
+                "baldursGate.history.eldothJoinedRepeat",
                 "baldursGate.companions.dismissAndReturn",
                 "baldursGate.companions.nativeCombat",
             ),
@@ -1732,7 +1784,11 @@ CASES = (
             "baldurs-gate-skie-refusal",
             MAP,
             (MAP,),
-            ("baldursGate.companions.skieWithoutEldoth",),
+            (
+                "baldursGate.companions.skieWithoutEldoth",
+                "baldursGate.history.eldothAbsentRefusesJoin",
+                "baldursGate.history.eldothFrozenRefusesJoin",
+            ),
             skieRefusal,
             classes=("Sorcerer",),
             sources=SOURCES,
@@ -2010,9 +2066,41 @@ SOURCE_BRANCHES.update(
 )
 
 
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateDialog.historyEldothJoined"] += (
+    "baldursGate.history.eldothJoinedRepeat",
+    "baldursGate.history.eldothAbsentRefusesJoin",
+    "baldursGate.history.eldothFrozenRefusesJoin",
+)
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateDialog.historyEldothAbsent"] += (
+    "baldursGate.history.eldothAbsentRefusesJoin",
+)
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateDialog.finishHistoryChoices"] += (
+    "baldursGate.history.eldothFrozenRefusesJoin",
+)
+
+
 # The complete source ledger remains pending even when a representative adaptation route exists.
 # Registration cannot turn a missing classic source branch into a passing native witness.
 DEFENSIVE_SOURCE_BRANCHES = {
+    "baldursGate.eldothGuard.spawnFailure": "Controlled setup/factory/lifetime regression (spawnFailure); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.partialHooks": "Controlled setup/factory/lifetime regression (partialHooks); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.partialItems": "Controlled setup/factory/lifetime regression (partialItems); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.controllerFailure": "Controlled setup/factory/lifetime regression (controllerFailure); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.preexistingActor": "Controlled setup/factory/lifetime regression (preexistingActor); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.invalidSetup": "Controlled setup/factory/lifetime regression (invalidSetup); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.missingDefinition": "Controlled setup/factory/lifetime regression (missingDefinition); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.replacedMapException": "Controlled setup/factory/lifetime regression (replacedMapException); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.replacedMapReturn": "Controlled setup/factory/lifetime regression (replacedMapReturn); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.cleanupFailure": "Controlled setup/factory/lifetime regression (cleanupFailure); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.reentrantRoster": "Controlled setup/factory/lifetime regression (reentrantRoster); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.reentrantHistory": "Controlled setup/factory/lifetime regression (reentrantHistory); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.otherHistoryChoice": "Controlled setup/factory/lifetime regression (otherHistoryChoice); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.replacedActor": "Controlled setup/factory/lifetime regression (replacedActor); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.existingRosterEntry": "Controlled setup/factory/lifetime regression (existingRosterEntry); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.nestedRecruitment": "Controlled setup/factory/lifetime regression (nestedRecruitment); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.independentClock": "Controlled setup/factory/lifetime regression (independentClock); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.finalSetterGuardRelease": "Controlled setup/factory/lifetime regression (finalSetterGuardRelease); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.ownerRelease": "Controlled setup/factory/lifetime regression (ownerRelease); source/model evidence only, never a native gameplay witness.",
     "res/maps/baldursGate/script.py:BaldursGatePortal.onDestroy": "Connector teardown unregisters its owned edge; the named source/model regression gives no native gameplay credit.",
 }
 
