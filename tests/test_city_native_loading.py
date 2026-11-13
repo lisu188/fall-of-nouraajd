@@ -275,8 +275,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                     assert len(copies) == 1 and copies[0].getTypeId() == 'Dagger'
                     assert copies[0].getGame() is instance
                     assert not any(item.getName() == 'loadDiagnosticOwnedDagger' for actor in world.getObjects()
-                                   if isinstance(actor, game.CCreature) and actor is not restored
-                                   for item in (*actor.getItems(), *actor.getEquipped().values()) if item)
+                                    if isinstance(actor, game.CCreature) and actor is not restored
+                                    for item in (*actor.getItems(), *actor.getEquipped().values()) if item)
                     loop.run()
                 completed = True
                 print('native load diagnostics preserve silence and actual ownership', flush=True)
@@ -408,6 +408,26 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
 
 
 class CityNativeLoadingSourceTest(unittest.TestCase):
+    def testEmbeddedLoadProgramsSatisfyTheRepositoryIndentationGate(self):
+        import json
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[1]
+        module = ast.parse((root / "test.py").read_text(encoding="utf-8"))
+        owner = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == "GameTest")
+        gate = next(
+            node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == "test_indentation"
+        )
+        gate.decorator_list = []
+        namespace = {
+            "REPO_ROOT": root,
+            "git_tracked_files": lambda pattern: ("tests/test_city_native_loading.py",),
+            "json": json,
+        }
+        exec(compile(ast.Module(body=[gate], type_ignores=[]), "test.py", "exec"), namespace)
+        success, offenders = namespace["test_indentation"](self)
+        self.assertTrue(success, offenders)
+
     def program(self, method_name, marker):
         case = CityNativeLoadingRuntimeTest(method_name)
         programs = []
