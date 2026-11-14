@@ -3,6 +3,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +50,14 @@ class RecoveryWorkflowTest(unittest.TestCase):
             self.assertIn(home + "/lib", environment["LD_LIBRARY_PATH"].split(":"))
             self.assertIn(home + "/lib", environment["LIBRARY_PATH"].split(":"))
             self.assertTrue(any(path.startswith(home + "/include/python") for path in environment["CPATH"].split(":")))
+
+    def testWorkflowRunsOnlyExistingRecoveryTestModules(self):
+        workflow = (ROOT / ".github/workflows/recover-history.yml").read_text()
+        modules = set(re.findall(r"\btests\.(test_\w+)", workflow))
+        triggers = set(re.findall(r"^\s*- tests/(test_\w+)\.py$", workflow, re.MULTILINE))
+        self.assertTrue(modules)
+        self.assertEqual(set(), {name for name in modules | triggers if not (ROOT / "tests" / (name + ".py")).is_file()})
+        self.assertEqual(modules, triggers)
 
     def testAllDownloadedSourcesHaveUniquePinnedIdentities(self):
         lock = json.loads((ROOT / "recovery/toolchains/sources.json").read_text())
