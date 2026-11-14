@@ -118,6 +118,8 @@ export GAME_BUILD_DIR=cmake-build-gcc15-release
 python3 mcp.py
 # or build the extension on demand and run
 python3 mcp.py --build
+
+HTTP MCP access is restricted to loopback (`127.0.0.1` or `localhost`) and validates the HTTP `Host` header. Non-loopback `--host` values are rejected. For remote inspection, use SSH port forwarding to the local MCP port or the stdio transport.
 </pre>
 The HTTP server exposes a unified `engine` surface from both `game` and `_game`. Core MCP tools include:
 - `engine_list`
