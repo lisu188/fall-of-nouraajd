@@ -17,7 +17,7 @@ class McpHttpHostTests(unittest.TestCase):
             None, "", "example.com", "example.com:8765", "127.0.0.1.evil.test",
             "0.0.0.0:8765", "127.0.0.1:9999", "localhost:bogus",
             "localhost:65536", "localhost@", "localhost/path", "localhost?x=1",
-            "localhost#x", "localhost\\r\\nX-Forged: yes", "[::1]:8765",
+            "localhost#x", "localhost\r\nX-Forged: yes", "[::1]:8765",
         )
         for host in hosts:
             with self.subTest(host=host):
