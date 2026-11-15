@@ -2009,6 +2009,141 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     with self.assertRaises(AssertionError):
                         exercise(price, mutation)
 
+    def testNarlenRogueStoneReturnsToGuildThroughOrdinaryScheduleTicksBeforeTurnIn(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        for travel_ticks, unavailable in ((3, ""), (20, ""), (3, "dead"), (3, "missing")):
+            with self.subTest(travel_ticks=travel_ticks, unavailable=unavailable):
+                model = CityModel(agility=12)
+                narlen = model.canonical("NARLEN")
+                ring = model.item("RING16", narlen)
+                self.assertTrue(model.dialog(narlen).acceptNarlenLookout())
+                model.clock.advanceTicks(700)
+                model.installLookoutOfficer()
+                self.assertTrue(model.dialog(narlen).beginNarlenLookout())
+                model.clock.advanceTicks(20)
+                self.assertTrue(model.dialog(narlen).warnNarlen())
+                self.assertTrue(model.dialog(narlen).questNarlenLookoutComplete())
+                self.assertTrue(model.dialog(narlen).acceptNarlenRogueStone())
+                model.clock.advanceTicks(410)
+                self.assertEqual(1130, model.game_map.getNumericProperty("plugin_cityTicks"))
+                self.assertEqual("AR1300", narlen.getStringProperty("sourceArea"))
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                events, choices, stones = [], [], []
+                location = {"area": "AR0130", "waits": 0}
+                driver = SimpleNamespace(
+                    test=self,
+                    player=model.player,
+                    game_map=model.game_map,
+                    object=lambda name, required=False: model.game_map.getObjectByName(name),
+                    call=lambda owner, method, *args: getattr(owner, method)(*args),
+                    number=model.game_map.getNumericProperty,
+                    string=model.game_map.getStringProperty,
+                    gold=model.player.getGold,
+                    coords=lambda: tuple(vars(model.player.getCoords()).values()),
+                    snapshot=lambda: dict(location),
+                    questNames=lambda completed=False: [
+                        quest.getName()
+                        for quest in (model.player.getCompletedQuests() if completed else model.player.getQuests())
+                    ],
+                )
+
+                def tick():
+                    self.assertIn(stones[0], model.player.items, "The same stone must remain owned until handover")
+                    self.assertNotIn(stones[0], narlen.items)
+                    model.clock.advanceTicks(1)
+
+                def waitTurns(limit, predicate):
+                    self.assertEqual(25, limit)
+                    before = model.game_map.getNumericProperty("plugin_cityTicks")
+                    try:
+                        GameplayBranchDriver.waitTurns(driver, limit, predicate)
+                    finally:
+                        location["waits"] += model.game_map.getNumericProperty("plugin_cityTicks") - before
+
+                def hold(point):
+                    self.assertEqual(driver.coords(), point)
+                    events.append(("hold", location["area"]))
+
+                def travel(actual, area):
+                    self.assertIs(driver, actual)
+                    self.assertEqual("AR0153", area)
+                    self.assertEqual("AR1300", narlen.getStringProperty("sourceArea"))
+                    self.assertIn(stones[0], model.player.items)
+                    events.append(("travel", area))
+                    location["area"] = area
+                    for _ in range(travel_ticks):
+                        tick()
+
+                def acquire(requirement):
+                    self.assertEqual({"anyOf": ["MISC45"], "count": 1}, requirement)
+                    stones.append(model.item("MISC45"))
+                    if unavailable == "dead":
+                        model.kill(narlen)
+                    elif unavailable == "missing":
+                        model.game_map.removeObject(narlen)
+                        model.clock.setStringProperty("relocationDefinitions", "[]")
+
+                def contact(name):
+                    self.assertEqual(narlen.getName(), name)
+                    self.assertEqual("AR0153", location["area"])
+                    self.assertIs(narlen, driver.object(name))
+                    self.assertTrue(narlen.isAlive())
+                    self.assertEqual("AR0153", narlen.getStringProperty("sourceArea"))
+                    self.assertIn(stones[0], model.player.items)
+                    events.append(("contact", name))
+
+                def choose(dialog_id, action):
+                    self.assertEqual(
+                        (narlen.getName() + "Dialog", "questNarlenRogueStoneComplete"), (dialog_id, action)
+                    )
+                    self.assertEqual("AR0153", location["area"])
+                    choices.append((dialog_id, action))
+                    self.assertTrue(getattr(model.dialog(narlen), action)())
+
+                driver.tick, driver.waitTurns, driver.navigateCoords, driver.choose = tick, waitTurns, hold, choose
+                planner = routes.QuestRoute(driver)
+                planner.item, planner.contact = acquire, contact
+                with patch.object(routes, "travel", side_effect=travel):
+                    if unavailable:
+                        with self.assertRaisesRegex(AssertionError, "Turn budget exhausted.*25"):
+                            planner.settle("narlenRogueStone", "complete")
+                        self.assertEqual(25, location["waits"])
+                        self.assertFalse(choices)
+                        self.assertEqual("active", routes.state(driver, "narlenRogueStone"))
+                        self.assertIn(stones[0], model.player.items)
+                        self.assertNotIn(stones[0], narlen.items)
+                    else:
+                        name, outcome = planner.settle("narlenRogueStone", "complete")
+                        self.assertEqual((narlen.getName(), "complete"), (name, outcome["id"]))
+                        self.assertEqual(17 if travel_ticks == 3 else 0, location["waits"])
+                        self.assertIs(narlen, model.game_map.getObjectByName(name))
+                        self.assertIs(narlen, model.clock.getObjectProperty("plugin_cityRelocationActor_narlen"))
+                        self.assertIn(stones[0], narlen.items)
+                        self.assertNotIn(stones[0], model.player.items)
+                        self.assertIn(ring, narlen.items)
+                        pearls = [
+                            item
+                            for item in model.player.items
+                            if item.getStringProperty("plugin_citySourceItem") == "MISC36"
+                        ]
+                        self.assertEqual(1, len(pearls))
+                        self.assertEqual(3, pearls[0].getNumericProperty("plugin_cityQuantity"))
+                        before = routes.resources(driver), tuple(events), tuple(choices), tuple(narlen.items)
+                        self.assertIsNone(planner.settle("narlenRogueStone", "complete"))
+                        self.assertEqual(
+                            before, (routes.resources(driver), tuple(events), tuple(choices), tuple(narlen.items))
+                        )
+                self.assertEqual([("travel", "AR0153"), ("hold", "AR0153")], events[:2])
+                self.assertEqual("active", routes.state(driver, "quinnDagger"))
+                self.assertIn("cityQuinnDaggerQuest", driver.questNames())
+                self.assertFalse(planner.pending)
+                self.assertFalse(planner.pending_outcomes)
+
     def testNarlenWarningWaitsForActualSourceOfficerAfterBeginningTheNightLookout(self):
         from types import SimpleNamespace
         from unittest.mock import Mock, patch

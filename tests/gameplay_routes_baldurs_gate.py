@@ -1098,6 +1098,28 @@ class QuestRoute:
                 for _ in range(outcome["conditions"]["minTalks"]):
                     self.d.choose(name + "Dialog", "talk")
             self.conditions(outcome.get("conditions", {}))
+            if key == "narlenRogueStone" and outcome["id"] == "complete":
+                travel(self.d, "AR0153")
+                names = [
+                    name
+                    for name, entry in self.data["config"].items()
+                    if entry.get("class") in ACTOR_CLASSES
+                    and entry["properties"].get("sourceCreature") == "NARLEN"
+                    and entry["properties"].get("sourceArea") == "AR0153"
+                ]
+                self.d.test.assertEqual(1, len(names), "The source must identify one canonical guild Narlen")
+
+                def returnedToGuild():
+                    actor = self.d.object(names[0], required=False)
+                    return (
+                        actor is not None
+                        and self.d.call(actor, "isAlive")
+                        and self.d.call(actor, "getStringProperty", "sourceCreature") == "NARLEN"
+                        and self.d.call(actor, "getStringProperty", "sourceArea") == "AR0153"
+                    )
+
+                self.d.navigateCoords(self.d.coords())
+                self.d.waitTurns(25, returnedToGuild)
             if (
                 key == "cythandriaDiary"
                 and self.d.flag("plugin_cityFlag_tamokoMove2")
