@@ -1,0 +1,15 @@
+process 252: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded animation: images/attacks/attack/
+Loaded animation: images/players/sorcerer/
+Loaded animation: images/spells/magicmissile/
+Loaded animation: images/arrows/right/
+Loaded animation: images/arrows/left/
+Loaded animation: images/items/potions/life/
+Loaded animation: images/items/potions/mana/
+Loaded animation: images/items/potions/bless/
+Loaded animation: images/items/potions/poison/
+Loaded animation: images/tiles/grass/
+Loaded animation: images/tiles/road/
+Loaded animation: images/tiles/water/
+Loaded animation: images/buildings/cave/

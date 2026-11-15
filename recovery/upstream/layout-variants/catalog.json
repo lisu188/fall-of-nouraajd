@@ -1,0 +1,42 @@
+{
+  "count": 3,
+  "entries": [
+    {
+      "bytes": 6010,
+      "originalBlob": "98c613957f29174649c620f16c67fa001989a613",
+      "paths": [
+        "json/writer.h"
+      ],
+      "provenance": "Exact original Git blob match: normalize line endings to CRLF in already verified original 70b15891245733b3fd276d30d938b565c005daa0; all non-line-ending bytes are unchanged and resulting Git blob SHA-1 equals catalog pointer 98c613957f29174649c620f16c67fa001989a613",
+      "sha256": "038770d3e372e83fc03c078aaa36cdefbc5729d77dc285dd770fe577ca7dacf2",
+      "source": "98c613957f29174649c620f16c67fa001989a613",
+      "sourceOriginalBlob": "70b15891245733b3fd276d30d938b565c005daa0",
+      "transformation": "normalize line endings to CRLF"
+    },
+    {
+      "bytes": 33175,
+      "originalBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5",
+      "paths": [
+        "json/value.h"
+      ],
+      "provenance": "Exact original Git blob match: normalize line endings to CRLF in already verified original 025afb640bc05c35c08d6cc5754cfad08f22837b; all non-line-ending bytes are unchanged and resulting Git blob SHA-1 equals catalog pointer f1726ae68dff3dc215acfae830c2643ce26af1b5",
+      "sha256": "e869fc46de462bc3594681a0eb6f69f3e69d906feb23ea68beb8ef87726e13aa",
+      "source": "f1726ae68dff3dc215acfae830c2643ce26af1b5",
+      "sourceOriginalBlob": "025afb640bc05c35c08d6cc5754cfad08f22837b",
+      "transformation": "normalize line endings to CRLF"
+    },
+    {
+      "bytes": 6334,
+      "originalBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818",
+      "paths": [
+        "json/reader.h"
+      ],
+      "provenance": "Exact original Git blob match: normalize line endings to CRLF in already verified original d57e000e0972940bd0a830f8fa465763ec3de979; all non-line-ending bytes are unchanged and resulting Git blob SHA-1 equals catalog pointer dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818",
+      "sha256": "14354957e989cc054c23c9bcbac04a15ac6b6d38f28c55e592c1e1e2c857e6f4",
+      "source": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818",
+      "sourceOriginalBlob": "d57e000e0972940bd0a830f8fa465763ec3de979",
+      "transformation": "normalize line endings to CRLF"
+    }
+  ],
+  "schemaVersion": 1
+}

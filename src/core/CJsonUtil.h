@@ -79,7 +79,7 @@ template <fn::JsonObjectPointer T> bool isRef(T object) {
     return false;
 }
 
-template <fn::JsonObjectPointer T> bool isType(T object) {
+template <fn::JsonMapPointer T> bool isType(T object) {
     if (object == nullptr || !object->is_object() || !hasStringProp(object, "class")) {
         return false;
     }
@@ -96,7 +96,7 @@ template <fn::JsonObjectPointer T> bool isType(T object) {
     return true;
 }
 
-template <fn::JsonObjectPointer T> bool isObject(T object) { return isRef(object) || isType(object); }
+template <fn::JsonMapPointer T> bool isObject(T object) { return isRef(object) || isType(object); }
 
 template <fn::JsonMapPointer T> bool isMap(T object) {
     if (object == nullptr || !object->is_object()) {
