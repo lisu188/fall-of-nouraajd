@@ -204,6 +204,7 @@ FAST_TEST_PREFIXES = (
     "GameDiagnosticsTest.",
     "McpDiagnosticsTest.",
     "McpEngineThreadTest.",
+    "McpHandleLifetimeTest.",
     "McpNativeUiOwnershipSourceTest.",
     "UsurpergateEntryDiagnosticsTest.",
     "OctobogzDiagnosticTest.",
@@ -243,6 +244,8 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
     "McpServerTest.test_engine_handle_call_rejects_private_methods",
     "McpServerTest.test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation",
+    "McpServerTest.testMapMovementStatusReadPreservesPendingTurn",
+    "McpServerTest.testMapMovementStatusDoesNotAuthorizeUnrelatedGetters",
     "McpServerTest.test_engine_handle_call_serializes_player_quest_sets_as_handles",
     "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
     "McpServerTest.test_http_notification_response_declares_empty_body",
@@ -28227,6 +28230,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_game_diagnostics import GameDiagnosticsTest as _GameDiagnosticsTest
     from tests.test_mcp_diagnostics import McpDiagnosticsTest as _McpDiagnosticsTest
     from tests.test_mcp_engine_thread import McpEngineThreadTest as _McpEngineThreadTest
+    from tests.test_mcp_handle_lifetime import McpHandleLifetimeTest as _McpHandleLifetimeTest
     from tests.test_mcp_http_native_ui import McpNativeUiOwnershipSourceTest as _McpNativeUiOwnershipSourceTest
     from tests.test_usurpergate_entry_diagnostics import (
         UsurpergateEntryDiagnosticsTest as _UsurpergateEntryDiagnosticsTest,
@@ -28528,6 +28532,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class McpEngineThreadTest(_McpEngineThreadTest):
         pass
 
+    class McpHandleLifetimeTest(_McpHandleLifetimeTest):
+        pass
+
     class McpNativeUiOwnershipSourceTest(_McpNativeUiOwnershipSourceTest):
         pass
 
@@ -28701,7 +28708,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _CandlekeepMetadataSourceTest, _CandlekeepMetadataRuntimeTest
     del _PaidActionRuntimeTest
     del _GameDiagnosticsTest, _McpDiagnosticsTest, _NativeDiagnosticsRuntimeTest
-    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest
+    del _McpEngineThreadTest, _McpHttpNativeRuntimeTest, _McpHandleLifetimeTest
     del _McpNativeUiOwnershipSourceTest, _UsurpergateEntryDiagnosticsTest
     del _PermanentPlayerDefeatSourceTest, _PermanentDefeatJsonSyntaxTest
     del _DefeatContinuationSourceTest
@@ -29331,6 +29338,55 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(
             response["structuredContent"], {"error": "Method `__getattribute__` is not exported for handle calls"}
         )
+
+    def testMapMovementStatusReadPreservesPendingTurn(self):
+        server = self.make_stub_server()
+
+        class CMap:
+            def __init__(self):
+                self.pending = False
+                self.reads = 0
+                self.turns = 7
+
+            def isMoving(self):
+                self.reads += 1
+                return self.pending
+
+            def moveAsync(self):
+                self.turns += 1
+
+        game_map = CMap()
+        handle = server._serialize_result(game_map)
+        advertised = {entry["name"] for entry in handle.get("pythonMethods", ())}
+        self.assertIn("isMoving", advertised)
+        for pending in (False, True, True, False):
+            game_map.pending = pending
+            response = server._engine_handle_call({"handle": handle["__handle__"], "method": "isMoving"})
+            self.assertFalse(response["isError"])
+            self.assertIs(pending, response["structuredContent"]["result"])
+        self.assertEqual(4, game_map.reads)
+        self.assertEqual(7, game_map.turns)
+        denied = server._engine_handle_call({"handle": handle["__handle__"], "method": "moveAsync"})
+        self.assertTrue(denied["isError"])
+        self.assertEqual({"error": "Method `moveAsync` is not exported for handle calls"}, denied["structuredContent"])
+        self.assertEqual(7, game_map.turns)
+
+    def testMapMovementStatusDoesNotAuthorizeUnrelatedGetters(self):
+        server = self.make_stub_server()
+        probes = []
+
+        class CGameObject:
+            @property
+            def isMoving(self):
+                probes.append("dereferenced")
+                return lambda: True
+
+        handle = server._serialize_result(CGameObject())
+        self.assertNotIn("isMoving", {entry["name"] for entry in handle.get("pythonMethods", ())})
+        response = server._engine_handle_call({"handle": handle["__handle__"], "method": "isMoving"})
+        self.assertTrue(response["isError"])
+        self.assertEqual({"error": "Method `isMoving` is not exported for handle calls"}, response["structuredContent"])
+        self.assertEqual([], probes)
 
     def test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation(self):
         server = self.make_stub_server()
@@ -30611,6 +30667,8 @@ class McpServerTest(unittest.TestCase):
         path.write_text(json.dumps(log, indent=2, sort_keys=True))
 
     def _mcp_tool(self, session, name, arguments, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
+        if name in {"engine_call", "engine_handle_call"}:
+            arguments = {**arguments, "include_text_content": False}
         request_id = session["next_request_id"]
         session["next_request_id"] += 1
         return self._call_tool(session["proc"], request_id, name, arguments, timeout=timeout)
