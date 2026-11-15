@@ -1425,9 +1425,19 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     requireDefeatCurrent();
     vstd::logger::debug(winnerDescription, a->getName(), "defeated", loserDescription);
     requireDefeatCurrent();
-    const auto rewardScale = b->getScale();
+    const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp");
     requireDefeatCurrent();
-    a->addExpScaled(rewardScale);
+    const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp");
+    requireDefeatCurrent();
+    const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1;
+    requireDefeatCurrent();
+    if (sourceKillXp >= 0) {
+        a->addExp(sourceKillXp);
+    } else {
+        const auto rewardScale = b->getScale();
+        requireDefeatCurrent();
+        a->addExpScaled(rewardScale);
+    }
     requireDefeatCurrent();
     const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");
     requireDefeatCurrent();
