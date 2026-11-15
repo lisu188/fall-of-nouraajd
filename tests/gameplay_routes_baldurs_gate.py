@@ -1168,6 +1168,8 @@ def questRoute(d, key, outcome_key, *, item_first=False):
         d.test.assertEqual("notStarted", state(d, key))
     if key == "bherenCat" and outcome_key == "lowStanding":
         planner.settle("petrineRing", "catKilled")
+    if key == "cordyrSirines" and outcome_key == "complete":
+        planner.settle("petrineRing", "catKilled")
     name, result = planner.settle(key, outcome_key)
     if key == "tamokoMercy" and outcome_key == "fight":
         nativeVictory(d, name)

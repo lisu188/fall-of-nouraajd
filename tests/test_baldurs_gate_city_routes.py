@@ -17,6 +17,141 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
 
+    def testCordyrCompleteEarnsLowReputationThroughTheActualPetrineOutcomeWithoutReusingRewards(self):
+        from unittest.mock import patch
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        class SourcePrefixCompleted(Exception):
+            pass
+
+        for outcome_key in ("complete", "ordinary"):
+            with self.subTest(outcome=outcome_key):
+                model = CityModel()
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                petrine = model.actor("Petrine", "AR0200")
+                cordyr = model.actor("Cordyr", "AR1213", sourceCreature="CORDYR")
+                cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+                ring = model.item("RING16")
+                events, deaths = [], []
+                test = self
+
+                class SourcePlanner:
+                    quests = {row["id"]: row for row in routes.documents()["quests"]}
+                    tamoko_refuse = False
+
+                    def settle(self, key, outcome):
+                        events.append((key, outcome))
+                        owner = petrine if key == "petrineRing" else cordyr
+                        dialog = model.dialog(owner)
+                        test.assertTrue(dialog.acceptQuest(key))
+                        if key == "petrineRing":
+                            test.assertEqual("catKilled", outcome)
+                            test.assertTrue(cat.isAlive())
+                            test.assertTrue(model.dialog(cat).attack())
+                            model.kill(cat)
+                            deaths.append(cat)
+                            test.assertEqual(8, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            dialog = model.dialog(petrine)
+                            gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                            test.assertTrue(dialog.questPetrineRingCatKilled())
+                            test.assertEqual(7, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            test.assertEqual(
+                                (gold, xp), (model.player.getGold(), model.player.getNumericProperty("exp"))
+                            )
+                            test.assertIn(ring, model.player.items)
+                            test.assertNotIn(ring, petrine.items)
+                            test.assertFalse(dialog.questPetrineRingCatKilled())
+                            test.assertEqual(7, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            return owner.getName(), self.quests[key]["outcomes"][1]
+                        test.assertEqual("cordyrSirines", key)
+                        test.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_cordyrSirines"))
+                        test.assertFalse(dialog.canQuestOutcome(key, outcome))
+                        ticks = model.game_map.getNumericProperty("plugin_cityTicks")
+                        test.assertTrue(dialog.excursionSilKill())
+                        test.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_excursionSilResolved"))
+                        test.assertEqual(ticks + 2400, model.game_map.getNumericProperty("plugin_cityTicks"))
+                        test.assertTrue(dialog.canQuestOutcome(key, outcome))
+                        code = "SCRL1F" if outcome == "complete" else "SCRL1H"
+                        other_code = "SCRL1H" if outcome == "complete" else "SCRL1F"
+                        scroll = next(
+                            item for item in cordyr.items if item.getStringProperty("plugin_citySourceItem") == code
+                        )
+                        other_scroll = next(
+                            item
+                            for item in cordyr.items
+                            if item.getStringProperty("plugin_citySourceItem") == other_code
+                        )
+                        gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                        standing = model.game_map.getNumericProperty("plugin_cityStanding")
+                        reputation = model.game_map.getNumericProperty("plugin_cityReputation")
+                        test.assertEqual(7 if outcome == "complete" else 10, reputation)
+                        test.assertTrue(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(gold, model.player.getGold())
+                        test.assertEqual(
+                            xp + (1000 if outcome == "complete" else 0), model.player.getNumericProperty("exp")
+                        )
+                        delta = int(outcome == "complete")
+                        test.assertEqual(standing + delta, model.game_map.getNumericProperty("plugin_cityStanding"))
+                        test.assertEqual(reputation + delta, model.game_map.getNumericProperty("plugin_cityReputation"))
+                        test.assertIn(scroll, model.player.items)
+                        test.assertNotIn(scroll, cordyr.items)
+                        test.assertIn(other_scroll, cordyr.items)
+                        test.assertNotIn(other_scroll, model.player.items)
+                        test.assertIn(ring, model.player.items)
+                        test.assertNotIn(ring, petrine.items)
+                        snapshot = (
+                            model.player.getGold(),
+                            model.player.getNumericProperty("exp"),
+                            model.game_map.getNumericProperty("plugin_cityStanding"),
+                            model.game_map.getNumericProperty("plugin_cityReputation"),
+                            tuple(model.player.items),
+                            tuple(cordyr.items),
+                            tuple(petrine.items),
+                        )
+                        test.assertFalse(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(
+                            snapshot,
+                            (
+                                model.player.getGold(),
+                                model.player.getNumericProperty("exp"),
+                                model.game_map.getNumericProperty("plugin_cityStanding"),
+                                model.game_map.getNumericProperty("plugin_cityReputation"),
+                                tuple(model.player.items),
+                                tuple(cordyr.items),
+                                tuple(petrine.items),
+                            ),
+                        )
+                        raise SourcePrefixCompleted()
+
+                with (
+                    patch.object(routes, "start"),
+                    patch.object(routes, "QuestRoute", return_value=SourcePlanner()),
+                    self.assertRaises(SourcePrefixCompleted),
+                ):
+                    routes.questRoute(object(), "cordyrSirines", outcome_key)
+                self.assertEqual([cat] if outcome_key == "complete" else [], deaths)
+                self.assertEqual(
+                    (
+                        [("petrineRing", "catKilled"), ("cordyrSirines", "complete")]
+                        if outcome_key == "complete"
+                        else [("cordyrSirines", "ordinary")]
+                    ),
+                    events,
+                )
+                completed = {quest.getTypeId() for quest in model.player.getCompletedQuests()}
+                self.assertEqual(
+                    (
+                        {"cityPetrineRingQuest", "cityCordyrSirinesQuest"}
+                        if outcome_key == "complete"
+                        else {"cityCordyrSirinesQuest"}
+                    ),
+                    completed,
+                )
+                test.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_quinnDagger"))
+                test.assertIn("cityQuinnDaggerQuest", {quest.getTypeId() for quest in model.player.getQuests()})
+                test.assertEqual("", model.game_map.getStringProperty("plugin_cityQuest_bherenCat"))
+
     def testSameDistrictTargetTravelUsesTheAuditedReachableSewerReentry(self):
         from unittest.mock import patch
 
