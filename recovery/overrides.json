@@ -93693,6 +93693,475 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074 (previous version of view/gamescene.cpp)",
       "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
       "source": "payloads/reconstructions/f1/f1dcf2969637e9b1aadbb80cf1dddc6b82250a8e-gamescene.cpp"
+    },
+    {
+      "originalBlob": "2cda709ba8df392beea540c707c22d7f35a2dcb1",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; consolidated the five exact surviving creature templates from #39 (49e97768); preserved their stats, equipment, actions and levelling without the later unverified donor defaults",
+      "sha256": "2bbb5a570e728517f6b1e61b1ba5bb99ceedc2335b58972d2dccc123172b460b",
+      "source": "payloads/reconstructions/2c/2cda709ba8df392beea540c707c22d7f35a2dcb1-creatures.json"
+    },
+    {
+      "originalBlob": "3f316734691ebbdb56729576bf2bbb8f35b5134c",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted validated e80827d4 reconstruction to the original #40 named constructor and removed levelling member; read levelling from the consolidated template",
+      "sha256": "a4b00c6d01ed9f2ddb49c4778d0390023148918c2016dcd5eaca7c911d62a2e9",
+      "source": "payloads/reconstructions/3f/3f316734691ebbdb56729576bf2bbb8f35b5134c-creature.cpp"
+    },
+    {
+      "originalBlob": "a65529111e0aa02ab4d1951832f5122bf15c548d",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted validated 7f754424 reconstruction with the original #40 Player(Map*,std::string) delegating constructor",
+      "sha256": "f6b46b71dca5f0267ff4db2065f15a652864bd3d440a8cf0696070c91440f1a8",
+      "source": "payloads/reconstructions/a6/a65529111e0aa02ab4d1951832f5122bf15c548d-player.cpp"
+    },
+    {
+      "originalBlob": "30d834915bc5709c30abbf7f1d816b859694f955",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried validated 3843e147 reconstruction; surviving #40 map.h has unchanged APIs, so no unsupported implementation changes inferred",
+      "sha256": "7a3f534eaba6c2952de46e5d435af6425c6e1fb8993e8f9b61a5861207500e00",
+      "source": "payloads/reconstructions/30/30d834915bc5709c30abbf7f1d816b859694f955-map.cpp"
+    },
+    {
+      "originalBlob": "4aa58bb761dc05e60a9718ed1796cf871c5d993b",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted validated f1dcf296 reconstruction to Player(map,\"Warrior\") and the consolidated creature configuration; retained map initialization",
+      "sha256": "ce13bd1d85bb8dac5c0cb7b9940e2455258de103a99844c05c577145a08b6cfb",
+      "source": "payloads/reconstructions/4a/4aa58bb761dc05e60a9718ed1796cf871c5d993b-gamescene.cpp"
+    },
+    {
+      "originalBlob": "1e4c4a0ca26853a5f8436520bcdcb23ce9669eeb",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried #40 consolidated original templates, removing duplicated names because #41 original constructors pass the template name separately",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/1e/1e4c4a0ca26853a5f8436520bcdcb23ce9669eeb-creatures.json"
+    },
+    {
+      "originalBlob": "6c345d0a22a99c2e55e236cb6c612319a67ce70a",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #40 reconstruction to the original #41 Creature(name,config,map) and Creature(name,map); retain explicit name across load/save",
+      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "source": "payloads/reconstructions/6c/6c345d0a22a99c2e55e236cb6c612319a67ce70a-creature.cpp"
+    },
+    {
+      "originalBlob": "99fd0199f17296ad33efb8289ca1e35a15d49a6e",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #40 reconstruction to both original #41 Player(name,...) constructors",
+      "sha256": "d315163b4b004e86d828eec06aacfa8f5c626c680f7e61b04ca5e266f834d9ad",
+      "source": "payloads/reconstructions/99/99fd0199f17296ad33efb8289ca1e35a15d49a6e-player.cpp"
+    },
+    {
+      "originalBlob": "88455c8890eb38ccfedd5662431734912f1812ff",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted prepared #40 map reconstruction to original #41 implicit Map constructor; group saved objects by className because original Cave no longer serializes its name",
+      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "source": "payloads/reconstructions/88/88455c8890eb38ccfedd5662431734912f1812ff-map.cpp"
+    },
+    {
+      "originalBlob": "65065f71dc354ee9c7a44541f0d5a66f8b4a8b6b",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #40 scene reconstruction to the original #41 Player(name,map) constructor",
+      "sha256": "3cdc762bf925aac4535b9dcef16587a30ab5d67aa98e8d56cbe6744f82ff52c6",
+      "source": "payloads/reconstructions/65/65065f71dc354ee9c7a44541f0d5a66f8b4a8b6b-gamescene.cpp"
+    },
+    {
+      "originalBlob": "50e85bbf386d6e230bf46394a8e7bb53a66b8aca",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #43; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/50/50e85bbf386d6e230bf46394a8e7bb53a66b8aca-creatures.json"
+    },
+    {
+      "originalBlob": "1b17e6c3f32ae5c5e183b78098cf3c98a5198679",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #44; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "source": "payloads/reconstructions/1b/1b17e6c3f32ae5c5e183b78098cf3c98a5198679-creature.cpp"
+    },
+    {
+      "originalBlob": "5a0ff31ca6d70975373da32a66f6310ab2ed71c4",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #45; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "source": "payloads/reconstructions/5a/5a0ff31ca6d70975373da32a66f6310ab2ed71c4-map.cpp"
+    },
+    {
+      "originalBlob": "c447e306339717ef0811af79a33a81617f09f229",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "source": "payloads/reconstructions/c4/c447e306339717ef0811af79a33a81617f09f229-creature.cpp"
+    },
+    {
+      "originalBlob": "a30de926e5e0c017a7105e32bb69756696d558df",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "source": "payloads/reconstructions/a3/a30de926e5e0c017a7105e32bb69756696d558df-map.cpp"
+    },
+    {
+      "originalBlob": "4f9ff371398e2a3671f80d9a157ba8ffa65f00cf",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "3cdc762bf925aac4535b9dcef16587a30ab5d67aa98e8d56cbe6744f82ff52c6",
+      "source": "payloads/reconstructions/4f/4f9ff371398e2a3671f80d9a157ba8ffa65f00cf-gamescene.cpp"
+    },
+    {
+      "originalBlob": "68660900e3fbcc7fa0cc93854dc17eacfc972a39",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #47; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "source": "payloads/reconstructions/68/68660900e3fbcc7fa0cc93854dc17eacfc972a39-map.cpp"
+    },
+    {
+      "originalBlob": "458afea928cabc3914ed4128f3c6ad74edc17b60",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #48; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
+      "sha256": "d315163b4b004e86d828eec06aacfa8f5c626c680f7e61b04ca5e266f834d9ad",
+      "source": "payloads/reconstructions/45/458afea928cabc3914ed4128f3c6ad74edc17b60-player.cpp"
+    },
+    {
+      "originalBlob": "7ba80885eab2c1308f92b91878bc9a4841a5806e",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; extended validated c609dca2 reconstruction with three #49 declarations, configuration entries and exact surviving Effect handlers; original durations are missing, so reconstructed durations are 4/6/3 turns for Mutilation/LethalPoison/Chloroform",
+      "sha256": "47500823e98ffd28b2e7f79d606318c3b375cf549f518fa0cd2dba53aeff9954",
+      "source": "payloads/reconstructions/7b/7ba80885eab2c1308f92b91878bc9a4841a5806e-interaction.cpp"
+    },
+    {
+      "originalBlob": "71b19617c3b7fadc5afe5e2f066984d26e67e1ec",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried #43 reconstructed templates; #49 original creature data delta is unavailable, so new skill levelling assignments are not invented",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/71/71b19617c3b7fadc5afe5e2f066984d26e67e1ec-creatures.json"
+    },
+    {
+      "originalBlob": "10b4ea058ec42ba8902b8ead95782573a613057f",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; extended #49 reconstruction with #50 Backstab declaration and config entry; original formula is unavailable, so reconstructed damage is twice getDmg()",
+      "sha256": "16841c4f0b15c542279f9727bdce859626554e8cec8b4f9527d23acbef5a302c",
+      "source": "payloads/reconstructions/10/10b4ea058ec42ba8902b8ead95782573a613057f-interaction.cpp"
+    },
+    {
+      "originalBlob": "3c7d94aea80c065532fc62576886a8087ac98dc1",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried #49 reconstructed templates; #50 original creature data delta is unavailable, so new skill levelling assignments are not invented",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/3c/3c7d94aea80c065532fc62576886a8087ac98dc1-creatures.json"
+    },
+    {
+      "originalBlob": "69a1ab3d511c22a99e4faa62b91ba56e5096ff69",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; extended #50 reconstruction with #51 Bloodlash declaration, config and exact surviving Effect handler; original duration is unavailable, so reconstructed duration is four turns",
+      "sha256": "6165cf17bfa3f587377050ec95582652dee26a7f5a5bb442a66f32d52ffe9e48",
+      "source": "payloads/reconstructions/69/69a1ab3d511c22a99e4faa62b91ba56e5096ff69-interaction.cpp"
+    },
+    {
+      "originalBlob": "56d68bc49c636d57f5eddadaf9a5d87a8af448a7",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried #50 reconstructed templates; #51 original creature data delta is unavailable, so new skill levelling assignments are not invented",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/56/56d68bc49c636d57f5eddadaf9a5d87a8af448a7-creatures.json"
+    },
+    {
+      "originalBlob": "a773dc67c031e66b427e85b301ae19f37c8da1b1",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried #46 creature reconstruction; #51 only changes levelUp to nonvirtual in surviving header and requires no implementation adaptation",
+      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "source": "payloads/reconstructions/a7/a773dc67c031e66b427e85b301ae19f37c8da1b1-creature.cpp"
+    },
+    {
+      "originalBlob": "daa89f0bdc4c54739285825b281e2de5536915ab",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried #51 reconstructed creature templates; original #52 data delta is unavailable and surviving interfaces still query the same template keys",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/da/daa89f0bdc4c54739285825b281e2de5536915ab-creatures.json"
+    },
+    {
+      "originalBlob": "dc199170c7952690559bd1826b18b43eeb5cd8fa",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #51 reconstruction to surviving #52 removal of bonusLevel and addition of getLevelStats(); obtain per-level stats from the consolidated template",
+      "sha256": "e6ba3993860a25cf0c21b92c4a2ce633a6e0257d17cab216cc5ff3c40e3c74e1",
+      "source": "payloads/reconstructions/dc/dc199170c7952690559bd1826b18b43eeb5cd8fa-creature.cpp"
+    },
+    {
+      "originalBlob": "fb8ad2edcb09fc611f86ed27a375aa897cc58985",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #48 reconstruction to original #52 tile header and entered-object API consumed by surviving PlayerAnimation callback",
+      "sha256": "cd3afbceb295188856366d2d2f5dec0fecf2423785f84a1ba0c46be98efd31d8",
+      "source": "payloads/reconstructions/fb/fb8ad2edcb09fc611f86ed27a375aa897cc58985-player.cpp"
+    },
+    {
+      "originalBlob": "ee3a67852023521062a7cbcf2c4af90554e1d192",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #47 reconstruction to surviving #52 generic Tile factory and array coordinate format; retire old map graphics without deleting Destroyer-owned objects; define declared clearRange helper",
+      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "source": "payloads/reconstructions/ee/ee3a67852023521062a7cbcf2c4af90554e1d192-map.cpp"
+    },
+    {
+      "originalBlob": "130f86189802458f7e774ae50c15a4b8b90b9284",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #46 scene reconstruction with changeMap() consumed by original #52 Dungeon; preserve player save state and hide retired views; reconstructed destination dungeon at (3,3), original layout unavailable; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
+      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "source": "payloads/reconstructions/13/130f86189802458f7e774ae50c15a4b8b90b9284-gamescene.cpp"
+    },
+    {
+      "originalBlob": "41d0d35fc84030c585fffd1a869a57a16124e6ec",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #51 reconstruction to original #52 removal of stored action callback; register three new declared/configured skills with minimal reconstructed behavior (DeathStrike=Attack, Barrier=3-turn surviving Effect, BloodThirst=damage heal); original formulas unavailable",
+      "sha256": "52bf403c3c3b979654697a5e2930f300034c2518d08c3746b48d23b06b8841b8",
+      "source": "payloads/reconstructions/41/41d0d35fc84030c585fffd1a869a57a16124e6ec-interaction.cpp"
+    },
+    {
+      "originalBlob": "ab1e3fae1ac8ec6baa99f66a842a88fb4e0c369c",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #52 reconstruction to surviving #53 removal of lock field and unLock/doLock/isLock declarations",
+      "sha256": "1ddfe0dfad34124f5acae9b0945fecdb7c87dfaad627d005554ef443689b547e",
+      "source": "payloads/reconstructions/ab/ab1e3fae1ac8ec6baa99f66a842a88fb4e0c369c-player.cpp"
+    },
+    {
+      "originalBlob": "7fec039b729f6c1f4b10cdae61a0702d9bcbb7e7",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried #52 reconstruction; #53 surviving changes expose only getStep() and remove Player locking, neither requires additional implementation changes",
+      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "source": "payloads/reconstructions/7f/7fec039b729f6c1f4b10cdae61a0702d9bcbb7e7-map.cpp"
+    },
+    {
+      "originalBlob": "8cd932e0b9cc9e637212e49700cee33dc620fc7c",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried #52 reconstruction; #53 surviving changes expose only getStep() and remove Player locking, neither requires additional implementation changes; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
+      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "source": "payloads/reconstructions/8c/8cd932e0b9cc9e637212e49700cee33dc620fc7c-gamescene.cpp"
+    },
+    {
+      "originalBlob": "0ac286f347f8e1e97cabb659684823f6f3c40175",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest #53 reconstruction through API-stable #55; surviving files provide no recoverable internal implementation delta",
+      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "source": "payloads/reconstructions/0a/0ac286f347f8e1e97cabb659684823f6f3c40175-map.cpp"
+    },
+    {
+      "originalBlob": "2030ab8cfa96ec5bea0602f0afcb34bc044dff94",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest #53 reconstruction through API-stable #55; surviving files provide no recoverable internal implementation delta; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
+      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "source": "payloads/reconstructions/20/2030ab8cfa96ec5bea0602f0afcb34bc044dff94-gamescene.cpp"
+    },
+    {
+      "originalBlob": "29ce186b63c5cae91dfb62e8f7972722d8d0a7b3",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest #55 reconstruction through API-stable #56; surviving files provide no recoverable internal implementation delta",
+      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "source": "payloads/reconstructions/29/29ce186b63c5cae91dfb62e8f7972722d8d0a7b3-map.cpp"
+    },
+    {
+      "originalBlob": "17eb1df43354259c3eb036fc6fce12c1c535f167",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #56 reconstruction with surviving #57 addDungeon declaration; original generation algorithm is unavailable, so reconstruct a rectangular ground room bounded by mountain tiles",
+      "sha256": "399f533448799528581430dc883dbf8fcd245d602db3e07e379787f35a38287a",
+      "source": "payloads/reconstructions/17/17eb1df43354259c3eb036fc6fce12c1c535f167-map.cpp"
+    },
+    {
+      "originalBlob": "0868c4434cd14b3dfbc11ce5f8697b970f7128df",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried #55 scene reconstruction; removal of Cave::count does not affect surviving scene APIs; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
+      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "source": "payloads/reconstructions/08/0868c4434cd14b3dfbc11ce5f8697b970f7128df-gamescene.cpp"
+    },
+    {
+      "originalBlob": "5aebd12f49fb7ea16aa1b624f4d377dbd720df66",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #57 map reconstruction to exact surviving #58 string tile storage, bounded rendered-tile cache, ensureSize(Player*) and setMap APIs; cache radius follows original cacheSize=25, delete evicted cache objects through their exact Tile type",
+      "sha256": "ceffe91c5b77315bfa0cbd20aba69702325a64e5cc42bbc64de1c22c6bd9b7cf",
+      "source": "payloads/reconstructions/5a/5aebd12f49fb7ea16aa1b624f4d377dbd720df66-map.cpp"
+    },
+    {
+      "originalBlob": "dead22d7dd63babb140aed16f390a1a6b7ce7166",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #57 scene reconstruction to original #58 Map::ensureSize(Player*) and removed scene ensureSize; retain the actual player using setMap across map changes; rectangular dungeon destination is reconstructed; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
+      "sha256": "e4ba792de6144c95efea13ae6999fd66be60b36319910b5e266cbe89eb4a5ffc",
+      "source": "payloads/reconstructions/de/dead22d7dd63babb140aed16f390a1a6b7ce7166-gamescene.cpp"
+    },
+    {
+      "originalBlob": "395e90c23f4f3255f3dabea81e1d219f1dd949de",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed view/gamescene.cpp through API-stable #59; surviving files provide no recoverable internal implementation/data delta; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
+      "sha256": "e4ba792de6144c95efea13ae6999fd66be60b36319910b5e266cbe89eb4a5ffc",
+      "source": "payloads/reconstructions/39/395e90c23f4f3255f3dabea81e1d219f1dd949de-gamescene.cpp"
+    },
+    {
+      "originalBlob": "ff3fa0f036b36983935bca7aab4f45e35a52a96f",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #60; surviving files provide no recoverable internal implementation/data delta",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/ff/ff3fa0f036b36983935bca7aab4f45e35a52a96f-creatures.json"
+    },
+    {
+      "originalBlob": "f4c397119c04b8148144f473c61159382d521e84",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed map/map.cpp through API-stable #60; surviving files provide no recoverable internal implementation/data delta",
+      "sha256": "ceffe91c5b77315bfa0cbd20aba69702325a64e5cc42bbc64de1c22c6bd9b7cf",
+      "source": "payloads/reconstructions/f4/f4c397119c04b8148144f473c61159382d521e84-map.cpp"
+    },
+    {
+      "originalBlob": "855f7da4bad3e0864652b935ead475f28cc9b621",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #61; surviving files provide no recoverable internal implementation/data delta",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/85/855f7da4bad3e0864652b935ead475f28cc9b621-creatures.json"
+    },
+    {
+      "originalBlob": "bf84dcf548423144dd1328bef8ab7723fd663088",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed map/map.cpp through API-stable #61; surviving files provide no recoverable internal implementation/data delta",
+      "sha256": "ceffe91c5b77315bfa0cbd20aba69702325a64e5cc42bbc64de1c22c6bd9b7cf",
+      "source": "payloads/reconstructions/bf/bf84dcf548423144dd1328bef8ab7723fd663088-map.cpp"
+    },
+    {
+      "originalBlob": "a0a8a14fb49e66b75760874b6b9c86f7fa5dbfe5",
+      "path": "config/creatures.json",
+      "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta",
+      "sha256": "83dcebc9cdf2261760a9dcf9d22336deb89b439ccd3f2daff61688406262dcc2",
+      "source": "payloads/reconstructions/a0/a0a8a14fb49e66b75760874b6b9c86f7fa5dbfe5-creatures.json"
+    },
+    {
+      "originalBlob": "da95c3f67d6972bf6691068f50df6b83b8e3da89",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #52 reconstruction to original #63 map-independent constructors and addEffect(type,caster); Effect is now declared by interaction.h",
+      "sha256": "b6b88eed932fc1f6a02c6ca1c6969f660aea78f8040337a638606b771cd8213b",
+      "source": "payloads/reconstructions/da/da95c3f67d6972bf6691068f50df6b83b8e3da89-creature.cpp"
+    },
+    {
+      "originalBlob": "6e58ae54a1d02acb723dec18d772b0a17339b913",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #53 reconstruction to both original #63 map-independent Player constructors; Map::addObject assigns the actual owning map",
+      "sha256": "2eaa9a92a3e36e973cf26e038438f560fe578ff276cfa34b02d1e1a3d47a4113",
+      "source": "payloads/reconstructions/6e/6e58ae54a1d02acb723dec18d772b0a17339b913-player.cpp"
+    },
+    {
+      "originalBlob": "f62fc33eb7bd904e4d6b653769986003fb0d7888",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #52 interaction reconstruction to original #63 effect string field and Creature::addEffect API; moved exact surviving #62 effect implementations into interaction.cpp and use surviving #63 effects.json durations/buff targets",
+      "sha256": "b4bbbcd765e86a2f28f4bc075a744caf6c2ebbec5374ec2d705b7468c5439a3f",
+      "source": "payloads/reconstructions/f6/f62fc33eb7bd904e4d6b653769986003fb0d7888-interaction.cpp"
+    },
+    {
+      "originalBlob": "df217376c6bd70392502861c3659a1002618ac6c",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #61 reconstruction to original #63 map-independent MapObject constructor and Map::hide; hide clears rendered cache while preserving logical map/object state",
+      "sha256": "887ec9c33a82ef8e29573dc54786bf6da863d7d01a142022cc553b5c49c2d5e8",
+      "source": "payloads/reconstructions/df/df217376c6bd70392502861c3659a1002618ac6c-map.cpp"
+    },
+    {
+      "originalBlob": "78f096417f1e96b54ab966d3817cb2e9ba88167e",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted #59 reconstruction to surviving #63 map-independent Player/Cave/Dungeon constructors; owning maps assigned through Map::addObject",
+      "sha256": "b9d392dca0e5419a7482535f77ffa25c5efbe6493b6693f4ff47245f854c9663",
+      "source": "payloads/reconstructions/78/78f096417f1e96b54ab966d3817cb2e9ba88167e-gamescene.cpp"
+    },
+    {
+      "originalBlob": "4ff9f45b2f23d26fc69280d6c0df542e02efa223",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter",
+      "sha256": "658cd0089bcd7f371105eeb3261850fae34e25d69f71935fefd43e6337498e0a",
+      "source": "payloads/reconstructions/4f/4ff9f45b2f23d26fc69280d6c0df542e02efa223-stats.cpp"
+    },
+    {
+      "originalBlob": "75ea3f5ea6cd94a23c5a2666cd62465a53ed7057",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "3285f16956153ca4b2e6ab949bb6d8d8f386378a97039257c8ecaa920a31a752",
+      "source": "payloads/reconstructions/75/75ea3f5ea6cd94a23c5a2666cd62465a53ed7057-game.pro"
+    },
+    {
+      "originalBlob": "b25dfc11ef699553ff570e025cbbeabc2eaf51e8",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "931337e7a8d67255c55e51dabca0b1869cc49d6b4d9f4329a4c29d15d8ac1254",
+      "source": "payloads/reconstructions/b2/b25dfc11ef699553ff570e025cbbeabc2eaf51e8-game.pro"
+    },
+    {
+      "originalBlob": "10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a45e7ab2301934904ef12a5bb55c5a85034ffb879ec12764c2a7ecdef5f0a98c",
+      "source": "payloads/reconstructions/10/10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d-game.pro"
+    },
+    {
+      "originalBlob": "70d87918c1d7c24681e98a3d8e860b33f0f42451",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "source": "payloads/reconstructions/70/70d87918c1d7c24681e98a3d8e860b33f0f42451-game.pro"
+    },
+    {
+      "originalBlob": "9597e896cd261a70d461bdd451808e031e50dd8a",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "source": "payloads/reconstructions/95/9597e896cd261a70d461bdd451808e031e50dd8a-game.pro"
+    },
+    {
+      "originalBlob": "4fe204b5a652a47eee6fcb5ca0e847ef69900392",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "637acf61eee8b41467223e5ae51fb65fb006c1d2c5ffc2b480545c004d257dea",
+      "source": "payloads/reconstructions/4f/4fe204b5a652a47eee6fcb5ca0e847ef69900392-game.pro"
+    },
+    {
+      "originalBlob": "ee49ba5ebb81e355b0effc08a4f07ead85652c5d",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "ac981ee53170136b8a1874cae0ee053c977016c7fc29fb0204d4470b8dc310f6",
+      "source": "payloads/reconstructions/ee/ee49ba5ebb81e355b0effc08a4f07ead85652c5d-game.pro"
+    },
+    {
+      "originalBlob": "267e7b62b2e9cb6678276b8e319bba55f59403d1",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "19ce281299ebe51bf42410e268a470faf155fcbd661d12027a680ad6150de0ab",
+      "source": "payloads/reconstructions/26/267e7b62b2e9cb6678276b8e319bba55f59403d1-game.pro"
+    },
+    {
+      "originalBlob": "69fd798f9c12545d2718d2787ad1ea609107a937",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "source": "payloads/reconstructions/69/69fd798f9c12545d2718d2787ad1ea609107a937-game.pro"
+    },
+    {
+      "originalBlob": "91fe15120dd506b4a0cfabb13cbca41cd66bea7a",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "source": "payloads/reconstructions/91/91fe15120dd506b4a0cfabb13cbca41cd66bea7a-game.pro"
+    },
+    {
+      "originalBlob": "3059c5de88b726b70736b936ebf8e360f82fec09",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "source": "payloads/reconstructions/30/3059c5de88b726b70736b936ebf8e360f82fec09-game.pro"
+    },
+    {
+      "originalBlob": "7caf45e39f7a992d2d3d43870b97520462a3ea4d",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "73d9722cdf1cc97b9efee0466447fc64f65c31453a3c0e2fc158a3468849aaef",
+      "source": "payloads/reconstructions/7c/7caf45e39f7a992d2d3d43870b97520462a3ea4d-game.pro"
+    },
+    {
+      "originalBlob": "e44a0288b373871a71c3dbe0d82ec6c483c2a014",
+      "path": "game.pro",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "5911fd1c6a0a1c42f99353bc704976c70c61c3495195b492592c119a0dc1fa00",
+      "source": "payloads/reconstructions/e4/e44a0288b373871a71c3dbe0d82ec6c483c2a014-game.pro"
+    },
+    {
+      "originalBlob": "d59b1fb1b9c5d957efe4284a887026060ac53395",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback.",
+      "sha256": "c44ad3ff332fb217d7362175b851d0e4e4e58c7f1f4ea0eea669838d8b35413e",
+      "source": "payloads/reconstructions/d5/d59b1fb1b9c5d957efe4284a887026060ac53395-GameScript.cpp"
     }
   ],
   "schemaVersion": 1

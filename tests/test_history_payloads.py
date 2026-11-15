@@ -27,6 +27,21 @@ def payloadPins():
 
 
 class HistoryPayloadPinsTest(unittest.TestCase):
+    def testArchivedOriginalPayloadsMatchTheirBfgPointers(self):
+        identities = set()
+        for name in ("software-heritage", "layout-variants"):
+            catalog_path = RECOVERY_ROOT / "upstream" / name / "catalog.json"
+            catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+            self.assertEqual(catalog["count"], len(catalog["entries"]))
+            for entry in catalog["entries"]:
+                with self.subTest(original=entry["originalBlob"]):
+                    content = (catalog_path.parent / entry["source"]).read_bytes()
+                    header = b"blob " + str(len(content)).encode("ascii") + b"\0"
+                    self.assertEqual(entry["originalBlob"], hashlib.sha1(header + content).hexdigest())
+                    self.assertNotIn(entry["originalBlob"], identities)
+                    identities.add(entry["originalBlob"])
+                    self.assertTrue(entry["paths"])
+
     def testEveryPinnedPayloadKeepsItsExactBytes(self):
         pins = payloadPins()
         if not pins:
@@ -52,7 +67,6 @@ class HistoryPayloadPinsTest(unittest.TestCase):
             if result.returncode:
                 self.skipTest("Git attributes are unavailable outside a Git checkout")
             self.assertTrue(result.stdout.strip().endswith(": text: unset"), result.stdout)
-
 
     def testCompressedEvidenceLogsAreIntact(self):
         for log in sorted((RECOVERY_ROOT / "evidence").glob("*/build.log.gz")):

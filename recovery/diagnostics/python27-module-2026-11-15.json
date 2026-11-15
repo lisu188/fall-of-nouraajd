@@ -1,0 +1,200 @@
+{
+  "checks": [
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalEngineInitSymbol": "init_game",
+      "position": 260,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "b4954bbcaad2b59cd68f24beb69fe05cbbe46081",
+      "originalEngineInitSymbol": "init_game",
+      "position": 261,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "e8b7c3d0e6da989122a0587943a98504342da3cd",
+      "originalEngineInitSymbol": "init_game",
+      "position": 262,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7",
+      "originalEngineInitSymbol": "init_game",
+      "position": 263,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "e398df1047d75ac0b2885d0dcfc03ad4c35990c2",
+      "originalEngineInitSymbol": "init_game",
+      "position": 264,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "cce51b01010c31cc69119e695dc3133c8c372210",
+      "originalEngineInitSymbol": "init_game",
+      "position": 265,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+      "originalEngineInitSymbol": "init_game",
+      "position": 266,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "f2c254b087ffa7ab035dc86946997dbb5a4fe6c0",
+      "originalEngineInitSymbol": "init_game",
+      "position": 267,
+      "status": "static-only"
+    },
+    {
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073",
+      "originalEngineInitSymbol": "init_game",
+      "position": 268,
+      "status": "static-only"
+    }
+  ],
+  "entries": [
+    {
+      "originalBlob": "d59b1fb1b9c5d957efe4284a887026060ac53395",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback.",
+      "sha256": "c44ad3ff332fb217d7362175b851d0e4e4e58c7f1f4ea0eea669838d8b35413e",
+      "source": "recovery/payloads/reconstructions/d5/d59b1fb1b9c5d957efe4284a887026060ac53395-GameScript.cpp"
+    }
+  ],
+  "limitations": [
+    "No compilation or runtime acceptance: pinned toolchain and remaining native reconstructions are required.",
+    "Original CCreature.h is missing throughout these trees and must be restored separately; no fake definitions are supplied.",
+    "Earlier six distinct GameScript original blobs at #246-259 still require their own source-era API adaptations.",
+    "Binding API equivalence is bounded by surviving header/caller evidence; containers, GUI panels, and later-only quest/event/trade APIs are not invented.",
+    "CTile::onStep is nonvirtual in original headers and is exposed directly without a fake Python override.",
+    "CScroll appears only in #264 within this unchanged original module blob and is not assumed by the reconstruction."
+  ],
+  "schemaVersion": 1,
+  "sourceEvidence": [
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "originalBlob": "59313fea33fd5dfb1ca76dcd2cc1222ffb620008",
+      "path": "src/creature.h",
+      "position": 247,
+      "sha256": "5166884312d3eca72dd1d2b28c609d061b10eed048e28573dbebd36706156f97"
+    },
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "originalBlob": "937191f31ed36369792a5a8f7c2b1a2ef1005c42",
+      "path": "src/player.h",
+      "position": 247,
+      "sha256": "30324f71a8d8d5b2aaee30dfa57e976eaacb77b9dc591524ea66b167cb6fd6dc"
+    },
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "originalBlob": "ae2289cd0362a445c0aafdf21d1d4556fc835178",
+      "path": "src/monster.h",
+      "position": 247,
+      "sha256": "0889172f7e3ab39e62b51d0c1a1cfc9e86db30ede582849440425b48e51713a4"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "originalBlob": "9da4b3e0a4b3f43cf128c25f9a87e054e066cf92",
+      "path": "src/Stats.h",
+      "position": 257,
+      "sha256": "1c7d36421d0480273e019629aa5647eb95950d6d01ffc90d7f8327787a91534b"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "originalBlob": "c79e702afa9ada9813f419458fd294010459423b",
+      "path": "src/Stats.cpp",
+      "position": 257,
+      "sha256": "786df0871fa1760058f39167980584c230d8caea2543e94bd7590d5b5101ad52"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "1bec2b9f6170f3b67f6b30b1119c2395c4c4c9f7",
+      "path": "src/CMap.h",
+      "position": 260,
+      "sha256": "eeec7a31222fce18ea09ed3f3bd2dfcc4c24adf762575daca327550b71eac31a"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "d7026aac05a0b61f8f942df29edf505fcd83260e",
+      "path": "src/CMapObject.h",
+      "position": 260,
+      "sha256": "8304b479e592cad1e26f101fe62ebedd14ab1f7d26020b402f0b412b1dae17c8"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "57802c26e84ddcc87c37e42c1e937f6c179d8cb6",
+      "path": "src/CBuilding.h",
+      "position": 260,
+      "sha256": "56eac83edf265df551aeab939a26ab2b505e1b93a87504e79a92285830fb9b9e"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "87dfedd65a5001cf8f410bb051f4adac9a204eec",
+      "path": "src/CItem.h",
+      "position": 260,
+      "sha256": "17d6e97f2ddbff87a0ba4d7e380c367458709ed25052616e98d69a75b5c3bb9c"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "26f202f6271ed0e1479c841ddae95e727a88b286",
+      "path": "src/CInteraction.h",
+      "position": 260,
+      "sha256": "cae2654d50db5bd66edb8afa82353a49043cbeed8faa44460cdb46f78c50062f"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "fb6fe0e3c26f37f094c02b2cfccc4f362ce1fd10",
+      "path": "src/CTile.h",
+      "position": 260,
+      "sha256": "2d5955ebe737dd59b0c3d3e28a747e9a10fa39664ea220ef3ae3179030d2fb22"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "d68afb1cb35eba0d7cb5d61ab82f309cfc41a4b3",
+      "path": "src/CScriptEngine.h",
+      "position": 260,
+      "sha256": "94379dbf888cbd787a72cc3378253a7c7ca322ac8f5dca9e63406d28df25c2fe"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "aacc716893d747d2b234b0052c7213b7fbe05539",
+      "path": "src/Util.h",
+      "position": 260,
+      "sha256": "59a65b65dab02a31214f491296cf45f6a0aef6b43ef8871d106d075466e55b8b"
+    },
+    {
+      "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+      "originalBlob": "82ccf10eb8e41b376440564d0bd287c6259f74c8",
+      "path": "src/CItem.h",
+      "position": 266,
+      "sha256": "7cd16fb12d44a76206a2aaf2071a179a1af0fd8b93a23253b9a55d639c02e3bd"
+    },
+    {
+      "commit": "55e6516eb91b739e899df1ef8d72116da44fec49",
+      "path": "GameScript.cpp",
+      "role": "Intact Boost binding donor, adapted to earlier supported APIs",
+      "sha256": "374e8e3995f6f57e5fae9cfd4d5e02b8bf1e81ffce06d8e40700559396b52fcf"
+    }
+  ]
+}
