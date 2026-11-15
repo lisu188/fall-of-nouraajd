@@ -92,6 +92,19 @@ class HistoryRootfsTest(unittest.TestCase):
         self.assertFalse((self.destination / "obsolete").exists())
         self.assertFalse(any(path.name.startswith(".wh.") for path in self.destination.rglob("*")))
 
+    def testImageDevicesAreOmittedOnlyFromRuntimeDevMount(self):
+        self.materialize(
+            [
+                {"name": "dev", "type": tarfile.DIRTYPE},
+                {"name": "dev/null", "type": tarfile.CHRTYPE},
+                {"name": "dev/disk", "type": tarfile.BLKTYPE},
+                {"name": "dev/pipe", "type": tarfile.FIFOTYPE},
+                {"name": "etc/preserved", "data": b"config"},
+            ]
+        )
+        self.assertEqual([], list((self.destination / "dev").iterdir()))
+        self.assertEqual(b"config", (self.destination / "etc/preserved").read_bytes())
+
     def testContainerAbsoluteSymlinkCannotWriteToTheHost(self):
         outside = self.root / "outside"
         outside.mkdir()

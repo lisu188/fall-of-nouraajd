@@ -153,6 +153,10 @@ def applyLayer(stream, root: Path, directory_modes: dict[tuple[str, ...], int]) 
                 continue
             if parts == (METADATA,):
                 raise RootfsError("Image contains reserved runner provenance metadata")
+            # Runtime creates an isolated /dev; old Ubuntu image layers also
+            # contain device nodes that an unprivileged extractor cannot create.
+            if member.isdev() and parts[0] == "dev":
+                continue
             target = imagePath(root, parts)
             if target == root / METADATA:
                 raise RootfsError("Image alias targets reserved runner provenance metadata")
