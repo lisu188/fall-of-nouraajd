@@ -1,4 +1,4 @@
-FROM ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7
+FROM ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get -o Acquire::Check-Valid-Until=false update && \
@@ -14,8 +14,15 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && \
     dpkg-query -W > /opt/recovery-installed-packages.txt && \
     rm -rf /var/lib/apt/lists/*
 
-COPY sources.json build.sh /opt/recovery/toolchain-source/
-RUN bash /opt/recovery/toolchain-source/build.sh
+# Empty unless replaced with --build-context source-cache=<dir> (see stage_sources.sh).
+FROM scratch AS source-cache
+
+FROM base AS toolchain
+
+ARG RECOVERY_SOURCE_LOCK=sources.json
+COPY sources.json sources-git.json build.sh /opt/recovery/toolchain-source/
+RUN --mount=type=bind,from=source-cache,target=/opt/recovery/source-cache \
+    RECOVERY_SOURCE_LOCK="${RECOVERY_SOURCE_LOCK}" bash /opt/recovery/toolchain-source/build.sh
 
 ENV LIBGL_ALWAYS_SOFTWARE=1 QT_OPENGL=software QT_X11_NO_MITSHM=1
 WORKDIR /workspace

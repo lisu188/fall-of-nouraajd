@@ -60414,74 +60414,10 @@
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
-      "blob": "2b497beeead259c7723dc53985432cd010defbf7",
-      "mode": "100644",
-      "path": "animation/animatedobject.h",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animatedobject.h",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "a06aaa1a5c944ac62a5ae8290369299b33dcb55e",
-      "mode": "100644",
-      "path": "animation/animationprovider.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animationprovider.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
       "blob": "6042f926d4028481bc67d546e36e366483d05241",
       "mode": "100644",
       "path": "creatures/creature.cpp",
       "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp",
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "9e96869c54f7ab2ef633db529a125bf9cd52a35d",
-      "mode": "100644",
-      "path": "creatures/monsters/pritz.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritz.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "a7752d13468920e1b4f057848cda3f42cb1acf6d",
-      "mode": "100644",
-      "path": "creatures/monsters/pritzmage.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritzmage.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "a6b99945b9ca341c2b228daef54bb8b0a3761253",
-      "mode": "100644",
-      "path": "creatures/players/mage.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/mage.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "8a26e559a90ed619a4647168d483f534d3e5056f",
-      "mode": "100644",
-      "path": "creatures/players/player.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/player.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "cc6e2e5905c41ee908bbd25fb4fd819798ef5a15",
-      "mode": "100644",
-      "path": "creatures/players/rogue.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/rogue.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "e9d70eb7dfe5e82b2d87624f76ba4e369408a258",
-      "mode": "100644",
-      "path": "creatures/players/warrior.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/warrior.cpp",
-      "replaceExisting": true,
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
@@ -60528,22 +60464,6 @@
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
-      "blob": "773034569170061919e5ef830ae9d8093a13fcbd",
-      "mode": "100644",
-      "path": "map/map.h",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.h",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "80755a5313045117723f7ce5aff512319d90c7e3",
-      "mode": "100644",
-      "path": "map/tiles/tile.h",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/tiles/tile.h",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
       "blob": "db6f11c26618e592b2ac09f89727e1a79de27b4b",
       "mode": "100644",
       "path": "stats/stats.cpp",
@@ -60555,14 +60475,6 @@
       "mode": "100644",
       "path": "view/gamescene.cpp",
       "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp",
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "b4290d625db20c7d2a934c7a426f844b2f6e0cf9",
-      "mode": "100644",
-      "path": "view/gameview.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gameview.cpp",
-      "replaceExisting": true,
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
@@ -79158,157 +79070,71 @@
     },
     {
       "blob": "5660ac080c4272536e9f9b3f7d1c57fd592d0d9a",
+      "originalBlob": "a159ee450bd4b9de9720b591d28b350f5794a8d2",
       "path": "Game.pro",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "animation/animatedobject.h",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "539826837ca8f49f5f7c17acdab374c49f7db9a86214062ca1671e5d39f5cf19",
-      "source": "upstream/compatibility/earliest/animation/animatedobject.h",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "animation/animationprovider.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "68e8926f4e78e835180b0735cf9ca284bf07163d49d604ff23da11490d8535d6",
-      "source": "upstream/compatibility/earliest/animation/animationprovider.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "6042f926d4028481bc67d546e36e366483d05241",
+      "originalBlob": "ef44b5df70589d0e652b6b1c5c8456e048e668ba",
       "path": "creatures/creature.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/monsters/pritz.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "cf30b825ffcc3c25c2896ae071a6de63136899ae9d75e962f18fb2ae6bcf24fd",
-      "source": "upstream/compatibility/earliest/creatures/monsters/pritz.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/monsters/pritzmage.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "1e22eb03f1b93cb19a855f2750a3dc9d77acd73dbe045d018afc9c64021d4111",
-      "source": "upstream/compatibility/earliest/creatures/monsters/pritzmage.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/mage.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "704e5115cbf4441b35d1008ce25d262853be0260f7acb69954440eb16786fe20",
-      "source": "upstream/compatibility/earliest/creatures/players/mage.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/player.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "2b18e0d2c5398dc2a74ec5ec37ecf0c56596bb2ba80d1d04c6fb3bb620f0813f",
-      "source": "upstream/compatibility/earliest/creatures/players/player.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/rogue.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "2ca7ea019d3ca7081d760a87c801af024f6303a8e4e6c94c0f3dce4cac1dccfc",
-      "source": "upstream/compatibility/earliest/creatures/players/rogue.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/warrior.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "299d16910635ddf33b3eb003eeff58ea3406fcbf9a598834aef43c87bbbd6532",
-      "source": "upstream/compatibility/earliest/creatures/players/warrior.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "f890ee0f00785096c6903db731e492c512342117",
+      "originalBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
       "path": "images/buildings/cave/0.png",
-      "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "fb2a04dc08174e6e5e695f71374552a4374dfc2d",
+      "originalBlob": "6cab0a22e2f71d71b95dfefa7565593528494ab8",
       "path": "images/tiles/grass/0.png",
-      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "d48054fd873a7b31be64c8e23af1d8e93092c858",
+      "originalBlob": "c63b54e718a36c4a43474f293397c19d739f1604",
       "path": "images/tiles/ground/0.png",
-      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "85d6d5c7c94cab2a5982376341fecaabdba4f4e5",
+      "originalBlob": "203d08f3f0f153b2fffca654b4049c483906be11",
       "path": "images/tiles/mountain/0.png",
-      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "926e710abc6016a76dbfb9ccd2c9fd035a65e327",
+      "originalBlob": "6a0a6e63b9334f8bce62485daaf6b3dfa0df7a71",
       "path": "images/tiles/road/0.png",
-      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "bcbc39b6caa2bd2dd09bfd4b07220e2f27fe5910",
+      "originalBlob": "c8576600fa057e55c3f7c4b140fbaf8010b71a93",
       "path": "images/tiles/water/0.png",
-      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
-      "blob": "b87f78f0b3e634ad55ca98d98467a75043dff71d",
+      "originalBlob": "0f2d04cf0f5e9fdc582ff67ae67d31c6365d1d8e",
       "path": "map/map.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp; headerMatch=0; apiOverlap=9500/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "map/map.h",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "89f10e5f3746d3c1ee8b5d64871d9ec87d117632fc6a9b98762fb049a8213ade",
-      "source": "upstream/compatibility/earliest/map/map.h",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "map/tiles/tile.h",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "363142caea34dfa3d474b9cd95a24860d76d25ead6751e42cdc97cdec08fd612",
-      "source": "upstream/compatibility/earliest/map/tiles/tile.h",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); replaces the 2026 donor that required modified headers",
+      "sha256": "2224efe9614c7d3d9611fe5dc7afd17d79c1b7d850028d2eb89b7f75d2e8609c",
+      "source": "payloads/reconstructions/0f/0f2d04cf0f5e9fdc582ff67ae67d31c6365d1d8e-map.cpp"
     },
     {
       "blob": "db6f11c26618e592b2ac09f89727e1a79de27b4b",
+      "originalBlob": "afe8cf2e65426bc9e4d11d9912769b9acac6a40b",
       "path": "stats/stats.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
-      "blob": "14ad04283dc95bceec84a5ae6125a2b34ae1d9d0",
+      "originalBlob": "5b28e8246cc5109520552d93627eb9d59ff6441b",
       "path": "view/gamescene.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "view/gameview.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "4d032a1e6cdf3951d0dec99366ae8be4206beb4834949a869633047361908644",
-      "source": "upstream/compatibility/earliest/view/gameview.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 2026 donor (108bdcbe view/gamescene.cpp) to the original headers: tiles are created through Map::getTile and player views are positioned by GameView::resize",
+      "sha256": "78032dd8fe518dbea30360f1686a912684bb81d9369ea844bf4b7c94a0acb07b",
+      "source": "payloads/reconstructions/5b/5b28e8246cc5109520552d93627eb9d59ff6441b-gamescene.cpp"
     },
     {
       "path": "compression/minizip.h",
@@ -93328,6 +93154,545 @@
       "path": "scripts/game/interaction.py",
       "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=32",
       "tree": "ffee761da016546507d64cda072b997f0992a5d9"
+    },
+    {
+      "originalBlob": "0340e81fb1eee9c9eec04786a8bfb4e8ac3971c4",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1056f5a1bb90ad6555a946e3ee2e95334ea0cca5 (previous version of stats/stats.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/03/0340e81fb1eee9c9eec04786a8bfb4e8ac3971c4-stats.cpp"
+    },
+    {
+      "originalBlob": "056acff8a5ac07d4006cfa545a2fe842117df4af",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 65ed8ffa reconstruction: initializeFromFile, configured levelling actions (getLevelAction) and getLevelBonus declared in the same-commit creature.h",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/05/056acff8a5ac07d4006cfa545a2fe842117df4af-creature.cpp"
+    },
+    {
+      "originalBlob": "0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a2666fb41565d2dcfae1162a6a5a09ff9381d36d (previous version of interactions/interaction.cpp); compiles in 81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/0a/0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d-interaction.cpp"
+    },
+    {
+      "originalBlob": "1056f5a1bb90ad6555a946e3ee2e95334ea0cca5",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the ff3d46a0 reconstruction across the 4a6a0310 source reformat",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/10/1056f5a1bb90ad6555a946e3ee2e95334ea0cca5-stats.cpp"
+    },
+    {
+      "originalBlob": "1c25469b4d69303a822d160da47356bbf5f2f990",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 056acff8a5ac07d4006cfa545a2fe842117df4af (previous version of creatures/creature.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/1c/1c25469b4d69303a822d160da47356bbf5f2f990-creature.cpp"
+    },
+    {
+      "originalBlob": "1f4cd3f2395389fb8cecb6efb8d854a89e23e51b",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the ef44b5df reconstruction: value action list (mirrors the same-commit player.cpp change) and Creature::addEffect",
+      "sha256": "b88110750398fdcb4325a904bf7e0cb1970f7425c2ebad69f6d7e70b83a44056",
+      "source": "payloads/reconstructions/1f/1f4cd3f2395389fb8cecb6efb8d854a89e23e51b-creature.cpp"
+    },
+    {
+      "originalBlob": "27745415c1f4ae213873a14ad9b903ecbe8ae27d",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); Player comes through view/gamescene.h so the same file builds before and after creatures/players/ moved; carried unchanged across the 4a6a0310 source reformat",
+      "sha256": "48bc7736a90a8eb0157c5984792cea297bc6a35d2624e697a2a8c34df4c6f595",
+      "source": "payloads/reconstructions/27/27745415c1f4ae213873a14ad9b903ecbe8ae27d-map.cpp"
+    },
+    {
+      "originalBlob": "45cb7aaa94d107c4fd1cef1e605c91e1be604417",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the c11d143b reconstruction (previous version of view/gamescene.cpp)",
+      "sha256": "b11bcfa3821448e49c3e84e886e7de54ccc6c40ac4e6c01105ff4b63b72bbeee",
+      "source": "payloads/reconstructions/45/45cb7aaa94d107c4fd1cef1e605c91e1be604417-gamescene.cpp"
+    },
+    {
+      "originalBlob": "499bbd1240f6bfc05d05f50974d54f5f9f593014",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; surviving f4bf8a28 interactions/interaction.cpp plus the prototype registry (getAction, terminate, init) declared in the same-commit interaction.h",
+      "sha256": "7fec34be945974be9e540e82593671ca6a1a4eed6e218d32cbdb2b89ea26efba",
+      "source": "payloads/reconstructions/49/499bbd1240f6bfc05d05f50974d54f5f9f593014-interaction.cpp"
+    },
+    {
+      "originalBlob": "65ed8ffa036e62eabfbe3e593156e877b4c70250",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 678eb109 reconstruction: value Stats, JSON creature configuration in the style of the surviving Item::loadJsonFile, per-level stat growth",
+      "sha256": "5b9d6ff6510d28f955ca2f175390d66e68208201a39aeff943f592949cdb0f1c",
+      "source": "payloads/reconstructions/65/65ed8ffa036e62eabfbe3e593156e877b4c70250-creature.cpp"
+    },
+    {
+      "originalBlob": "678eb1091f129d68b166f003231c2b10c0eb168c",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 1f4cd3f2 reconstruction: effects replace stun (applyEffects, as used by the same-commit player.cpp and effect.cpp) and out-of-line accessors",
+      "sha256": "537a74124c0c712903e9a1dca65f750c5a6f816593002ce9f5055244b2d7554a",
+      "source": "payloads/reconstructions/67/678eb1091f129d68b166f003231c2b10c0eb168c-creature.cpp"
+    },
+    {
+      "originalBlob": "6d39ac779f573337b12845508847f280bf2cbf71",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; 2026 donor stats.cpp plus Stats::init(Json::Value) declared in the same-commit stats.h",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/6d/6d39ac779f573337b12845508847f280bf2cbf71-stats.cpp"
+    },
+    {
+      "originalBlob": "8895196e12c6d082589a4278391a97735994c633",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d (previous version of interactions/interaction.cpp); compiles in da13b28d2062a5727d5856e3f94cf5aa2d653194",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/88/8895196e12c6d082589a4278391a97735994c633-interaction.cpp"
+    },
+    {
+      "originalBlob": "a2666fb41565d2dcfae1162a6a5a09ff9381d36d",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 499bbd12 reconstruction; getAction instantiates interactions by name because the same-commit interaction.h removed the registry",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/a2/a2666fb41565d2dcfae1162a6a5a09ff9381d36d-interaction.cpp"
+    },
+    {
+      "originalBlob": "c11d143b1549352cca3fa8b22287ba41a3a0747c",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 5b28e824 reconstruction with Mage renamed to Sorcerer (same-commit mage.h)",
+      "sha256": "b11bcfa3821448e49c3e84e886e7de54ccc6c40ac4e6c01105ff4b63b72bbeee",
+      "source": "payloads/reconstructions/c1/c11d143b1549352cca3fa8b22287ba41a3a0747c-gamescene.cpp"
+    },
+    {
+      "originalBlob": "da0d2da6fc3ffa1e597f9637a73db7bc235cd6d2",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 45cb7aaa reconstruction across the 4a6a0310 source reformat",
+      "sha256": "b11bcfa3821448e49c3e84e886e7de54ccc6c40ac4e6c01105ff4b63b72bbeee",
+      "source": "payloads/reconstructions/da/da0d2da6fc3ffa1e597f9637a73db7bc235cd6d2-gamescene.cpp"
+    },
+    {
+      "originalBlob": "ff3d46a0900f209fe18a6bee08d4592037821072",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 6d39ac77 reconstruction (previous version of stats/stats.cpp)",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/ff/ff3d46a0900f209fe18a6bee08d4592037821072-stats.cpp"
+    },
+    {
+      "originalBlob": "04855a2dca1fcbebb115d404f24805f1dd447528",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3e8ae69135343931bdd2c2b991501be297258d5a (previous version of creatures/creature.cpp)",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/04/04855a2dca1fcbebb115d404f24805f1dd447528-creature.cpp"
+    },
+    {
+      "originalBlob": "14bed295c45009afd79794e686e3d6ca8f7bcff0",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 3096492a reconstruction; dropped includes of the item subclasses removed in this commit and included items/armor.h and items/weapon.h",
+      "sha256": "39d09f023504927943a1b1e51d0536ddad42ef7959a1f3b989cd1201e89505ef",
+      "source": "payloads/reconstructions/14/14bed295c45009afd79794e686e3d6ca8f7bcff0-player.cpp"
+    },
+    {
+      "originalBlob": "15da77d01cfd03136938d6d608982b6968fce441",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 73 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "d22eed4b0b423cb82e15dfe464d01465e57b1911bc71d833f294607476414963",
+      "source": "payloads/reconstructions/15/15da77d01cfd03136938d6d608982b6968fce441-Game.pro"
+    },
+    {
+      "originalBlob": "1c22979740439a35fae1fd560b04f7ae698e6ca6",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 217e1fa2 reconstruction with player.h at its new creatures/ path",
+      "sha256": "710e6ccb3b40d7d605a7b357aa82525fb10679e2f4f8d0d615333c9413de2860",
+      "source": "payloads/reconstructions/1c/1c22979740439a35fae1fd560b04f7ae698e6ca6-interaction.cpp"
+    },
+    {
+      "originalBlob": "217e1fa27cd7418ae31d610b1654243e9564d98e",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 51538e9c356cd19cc2021268cdc93bae0d3763e9 (previous version of interactions/interaction.cpp)",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/21/217e1fa27cd7418ae31d610b1654243e9564d98e-interaction.cpp"
+    },
+    {
+      "originalBlob": "3096492a10846f78c0c46073fce145625dc3e746",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; surviving 08867695 creatures/player.cpp with the same-commit player.h changes: out-of-line lock accessors, performAction (the fight round formerly in Interaction::mousePressEvent, which the surviving 5a89254f interaction.cpp now delegates) and defeatCreature",
+      "sha256": "41c1154390963fed472c7b562ff22b899fd4527ed799cbc9354cc53e7db7288c",
+      "source": "payloads/reconstructions/30/3096492a10846f78c0c46073fce145625dc3e746-player.cpp"
+    },
+    {
+      "originalBlob": "33a4078c8428a57a35c744b645c707cbf40d9a64",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7859caf8ac (previous version of creatures/creature.cpp)",
+      "sha256": "52a34b15dde74c261dd570c739613044230861c1d1174bbbc0307355f3584b98",
+      "source": "payloads/reconstructions/33/33a4078c8428a57a35c744b645c707cbf40d9a64-creature.cpp"
+    },
+    {
+      "originalBlob": "3e79503c277a1ecac97286482c2dab3595931549",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1c25469b4d (previous version of creatures/creature.cpp)",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/3e/3e79503c277a1ecac97286482c2dab3595931549-creature.cpp"
+    },
+    {
+      "originalBlob": "3e8ae69135343931bdd2c2b991501be297258d5a",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3e79503c277a1ecac97286482c2dab3595931549 (previous version of creatures/creature.cpp)",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/3e/3e8ae69135343931bdd2c2b991501be297258d5a-creature.cpp"
+    },
+    {
+      "originalBlob": "4d1dbb28e4a09e3debe947e7a29d95b00bcede2e",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "0f194c8a0660ed2d24f0a9e1eaab1b55dfd9dcde087abe551a98d6b9e39f83b1",
+      "source": "payloads/reconstructions/4d/4d1dbb28e4a09e3debe947e7a29d95b00bcede2e-Game.pro"
+    },
+    {
+      "originalBlob": "51538e9c356cd19cc2021268cdc93bae0d3763e9",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8895196e12 (previous version of interactions/interaction.cpp)",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/51/51538e9c356cd19cc2021268cdc93bae0d3763e9-interaction.cpp"
+    },
+    {
+      "originalBlob": "5c4fab9cf01a417d224f3d4e329e6130a10f4bbe",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8428884b94 (previous version of creatures/creature.cpp)",
+      "sha256": "723df41fac4a1f64821b29ba3c99d3e6ec0c4198b4cee64c1a8ce0056c95d7e4",
+      "source": "payloads/reconstructions/5c/5c4fab9cf01a417d224f3d4e329e6130a10f4bbe-creature.cpp"
+    },
+    {
+      "originalBlob": "63c87b0045b2eca5214a36529c3d6d148546de3c",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 74 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "36c0b0054b3ed29d7d01a151bbe4e32d5afabfc8f37a158513683306bbecc3f4",
+      "source": "payloads/reconstructions/63/63c87b0045b2eca5214a36529c3d6d148546de3c-Game.pro"
+    },
+    {
+      "originalBlob": "6e5718200da392b1c4f10ee5ac1a160fa3054f05",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 87d8078c26 (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/6e/6e5718200da392b1c4f10ee5ac1a160fa3054f05-gamescene.cpp"
+    },
+    {
+      "originalBlob": "7859caf8ac6531b0231352020038ae1bc06db07a",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the c6dbc139 reconstruction: inventory, gold and addItem/loseItem/getInventory moved into Creature (same-commit creature.h/player.h), starting items from the configuration's items list through the surviving Item::getItem",
+      "sha256": "52a34b15dde74c261dd570c739613044230861c1d1174bbbc0307355f3584b98",
+      "source": "payloads/reconstructions/78/7859caf8ac6531b0231352020038ae1bc06db07a-creature.cpp"
+    },
+    {
+      "originalBlob": "7f8e82af23a32a8d3ae95caac2a860b376b02f32",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 62 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "6b2d95b7122bc4e4845b7ced7d0745fba856c11a2be2b5689991738c27ec05e8",
+      "source": "payloads/reconstructions/7f/7f8e82af23a32a8d3ae95caac2a860b376b02f32-Game.pro"
+    },
+    {
+      "originalBlob": "8428884b948f50a6d4d7b1c984f724a7c7bcd0b0",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 04855a2d reconstruction: Creature(path, map, x, y) loads its configuration in the constructor (same-commit creature.h/player.cpp/monster.cpp) and levels from 0 to 1 so level-1 actions apply",
+      "sha256": "723df41fac4a1f64821b29ba3c99d3e6ec0c4198b4cee64c1a8ce0056c95d7e4",
+      "source": "payloads/reconstructions/84/8428884b948f50a6d4d7b1c984f724a7c7bcd0b0-creature.cpp"
+    },
+    {
+      "originalBlob": "87d8078c26bc47865cbc582745003d689d6fbb6f",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the da0d2da6 reconstruction: the player is a config-driven Player (sorcerer.json) after the class hierarchy flattened",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/87/87d8078c26bc47865cbc582745003d689d6fbb6f-gamescene.cpp"
+    },
+    {
+      "originalBlob": "994fafd655f3031dc709176d7f0585fd4b64fbb2",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 14bed295 reconstruction: inventory functions moved to Creature, out-of-line getLoot, updateViews and removeFromFightList, defeat handling folded back into performAction (defeatCreature removed from player.h)",
+      "sha256": "db0eac2f481a38aa8efdf75f4bd52fdbc54df2d595537c072c411ca52676a023",
+      "source": "payloads/reconstructions/99/994fafd655f3031dc709176d7f0585fd4b64fbb2-player.cpp"
+    },
+    {
+      "originalBlob": "c6dbc139602528ab99dd4de4c00a68e056dde3a6",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 5c4fab9c reconstruction with armor/weapon headers at their new items/ paths",
+      "sha256": "dc4f1eb0e73750097ed36cdb3b71fba6a6b89981a3a960b3f01bbc5a5d30be4e",
+      "source": "payloads/reconstructions/c6/c6dbc139602528ab99dd4de4c00a68e056dde3a6-creature.cpp"
+    },
+    {
+      "originalBlob": "d219e66c13cacf2cd5d17ee65ffd6075605aa26f",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "6b2d95b7122bc4e4845b7ced7d0745fba856c11a2be2b5689991738c27ec05e8",
+      "source": "payloads/reconstructions/d2/d219e66c13cacf2cd5d17ee65ffd6075605aa26f-Game.pro"
+    },
+    {
+      "originalBlob": "e4345eeb70dfe1310db077338f6966d05279e6ac",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 69 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "3042c6e2e8ecb15f93c4a2b0651775e3a12bce72d91afaa397424cd87072df5f",
+      "source": "payloads/reconstructions/e4/e4345eeb70dfe1310db077338f6966d05279e6ac-Game.pro"
+    },
+    {
+      "originalBlob": "e550689d8e13c4bd58c34c9007da23103bde25bd",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 994fafd6 reconstruction: potion subclasses were removed in this commit, so starting potions now come only from the player configuration's items list",
+      "sha256": "30fa34748298c14fae75eb5d54982b8c9cadadd3c378b3552129478e0b8506a2",
+      "source": "payloads/reconstructions/e5/e550689d8e13c4bd58c34c9007da23103bde25bd-player.cpp"
+    },
+    {
+      "originalBlob": "f27c3b303de001c2569726588986622b6437584d",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e5718200d (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/f2/f27c3b303de001c2569726588986622b6437584d-gamescene.cpp"
+    },
+    {
+      "originalBlob": "008bb3e7ce718a77102574fdd0a5d84628a2084d",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 63 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "95c5cab544709105623ab07252aa6353c34f3ccd0d0ed21a3db927168d9fb265",
+      "source": "payloads/reconstructions/00/008bb3e7ce718a77102574fdd0a5d84628a2084d-Game.pro"
+    },
+    {
+      "originalBlob": "1ecc50a84f5ec5fd3a873c17e0cae13b1eab2cbb",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; rebuilt for the same-commit interaction.h: one data-driven Interaction (config/interactions.json for mana cost and animation) bound to free action functions whose bodies are the surviving 47b73fdf interaction subclasses' action methods; structure and mousePressEvent from the surviving 47b73fdf interaction.cpp",
+      "sha256": "ec411d5d5f96e0959ebe1e8f30af9a5b9b44c339ee1f87b790c6d66ca539b52f",
+      "source": "payloads/reconstructions/1e/1ecc50a84f5ec5fd3a873c17e0cae13b1eab2cbb-interaction.cpp"
+    },
+    {
+      "originalBlob": "28e4223623f2f283d339e317108733786b1f3447",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 61 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "af10e08eb48c19b6cb07bc11fe59cfaa38e5af3927e6de9f8a2545aba5269f26",
+      "source": "payloads/reconstructions/28/28e4223623f2f283d339e317108733786b1f3447-Game.pro"
+    },
+    {
+      "originalBlob": "3ffa66f17ff21045f38b75f1c3eb75c6c628e7d6",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the fc0655d1 reconstruction: interactions run through Interaction::onAction",
+      "sha256": "69e691c03890f39058fe3ede77bec8a1c587ae57361fed12d228b3382cb67759",
+      "source": "payloads/reconstructions/3f/3ffa66f17ff21045f38b75f1c3eb75c6c628e7d6-player.cpp"
+    },
+    {
+      "originalBlob": "97e50043c3ba95714010d0cb6932a62d32b62569",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 33a4078c8428a57a35c744b645c707cbf40d9a64 (previous version of creatures/creature.cpp)",
+      "sha256": "52a34b15dde74c261dd570c739613044230861c1d1174bbbc0307355f3584b98",
+      "source": "payloads/reconstructions/97/97e50043c3ba95714010d0cb6932a62d32b62569-creature.cpp"
+    },
+    {
+      "originalBlob": "9ee96a8e2bf78f077cdfbfd98442a2512e79febc",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the a1107283 reconstruction: effects are data-driven Effect(type, caster, duration) objects (same-commit effect.h, surviving effect.cpp)",
+      "sha256": "a23ac59f2a891d16f5d60553ed948f068575912768808206d50ba3f0872a1a3c",
+      "source": "payloads/reconstructions/9e/9ee96a8e2bf78f077cdfbfd98442a2512e79febc-interaction.cpp"
+    },
+    {
+      "originalBlob": "a1107283af09017e43a9e9415b5ac2f80bb77397",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 1ecc50a8 reconstruction: the name-to-action table is the static Interaction::actions member declared in the same-commit interaction.h",
+      "sha256": "d386966146795016686cc82da8078a21d79faea699e4d578721075da91c5c9b6",
+      "source": "payloads/reconstructions/a1/a1107283af09017e43a9e9415b5ac2f80bb77397-interaction.cpp"
+    },
+    {
+      "originalBlob": "a37a1e236ff96ed943885a3536bfb8c706b3a7ca",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 64 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "a3765e86966c3305a25a52f1c9b047ab52cf945003a079b5bb65f15bc365a6fe",
+      "source": "payloads/reconstructions/a3/a37a1e236ff96ed943885a3536bfb8c706b3a7ca-Game.pro"
+    },
+    {
+      "originalBlob": "b1f98e58603669363da199f0d31d7cdb5292aced",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cc72feb06247816b7fc4c6468403d3f195fd69de (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/b1/b1f98e58603669363da199f0d31d7cdb5292aced-gamescene.cpp"
+    },
+    {
+      "originalBlob": "c6b91fa5d69ef82b2cb0b236c24dbc7641473d8b",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 63 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "95c5cab544709105623ab07252aa6353c34f3ccd0d0ed21a3db927168d9fb265",
+      "source": "payloads/reconstructions/c6/c6b91fa5d69ef82b2cb0b236c24dbc7641473d8b-Game.pro"
+    },
+    {
+      "originalBlob": "cc72feb06247816b7fc4c6468403d3f195fd69de",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f27c3b303d (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/cc/cc72feb06247816b7fc4c6468403d3f195fd69de-gamescene.cpp"
+    },
+    {
+      "originalBlob": "cf8025b14dd608170ab57397e6df00f3cb0db224",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the d635f66f reconstruction: finished effects are detected with Effect::getTimeLeft",
+      "sha256": "a59acb290d3447276f5835a20e18d12804dde662a85fbb0097a963080db9dbd7",
+      "source": "payloads/reconstructions/cf/cf8025b14dd608170ab57397e6df00f3cb0db224-creature.cpp"
+    },
+    {
+      "originalBlob": "d635f66fb08e6f2ba8c484b6cf18f27aa416d6b0",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 97e50043 reconstruction: interactions are created with Interaction::getInteraction and run with onAction, the level bonus is a value (same-commit creature.h), and getCoordsString is defined",
+      "sha256": "494955d1380610ea96f005206a694e5a939edd4a21b3c7f712b14c35ed6ab18c",
+      "source": "payloads/reconstructions/d6/d635f66fb08e6f2ba8c484b6cf18f27aa416d6b0-creature.cpp"
+    },
+    {
+      "originalBlob": "fc0655d192349029f22bc5164bd055a032afdfe8",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e550689d8e13c4bd58c34c9007da23103bde25bd (previous version of creatures/player.cpp)",
+      "sha256": "30fa34748298c14fae75eb5d54982b8c9cadadd3c378b3552129478e0b8506a2",
+      "source": "payloads/reconstructions/fc/fc0655d192349029f22bc5164bd055a032afdfe8-player.cpp"
+    },
+    {
+      "originalBlob": "fe3928a0ea5a4797adac383747b1d278f0c7b012",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 0340e81f reconstruction: addBonus and removeBonus take Stats by value (same-commit stats.h)",
+      "sha256": "1477ca1f6deb13877151c3d873dba47e0e689c30d2d03a5c0fcc686e5ebdc109",
+      "source": "payloads/reconstructions/fe/fe3928a0ea5a4797adac383747b1d278f0c7b012-stats.cpp"
+    },
+    {
+      "originalBlob": "206d84bacf195c7145d70343b4f0b64be9269820",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 3ffa66f1 reconstruction: Player(path, map) and an equipped-items view (same-commit player.h)",
+      "sha256": "0ec04b68be4020f011dcc11c6228f5ab0ddd6ec89598cda40333f39f4c1f3ba2",
+      "source": "payloads/reconstructions/20/206d84bacf195c7145d70343b4f0b64be9269820-player.cpp"
+    },
+    {
+      "originalBlob": "3843e1471f952d44d8404d5615deb3dd3721d0e1",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 6dc1be85 reconstruction: tiles are saved grouped by type as coordinates and recreated with the surviving Tile::getTile(type, x, y) (same-commit tile.cpp)",
+      "sha256": "7a3f534eaba6c2952de46e5d435af6425c6e1fb8993e8f9b61a5861207500e00",
+      "source": "payloads/reconstructions/38/3843e1471f952d44d8404d5615deb3dd3721d0e1-map.cpp"
+    },
+    {
+      "originalBlob": "44595a0a1221d2947c49bad089eeab94be578642",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the cf8025b1 reconstruction: Creature(path, map) loads configurations and saved games through loadFromJson (actions, items, equipped weapon/armor, coordinates, saved level/exp/hp/mana) with the matching saveToJson, and keeps the equipped list (same-commit creature.h, player.json, configs)",
+      "sha256": "0141fc5cc263748f76224a4bd852c69ba9f03cb4047ae117a6b77625b81d7c32",
+      "source": "payloads/reconstructions/44/44595a0a1221d2947c49bad089eeab94be578642-creature.cpp"
+    },
+    {
+      "originalBlob": "6dc1be851f97a86f883776b64f7ac1061cff706b",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the cde8ba2e reconstruction: saved maps skip objects whose canSave is false and loading recreates tiles through the surviving Tile::getTile",
+      "sha256": "e524a80c24787b56065ee14611d630bd80eced30180d670133069fc8b2e94912",
+      "source": "payloads/reconstructions/6d/6dc1be851f97a86f883776b64f7ac1061cff706b-map.cpp"
+    },
+    {
+      "originalBlob": "7f754424f45caca4a6d7a1f4bc26137ef7734cbe",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the d73ccec8 reconstruction with the Json::Value constructor (same-commit player.h)",
+      "sha256": "360f8277453ea1a08d0d6ea3e9d9a204d2424ef1d2fd82cdbfea6dfdc452c6b7",
+      "source": "payloads/reconstructions/7f/7f754424f45caca4a6d7a1f4bc26137ef7734cbe-player.cpp"
+    },
+    {
+      "originalBlob": "a9e9a3e3502ea6af3db322eb00d5ec3012970adc",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the b1f98e58 reconstruction: the player is restored from the saved player.json introduced in this commit",
+      "sha256": "4e95fb7f765852c0bc6dea17f887fe1c4f5850391943b89ca7e5e1cb55e3622e",
+      "source": "payloads/reconstructions/a9/a9e9a3e3502ea6af3db322eb00d5ec3012970adc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "aad65fa32f80eb4b4f194d256abba6d754c40534",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 27745415 reconstruction: MapObject::moveTo gains the silent flag declared in the same-commit map.h (silent moves only place the object)",
+      "sha256": "9b603fa5ba305ebc3025f7c909e75ab0ae1949b5154e86cbe62fd72d1e3e6ab0",
+      "source": "payloads/reconstructions/aa/aad65fa32f80eb4b4f194d256abba6d754c40534-map.cpp"
+    },
+    {
+      "originalBlob": "b3c72b5223bf75a02ad419ac7f90431d89b0f062",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the b5dc5c70 reconstruction: Creature(Json::Value, map) takes the configuration itself, and canSave leaves defeated creatures out of saves (same-commit creature.h/map.h)",
+      "sha256": "1067651d741ff741de9f989b79df5a3aaa03796968aee11f8bed4ef57e61b0e4",
+      "source": "payloads/reconstructions/b3/b3c72b5223bf75a02ad419ac7f90431d89b0f062-creature.cpp"
+    },
+    {
+      "originalBlob": "b53f162880b9e7a11d28e171b902ac423003c19d",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the aad65fa3 reconstruction: the object list is a value member and Map gains loadFromJson/saveToJson over tiles and objects (same-commit map.h; Tile and Cave serializers survive)",
+      "sha256": "ae6d53f37afa06722a15ee138c0a1237877361eba407f7ce205084e4d005e501",
+      "source": "payloads/reconstructions/b5/b53f162880b9e7a11d28e171b902ac423003c19d-map.cpp"
+    },
+    {
+      "originalBlob": "b5dc5c7038ca4be2cf3bc22ab20ad038c8e0772e",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 44595a0a reconstruction: the configuration's animation path and levelling table are kept as members (animPath, levelling) and getCoordsString is gone (same-commit creature.h)",
+      "sha256": "3b4729f141f33eea5f2368607b2d42a02a1203484c8e25ea8383c8f44eae408e",
+      "source": "payloads/reconstructions/b5/b5dc5c7038ca4be2cf3bc22ab20ad038c8e0772e-creature.cpp"
+    },
+    {
+      "originalBlob": "bcc6eba508085367cc0e3f6957c33713a2ec62cc",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the f1ad1b8f reconstruction: GameScene::setPlayer returns void (same-commit gamescene.h)",
+      "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
+      "source": "payloads/reconstructions/bc/bcc6eba508085367cc0e3f6957c33713a2ec62cc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "c609dca28291f13355c10923feed107fb0614abb",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9ee96a8e2bf78f077cdfbfd98442a2512e79febc (previous version of interactions/interaction.cpp)",
+      "sha256": "a23ac59f2a891d16f5d60553ed948f068575912768808206d50ba3f0872a1a3c",
+      "source": "payloads/reconstructions/c6/c609dca28291f13355c10923feed107fb0614abb-interaction.cpp"
+    },
+    {
+      "originalBlob": "cde8ba2e2c6a6b91eb43531a93ec3c72b62277ab",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b53f162880b9e7a11d28e171b902ac423003c19d (previous version of map/map.cpp)",
+      "sha256": "ae6d53f37afa06722a15ee138c0a1237877361eba407f7ce205084e4d005e501",
+      "source": "payloads/reconstructions/cd/cde8ba2e2c6a6b91eb43531a93ec3c72b62277ab-map.cpp"
+    },
+    {
+      "originalBlob": "d30a3f796dd94c2813b25027982c9f8c263d762c",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)",
+      "sha256": "658cd0089bcd7f371105eeb3261850fae34e25d69f71935fefd43e6337498e0a",
+      "source": "payloads/reconstructions/d3/d30a3f796dd94c2813b25027982c9f8c263d762c-stats.cpp"
+    },
+    {
+      "originalBlob": "d73ccec874a9d7aa81276ee9c182349b8cfab8f6",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 206d84ba reconstruction with the renamed constructor parameter",
+      "sha256": "bf5fc793c8b5dc20406754e516632b7b65ab7097fc3534415d5118442a08a7d4",
+      "source": "payloads/reconstructions/d7/d73ccec874a9d7aa81276ee9c182349b8cfab8f6-player.cpp"
+    },
+    {
+      "originalBlob": "e29597b4fc9c4ba8569fd03bb81b2b02b0252c62",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e34408f131b5d6791bf47010b2b65339307989cf (previous version of view/gamescene.cpp)",
+      "sha256": "eb524fed15c276f0aba4a3b1e2baf619560fd910c224896501938f46c9d88975",
+      "source": "payloads/reconstructions/e2/e29597b4fc9c4ba8569fd03bb81b2b02b0252c62-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e34408f131b5d6791bf47010b2b65339307989cf",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the a9e9a3e3 reconstruction: player.json was deleted in this commit, so the player starts from config/players/warrior.json (the class of the deleted save)",
+      "sha256": "eb524fed15c276f0aba4a3b1e2baf619560fd910c224896501938f46c9d88975",
+      "source": "payloads/reconstructions/e3/e34408f131b5d6791bf47010b2b65339307989cf-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of bcc6eba508085367cc0e3f6957c33713a2ec62cc (previous version of view/gamescene.cpp)",
+      "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
+      "source": "payloads/reconstructions/e6/e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e80827d44783b0a705644f8ce4b5f111d2c4b5b2",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b3c72b5223bf75a02ad419ac7f90431d89b0f062 (previous version of creatures/creature.cpp)",
+      "sha256": "1067651d741ff741de9f989b79df5a3aaa03796968aee11f8bed4ef57e61b0e4",
+      "source": "payloads/reconstructions/e8/e80827d44783b0a705644f8ce4b5f111d2c4b5b2-creature.cpp"
+    },
+    {
+      "originalBlob": "f1ad1b8f30df3be73d3ad1a48f7868d33c88ea9c",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the e29597b4 reconstruction: the player is built from the warrior configuration value, and GameScene::setPlayer is defined (same-commit gamescene.h)",
+      "sha256": "618e65529f7a0586138f192595952e088bd1366468cfc80dd9ec7b60d5ccad14",
+      "source": "payloads/reconstructions/f1/f1ad1b8f30df3be73d3ad1a48f7868d33c88ea9c-gamescene.cpp"
+    },
+    {
+      "originalBlob": "f1dcf2969637e9b1aadbb80cf1dddc6b82250a8e",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074 (previous version of view/gamescene.cpp)",
+      "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
+      "source": "payloads/reconstructions/f1/f1dcf2969637e9b1aadbb80cf1dddc6b82250a8e-gamescene.cpp"
     }
   ],
   "schemaVersion": 1

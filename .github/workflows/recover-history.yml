@@ -16,7 +16,7 @@ on:
       - tests/test_history_overrides.py
       - tests/test_history_config.py
       - tests/test_recovery_readme.py
-      - tests/test_recovery_rootfs.py
+      - tests/test_history_payloads.py
       - tests/test_history_resources.py
       - tests/test_recovery_workflow.py
 
@@ -42,7 +42,7 @@ jobs:
           python3 -m unittest tests.test_history_recovery tests.test_history_smoke \
             tests.test_recovery_workflow tests.test_history_overrides \
             tests.test_history_config tests.test_recovery_readme \
-            tests.test_recovery_rootfs tests.test_history_resources
+            tests.test_history_payloads tests.test_history_resources
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

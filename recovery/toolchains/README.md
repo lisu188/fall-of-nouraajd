@@ -29,6 +29,35 @@ Build the image from the repository root on a Docker host:
 docker build --platform linux/amd64 --tag nouraajd-recovery:qt5 recovery/toolchains
 ```
 
+### Hosts without python.org or Boost archive access
+
+`sources-git.json` is an alternative lock: each CPython source is the official
+release tag's commit exported with `git archive --format=tar --prefix=Python-<version>/`
+(the commits are pinned and the exported tarballs hashed), and Boost is the identical
+release archive with a SourceForge mirror. Stage every archive, then pass the cache as
+a named build context (the default `source-cache` stage is empty, so normal builds still
+download from `sources.json`):
+
+```sh
+python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-git.json /tmp/recovery-sources
+docker build --platform linux/amd64 --build-context source-cache=/tmp/recovery-sources \
+    --build-arg RECOVERY_SOURCE_LOCK=sources-git.json --tag nouraajd-recovery:qt5 recovery/toolchains
+```
+
+Xenial apt only speaks plain HTTP to the archive. On a host that allows only HTTPS
+through a proxy, run the transport adapter and build with host networking; apt still
+verifies every archive signature and package hash:
+
+```sh
+python3 recovery/toolchains/http_archive_proxy.py 3142 &
+docker build --network host --build-arg http_proxy=http://127.0.0.1:3142 ...
+```
+
+Boost 1.58's `exec.cpp` assumes the Python >= 3.4 `_Py_fopen(const char *)`; `build.sh`
+applies the upstream Boost.Python fix so the Python 3.3 variant builds. Python and Boost
+build output goes to log files and only failure excerpts are printed, because BuildKit
+keeps at most 2 MiB of output per step.
+
 Validate a restored version with the real game build and an isolated startup
 session. Use an absolute writable results directory outside the read-only source
 mount:
