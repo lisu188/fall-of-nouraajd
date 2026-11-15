@@ -236,66 +236,189 @@ def siegeMissingWand(d):
     d.test.fail(("No enabled breach was reached without a wand", sealed, d.snapshot()))
 
 
+class SiegeMageLootWitness:
+    """Retain one fresh exact mage defeat, wand transfer and resolved player victory."""
+
+    def __init__(self, player, after_seq):
+        self.player = self.actorKey(player)
+        if self.player is None or self.player[-1] is not True:
+            raise AssertionError("Invalid siege witness player")
+        if type(after_seq) is not int or after_seq < 0:
+            raise AssertionError("Invalid siege witness baseline")
+        self.baseline = self.seq = after_seq
+        self.reward = self.inventory = self.proof = None
+        self.wand = None
+
+    @staticmethod
+    def actorKey(actor):
+        if not isinstance(actor, dict):
+            return None
+        keys = ("name", "typeId", "type")
+        if not all(type(actor.get(key)) is str and actor[key] for key in keys):
+            return None
+        if actor.get("id") != actor["typeId"] or type(actor.get("isPlayer")) is not bool:
+            return None
+        return tuple(actor[key] for key in keys) + (actor["isPlayer"],)
+
+    @staticmethod
+    def wandKey(item):
+        if (
+            isinstance(item, dict)
+            and item.get("id") == item.get("typeId") == "magicWand"
+            and item.get("type") == "CItem"
+            and type(item.get("name")) is str
+            and item["name"]
+        ):
+            return item["name"]
+        return None
+
+    def observe(self, records):
+        for record in records:
+            if record.get("schema") != "playtest_trace.v1":
+                raise AssertionError("Invalid siege native trace schema")
+            seq = record.get("seq")
+            if type(seq) is not int or seq != self.seq + 1:
+                raise AssertionError("Stale, duplicate or missing siege native trace")
+            self.seq = seq
+            if self.proof is not None or record.get("map") != "siege":
+                continue
+            event = record.get("event")
+            if self.reward is None and event == "reward_granted":
+                mage = self.actorKey(record.get("defeated"))
+                if (
+                    mage is not None
+                    and mage[1:] == ("siegePritzMage", "CCreature", False)
+                    and self.actorKey(record.get("recipient")) == self.player
+                    and record.get("rewardSource") == "combat"
+                    and type(record.get("turn")) is int
+                    and record["turn"] >= 0
+                ):
+                    wands = [item for item in record.get("items", ()) if self.wandKey(item) is not None]
+                    if wands:
+                        self.reward, self.wand = record, wands[0]
+            elif self.reward is not None and event == "inventory_added":
+                if (
+                    self.inventory is None
+                    and self.actorKey(record.get("owner")) == self.player
+                    and self.wandKey(record.get("item")) == self.wandKey(self.wand)
+                    and type(record.get("turn")) is int
+                    and record["turn"] >= 0
+                ):
+                    self.inventory = record
+            elif self.inventory is not None and event == "combat_finished":
+                mage = self.actorKey(self.reward["defeated"])
+                attacker = self.actorKey(record.get("attacker"))
+                opponents = [self.actorKey(actor) for actor in record.get("opponents", ())]
+                allies = [self.actorKey(actor) for actor in record.get("allies", ())]
+                outcome = record.get("outcome")
+                victory = type(outcome) is int and (
+                    (outcome == 1 and attacker == self.player and mage in opponents)
+                    or (
+                        outcome == 2
+                        and attacker is not None
+                        and attacker[-1] is False
+                        and self.player in opponents
+                        and mage in [attacker, *allies]
+                    )
+                )
+                turn = record.get("turn")
+                if (
+                    victory
+                    and self.actorKey(record.get("survivor")) == self.player
+                    and type(turn) is int
+                    and turn >= 0
+                    and turn == self.reward.get("turn") == self.inventory.get("turn")
+                ):
+                    self.proof = {
+                        "baselineSeq": self.baseline,
+                        "reward": self.reward,
+                        "inventoryAdded": self.inventory,
+                        "combat": record,
+                    }
+
+
 def finishSiege(d):
     d.test.assertEqual("siege", d.map_name)
-    atStart(d, "siegeStart")
-    d.check("siege.arrival", d.flag("siege_initialized") and "defendSiegeQuest" in d.questNames())
-    initial_wands = d.count("magicWand")
-    d.test.assertGreaterEqual(initial_wands, 1)
-    seen_types = set()
-    sealed = []
-    for _ in range(1600):
-        seen_types.update(creatureTypes(d))
-        remaining = [name for name in GATES if not d.call(d.object(name), "getBoolProperty", "destroyed")]
-        if not remaining:
-            break
-        enabled = [name for name in remaining if d.call(d.object(name), "getBoolProperty", "enabled")]
-        if not enabled:
-            d.navigateTo("siegeStart")
-            d.tick()
-            continue
-        name = min(enabled, key=lambda value: sum(abs(a - b) for a, b in zip(d.coords(), d.coords(d.object(value)))))
-        if d.count("magicWand") == 0:
-            d.navigateTo(name)
+    d.test.assertIsNotNone(d.trace_path, "Siege mage loot requires the actual native trace")
+    d.assertSurvival()
+    d.test.assertIsNone(getattr(d, "_siege_mage_loot_witness", None))
+    binding = d.game["__handle__"], d.game_map["__handle__"], d.player["__handle__"]
+    epoch = d.call(d.game, "getMapBindingEpoch")
+    d.test.assertIs(type(epoch), int)
+    d.test.assertGreaterEqual(epoch, 0)
+    d.test.assertIs(d.call(d.player, "isPlayer"), True)
+    player = dict(d._nativeObjectIdentity(d.player), isPlayer=True)
+    witness = SiegeMageLootWitness(player, d._combat_trace_seq)
+    d._siege_mage_loot_witness = witness
+    try:
+        atStart(d, "siegeStart")
+        d.check("siege.arrival", d.flag("siege_initialized") and "defendSiegeQuest" in d.questNames())
+        initial_wands = d.count("magicWand")
+        d.test.assertGreaterEqual(initial_wands, 1)
+        seen_types = set()
+        sealed = []
+        for _ in range(1600):
+            seen_types.update(creatureTypes(d))
+            remaining = [name for name in GATES if not d.call(d.object(name), "getBoolProperty", "destroyed")]
+            if not remaining:
+                break
+            enabled = [name for name in remaining if d.call(d.object(name), "getBoolProperty", "enabled")]
+            if not enabled:
+                d.navigateTo("siegeStart")
+                d.tick()
+                continue
+            name = min(
+                enabled, key=lambda value: sum(abs(a - b) for a, b in zip(d.coords(), d.coords(d.object(value))))
+            )
             if d.count("magicWand") == 0:
-                gold_before = d.gold()
-                d.test.assertFalse(d.call(d.object(name), "sealBreach"))
-                d.test.assertEqual(gold_before, d.gold())
+                d.navigateTo(name)
+                if d.count("magicWand") == 0:
+                    gold_before = d.gold()
+                    d.test.assertFalse(d.call(d.object(name), "sealBreach"))
+                    d.test.assertEqual(gold_before, d.gold())
+                d.navigateTo("siegeStart")
+                d.tick()
+                continue
+            d.navigateTo(name)
+            gate = d.object(name)
+            # Headless confirmation leaves the breach open. Declining exploration consumes nothing.
+            d.test.assertFalse(d.call(gate, "getBoolProperty", "destroyed"))
+            wand_before, gold_before = d.count("magicWand"), d.gold()
+            d.test.assertTrue(d.call(gate, "sealBreach"))
+            d.pump()
+            d.test.assertEqual(wand_before - 1, d.count("magicWand"))
+            d.test.assertTrue(d.call(gate, "getBoolProperty", "pendingSeal"))
+            d.test.assertFalse(d.call(gate, "sealBreach"))
+            if len(sealed) == 3:
+                approach = d.call(d.player, "getStringProperty", "campaign_var_nouraajdGateApproach")
+                bounty = 475 if approach == "threatened" else 500
+                d.test.assertEqual(gold_before + bounty, d.gold())
             d.navigateTo("siegeStart")
-            d.tick()
-            continue
-        d.navigateTo(name)
-        gate = d.object(name)
-        # Headless confirmation leaves the breach open. Declining exploration consumes nothing.
-        d.test.assertFalse(d.call(gate, "getBoolProperty", "destroyed"))
-        wand_before, gold_before = d.count("magicWand"), d.gold()
-        d.test.assertTrue(d.call(gate, "sealBreach"))
-        d.pump()
-        d.test.assertEqual(wand_before - 1, d.count("magicWand"))
-        d.test.assertTrue(d.call(gate, "getBoolProperty", "pendingSeal"))
-        d.test.assertFalse(d.call(gate, "sealBreach"))
-        if len(sealed) == 3:
-            approach = d.call(d.player, "getStringProperty", "campaign_var_nouraajdGateApproach")
-            bounty = 475 if approach == "threatened" else 500
-            d.test.assertEqual(gold_before + bounty, d.gold())
-        d.navigateTo("siegeStart")
-        d.waitTurns(32, lambda: not d.call(gate, "getBoolProperty", "pendingSeal"))
+            d.waitTurns(32, lambda: not d.call(gate, "getBoolProperty", "pendingSeal"))
+            d.check(
+                "siege.gate." + name,
+                d.call(gate, "getBoolProperty", "destroyed")
+                and not d.call(gate, "getBoolProperty", "enabled")
+                and not d.call(gate, "getBoolProperty", "canStep"),
+            )
+            sealed.append(name)
+        d.check("siege.spawn.grunt", "siegePritz" in seen_types)
+        # Only naturally defeated mages can replace the one authored starting wand.
+        d.assertSurvival()
+        d.test.assertEqual(binding, (d.game["__handle__"], d.game_map["__handle__"], d.player["__handle__"]))
+        d.test.assertEqual(epoch, d.call(d.game, "getMapBindingEpoch"))
+        acquired_wands = d.count("magicWand") + len(sealed) - initial_wands
         d.check(
-            "siege.gate." + name,
-            d.call(gate, "getBoolProperty", "destroyed")
-            and not d.call(gate, "getBoolProperty", "enabled")
-            and not d.call(gate, "getBoolProperty", "canStep"),
+            "siege.spawn.mageAndLoot",
+            ("siegePritzMage" in seen_types or witness.proof is not None)
+            and acquired_wands >= max(0, 4 - initial_wands),
+            acquiredWands=acquired_wands,
+            observedTypes=sorted(seen_types),
+            mageLoot=witness.proof,
+            witnessBinding={"game": binding[0], "map": binding[1], "player": binding[2], "epoch": epoch},
         )
-        sealed.append(name)
-    d.check("siege.spawn.grunt", "siegePritz" in seen_types)
-    # Only naturally defeated mages can replace the one authored starting wand.
-    acquired_wands = d.count("magicWand") + len(sealed) - initial_wands
-    d.check(
-        "siege.spawn.mageAndLoot",
-        "siegePritzMage" in seen_types and acquired_wands >= max(0, 4 - initial_wands),
-        acquiredWands=acquired_wands,
-        observedTypes=sorted(seen_types),
-    )
+    finally:
+        d._siege_mage_loot_witness = None
     d.check("siege.quest.complete", d.flag("campaign_completed") and "defendSiegeQuest" in d.questNames(completed=True))
     verifyJournals(d)
     gold_before = d.gold()

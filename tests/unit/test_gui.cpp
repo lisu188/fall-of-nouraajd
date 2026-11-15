@@ -73,10 +73,167 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <future>
 #include <thread>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 #include <utility>
 
 namespace {
+
+struct GuiReadyProbe {
+    bool operator()() & { return true; }
+};
+
+struct GuiExplicitReadyProbe {
+    std::optional<int> operator()() & { return 1; }
+};
+
+struct GuiInvalidReadyProbe {
+    std::string operator()() & { return {}; }
+};
+
+struct GuiRvalueReadyProbe {
+    bool operator()() && { return true; }
+};
+
+struct GuiReaderProbe {
+    int operator()() & { return 7; }
+};
+
+struct GuiRvalueReaderProbe {
+    int operator()() && { return 7; }
+};
+
+struct GuiOwnerReadyProbe {
+    bool operator()(std::shared_ptr<CListView> &) & { return true; }
+};
+
+template <typename Result> struct GuiOwnerResultProbe {
+    Result operator()(std::shared_ptr<CListView> &) & { return {}; }
+};
+
+struct GuiBooleanReferenceResult {
+    friend bool &operator||(bool, GuiBooleanReferenceResult) {
+        static bool ready = true;
+        return ready;
+    }
+};
+
+struct GuiNonBooleanLogicalResult {
+    friend int operator||(bool, GuiNonBooleanLogicalResult) { return 1; }
+};
+
+struct GuiOwnerCallbackProbe {
+    void operator()(std::shared_ptr<CListView> &) & {}
+};
+
+struct GuiRvalueOwnerCallbackProbe {
+    void operator()(std::shared_ptr<CListView> &) && {}
+};
+
+struct GuiNonDefaultResult {
+    explicit GuiNonDefaultResult(int) {}
+};
+
+struct GuiValueInitializedResult {
+    const int value;
+};
+
+template <typename Predicate, typename Reader>
+concept CanAwaitGuiReady =
+    requires(Predicate ready, Reader read) { gui_async::until(std::move(ready), std::move(read)); };
+
+template <typename T, typename Predicate, typename Callback>
+concept CanScheduleGuiReady = requires(std::weak_ptr<T> owner, Predicate ready, Callback callback) {
+    gui_async::whenReady(owner, std::move(ready), std::move(callback));
+};
+
+template <typename T>
+concept CanRunGuiTask = requires(const std::shared_ptr<CGameGraphicsObject> &owner, vstd::task<T> task) {
+    gui_async::run(owner, std::move(task));
+};
+
+static_assert(CanAwaitGuiReady<GuiReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiExplicitReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiInvalidReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiRvalueReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiReadyProbe, GuiRvalueReaderProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::optional<int>>, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::shared_ptr<int>>, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<GuiBooleanReferenceResult>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::string>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerResultProbe<GuiNonBooleanLogicalResult>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerReadyProbe, GuiRvalueOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CGameObject, GuiOwnerReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(CanRunGuiTask<void>);
+static_assert(CanRunGuiTask<int>);
+static_assert(!std::default_initializable<GuiValueInitializedResult>);
+static_assert(CanRunGuiTask<GuiValueInitializedResult>);
+static_assert(!CanRunGuiTask<GuiNonDefaultResult>);
+
+template <typename T, auto Destroy>
+concept HasSdlResourceDeleter = requires { typename fn::sdl::ResourceDeleter<T, Destroy>; };
+
+static_assert(HasSdlResourceDeleter<SDL_Surface, SDL_FreeSurface>);
+static_assert(!HasSdlResourceDeleter<SDL_Surface, SDL_DestroyTexture>);
+static_assert(!HasSdlResourceDeleter<SDL_Surface, SDL_LockSurface>);
+static_assert(std::is_empty_v<fn::sdl::SurfaceDeleter>);
+static_assert(std::is_empty_v<fn::sdl::TextureDeleter>);
+static_assert(std::is_empty_v<fn::sdl::RendererDeleter>);
+static_assert(std::is_empty_v<fn::sdl::WindowDeleter>);
+static_assert(std::is_empty_v<fn::sdl::FontDeleter>);
+static_assert(std::is_nothrow_invocable_v<fn::sdl::SurfaceDeleter, SDL_Surface *>);
+
+struct SdlResourceProbe {
+    int releases = 0;
+};
+
+struct SdlReferenceResourceDeleter {
+    void operator()(SdlResourceProbe *&resource) const { ++resource->releases; }
+};
+
+struct SdlRvalueResourceDeleter {
+    void operator()(SdlResourceProbe *) &&;
+};
+
+struct SdlRvaluePointerDeleter {
+    void operator()(SdlResourceProbe *&&) const;
+};
+
+static_assert(HasSdlResourceDeleter<SdlResourceProbe, SdlReferenceResourceDeleter{}>);
+static_assert(!HasSdlResourceDeleter<SdlResourceProbe, SdlRvalueResourceDeleter{}>);
+static_assert(!HasSdlResourceDeleter<SdlResourceProbe, SdlRvaluePointerDeleter{}>);
+
+void releaseSdlResourceProbe(SdlResourceProbe *resource) { ++resource->releases; }
+
+void testSdlResourceDeletersPreserveOwnershipTransfers() {
+    using ReferenceDeleter = fn::sdl::ResourceDeleter<SdlResourceProbe, SdlReferenceResourceDeleter{}>;
+    SdlResourceProbe referenced;
+    ReferenceDeleter{}(nullptr);
+    ReferenceDeleter{}(&referenced);
+    expect_true(referenced.releases == 1, "an SDL deleter must invoke its stored callable with a pointer lvalue");
+
+    using ProbeDeleter = fn::sdl::ResourceDeleter<SdlResourceProbe, releaseSdlResourceProbe>;
+    using ProbePtr = std::unique_ptr<SdlResourceProbe, ProbeDeleter>;
+    SdlResourceProbe first, second;
+    ProbeDeleter{}(nullptr);
+    {
+        ProbePtr original(&first);
+        auto moved = std::move(original);
+        expect_true(!original && moved.get() == &first && first.releases == 0,
+                    "moving an SDL owner must transfer its resource without destroying it");
+        moved.reset(&second);
+        expect_true(first.releases == 1 && second.releases == 0,
+                    "resetting an SDL owner must destroy only its previous resource");
+        auto released = moved.release();
+        expect_true(!moved && released == &second && second.releases == 0,
+                    "releasing an SDL owner must leave destruction to its next owner");
+        moved.reset(released);
+    }
+    expect_true(first.releases == 1 && second.releases == 1,
+                "transferred SDL resources must be destroyed exactly once by their final owners");
+}
 
 template <typename Predicate> bool pumpGuiUntil(Predicate ready) {
     auto loop = vstd::event_loop<>::instance();
@@ -525,17 +682,18 @@ class QuestTextCountingPanel : public CGameQuestPanel {
 };
 
 class DragCallbackPanel : public CGamePanel {
-    V_META(DragCallbackPanel, CGamePanel,
-           V_METHOD(DragCallbackPanel, sourceCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(DragCallbackPanel, targetCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(DragCallbackPanel, sourceClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, targetClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, sourceDragStart, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, targetDragValidate, bool, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, targetDrop, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, sourceDragCancel, void, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>))
+    V_META(
+        DragCallbackPanel, CGamePanel,
+        V_METHOD(DragCallbackPanel, sourceCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(DragCallbackPanel, targetCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(DragCallbackPanel, sourceClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, targetClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, sourceDragStart, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, targetDragValidate, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, targetDrop, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, sourceDragCancel, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, throwingDecision, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, throwingAction, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
   public:
     CListView::collection_pointer sourceCollection(std::shared_ptr<CGui>) {
@@ -598,6 +756,16 @@ class DragCallbackPanel : public CGamePanel {
         last_source_object = object;
     }
 
+    bool throwingDecision(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>) {
+        ++decisionFailures;
+        throw std::runtime_error("list decision fixture failure");
+    }
+
+    void throwingAction(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>) {
+        ++actionFailures;
+        throw std::runtime_error("list action fixture failure");
+    }
+
     std::shared_ptr<CGameObject> sourceItem = std::make_shared<CGameObject>();
     std::shared_ptr<CGameObject> targetItem = std::make_shared<CGameObject>();
     std::shared_ptr<CGameObject> last_source_object;
@@ -612,6 +780,8 @@ class DragCallbackPanel : public CGamePanel {
     int drag_validations = 0;
     int drops = 0;
     int drag_cancels = 0;
+    int decisionFailures = 0;
+    int actionFailures = 0;
     bool allow_drag_start = true;
     bool allow_drop = true;
 };
@@ -2873,6 +3043,106 @@ void test_fight_panel_enemy_selection_uses_exact_instance() {
                 "fight enemy selection should not match a different creature with the same configured id");
 }
 
+void testListCallbacksKeepMissingAndFailurePolicies() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("throwingDecision");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.panel->decisionFailures == 1 && harness.panel->source_clicks == 1 &&
+                    !harness.gui->hasDragSession(),
+                "a failing drag-start must reject the drag and preserve its ordinary click fallback");
+
+    harness.source->setDragEnabled(false);
+    harness.source->setCallback("throwingAction");
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25) &&
+                    harness.panel->actionFailures == 1,
+                "a failing ordinary callback must be contained while its input stays consumed");
+    harness.source->setCallback("");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.panel->actionFailures == 1, "an absent ordinary callback must not invoke a reflected action");
+
+    harness.source->setDragEnabled(true);
+    harness.source->setCallback("sourceClick");
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+    harness.target->setDrop("targetDrop");
+    const auto dropOnTarget = [&] {
+        harness.gui->clearDragSession();
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(125, 25);
+        return harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25);
+    };
+    expect_true(dropOnTarget() && harness.panel->drops == 1 && harness.panel->drag_validations == 0 &&
+                    harness.panel->drag_cancels == 0,
+                "an absent drop validator must permit a configured drop action");
+
+    harness.target->setDragValidate("throwingDecision");
+    expect_true(!dropOnTarget() && harness.panel->decisionFailures == 2 && harness.panel->drops == 1 &&
+                    harness.panel->drag_cancels == 1,
+                "a failing drop validator must reject the drop and notify the source once");
+
+    harness.target->setDragValidate("targetDragValidate");
+    harness.target->setDrop("throwingAction");
+    expect_true(dropOnTarget() && harness.panel->actionFailures == 2 && harness.gui->hasDragSession() &&
+                    harness.gui->getDragSession()->acceptedTarget.lock() == harness.target,
+                "a contained drop-action exception must preserve the existing accepted-target policy");
+
+    harness.gui->clearDragSession();
+    harness.source->setDragCancel("throwingAction");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(180, 25);
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 180, 25) &&
+                    harness.panel->actionFailures == 3,
+                "a failing cancellation callback must be contained while the release stays consumed");
+    harness.gui->clearDragSession();
+}
+
+void testListSelectionAndRightClickFailuresUseFalse() {
+    auto harness = create_drag_list_harness();
+    type_registration::registerGuiAnimationTypes();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        harness.game->getObjectHandler()->registerType(name, builder);
+    }
+    harness.panel->sourceItem->setAnimation("images/item");
+    harness.panel->sourceItem->setLabel("");
+    harness.panel->sourceItem->setDescription("");
+    const auto hasSelection = [&] {
+        for (const auto &graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+            if (vstd::cast<CSelectionBox>(graphic)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    expect_true(!hasSelection(), "an absent selection callback must leave the item unselected");
+    harness.source->setSelect("throwingDecision");
+    const int decisionsBefore = harness.panel->decisionFailures;
+    expect_true(!hasSelection() && harness.panel->decisionFailures == decisionsBefore + 1,
+                "a failing selection callback must leave the item unselected");
+    harness.source->setSelect("sourceDragStart");
+    expect_true(hasSelection(), "a successful selection callback must preserve its true result");
+    harness.source->setSelect("");
+
+    std::shared_ptr<CAnimation> animation;
+    for (const auto &graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+        auto candidate = vstd::cast<CAnimation>(graphic);
+        if (candidate && candidate->getObject() == harness.panel->sourceItem) {
+            animation = candidate;
+        }
+    }
+    expect_true(animation != nullptr, "the callback fixture must expose the item's actual animation");
+    if (!animation) {
+        return;
+    }
+    expect_true(!animation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
+                "an absent right-click callback must leave unlabelled-item input unhandled");
+    harness.source->setRightClickCallback("throwingDecision");
+    expect_true(!animation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
+                "a failing right-click callback must leave unlabelled-item input unhandled");
+    harness.source->setRightClickCallback("sourceDragStart");
+    expect_true(animation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
+                "a successful right-click callback must preserve its handled result");
+}
+
 void test_list_view_drag_callbacks_validate_and_drop_without_click_fallback() {
     auto harness = create_drag_list_harness();
     harness.source->setDragStart("sourceDragStart");
@@ -4916,6 +5186,7 @@ void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    testSdlResourceDeletersPreserveOwnershipTransfers();
     testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop();
     testPendingGuiInitializationDoesNotRetainDetachedWidgets();
     testRejectedGuiRefreshDoesNotLeaveItsBatchQueued();
@@ -4972,6 +5243,8 @@ int main() {
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_repeated_gui_creation_preserves_live_window_and_renderer();
+    testListCallbacksKeepMissingAndFailurePolicies();
+    testListSelectionAndRightClickFailuresUseFalse();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping();

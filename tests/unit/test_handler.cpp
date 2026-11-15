@@ -78,12 +78,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <optional>
 #include <type_traits>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace {
 
@@ -2080,8 +2087,8 @@ void testOwnedDefeatStopsBeforeSecondRandomLootFactory() {
             item->setPower(1);
             return item;
         });
-        game->getObjectHandler()->registerConfig(
-            "AUnitTwoFactoryItem", std::make_shared<json>(json{{"class", "AUnitTwoFactoryItem"}}));
+        game->getObjectHandler()->registerConfig("AUnitTwoFactoryItem",
+                                                 std::make_shared<json>(json{{"class", "AUnitTwoFactoryItem"}}));
         expect_true(game->getObjectHandler()->getConfig("AUnitTwoFactoryItem") &&
                         game->getObjectHandler()->getClass("AUnitTwoFactoryItem") == "AUnitTwoFactoryItem",
                     "the two-constructor fixture must populate the actual configured item table before arming");
@@ -6871,9 +6878,8 @@ void testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges
         game->setMap(other);
         game->setMap(map);
     }
-    expect_true(game->getMapBindingEpoch() == publishedEpoch + 256 &&
-                    loop->getPendingTaskCount() == pending && loop->getDelayedTaskCount() == delayed &&
-                    context->isTransitionGenerationCurrent(generation),
+    expect_true(game->getMapBindingEpoch() == publishedEpoch + 256 && loop->getPendingTaskCount() == pending &&
+                    loop->getDelayedTaskCount() == delayed && context->isTransitionGenerationCurrent(generation),
                 "maps without wait observers must add no queued callbacks, delays, or transition generations");
     const auto resourceEpoch = game->getMapBindingEpoch();
     auto now = std::make_shared<CWaitState::Clock::time_point>();
@@ -7538,6 +7544,178 @@ void testVerifiedLoadResumeRejectsSupersededWeakBindings() {
     }
 }
 
+class ScopedLoadDiagnosticCapture {
+  public:
+    explicit ScopedLoadDiagnosticCapture(std::filesystem::path path) : path(std::move(path)) {
+        if (std::fflush(stderr) != 0) {
+            return;
+        }
+#ifdef _WIN32
+        file = _wfopen(this->path.c_str(), L"w+b");
+        if (file) {
+            saved = _dup(_fileno(stderr));
+            if (saved >= 0 && _dup2(_fileno(file), _fileno(stderr)) < 0) {
+                _close(saved);
+                saved = -1;
+            }
+        }
+#else
+        file = std::fopen(this->path.c_str(), "w+b");
+        if (file) {
+            saved = dup(fileno(stderr));
+            if (saved >= 0 && dup2(fileno(file), fileno(stderr)) < 0) {
+                close(saved);
+                saved = -1;
+            }
+        }
+#endif
+    }
+
+    ScopedLoadDiagnosticCapture(const ScopedLoadDiagnosticCapture &) = delete;
+    ScopedLoadDiagnosticCapture &operator=(const ScopedLoadDiagnosticCapture &) = delete;
+    ScopedLoadDiagnosticCapture(ScopedLoadDiagnosticCapture &&) = delete;
+    ScopedLoadDiagnosticCapture &operator=(ScopedLoadDiagnosticCapture &&) = delete;
+
+    ~ScopedLoadDiagnosticCapture() {
+        restore();
+        if (file) {
+            std::fclose(file);
+        }
+    }
+
+    std::optional<std::string> finish() {
+        if (finished || saved < 0 || !file) {
+            return std::nullopt;
+        }
+        finished = true;
+        const bool flushed = std::fflush(stderr) == 0;
+        if (!restore() || !flushed || std::fseek(file, 0, SEEK_SET) != 0) {
+            return std::nullopt;
+        }
+        std::string output(MAX_BYTES + 1, '\0');
+        const auto bytes = std::fread(output.data(), 1, output.size(), file);
+        const bool complete = !std::ferror(file) && bytes <= MAX_BYTES;
+        output.resize(bytes);
+        const bool replayed = std::fwrite(output.data(), 1, output.size(), stderr) == output.size();
+        const bool replayFlushed = std::fflush(stderr) == 0;
+        return complete && replayed && replayFlushed ? std::optional<std::string>(std::move(output)) : std::nullopt;
+    }
+
+    void cleanup(bool successful) {
+        if (file && saved < 0) {
+            std::fclose(file);
+            file = nullptr;
+        }
+        if (successful) {
+            std::error_code ignored;
+            std::filesystem::remove(path, ignored);
+        }
+    }
+
+  private:
+    static constexpr std::size_t MAX_BYTES = 32 * 1024;
+    std::filesystem::path path;
+    std::FILE *file = nullptr;
+    int saved = -1;
+    bool finished = false;
+
+    bool restore() {
+        if (saved < 0) {
+            return true;
+        }
+        std::fflush(stderr);
+#ifdef _WIN32
+        const bool restored = _dup2(saved, _fileno(stderr)) == 0;
+        if (restored) {
+            _close(saved);
+        }
+#else
+        const bool restored = dup2(saved, fileno(stderr)) >= 0;
+        if (restored) {
+            close(saved);
+        }
+#endif
+        if (restored) {
+            saved = -1;
+        }
+        return restored;
+    }
+};
+
+bool verifyRejectedOrSupersededLoadDiagnostics(const std::optional<std::string> &output, int mode,
+                                               const std::string &slot) {
+    if (!output) {
+        return false;
+    }
+    std::vector<json> records;
+    std::istringstream lines(*output);
+    std::string line;
+    try {
+        while (std::getline(lines, line)) {
+            if (line.starts_with("{\"diagnostic\":\"load-stage\"")) {
+                records.push_back(json::parse(line));
+            }
+        }
+        if (mode != 1 && mode != 2 && mode != 5) {
+            return records.empty();
+        }
+        const std::vector<std::string> stages = mode == 5 ? std::vector<std::string>{"readParse.begin",
+                                                                                     "readParse.end",
+                                                                                     "decode.begin",
+                                                                                     "decode.end",
+                                                                                     "resources.begin",
+                                                                                     "resources.end",
+                                                                                     "snapshot.construct.begin",
+                                                                                     "snapshot.construct.end",
+                                                                                     "rehydrate.begin",
+                                                                                     "rehydrate.end",
+                                                                                     "registrations.commit.begin",
+                                                                                     "registrations.commit.end",
+                                                                                     "install.begin",
+                                                                                     "install.end",
+                                                                                     "verifiedCommit.begin",
+                                                                                     "verifiedCommit.end",
+                                                                                     "terminal"}
+                                                          : std::vector<std::string>{"terminal"};
+        if (records.size() != stages.size() || records.size() > 48) {
+            return false;
+        }
+        long long previous = 0;
+        for (std::size_t index = 0; index < records.size(); ++index) {
+            const auto &record = records[index];
+            if (!record.is_object() || record.size() != 7) {
+                return false;
+            }
+            for (const auto *key :
+                 {"diagnostic", "candidate", "stage", "elapsedMicroseconds", "sequence", "success", "outcome"}) {
+                if (!record.contains(key)) {
+                    return false;
+                }
+            }
+            if (!record.at("elapsedMicroseconds").is_number_integer() || !record.at("sequence").is_number_integer() ||
+                !record.at("success").is_boolean()) {
+                return false;
+            }
+            const auto elapsed = record.at("elapsedMicroseconds").get<long long>();
+            const bool terminal = index == records.size() - 1;
+            const bool expectedSuccess = mode == 5 && !terminal && stages[index] != "verifiedCommit.end";
+            const auto expectedOutcome = terminal ? (mode == 5 ? "superseded" : "rejected") : "pending";
+            if (record.at("diagnostic").get<std::string>() != "load-stage" ||
+                record.at("candidate").get<std::string>() != (mode == 5 ? "primary" : "none") ||
+                record.at("stage").get<std::string>() != stages[index] ||
+                record.at("sequence").get<long long>() != static_cast<long long>(index + 1) || elapsed < previous ||
+                record.at("success").get<bool>() != expectedSuccess ||
+                record.at("outcome").get<std::string>() != expectedOutcome ||
+                record.dump().find(slot) != std::string::npos) {
+                return false;
+            }
+            previous = elapsed;
+        }
+        return true;
+    } catch (const std::exception &) {
+        return false;
+    }
+}
 void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
     int rejected_dispatches = 0;
     for (int mode = 0; mode < 7; ++mode) {
@@ -7550,6 +7728,12 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
         std::optional<CGameContext::UnsafeOperationLease> unsafe;
         std::optional<CGameContext::SaveSnapshotLease> snapshot;
         bool expected_outcome = true;
+        const auto diagnosticPath = std::filesystem::path(
+            fixture.resources->getPath(CSaveFormat::primaryPath(fixture.slot)) + ".load-diagnostics");
+        ScopedEnvironmentVariable diagnosticEnabled("GAME_LOAD_STAGE_DIAGNOSTICS", mode == 1 || mode == 2 || mode == 5
+                                                                                       ? std::optional<std::string>("1")
+                                                                                       : std::nullopt);
+        ScopedLoadDiagnosticCapture diagnosticCapture(diagnosticPath);
         if (mode == 0) {
             CGameLoader::loadSavedGame(fixture.game, fixture.slot + "-missing");
         } else if (mode == 1) {
@@ -7601,6 +7785,16 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
         if (mode == 0 || mode == 1 || mode == 2 || mode == 4) {
             expected_outcome = expected_outcome && fixture.game->getMap() == original;
         }
+        const auto diagnosticOutput = diagnosticCapture.finish();
+        expect_true(diagnosticOutput.has_value(), "load diagnostic capture must restore and replay C stderr");
+        const bool diagnosticValid = verifyRejectedOrSupersededLoadDiagnostics(diagnosticOutput, mode, fixture.slot);
+        if (mode == 1 || mode == 2) {
+            expect_true(diagnosticValid, "load diagnostic rejection must emit one bounded rejected terminal");
+        } else if (mode == 5) {
+            expect_true(diagnosticValid, "load diagnostic supersession must stop before resume with ordered terminal");
+        } else {
+            expect_true(diagnosticValid, "default-disabled and candidate-only loads must emit no load diagnostic");
+        }
         vstd::event_loop<>::instance()->run();
         const bool suppressed = fixture.state->calls == 0;
         rejected_dispatches += fixture.state->calls;
@@ -7610,7 +7804,8 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
             unsafe->finish();
         }
         snapshot.reset();
-        fixture.cleanup(expected_outcome && suppressed);
+        diagnosticCapture.cleanup(expected_outcome && suppressed && diagnosticValid);
+        fixture.cleanup(expected_outcome && suppressed && diagnosticValid);
     }
     expect_true(rejected_dispatches == 0,
                 "seven rejected, unverified or disabled load paths have a zero authored-dispatch budget");
@@ -7805,8 +8000,7 @@ int main() {
 
     nativeTestProfile().run("testSaveAdmissionRejectsBeforeQuestAndGraphWork",
                             testSaveAdmissionRejectsBeforeQuestAndGraphWork);
-    nativeTestProfile().run("testSaveAdmissionOwnersMovesAndSnapshots",
-                            testSaveAdmissionOwnersMovesAndSnapshots);
+    nativeTestProfile().run("testSaveAdmissionOwnersMovesAndSnapshots", testSaveAdmissionOwnersMovesAndSnapshots);
     nativeTestProfile().run("testSaveAdmissionSurvivesMapAndGameOwnerChanges",
                             testSaveAdmissionSurvivesMapAndGameOwnerChanges);
     nativeTestProfile().run("testSaveAdmissionQuarantineRequiresVerifiedInstall",
@@ -7815,10 +8009,14 @@ int main() {
                             testAuthoredNativeSavePolicyIsStrictAndPrecedesObjects);
     nativeTestProfile().run("testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy",
                             testVerifiedRestoreReappliesAuthoritativeNativeSavePolicy);
-    nativeTestProfile().run("testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects", testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects);
-    nativeTestProfile().run("testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease", testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease);
-    nativeTestProfile().run("testVerifiedLoadResumeRejectsSupersededWeakBindings", testVerifiedLoadResumeRejectsSupersededWeakBindings);
-    nativeTestProfile().run("testUnverifiedOrRejectedLoadsNeverDispatchResume", testUnverifiedOrRejectedLoadsNeverDispatchResume);
+    nativeTestProfile().run("testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects",
+                            testVerifiedLoadResumePolicyIsStrictAndPrecedesObjects);
+    nativeTestProfile().run("testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease",
+                            testVerifiedLoadResumesActualFlowOnlyAfterPostedLeaseRelease);
+    nativeTestProfile().run("testVerifiedLoadResumeRejectsSupersededWeakBindings",
+                            testVerifiedLoadResumeRejectsSupersededWeakBindings);
+    nativeTestProfile().run("testUnverifiedOrRejectedLoadsNeverDispatchResume",
+                            testUnverifiedOrRejectedLoadsNeverDispatchResume);
     nativeTestProfile().run("testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime",
                             testWaitStateSnapshotsPreserveRemainingDurationWithoutRebasingLiveTime);
     nativeTestProfile().run("testWaitStateRejectsInvalidDurationsMutationsAndDuplicateLeases",
