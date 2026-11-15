@@ -120,7 +120,7 @@ class McpBranchWorkflowTest(unittest.TestCase):
                 output = workflowScalar(job, "runtime-ready", 6)
                 upload = workflowStep(job, "Upload current " + platform.title() + " MCP runtime")
                 self.assertEqual("mcp-runtime-upload", workflowScalar(upload, "id", 8))
-                self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", upload)
+                self.assertIn("actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9", upload)
                 self.assertEqual("error", workflowScalar(upload, "if-no-files-found", 10))
                 self.assertNotIn("continue-on-error:", upload)
                 for outcome in ("", "skipped", "failure", "cancelled", "success"):
