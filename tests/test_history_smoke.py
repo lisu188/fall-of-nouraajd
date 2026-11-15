@@ -189,6 +189,201 @@ class HistoricalSmokeTest(unittest.TestCase):
             (root / "scripting.cpp").write_text("PyModuleDef definition;")
             self.assertEqual("3.4", verify.selectRecipe(recipes, root, None)["pythonAbi"])
 
+    def testLinuxRecipeIgnoresWindowsAndroidAndUnreferencedProjects(self):
+        recipes = [{"id": f"python-{abi}", "pythonAbi": abi} for abi in ("none", "2.7", "3.3", "3.4")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Game.pro").write_text(
+                "include(game.pri)\nunix:LIBS += -lpython3.4m\n"
+                "win32:LIBS += -lpython34\nandroid {\nLIBS -= -lpython3.4m\nLIBS += -lpython3.3m\n}\n"
+            )
+            (root / "game.pri").write_text(
+                "win32 {\nINCLUDEPATH += C:/Python34/include\n}\n"
+                "unix:!android {\nINCLUDEPATH += /usr/local/include/python3.4m\n}\n"
+            )
+            (root / "vendor").mkdir()
+            (root / "vendor/python.pro").write_text("LIBS += -lpython2.7\n")
+            self.assertEqual("3.4", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+
+    def testDesktopLinkAbiTakesPrecedenceOverWindowsIncludePaths(self):
+        recipes = [{"id": f"python-{abi}", "pythonAbi": abi} for abi in ("3.3", "3.4")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Game.pro").write_text("INCLUDEPATH += C:/Python34/include\nunix:LIBS += -lpython3.3m\n")
+            self.assertEqual("3.3", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+
+    def testSingleLinePlatformScopeRetainsItsElseBranch(self):
+        recipes = [{"id": f"python-{abi}", "pythonAbi": abi} for abi in ("2.7", "3.3")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "game.pro").write_text("win32 { LIBS += -lpython3.3m }\nelse { LIBS += -lpython2.7 }\n")
+            self.assertEqual("2.7", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+            (root / "game.pro").write_text("win32 { LIBS += -lpython3.3m } else { LIBS += -lpython2.7 }\n")
+            with self.assertRaisesRegex(verify.VerificationError, "inline scopes"):
+                verify.selectRecipe(recipes, root, None)
+
+    def testDormantPythonSourcesDoNotOverrideTheDeclaredTarget(self):
+        recipes = [{"id": f"python-{abi}", "pythonAbi": abi} for abi in ("none", "2.7", "3.3", "3.4")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "game.pro").write_text("SOURCES += current.cpp\n")
+            (root / "current.cpp").write_text("int main() {}\n")
+            (root / "obsolete.cpp").write_text("PyModuleDef definition;\n")
+            self.assertEqual("none", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+            (root / "game.pro").write_text("SOURCES += current.cpp\nLIBS += -lpython2.7\n")
+            (root / "current.cpp").write_text('Py_InitModule("game", methods);\n')
+            self.assertEqual("2.7", verify.selectRecipe(recipes, root, None)["pythonAbi"])
+
+    def testCaseOnlyProjectRenameSelectsTheProjectWhoseSourcesStillExist(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Game.pro").write_text("SOURCES += old/main.cpp\n")
+            (root / "game.pro").write_text("SOURCES += CMain.cpp\n")
+            (root / "CMain.cpp").write_text("int main() {}\n")
+            self.assertEqual(root / "game.pro", verify.selectProjects(root)["application"])
+            (root / "old").mkdir()
+            (root / "old/main.cpp").write_text("int main() {}\n")
+            with self.assertRaisesRegex(verify.VerificationError, "qmake project, found 2"):
+                verify.selectProjects(root)
+
+    def testReconstructedProjectCanExplicitlySelectTheCurrentApplication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "main.cpp").write_text("int main() {}\n")
+            (root / "Game.pro").write_text("SOURCES += main.cpp\n")
+            (root / "game.pro").write_text("SOURCES += main.cpp\nGAME_RECOVERY_APPLICATION = true\n")
+            self.assertEqual(root / "game.pro", verify.selectProjects(root)["application"])
+
+    def testMultipleExplicitReconstructedApplicationsFailClosed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("Game.pro", "game.pro"):
+                (root / name).write_text("GAME_RECOVERY_APPLICATION = true\n")
+            with self.assertRaisesRegex(verify.VerificationError, "Multiple reconstructed historical application"):
+                verify.selectProjects(root)
+
+    def testSubdirProjectsUseDeclaredDependencyOrder(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "game").mkdir()
+            (root / "python").mkdir()
+            (root / "game.pro").write_text("TEMPLATE = subdirs\nSUBDIRS = game python\ngame.depends = python\n")
+            (root / "game/game.pro").write_text("TEMPLATE = app\nunix:LIBS += -lpython3.3m\n")
+            (root / "python/python.pro").write_text("TEMPLATE = lib\nTARGET = python\n")
+            projects = verify.selectProjects(root)
+            self.assertEqual(root / "game/game.pro", projects["application"])
+            self.assertEqual([root / "python/python.pro"], projects["dependencies"])
+            recipes = [{"id": "python33", "pythonAbi": "3.3"}]
+            self.assertEqual("python33", verify.selectRecipe(recipes, root, None)["id"])
+
+    def testQmakeIncludesCannotEscapeOrCycle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            root.mkdir()
+            (root.parent / "outside.pri").write_text("LIBS += -lpython2.7\n")
+            for include in ("../outside.pri", "game.pro"):
+                with self.subTest(include=include):
+                    (root / "game.pro").write_text(f"include({include})\n")
+                    with self.assertRaisesRegex(verify.VerificationError, "escapes.*or is cyclic"):
+                        verify.selectProjects(root)
+
+    def testMultipleGameApplicationsAndCyclicSubdirsFailClosed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("one", "two"):
+                (root / name).mkdir()
+                (root / name / (name + ".pro")).write_text("TEMPLATE = app\n")
+            (root / "game.pro").write_text("TEMPLATE = subdirs\nSUBDIRS = one two\n")
+            with self.assertRaisesRegex(verify.VerificationError, "one historical game application"):
+                verify.selectProjects(root)
+            with (root / "game.pro").open("a") as project:
+                project.write("one.depends = two\ntwo.depends = one\n")
+            with self.assertRaisesRegex(verify.VerificationError, "cyclic"):
+                verify.selectProjects(root)
+
+    def testPrefixedPlayerCanBeDefinedInTheCombinedCreatureHeader(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            (source / "CGameScene.h").write_text("class CGameScene : public QGraphicsScene { CMap *getMap(); };\n")
+            (source / "CGameView.h").write_text("class CGameView : public QGraphicsView {};\n")
+            (source / "CMap.h").write_text("class CMap { bool contains(int x, int y, int z); };\n")
+            (source / "CCreature.h").write_text("class CCreature {};\nclass CPlayer : public CCreature {};\n")
+            adapter = verify.prepareSmokeAdapter(source, root / "observer")
+            self.assertEqual("prefixed-3d", adapter["id"])
+            self.assertIn('GAME_RECOVERY_PLAYER_HEADER "CCreature.h"', Path(adapter["config"]).read_text())
+            (source / "CCreature.h").write_text("class CCreature {};\nclass CPlayer;\n")
+            with self.assertRaisesRegex(verify.VerificationError, "definition header; found 0"):
+                verify.prepareSmokeAdapter(source, root / "missing-player")
+
+    def testPrefixedClassNamesCanKeepTheirOriginalLowercaseHeaderNames(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            (source / "gamescene.h").write_text("class CGameScene : public QGraphicsScene { CMap *getMap(); };\n")
+            (source / "gameview.h").write_text("class CGameView : public QGraphicsView {};\n")
+            (source / "CMap.h").write_text(
+                "class CMap { CPlayer *getPlayer(); bool contains(int x, int y, int z); };\n"
+            )
+            (source / "creature.h").write_text("class CCreature {};\nclass CPlayer : public CCreature {};\n")
+            adapter = verify.prepareSmokeAdapter(source, root / "observer")
+            config = Path(adapter["config"]).read_text()
+            self.assertEqual("prefixed-3d", adapter["id"])
+            self.assertIn('GAME_RECOVERY_SCENE_HEADER "gamescene.h"', config)
+            self.assertIn("GAME_RECOVERY_SCENE_TYPE CGameScene", config)
+
+    def testSubdirSnapshotBuildsLibraryBeforeObservedApplication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def restore(repo, catalog, commit, source, overrides):
+                for name in ("game", "python"):
+                    (source / name).mkdir(parents=True)
+                (source / "game.pro").write_text("TEMPLATE = subdirs\nSUBDIRS = python game\ngame.depends = python\n")
+                (source / "game/game.pro").write_text("TEMPLATE = app\nLIBS += -lpython3.3m\n")
+                (source / "python/python.pro").write_text("TEMPLATE = lib\nTARGET = python\n")
+                return {"restoredFilesFingerprint": "restored-files"}
+
+            def run(command, cwd, environment, timeout, log):
+                log.write_text("command succeeded\n")
+                if command[0] == "make" and cwd.name == "game":
+                    (cwd / "RecoveryGame").write_bytes(b"application")
+                return {"command": command, "returnCode": 0, "timedOut": False, "log": str(log)}
+
+            with mock.patch("scripts.recover_history.restoreSnapshot", side_effect=restore), mock.patch.object(
+                verify, "toolchainFingerprint", return_value={}
+            ), mock.patch.object(
+                verify, "prepareSmokeAdapter", return_value={"configSha256": "observer"}
+            ), mock.patch.object(
+                verify, "prepareLibraryAliases", return_value={"aliases": {}}
+            ), mock.patch.object(
+                verify, "runCommand", side_effect=run
+            ) as commands, mock.patch.object(
+                verify, "runSmoke", return_value={"status": "success"}
+            ) as smoke, mock.patch.object(
+                verify, "exportEvidence"
+            ):
+                result = verify.verifySnapshot(
+                    root,
+                    {},
+                    {"commits": ["original"], "tree": "tree"},
+                    root / "output",
+                    [{"id": "python33", "pythonAbi": "3.3", "environment": {"LD_LIBRARY_PATH": "/locked/abi"}}],
+                )
+            self.assertEqual("success", result["status"], result)
+            self.assertEqual("game/game.pro", result["project"])
+            calls = commands.call_args_list
+            self.assertEqual(["qmake", "make", "qmake", "make", "g++"], [call.args[0][0] for call in calls])
+            self.assertFalse(any(arg.startswith("SOURCES+=") for arg in calls[0].args[0]))
+            self.assertTrue(any(arg.startswith("SOURCES+=") for arg in calls[2].args[0]))
+            self.assertEqual("game", smoke.call_args.args[1].name)
+            self.assertEqual(
+                result["runtimeLibraryDirectories"][0] + ":/locked/abi",
+                smoke.call_args.kwargs["environment"]["LD_LIBRARY_PATH"],
+            )
+
     def testQmakeVersionUsesItsSupportedVersionFlag(self):
         completed = mock.Mock(returncode=0, stdout="QMake version 3.0", stderr="")
         with mock.patch.object(verify.shutil, "which", return_value="/usr/bin/qmake"), mock.patch.object(

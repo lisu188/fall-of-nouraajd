@@ -573,7 +573,14 @@ def attachSnapshotDocumentation(objects, files, restoration, evidence_dir):
     raise RecoveryError(f"No matching verified screenshot and README evidence for {restoration['sourceCommit']}")
 
 
-def replayHistory(repo_root, catalog, overrides=None, tips=None, evidence_dir=None):
+def replayHistory(
+    repo_root, catalog, overrides=None, tips=None, evidence_dir=None, ref_namespace="refs/heads/recovery/bfg"
+):
+    if not isinstance(ref_namespace, str) or not (
+        ref_namespace == "refs/heads/recovery/bfg" or ref_namespace.startswith("refs/heads/recovery/bfg/")
+    ):
+        raise RecoveryError("Replay ref namespace must be under refs/heads/recovery/bfg")
+    gitCommand(repo_root, "check-ref-format", ref_namespace + "/probe")
     # Resolve every required reconstruction before writing any recovery object.
     prepared = {}
     with GitObjects(repo_root) as objects:
@@ -620,7 +627,7 @@ def replayHistory(repo_root, catalog, overrides=None, tips=None, evidence_dir=No
             mapping[commit] = (
                 gitCommand(repo_root, "hash-object", "-t", "commit", "-w", "--stdin", data=replacement).decode().strip()
             )
-    refs = {"refs/heads/recovery/bfg/" + tip: mapping[tip] for tip in selected_tips}
+    refs = {ref_namespace + "/" + tip: mapping[tip] for tip in selected_tips}
     return {
         "schemaVersion": 1,
         "status": "complete",
@@ -682,6 +689,11 @@ def main(argv=None):
         if command == "replay":
             child.add_argument("--tip", action="append", help="Replay this damaged commit and its ancestors")
             child.add_argument(
+                "--ref-namespace",
+                default="refs/heads/recovery/bfg",
+                help="Mapping-only ref prefix under refs/heads/recovery/bfg; use a new version to preserve older refs",
+            )
+            child.add_argument(
                 "--evidence-dir",
                 type=Path,
                 required=True,
@@ -716,7 +728,12 @@ def main(argv=None):
                 writeJson(args.report, result)
         elif args.command == "replay":
             result = replayHistory(
-                args.repo_root, readJson(args.catalog), loadOverrides(args.overrides), args.tip, args.evidence_dir
+                args.repo_root,
+                readJson(args.catalog),
+                loadOverrides(args.overrides),
+                args.tip,
+                args.evidence_dir,
+                args.ref_namespace,
             )
             writeJson(args.output, result)
             result = {

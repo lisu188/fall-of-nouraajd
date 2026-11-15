@@ -34,6 +34,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -42,6 +43,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 import recover_history as rh  # noqa: E402
 import history_rootfs as hr  # noqa: E402
+import verify_history as vh  # noqa: E402
 
 WORK = Path(os.environ.get("HISTORY_WORK_DIR", REPO / ".cache/history-recovery/workbench")).resolve()
 RECON = WORK / "recon"
@@ -212,21 +214,36 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     if clean:
         shutil.rmtree(output, ignore_errors=True)
     output.mkdir(parents=True, exist_ok=True)
-    project = sorted(source.glob("*.pro"))[0]
-    aliases = output / "library-aliases"
-    aliases.mkdir(exist_ok=True)
-    if not (aliases / "libzdll.so").is_symlink():
-        (aliases / "libzdll.so").symlink_to("/usr/lib/x86_64-linux-gnu/libz.so")
-    result = docker(
-        f"qmake QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' "
-        f"'LIBS+=-L{aliases}' "
-        f"{project} -o Makefile > qmake.log 2>&1; "
-        f"make -k -j{os.cpu_count() or 1} > make.log 2>&1; echo rc=$?; "
-        f"grep -E 'error|undefined reference' make.log | sort | uniq | head -{lines}",
-        output,
-    )
+    projects = vh.selectProjects(source)
+    recipe = vh.selectRecipe(vh.loadRecipes(REPO / "recovery/toolchains/qt5.json"), source, None)
+    aliases = vh.prepareLibraryAliases(source, output)
+    environment = ["env", *(name + "=" + str(value) for name, value in recipe.get("environment", {}).items())]
+    commands = ["set -e"]
+    for project in [*projects["dependencies"], projects["application"]]:
+        build_root = output / project.relative_to(source).parent
+        build_root.mkdir(parents=True, exist_ok=True)
+        configure = [
+            *environment,
+            recipe.get("qmakeCommand", "qmake"),
+            str(project),
+            "-o",
+            str(build_root / "Makefile"),
+            *recipe.get("qmakeArguments", []),
+        ]
+        if aliases["aliases"]:
+            configure += ["-after", "LIBS+=-L" + aliases["directory"]]
+        make = [*environment, recipe.get("makeCommand", "make"), "-k", f"-j{os.cpu_count() or 1}"]
+        commands += [
+            "cd " + shlex.quote(str(build_root)),
+            shlex.join(configure) + ' > qmake.log 2>&1 || { rc=$?; cat qmake.log; exit "$rc"; }',
+            shlex.join(make)
+            + " > make.log 2>&1 || { rc=$?; "
+            + f"grep -E 'error|undefined reference' make.log | sort | uniq | head -{int(lines)}; "
+            + 'exit "$rc"; }',
+        ]
+    result = docker("\n".join(commands), output)
     print(result.stdout, end="")
-    return "rc=0" in result.stdout
+    return result.returncode == 0
 
 
 def intactProject(commit: str, name: str) -> tuple[str, str] | None:
