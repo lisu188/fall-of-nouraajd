@@ -96,13 +96,34 @@ json map_to_json_object(const std::map<Key, Value> &values, KeySerializer key_se
     return object;
 }
 
+template <typename T>
+concept PrimitiveJsonScalar = std::same_as<T, int> || std::same_as<T, std::string>;
+
+template <PrimitiveJsonScalar Value> void registerSetValueCodec() {
+    CTypes::registerJsonType<std::set<Value>>(
+        [](const std::set<Value> &values) { return set_to_json_array(values); },
+        [](const std::shared_ptr<CGame> &, const json &object) { return json_array_to_set<Value>(object); });
+}
+
+template <PrimitiveJsonScalar Key, PrimitiveJsonScalar Value> void registerMapValueCodec() {
+    CTypes::registerJsonType<std::map<Key, Value>>(
+        [](const std::map<Key, Value> &values) {
+            if constexpr (std::same_as<Key, std::string>) {
+                return map_to_json_object(values, std::identity{});
+            } else {
+                return map_to_json_object(values, [](int key) { return vstd::str(key); });
+            }
+        },
+        [](const std::shared_ptr<CGame> &, const json &object) {
+            if constexpr (std::same_as<Key, std::string>) {
+                return json_object_to_string_key_map<Value>(object);
+            } else {
+                return json_object_to_int_key_map<Value>(object);
+            }
+        });
+}
+
 void registerCustomValueTypes() {
-    auto array_string_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
-        return json_array_to_set<std::string>(object);
-    };
-
-    auto array_string_serialize = [](const std::set<std::string> &set) { return set_to_json_array(set); };
-
     auto list_string_deserialize =
         [](const std::shared_ptr<CGame> &, const json &object,
            CSerializationReadContext &context) -> CSerializationResult<std::list<std::string>> {
@@ -138,53 +159,14 @@ void registerCustomValueTypes() {
 
     auto tags_serialize = [](const CTags &tags) { return tags_to_json_array(tags); };
 
-    auto array_int_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
-        return json_array_to_set<int>(object);
-    };
-
-    auto array_int_serialize = [](const std::set<int> &set) { return set_to_json_array(set); };
-
-    auto map_string_string_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
-        return json_object_to_string_key_map<std::string>(object);
-    };
-
-    auto map_string_string_serialize = [](const std::map<std::string, std::string> &map) {
-        return map_to_json_object(map, std::identity{});
-    };
-
-    auto map_string_int_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
-        return json_object_to_string_key_map<int>(object);
-    };
-
-    auto map_string_int_serialize = [](const std::map<std::string, int> &map) {
-        return map_to_json_object(map, std::identity{});
-    };
-
-    auto map_int_string_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
-        return json_object_to_int_key_map<std::string>(object);
-    };
-
-    auto map_int_string_serialize = [](const std::map<int, std::string> &map) {
-        return map_to_json_object(map, [](int key) { return vstd::str(key); });
-    };
-
-    auto map_int_int_deserialize = [](const std::shared_ptr<CGame> &, const json &object) {
-        return json_object_to_int_key_map<int>(object);
-    };
-
-    auto map_int_int_serialize = [](const std::map<int, int> &map) {
-        return map_to_json_object(map, [](int key) { return vstd::str(key); });
-    };
-
-    CTypes::registerJsonType<std::set<std::string>>(array_string_serialize, array_string_deserialize);
+    registerSetValueCodec<std::string>();
     CTypes::registerJsonType<std::list<std::string>>(list_string_serialize, list_string_deserialize);
     CTypes::registerJsonType<CTags>(tags_serialize, tags_deserialize);
-    CTypes::registerJsonType<std::set<int>>(array_int_serialize, array_int_deserialize);
-    CTypes::registerJsonType<std::map<std::string, std::string>>(map_string_string_serialize,
-                                                                 map_string_string_deserialize);
-    CTypes::registerJsonType<std::map<std::string, int>>(map_string_int_serialize, map_string_int_deserialize);
-    CTypes::registerJsonType<std::map<int, std::string>>(map_int_string_serialize, map_int_string_deserialize);
-    CTypes::registerJsonType<std::map<int, int>>(map_int_int_serialize, map_int_int_deserialize);
+    registerSetValueCodec<int>();
+    registerMapValueCodec<std::string, std::string>();
+    registerMapValueCodec<std::string, int>();
+    registerMapValueCodec<int, std::string>();
+    registerMapValueCodec<int, int>();
 }
 } // namespace
 

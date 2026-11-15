@@ -3,6 +3,7 @@
 """Retain every audited DOPMER obligation without granting native or classic acceptance."""
 
 import ast
+import copy
 import hashlib
 import json
 
@@ -693,6 +694,14 @@ def addSevenSunsDeathObligation(source, config, methods, add, *, script):
     hook.setStringProperty("event", event_name)
     self.getMap().getEventHandler().registerTrigger(hook)
 """).body[0]
+    expected_named_hook = copy.deepcopy(expected_hook)
+    expected_named_hook.body.insert(
+        1, ast.parse('hook.setStringProperty("name", actor.getName() + ":" + event_name)').body[0]
+    )
+    hook_shapes = {
+        ast.dump(expected_hook, include_attributes=False),
+        ast.dump(expected_named_hook, include_attributes=False),
+    }
     registered_hook = any(
         isinstance(owner, ast.ClassDef)
         and owner.name == "BaldursGateClock"
@@ -700,8 +709,7 @@ def addSevenSunsDeathObligation(source, config, methods, add, *, script):
             isinstance(method, ast.FunctionDef)
             and method.name == "initializeActor"
             and any(
-                isinstance(node, ast.For)
-                and ast.dump(node, include_attributes=False) == ast.dump(expected_hook, include_attributes=False)
+                isinstance(node, ast.For) and ast.dump(node, include_attributes=False) in hook_shapes
                 for node in ast.walk(method)
             )
             for method in owner.body

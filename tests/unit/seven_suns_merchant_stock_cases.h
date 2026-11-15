@@ -348,12 +348,14 @@ void testSevenSunsStockStagedLifetimeRespectsRealForeignMapAdoption() {
 void testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce() {
     SevenSunsMerchantFixture f;
     f.map->setBoolProperty("plugin_cityFixedLoot", true);
+    f.map->setBoolProperty("plugin_citySourceKillXp", true);
     const int before = f.player->getExp();
     auto flow = f.beginMerchant();
     SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
     flow.reset();
     f.settle();
     auto defeated = f.replacement();
+    defeated->setNumericProperty("sourceKillXp", 7);
     auto weapon = defeated->getWeapon();
     expect_true(f.player->getExp() == before && f.merchantDestroyed == 0,
                 "quiet original replacement gives no combat XP or old death credit");
@@ -362,7 +364,7 @@ void testSevenSunsStockNaturalReplacementActualDefeatAwards420ExactlyOnce() {
     expect_true(f.player->getExp() == before + 420 && f.newDestroyed == 1 && f.merchantDestroyed == 0 &&
                     !f.map->getObjectByName(SevenSunsMerchantFixture::Names[0]) && defeated->getWeapon() == weapon &&
                     !f.player->getAllItems().contains(weapon) && f.map->tryBeginSaveSnapshot().has_value(),
-                "real certified new-actor defeat grants exact420 once and retains its undroppable natural weapon");
+                "certified replacement reward takes priority over source XP and retains its undroppable weapon");
     CFightHandler::defeatedCreature(f.player, defeated);
     expect_true(f.player->getExp() == before + 420 && f.newDestroyed == 1 && f.oldOwnershipIntact(),
                 "repeat actual defeat cannot grant a second420 or kill the retained old merchant");

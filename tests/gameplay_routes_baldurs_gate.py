@@ -518,6 +518,76 @@ def nativeVictory(d, name):
     d.combats += 1
 
 
+def alatosOwnedItems(d, owner):
+    owned = {}
+    items = [*d.call(owner, "getItems"), *d.call(owner, "getEquipped").values()]
+    for item in items:
+        if item is None:
+            continue
+        name = d.call(item, "getName")
+        if name in owned:
+            d.test.assertEqual(owned[name]["__handle__"], item["__handle__"], "Distinct possessions share one name")
+        owned[name] = item
+    return owned
+
+
+def captureAlatosBetrayal(d, planner, outcome):
+    d.test.assertEqual([{"label": "Resar"}], outcome["effects"]["hostile"])
+    name = planner.actorName(outcome["effects"]["hostile"])
+    actor = d.object(name)
+    d.test.assertTrue(d.call(actor, "isAlive"), "Capture Resar's actual possessions before the betrayal")
+    owned = alatosOwnedItems(d, actor)
+    expected = Counter()
+    for row in read(d, actor, "sourceInventory", []):
+        expected[row["item"]] += sourceQuantity(row)
+    actual = Counter()
+    profile = []
+    for item_name, item in owned.items():
+        d.test.assertFalse(d.call(item, "getBoolProperty", "plugin_cityUndroppable"))
+        code = d.call(item, "getStringProperty", "plugin_citySourceItem")
+        quantity = d.call(item, "getNumericProperty", "plugin_cityQuantity")
+        actual[code] += max(1, quantity)
+        profile.append((item_name, code, quantity))
+    d.test.assertTrue(expected, "Resar's authored native possessions must be initialized")
+    d.test.assertEqual(expected, actual, "Capture all actual inventory and equipped source possessions")
+    d.test.assertTrue(set(owned).isdisjoint(alatosOwnedItems(d, d.player)))
+    d.assertNativeCombatOutcomes()
+    return {"name": name, "actor": actor, "items": owned, "profile": sorted(profile), "after_seq": d._combat_trace_seq}
+
+
+def finishAlatosBetrayal(d, witness):
+    name, actor = witness["name"], witness["actor"]
+    current = d.object(name, required=False)
+    if current is not None:
+        d.test.assertEqual(actor["__handle__"], current["__handle__"], "Resar's captured native identity changed")
+        nativeVictory(d, name)
+    else:
+        d.assertNativeCombatOutcomes()
+        d.test.assertFalse(d.call(actor, "isAlive"), "A removed living actor is not a native victory")
+        d.test.assertIsNotNone(
+            d.playerVictoryAgainst(MAP, name, after_seq=witness["after_seq"]),
+            "Missing fresh native Resar victory before settlement",
+        )
+        d.combats += 1
+    d.test.assertIsNone(d.object(name, required=False), "The betrayal must finish before the reward baseline")
+    d.test.assertFalse(d.call(actor, "isAlive"), "Resar must actually die in native combat")
+    victory = d.playerVictoryAgainst(MAP, name, after_seq=witness["after_seq"])
+    d.test.assertIsNotNone(victory, "Missing fresh native Resar victory before settlement")
+    remaining, player = alatosOwnedItems(d, actor), alatosOwnedItems(d, d.player)
+    for item_name, item in witness["items"].items():
+        d.test.assertNotIn(item_name, remaining, "Defeated Resar retained a transferred possession")
+        d.test.assertIn(item_name, player, "Resar's actual possession was not transferred")
+        d.test.assertEqual(item["__handle__"], player[item_name]["__handle__"], "A new item replaced owned Resar loot")
+    for item_name, code, quantity in witness["profile"]:
+        d.test.assertEqual(code, d.call(player[item_name], "getStringProperty", "plugin_citySourceItem"))
+        d.test.assertEqual(quantity, d.call(player[item_name], "getNumericProperty", "plugin_cityQuantity"))
+    return {
+        "resarOpponent": name,
+        "resarNativeVictorySeq": victory["seq"],
+        "resarSourcePossessions": witness["profile"],
+    }
+
+
 class QuestRoute:
     """Finite dependency planner whose only mutations are normal movement and authored choices."""
 
@@ -529,6 +599,7 @@ class QuestRoute:
         self.pending_outcomes = set()
         self.actions = 0
         self.tamoko_refuse = False
+        self.alatos_betrayal = None
 
     def bounded(self, goal):
         self.actions += 1
@@ -916,6 +987,8 @@ class QuestRoute:
             before = resources(self.d)
             standing = self.d.number("plugin_cityStanding")
             action = "quest" + upperFirst(key) + upperFirst(outcome["id"])
+            if key == "alatosTheft" and outcome["id"] == "complete":
+                self.alatos_betrayal = captureAlatosBetrayal(self.d, self, outcome)
             self.d.choose(name + "Dialog", action)
             effects = outcome.get("effects", {})
             self.d.test.assertEqual(before[0] + effects.get("gold", 0), self.d.gold())
@@ -946,14 +1019,26 @@ def questRoute(d, key, outcome_key, *, item_first=False):
     name, result = planner.settle(key, outcome_key)
     if key == "tamokoMercy" and outcome_key == "fight":
         nativeVictory(d, name)
+    betrayal = {}
+    if key == "alatosTheft" and outcome_key == "complete":
+        d.test.assertIsNotNone(planner.alatos_betrayal)
+        betrayal = finishAlatosBetrayal(d, planner.alatos_betrayal)
     prefix = "baldursGate.quest." + key + "." + outcome_key
     before = resources(d)
     d.saveAndReload("city-quest-" + key + "-" + outcome_key)
+    if betrayal:
+        d.test.assertIsNone(d.object(betrayal["resarOpponent"], required=False))
+        owned = alatosOwnedItems(d, d.player)
+        for item_name, code, quantity in betrayal["resarSourcePossessions"]:
+            d.test.assertIn(item_name, owned, "Resar loot did not survive native reload")
+            d.test.assertEqual(code, d.call(owned[item_name], "getStringProperty", "plugin_citySourceItem"))
+            d.test.assertEqual(quantity, d.call(owned[item_name], "getNumericProperty", "plugin_cityQuantity"))
     d.check(
         prefix,
         state(d, key) == ("completed" if result.get("terminal", True) and not row.get("repeatable") else "active"),
         sourceId="quest:" + key + ":" + outcome_key,
         itemBeforeAccept=item_first,
+        **betrayal,
     )
     if not outcome.get("effects", {}).get("finale") and d.object(name, required=False):
         planner.contact(name)
@@ -1188,13 +1273,48 @@ def companionState(d, names):
     return result
 
 
+def eldothHistorySnapshot(d):
+    name = "cityCampaignNpc16"
+    clock = d.object("cityClock")
+    actor = d.call(d.game_map, "getObjectByName", name)
+    owned = d.call(clock, "getObjectProperty", "plugin_cityCompanion_" + name)
+    d.test.assertEqual(actor, owned, "The roster must own the currently registered Eldoth")
+    if actor:
+        d.test.assertFalse(d.call(actor, "isPlayer"))
+    return {
+        "history": read(d, d.game_map, "plugin_cityHistory", {}),
+        "frozen": d.flag("plugin_cityHistoryFrozen"),
+        "joined": d.flag("plugin_cityFlag_eldothJoined"),
+        "roster": read(d, clock, "plugin_cityRoster", []),
+        "spawned": read(d, clock, "plugin_citySpawnedActors", []),
+        "allies": d.string("plugin_cityCompanionNames"),
+        "resources": resources(d),
+        "actor": companionState(d, (name,)) if actor else None,
+    }
+
+
 def companionsRoute(d):
     from tests.gameplay_branch_driver import readNewNativeTrace
 
     start(d)
     planner = QuestRoute(d)
     planner.contact("cityStart")
+    d.saveAndReload("city-before-eldoth-history")
     d.choose("cityStartDialog", "historyEldothJoined")
+    eldoth = d.call(d.game_map, "getObjectByName", "cityCampaignNpc16")
+    d.test.assertIsNotNone(eldoth)
+    before = eldothHistorySnapshot(d)
+    d.test.assertEqual("joined", before["history"]["eldoth"])
+    d.test.assertTrue(before["joined"])
+    d.test.assertFalse(before["frozen"])
+    d.choose("cityStartDialog", "historyEldothJoined")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.test.assertEqual(eldoth, d.call(d.game_map, "getObjectByName", "cityCampaignNpc16"))
+    d.test.assertEqual(1, before["roster"].count("cityCampaignNpc16"))
+    d.test.assertEqual(1, before["spawned"].count("cityCampaignNpc16"))
+    d.saveAndReload("city-after-eldoth-history-repeat")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.check("baldursGate.history.eldothJoinedRepeat", True, sourceId="BALDUR.GAM#npc16")
     d.choose("cityStartDialog", "encounterQuayle")
     for name in ("cityCampaignNpc13", "cityCampaignNpc19"):
         planner.contact(name)
@@ -1275,6 +1395,22 @@ def skieRefusal(d):
     planner = QuestRoute(d)
     planner.contact("cityStart")
     d.choose("cityStartDialog", "historyEldothAbsent")
+    before = eldothHistorySnapshot(d)
+    d.test.assertEqual("absent", before["history"]["eldoth"])
+    d.test.assertFalse(before["frozen"])
+    d.test.assertFalse(before["joined"])
+    d.test.assertIsNone(before["actor"])
+    d.choose("cityStartDialog", "historyEldothJoined")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.check("baldursGate.history.eldothAbsentRefusesJoin", True, sourceId="BALDUR.GAM#npc16")
+    d.choose("cityStartDialog", "finishHistoryChoices")
+    d.test.assertTrue(d.flag("plugin_cityHistoryFrozen"))
+    before = eldothHistorySnapshot(d)
+    d.choose("cityStartDialog", "historyEldothJoined")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.saveAndReload("city-after-eldoth-history-refusals")
+    d.test.assertEqual(before, eldothHistorySnapshot(d))
+    d.check("baldursGate.history.eldothFrozenRefusesJoin", True, sourceId="BALDUR.GAM#npc16")
     planner.contact("cityCampaignNpc15")
     before_crimes = d.number("plugin_cityCrimes")
     d.choose("cityCampaignNpc15Dialog", "recruit")
@@ -1785,6 +1921,7 @@ CASES = (
             (MAP,),
             (
                 "baldursGate.companions.fiveAndReload",
+                "baldursGate.history.eldothJoinedRepeat",
                 "baldursGate.companions.dismissAndReturn",
                 "baldursGate.companions.nativeCombat",
             ),
@@ -1797,7 +1934,11 @@ CASES = (
             "baldurs-gate-skie-refusal",
             MAP,
             (MAP,),
-            ("baldursGate.companions.skieWithoutEldoth",),
+            (
+                "baldursGate.companions.skieWithoutEldoth",
+                "baldursGate.history.eldothAbsentRefusesJoin",
+                "baldursGate.history.eldothFrozenRefusesJoin",
+            ),
             skieRefusal,
             classes=("Sorcerer",),
             sources=SOURCES,
@@ -2075,9 +2216,41 @@ SOURCE_BRANCHES.update(
 )
 
 
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateDialog.historyEldothJoined"] += (
+    "baldursGate.history.eldothJoinedRepeat",
+    "baldursGate.history.eldothAbsentRefusesJoin",
+    "baldursGate.history.eldothFrozenRefusesJoin",
+)
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateDialog.historyEldothAbsent"] += (
+    "baldursGate.history.eldothAbsentRefusesJoin",
+)
+SOURCE_BRANCHES["res/maps/baldursGate/script.py:BaldursGateDialog.finishHistoryChoices"] += (
+    "baldursGate.history.eldothFrozenRefusesJoin",
+)
+
+
 # The complete source ledger remains pending even when a representative adaptation route exists.
 # Registration cannot turn a missing classic source branch into a passing native witness.
 DEFENSIVE_SOURCE_BRANCHES = {
+    "baldursGate.eldothGuard.spawnFailure": "Controlled setup/factory/lifetime regression (spawnFailure); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.partialHooks": "Controlled setup/factory/lifetime regression (partialHooks); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.partialItems": "Controlled setup/factory/lifetime regression (partialItems); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.controllerFailure": "Controlled setup/factory/lifetime regression (controllerFailure); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.preexistingActor": "Controlled setup/factory/lifetime regression (preexistingActor); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.invalidSetup": "Controlled setup/factory/lifetime regression (invalidSetup); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.missingDefinition": "Controlled setup/factory/lifetime regression (missingDefinition); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.replacedMapException": "Controlled setup/factory/lifetime regression (replacedMapException); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.replacedMapReturn": "Controlled setup/factory/lifetime regression (replacedMapReturn); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.cleanupFailure": "Controlled setup/factory/lifetime regression (cleanupFailure); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.reentrantRoster": "Controlled setup/factory/lifetime regression (reentrantRoster); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.reentrantHistory": "Controlled setup/factory/lifetime regression (reentrantHistory); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.otherHistoryChoice": "Controlled setup/factory/lifetime regression (otherHistoryChoice); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.replacedActor": "Controlled setup/factory/lifetime regression (replacedActor); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.existingRosterEntry": "Controlled setup/factory/lifetime regression (existingRosterEntry); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.nestedRecruitment": "Controlled setup/factory/lifetime regression (nestedRecruitment); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.independentClock": "Controlled setup/factory/lifetime regression (independentClock); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.finalSetterGuardRelease": "Controlled setup/factory/lifetime regression (finalSetterGuardRelease); source/model evidence only, never a native gameplay witness.",
+    "baldursGate.eldothGuard.ownerRelease": "Controlled setup/factory/lifetime regression (ownerRelease); source/model evidence only, never a native gameplay witness.",
     "res/maps/baldursGate/script.py:BaldursGatePortal.onDestroy": "Connector teardown unregisters its owned edge; the named source/model regression gives no native gameplay credit.",
 }
 

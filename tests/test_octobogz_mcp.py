@@ -877,6 +877,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.observeScoutHealingBoundary(stage, data, scout_sequence)
         except BaseException:
             pass
+        try:
+            self.captureScoutCombatContext(stage)
+        except BaseException:
+            evidence = getattr(self, "scout_healing_evidence", None)
+            if evidence is not None:
+                evidence.gap("combat-context-observation-error")
         items = data.get("items") or []
         coords = self.coords()
         self.assertEqual(
@@ -2695,6 +2701,183 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             return self.readScoutHealingTrace(evidence, baseline=True)
         return self.readScoutHealingTrace(evidence)
 
+    def captureScoutCombatContext(self, stage):
+        evidence = getattr(self, "scout_healing_evidence", None)
+        if (
+            getattr(self, "mcp_profile_class", None) != "Sorcerer"
+            or stage not in ("before entering the hunt lair", "after scout")
+            or evidence is None
+            or stage not in evidence.boundaries
+        ):
+            return
+        context = {"complete": True, "gaps": [], "sequenceBefore": evidence.sequence}
+        limits = {"equipped": 8, "effects": 12, "actions": 16}
+        stat_keys = (
+            "strength",
+            "agility",
+            "stamina",
+            "intelligence",
+            "armor",
+            "block",
+            "dmgMin",
+            "dmgMax",
+            "attack",
+            "hit",
+            "crit",
+            "fireResist",
+            "frostResist",
+            "normalResist",
+            "thunderResist",
+            "shadowResist",
+            "damage",
+            "mainStat",
+        )
+
+        def gap(reason):
+            if reason not in context["gaps"]:
+                context["gaps"].append(reason)
+
+        def text(value, limit):
+            if type(value) is not str or len(value.encode("utf-8")) > limit:
+                raise ValueError("Bounded native text required")
+            return value
+
+        def integer(value):
+            if type(value) is not int or not -(2**31) <= value < 2**31:
+                raise ValueError("Native integer required")
+            return value
+
+        def boolean(value):
+            if type(value) is not bool:
+                raise ValueError("Native boolean required")
+            return value
+
+        def stats(properties):
+            result = {}
+            for key in stat_keys:
+                value = properties[key]
+                if key == "mainStat":
+                    result[key] = text(value, 80)
+                else:
+                    result[key] = integer(value)
+            return result
+
+        def properties(handle):
+            raw = self.engine("jsonify", handle)
+            if type(raw) is not str or len(raw.encode("utf-8")) > 4096:
+                raise ValueError("Native descriptor exceeds diagnostic cap")
+            result = json.loads(raw)["properties"]
+            if type(result) is not dict:
+                raise ValueError("Native descriptor required")
+            return result
+
+        def identity(values):
+            return {"name": text(values["name"], 160), "typeId": text(values["typeId"], 80)}
+
+        def effect(values):
+            if values is None:
+                return None
+            values = values["properties"]
+            return {
+                **identity(values),
+                "duration": integer(values["duration"]),
+                "timeLeft": integer(values["timeLeft"]),
+                "cumulative": boolean(values["cumulative"]),
+                "bonus": stats(values["bonus"]["properties"]) if values.get("bonus") is not None else None,
+                "buff": "buff" in (values.get("tags") or []),
+            }
+
+        try:
+            context["turnBefore"] = self.call(self.game_map, "getTurn")
+        except BaseException:
+            gap("turn-read-error")
+        try:
+            context["stats"] = stats(properties(self.call(self.player, "getStats")))
+        except BaseException:
+            gap("stats-read-error")
+        for key, getter in (
+            ("equipped", "getEquipped"),
+            ("effects", "getEffects"),
+            ("actions", "getEffectiveInteractions"),
+        ):
+            rows = []
+            try:
+                collection = self.call(self.player, getter)
+                if key == "equipped":
+                    if type(collection) is not dict:
+                        raise ValueError("Native equipment map required")
+                    entries = []
+                    for slot, handle in collection.items():
+                        entries.append((slot, handle))
+                        if len(entries) == limits[key]:
+                            break
+                    entries.sort(key=lambda row: row[0])
+                else:
+                    if type(collection) is not list:
+                        raise ValueError("Native collection required")
+                    entries = list(enumerate(collection[: limits[key]]))
+                context[key + "Count"] = len(collection)
+                if len(collection) > limits[key]:
+                    gap(key + "-count-cap")
+                for slot, handle in entries[: limits[key]]:
+                    try:
+                        values = properties(handle)
+                        if key == "equipped":
+                            row = {
+                                **identity(values),
+                                "slot": text(slot, 16),
+                                "power": integer(values["power"]),
+                                "bonus": (
+                                    stats(values["bonus"]["properties"]) if values.get("bonus") is not None else None
+                                ),
+                            }
+                        elif key == "effects":
+                            row = effect({"properties": values})
+                        else:
+                            row = {
+                                **identity(values),
+                                "manaCost": integer(values["manaCost"]),
+                                "selfTarget": boolean(values["selfTarget"]),
+                                "committedManaRefund": integer(
+                                    self.call(handle, "getCommittedManaRefund", self.player)
+                                ),
+                                "effect": effect(values.get("effect")),
+                            }
+                        if len(json.dumps(row, ensure_ascii=True, allow_nan=False).encode()) > 2048:
+                            raise ValueError("Native diagnostic row exceeds cap")
+                        rows.append(row)
+                    except BaseException:
+                        gap(key + "-row-read-error")
+            except BaseException:
+                gap(key + "-read-error")
+            context[key] = sorted(rows, key=lambda row: (row.get("slot", ""), row["name"], row["typeId"]))
+            context[key + "RecordedCount"] = len(rows)
+        try:
+            context["turnAfter"] = self.call(self.game_map, "getTurn")
+            if context.get("turnBefore") != context["turnAfter"]:
+                gap("turn-changed-during-reads")
+        except BaseException:
+            gap("turn-read-error")
+        context["sequenceAfter"] = self.readScoutHealingTrace(evidence)
+        if context["sequenceAfter"] is None:
+            gap("context-trace-unavailable")
+        elif context["sequenceAfter"] != context["sequenceBefore"]:
+            gap("trace-changed-during-reads")
+        context["complete"] = not context["gaps"]
+        encoded = json.dumps(context, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+        if len(encoded.encode()) > 8192:
+            context = {
+                "complete": False,
+                "gaps": context["gaps"] + ["context-byte-cap"],
+                "observedBytes": len(encoded.encode()),
+                "counts": {key: context.get(key + "Count") for key in limits},
+                "sequenceBefore": context["sequenceBefore"],
+                "sequenceAfter": context["sequenceAfter"],
+            }
+        if not context["complete"]:
+            evidence.gap("combat-context-incomplete-" + stage)
+        evidence.boundaries[stage]["combatContext"] = context
+
     def observeScoutHealingBoundary(self, stage, properties, sequence_before=None):
         evidence = getattr(self, "scout_healing_evidence", None)
         if evidence is None or stage not in ScoutHealingBoundaryEvidence.STAGES:
@@ -2946,6 +3129,319 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
 
 class OctobogzDiagnosticTest(unittest.TestCase):
+
+    def scoutCombatContextFixture(self):
+        from types import SimpleNamespace
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_profile_class = "Sorcerer"
+        walker.player, walker.game_map = "player", "map"
+        walker.scout_healing_evidence, _items = self.scoutEvidenceFixture(0)
+        values = {
+            key: 0
+            for key in (
+                "strength",
+                "agility",
+                "stamina",
+                "intelligence",
+                "armor",
+                "block",
+                "dmgMin",
+                "dmgMax",
+                "attack",
+                "hit",
+                "crit",
+                "fireResist",
+                "frostResist",
+                "normalResist",
+                "thunderResist",
+                "shadowResist",
+                "damage",
+            )
+        }
+        values.update(mainStat="intelligence", hit=75, armor=10, dmgMin=21, dmgMax=26, stamina=13)
+        descriptors = {
+            "stats": {"properties": values},
+            "weapon": {
+                "properties": {
+                    "name": "earnedStaff",
+                    "typeId": "Staff",
+                    "power": 3,
+                    "bonus": {"properties": dict(values)},
+                }
+            },
+            "effect": {
+                "properties": {
+                    "name": "nativeWard",
+                    "typeId": "ArmorOfEndlessWinterEffect",
+                    "duration": 3,
+                    "timeLeft": 2,
+                    "cumulative": False,
+                    "bonus": {"properties": dict(values)},
+                    "tags": ["buff"],
+                }
+            },
+            "action": {
+                "properties": {
+                    "name": "nativeFrostBolt",
+                    "typeId": "FrostBolt",
+                    "manaCost": 20,
+                    "selfTarget": False,
+                    "effect": None,
+                }
+            },
+        }
+        collections = {"getEquipped": {"0": "weapon"}, "getEffects": ["effect"], "getEffectiveInteractions": ["action"]}
+        calls = []
+
+        def call(handle, operation, *args):
+            calls.append(("call", handle, operation, args))
+            if handle == "map" and operation == "getTurn":
+                return 2132
+            if handle == "player" and operation == "getStats":
+                return "stats"
+            if handle == "player" and operation in collections:
+                return collections[operation]
+            if handle == "action" and operation == "getCommittedManaRefund" and args == ("player",):
+                return 3
+            raise AssertionError(("Non-read or unknown native method", handle, operation, args))
+
+        def engine(operation, handle):
+            calls.append(("engine", operation, handle))
+            if operation != "jsonify":
+                raise AssertionError(("Non-read engine operation", operation))
+            return json.dumps(descriptors[handle])
+
+        walker.call, walker.engine = call, engine
+        walker.readScoutHealingTrace = lambda evidence: evidence.sequence
+        return SimpleNamespace(walker=walker, descriptors=descriptors, collections=collections, calls=calls)
+
+    def testScoutCombatContextAddsBoundedNativeReadsToTheExistingCheckedPayload(self):
+        fixture = self.scoutCombatContextFixture()
+        evidence = fixture.walker.scout_healing_evidence
+        original = json.loads(json.dumps(evidence.boundaries))
+        for stage in ("before entering the hunt lair", "after scout"):
+            fixture.walker.captureScoutCombatContext(stage)
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertTrue(payload["complete"], payload)
+        for stage in ("before entering the hunt lair", "after scout"):
+            context = payload["boundaries"][stage].pop("combatContext")
+            self.assertTrue(context["complete"], context)
+            self.assertEqual(75, context["stats"]["hit"])
+            self.assertEqual(10, context["stats"]["armor"])
+            self.assertEqual("Staff", context["equipped"][0]["typeId"])
+            self.assertEqual(2, context["effects"][0]["timeLeft"])
+            self.assertTrue(context["effects"][0]["buff"])
+            self.assertEqual((20, 3), (context["actions"][0]["manaCost"], context["actions"][0]["committedManaRefund"]))
+            self.assertEqual((2132, 2132), (context["turnBefore"], context["turnAfter"]))
+            self.assertEqual((100, 100), (context["sequenceBefore"], context["sequenceAfter"]))
+        self.assertEqual(original, payload["boundaries"])
+        self.assertEqual([], payload["nativeEvents"])
+        self.assertEqual(22, len(fixture.calls), "Two boundaries need only the fixed small read set")
+
+    def testScoutCombatContextActualSnapshotRetainsBothCheckedContextsBeforeAnyGearChange(self):
+        fixture = self.scoutCombatContextFixture()
+        walker = fixture.walker
+        old_engine, old_call = walker.engine, walker.call
+
+        def engine(operation, handle):
+            if handle == "player" and operation == "jsonify":
+                return json.dumps(
+                    {
+                        "properties": {
+                            "name": "actualHero",
+                            "hp": 91,
+                            "mana": 140,
+                            "items": [],
+                            "posx": 1,
+                            "posy": 2,
+                            "posz": 0,
+                        }
+                    }
+                )
+            return old_engine(operation, handle)
+
+        def call(handle, operation, *args):
+            values = {
+                "getLevel": 4,
+                "getNumericProperty": 6374,
+                "getMana": 140,
+                "getGold": 880,
+                "getStringProperty": "",
+            }
+            if handle == "player" and operation in values:
+                return values[operation]
+            return old_call(handle, operation, *args)
+
+        walker.engine, walker.call = engine, call
+        walker.coords = lambda: (1, 2, 0)
+        walker.rememberHealingConservation = lambda *args: None
+        walker.captureEarlyNativeTrace = lambda *args: None
+        walker.reportMcpProfile = lambda *args: None
+        with patch("builtins.print"):
+            for stage in ("before entering the hunt lair", "after scout"):
+                result = walker.snapshot(stage)
+                self.assertEqual((91, 140, 880), (result["hp"], result["mana"], result["gold"]))
+                boundary = walker.scout_healing_evidence.boundaries[stage]
+                self.assertIn("combatContext", boundary, "The real snapshot must retain the missing combat context")
+                self.assertTrue(boundary["combatContext"]["complete"], boundary)
+        notes = walker.scout_healing_evidence.notes()
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(notes)
+        self.assertTrue(payload["complete"], payload)
+        self.assertEqual(
+            "Staff", payload["boundaries"]["before entering the hunt lair"]["combatContext"]["equipped"][0]["typeId"]
+        )
+
+    def testScoutCombatContextAndOriginalInventoryShareTheSamePayloadCapAndChecksum(self):
+        fixture = self.scoutCombatContextFixture()
+        evidence, _items = self.scoutEvidenceFixture(52)
+        fixture.walker.scout_healing_evidence = evidence
+        for stage in ("before entering the hunt lair", "after scout"):
+            fixture.walker.captureScoutCombatContext(stage)
+        payload = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertTrue(payload["complete"], payload)
+        for stage in ScoutHealingBoundaryEvidence.STAGES:
+            self.assertEqual(52, payload["boundaries"][stage]["recordedCount"])
+        self.assertLessEqual(len(json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode()), 65536)
+        evidence.events = [{"diagnostic-size-control": "x" * 62000}]
+        capped = ScoutHealingBoundaryEvidence.decodeNotes(evidence.notes())
+        self.assertFalse(capped["complete"])
+        self.assertIn("payload-cap", capped["gaps"])
+        self.assertIn("boundaryCounts", capped)
+        self.assertNotIn("nativeEvents", capped)
+        self.assertLessEqual(len(json.dumps(capped).encode()), 65536)
+
+    def testScoutCombatContextGetterContractMatchesExistingNativeBindingsAndDispatcher(self):
+        import ast
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "mcp.py").read_text(encoding="utf-8")
+        allowlist = next(
+            ast.literal_eval(node.value)
+            for node in ast.parse(source).body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "MCP_ALLOWED_HANDLE_METHODS" for target in node.targets
+            )
+        )
+        self.assertTrue({"getStats", "getEquipped", "getEffects", "getEffectiveInteractions"} <= allowlist["CCreature"])
+        self.assertIn("getTurn", allowlist["CMap"])
+        self.assertIn("getCommittedManaRefund", allowlist["CInteraction"])
+        admission = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.FunctionDef) and node.name == "_allowed_handle_methods_for"
+        )
+        admission.decorator_list = []
+        namespace = {"MCP_ALLOWED_HANDLE_METHODS": allowlist, "Any": object}
+        exec(
+            compile(
+                ast.fix_missing_locations(ast.Module(body=[admission], type_ignores=[])),
+                "<actual-mcp-admission>",
+                "exec",
+            ),
+            namespace,
+        )
+        creature = type("CCreature", (), {})
+        player = type("CPlayer", (creature,), {})
+        interaction = type("CInteraction", (), {})
+        derived_action = type("FrostBolt", (interaction,), {})
+        admitted = namespace["_allowed_handle_methods_for"]
+        self.assertTrue({"getStats", "getEquipped", "getEffects", "getEffectiveInteractions"} <= admitted(player()))
+        self.assertIn("getCommittedManaRefund", admitted(derived_action()))
+        self.assertNotIn("getManaCost", admitted(derived_action()))
+        self.assertNotIn("performAction", admitted(derived_action()))
+        bindings = (root / "src/core/bindings/CModuleCreatures.cpp").read_text(encoding="utf-8")
+        for getter in ("getStats", "getEquipped", "getEffects", "getEffectiveInteractions"):
+            self.assertRegex(bindings, re.escape('.def("' + getter + '", &CCreature::' + getter))
+        action_binding = (root / "src/core/bindings/CModuleGameplay.cpp").read_text(encoding="utf-8")
+        self.assertIn(
+            '.def("getCommittedManaRefund", &CInteraction::getCommittedManaRefund, py::arg("caster")', action_binding
+        )
+
+    def testScoutCombatContextCountCapsBoundActualDescriptorReadsAndAreExplicitlyIncomplete(self):
+        fixture = self.scoutCombatContextFixture()
+        fixture.collections["getEquipped"] = {str(index): "weapon" for index in range(9)}
+        fixture.collections["getEffects"] = ["effect"] * 13
+        fixture.collections["getEffectiveInteractions"] = ["action"] * 17
+        fixture.walker.captureScoutCombatContext("after scout")
+        context = fixture.walker.scout_healing_evidence.boundaries["after scout"]["combatContext"]
+        self.assertFalse(context["complete"])
+        self.assertTrue({"equipped-count-cap", "effects-count-cap", "actions-count-cap"} <= set(context["gaps"]))
+        descriptor_reads = [call for call in fixture.calls if call[0] == "engine"]
+        self.assertEqual(1 + 8 + 12 + 16, len(descriptor_reads))
+        self.assertLessEqual(len(json.dumps(context).encode()), 8192)
+        self.assertFalse(
+            ScoutHealingBoundaryEvidence.decodeNotes(fixture.walker.scout_healing_evidence.notes())["complete"]
+        )
+
+    def testScoutCombatContextDescriptorBytesAndObservationErrorsNeverEscapeOrRetainPayloads(self):
+        for cause in ("oversize", "getter-error", "wrong-stats", "bad-refund", "trace-changed"):
+            with self.subTest(cause=cause):
+                fixture = self.scoutCombatContextFixture()
+                if cause == "oversize":
+                    fixture.descriptors["stats"]["private"] = "UNRETAINED" * 1000
+                elif cause == "getter-error":
+                    fixture.collections["getEffects"] = None
+                elif cause == "wrong-stats":
+                    fixture.descriptors["stats"]["properties"]["hit"] = 75.0
+                elif cause == "trace-changed":
+                    fixture.walker.readScoutHealingTrace = lambda evidence: evidence.sequence + 1
+                else:
+                    old_call = fixture.walker.call
+
+                    def read(handle, operation, *args):
+                        return 3.0 if operation == "getCommittedManaRefund" else old_call(handle, operation, *args)
+
+                    fixture.walker.call = read
+                fixture.walker.captureScoutCombatContext("after scout")
+                context = fixture.walker.scout_healing_evidence.boundaries["after scout"]["combatContext"]
+                self.assertFalse(context["complete"])
+                self.assertLessEqual(len(json.dumps(context).encode()), 8192)
+                self.assertNotIn("UNRETAINED", json.dumps(context))
+                primary = AssertionError("Finite living authored Pritz exhausted before healing readiness")
+                try:
+                    try:
+                        raise primary
+                    finally:
+                        fixture.walker.captureScoutCombatContext("after scout")
+                except AssertionError as caught:
+                    self.assertIs(primary, caught)
+
+    def testScoutCombatContextUnrelatedStagesOrClassesPerformNoAdditionalReads(self):
+        fixture = self.scoutCombatContextFixture()
+        for stage in ("partial reload", "readiness inventory", "not a Scout boundary"):
+            fixture.walker.captureScoutCombatContext(stage)
+        fixture.walker.mcp_profile_class = "Warrior"
+        fixture.walker.captureScoutCombatContext("before entering the hunt lair")
+        self.assertEqual([], fixture.calls)
+        self.assertFalse(
+            any("combatContext" in row for row in fixture.walker.scout_healing_evidence.boundaries.values())
+        )
+
+    def testScoutCombatContextSnapshotReadsStayAfterTheOriginalInventoryBoundary(self):
+        import ast
+
+        source = Path(__file__).read_text()
+        owner = next(
+            node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.ClassDef) and node.name == "OctobogzMcpWalkthroughTest"
+        )
+        methods = {node.name: node for node in owner.body if isinstance(node, ast.FunctionDef)}
+        snapshot = ast.get_source_segment(source, methods["snapshot"])
+        self.assertLess(
+            snapshot.index("self.observeScoutHealingBoundary"), snapshot.index("self.captureScoutCombatContext")
+        )
+        self.assertLess(snapshot.index("self.captureScoutCombatContext"), snapshot.index('print("MCP hunt journey"'))
+        helper = ast.get_source_segment(source, methods["captureScoutCombatContext"])
+        self.assertIn('evidence.gap("combat-context-incomplete-" + stage)', helper)
+        for operation in ("moveTo", "useItem", "useAction", "equipItem", "setFightController", "addItem"):
+            self.assertNotIn('"' + operation + '"', helper)
+        self.assertIn(
+            "target = 13 if initial else 10", ast.get_source_segment(source, methods["ensureAuthoredHealingReadiness"])
+        )
 
     def scoutEvidenceFixture(self, count=52):
         evidence = ScoutHealingBoundaryEvidence(100, "actualHero")
@@ -3357,6 +3853,7 @@ class OctobogzDiagnosticTest(unittest.TestCase):
 
         walker.call, walker.engine = call, engine
         walker.captureEarlyNativeTrace, walker.reportMcpProfile = Mock(), Mock()
+        walker.captureScoutCombatContext = Mock()
         with patch("builtins.print"):
             walker.ensureAuthoredHealingReadiness()
             walker.snapshot("before entering the hunt lair")

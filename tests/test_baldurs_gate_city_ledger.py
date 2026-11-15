@@ -524,6 +524,27 @@ class BaldursGateCityLedgerUnitTest(unittest.TestCase):
                 self.assertEqual([], row["implementation"]["targets"])
                 self.assertTrue(any("absent" in gap for gap in row["gaps"]))
 
+    def testDeathCounterMappingRecognizesOnlyExactNamedOrLegacyHookRegistration(self):
+        inputs = self.sevenSunsDeathInputs()
+        source, quests, config, script = inputs
+        name_setter = '                    hook.setStringProperty("name", actor.getName() + ":" + event_name)\n'
+        self.assertEqual(1, script.count(name_setter))
+        for candidate, status in (
+            (script, "partial"),
+            (script.replace(name_setter, "", 1), "partial"),
+            (
+                script.replace(name_setter, name_setter.replace('actor.getName() + ":" + event_name', '"unrelated"')),
+                "planned",
+            ),
+        ):
+            with self.subTest(status=status, named=name_setter in candidate):
+                row = next(
+                    row
+                    for row in self.sevenSunsDeathLedger((source, quests, config, candidate))["entries"]
+                    if row["id"] == "SSDopple#selectedCityDeaths"
+                )
+                self.assertEqual(status, row["implementation"]["status"])
+
     def testDeathCounterInventoryComesFromSourceDeathVariablesAndAreaPointers(self):
         source, quests, config, script = self.sevenSunsDeathInputs()
         ledger = self.sevenSunsDeathLedger((source, quests, {}, ""))
