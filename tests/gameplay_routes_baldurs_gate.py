@@ -165,7 +165,7 @@ def cityApproachPath(origin, destination, bounds, walkable, portals):
     raise AssertionError(("No portal-safe city approach", origin, destination, bounds))
 
 
-def cityTravelPath(origin, start_area, destination, connections, allowed, atlas, walkable, portals):
+def cityTravelPath(origin, start_area, destination, connections, allowed, atlas, walkable, portals, *, target=None):
     edges = defaultdict(list)
     for link in connections:
         if allowed(link):
@@ -179,7 +179,7 @@ def cityTravelPath(origin, start_area, destination, connections, allowed, atlas,
         reachable = cityApproachParents(point, atlas[area_id]["bounds"], walkable, portals)
         if not reachable:
             continue
-        if area_id == destination:
+        if area_id == destination and (target is None or tuple(target) in reachable):
             return route
         for link in sorted(edges[area_id], key=lambda entry: entry["object"]):
             arrival = (link["to"], tuple(link["target"]))
@@ -255,7 +255,7 @@ def contactCityObject(d, name):
     requireCurrent()
 
 
-def travel(d, destination):
+def travel(d, destination, *, target=None):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
 
@@ -280,6 +280,7 @@ def travel(d, destination):
         allowed,
         geometry["atlas"],
         *cityMovementCells(),
+        target=target,
     )
     traversed = []
     for link in route:
@@ -737,7 +738,7 @@ class QuestRoute:
         actor = self.d.object(name, required=False)
         area_id = currentArea(self.d, actor) if actor else ""
         area_id = area_id or self.data["config"][name]["properties"].get("sourceArea", "AR0800")
-        travel(self.d, area_id)
+        travel(self.d, area_id, target=self.d.coords(actor) if actor else None)
         contactCityObject(self.d, name)
 
     def ensurePhase(self, minimum):

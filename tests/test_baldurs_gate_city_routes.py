@@ -17,6 +17,121 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
 
+    def testSameDistrictTargetTravelUsesTheAuditedReachableSewerReentry(self):
+        from unittest.mock import patch
+
+        data = routes.documents()
+        geometry, config = data["geometry"], data["config"]
+        walkable, portals = routes.cityMovementCells()
+        origin, target = (186, 51, 0), (161, 51, 0)
+
+        def allowed(link):
+            properties = config[link["object"]]["properties"]
+            return (
+                properties.get("phaseMin", 5) <= 5 <= properties.get("phaseMax", 7)
+                and not properties.get("requiredFlag")
+                and link["to"] != "AR0108"
+            )
+
+        args = (origin, "AR0300", "AR0300", geometry["connections"], allowed, geometry["atlas"], walkable, portals)
+        self.assertEqual((), routes.cityTravelPath(*args), "Area-only callers must retain their existing behavior")
+        with self.assertRaisesRegex(AssertionError, "No portal-safe city approach"):
+            routes.cityApproachPath(origin, target, geometry["atlas"]["AR0300"]["bounds"], walkable, portals)
+        with patch.object(routes, "cityApproachParents", wraps=routes.cityApproachParents) as visits:
+            chosen = routes.cityTravelPath(*args, target=target)
+        self.assertEqual(["cityAr0300Portal12", "cityAr0226Portal5"], [row["object"] for row in chosen])
+        state_bound = 1 + len({(row["to"], tuple(row["target"])) for row in geometry["connections"]})
+        self.assertLessEqual(visits.call_count, state_bound)
+        states = [(tuple(call.args[0]), tuple(call.args[1])) for call in visits.call_args_list]
+        self.assertEqual(len(states), len(set(states)), "The existing search must not revisit an arrival state")
+        point = origin
+        for link in chosen:
+            properties = config[link["object"]]["properties"]
+            self.assertTrue(allowed(link))
+            self.assertFalse(properties.get("locked", False))
+            self.assertTrue(properties.get("sourceRegion"))
+            local = routes.cityApproachPath(
+                point, link["origin"], geometry["atlas"][link["from"]]["bounds"], walkable, portals
+            )
+            self.assertEqual(tuple(link["origin"]), local[-1])
+            self.assertFalse(set(local[:-1]) & portals)
+            for before, after in zip((point,) + local, local):
+                self.assertEqual(1, sum(abs(a - b) for a, b in zip(before, after)))
+            point = tuple(link["target"])
+        final = routes.cityApproachPath(point, target, geometry["atlas"]["AR0300"]["bounds"], walkable, portals)
+        self.assertEqual(target, final[-1])
+        self.assertFalse(set(final) & portals)
+
+    def testTargetTravelRejectsBlockedReentriesAndExhaustsCyclesWithinArrivalStates(self):
+        from unittest.mock import patch
+
+        atlas = {"A": {"bounds": [0, 0, 0, 4, 1]}, "B": {"bounds": [6, 0, 0, 2, 1]}}
+        walkable = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (6, 0, 0), (7, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0)})
+        links = [
+            {"object": "exit", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "return", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [3, 0, 0]},
+            {"object": "cycle", "from": "B", "to": "B", "origin": [7, 0, 0], "target": [6, 0, 0]},
+        ]
+        args = ((0, 0, 0), "A", "A", links, lambda _link: True, atlas, walkable, portals)
+        self.assertEqual((), routes.cityTravelPath(*args))
+        chosen = routes.cityTravelPath(*args, target=(3, 0, 0))
+        self.assertEqual(["exit", "return"], [row["object"] for row in chosen])
+        for blocked in ("phase", "flag", "wrongArrival"):
+            with self.subTest(blocked=blocked):
+                changed = [dict(row) for row in links]
+                returning = changed[1]
+                if blocked == "phase":
+                    returning["phaseMin"] = 7
+                elif blocked == "flag":
+                    returning["requiredFlag"] = "unearnedAccess"
+                else:
+                    returning["target"] = [0, 0, 0]
+                calls = []
+
+                def allowed(link):
+                    calls.append(link["object"])
+                    return link.get("phaseMin", 5) <= 5 and not link.get("requiredFlag")
+
+                with patch.object(routes, "cityApproachParents", wraps=routes.cityApproachParents) as visits:
+                    with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+                        routes.cityTravelPath(
+                            (0, 0, 0), "A", "A", changed, allowed, atlas, walkable, portals, target=(3, 0, 0)
+                        )
+                self.assertEqual([row["object"] for row in changed], calls)
+                bound = 1 + len({(row["to"], tuple(row["target"])) for row in changed})
+                self.assertLessEqual(visits.call_count, bound)
+
+    def testCityContactAndTravelForwardTheActualTargetWithoutChangingAreaOnlyCalls(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+
+        name, target = "cityAr0153Actor3", (161, 51, 0)
+        for present in (True, False):
+            with self.subTest(present=present):
+                actor = {"__handle__": "sameActualNarlen"} if present else None
+                driver = SimpleNamespace(object=Mock(return_value=actor), coords=Mock(return_value=target))
+                planner = routes.QuestRoute(driver)
+                with (
+                    patch.object(routes, "currentArea", return_value="AR0300"),
+                    patch.object(routes, "travel") as travel,
+                    patch.object(routes, "contactCityObject") as contact,
+                ):
+                    planner.contact(name)
+                travel.assert_called_once_with(
+                    driver, "AR0300" if present else "AR0153", target=target if present else None
+                )
+                contact.assert_called_once_with(driver, name)
+        driver = SimpleNamespace(test=self, number=lambda _key: 5, flag=lambda _key: False, coords=lambda: (186, 51, 0))
+        for point in (None, target):
+            with self.subTest(target=point):
+                with (
+                    patch.object(routes, "currentArea", return_value="AR0300"),
+                    patch.object(routes, "cityTravelPath", return_value=()) as path,
+                ):
+                    routes.travel(driver, "AR0300", target=point)
+                self.assertEqual({"target": point}, path.call_args.kwargs)
+
     def testBherenLowStandingRouteReportsTheSameCatToPetrineBeforeClaimingItsCloak(self):
         from unittest.mock import patch
         from tests.test_baldurs_gate_city_content import CityModel
@@ -2228,8 +2343,10 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 return "AR0162" if coords(actor)[2] == 2 else "AR0800"
             return "AR1100" if coords(actor)[0] < 71 else "AR1200"
 
-        def travel(owner, destination):
+        def travel(owner, destination, *, target=None):
             self.assertEqual(area_id, destination)
+            if target is not None:
+                self.assertEqual(driver.target_position, target)
             driver.travel_calls.append((driver.position, destination))
             if interior and mutation != "interiorMissingArrival":
                 driver.position = origin
@@ -2550,7 +2667,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         with ExitStack() as stack:
             stack.enter_context(patch.object(routes, "documents", return_value=data))
             stack.enter_context(patch.object(routes, "currentArea", return_value="AR0153"))
-            stack.enter_context(patch.object(routes, "travel", side_effect=lambda *_args: None))
+            stack.enter_context(patch.object(routes, "travel", side_effect=lambda *_args, target=None: None))
             stack.enter_context(
                 patch.object(routes, "contactCityObject", side_effect=lambda _driver, name: driver.contact(name))
             )
