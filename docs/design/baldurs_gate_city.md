@@ -79,7 +79,7 @@ python test.py --suite mcp-branches --branch-group baldursGate
 
 The first command uses source checks and native-shaped model doubles. The second requires a current staged native binary and real movement/dialogue/combat. Planned routes cover all five existing hero classes, but an unexecuted route is not a passing receipt. Shop chooser cancellation never proves an item was sold, stolen or transferred.
 
-Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. After bounded verified cleanup, C: remains above 95 percent used. No local native build or capture is authorized by that cleanup result; the 90 percent guard remains in force.
+Current acceptance blockers include original BG1-versus-EE reconciliation, unsupported source scripts and item effects, crime/arrest/escape outcomes, remaining conversation and recruitment branches, exact shop/temple formulas, and complete native save/reload and visual evidence. The owner confirmed that neither an original installation nor an alternate build volume is available. Recheck capacity before each artifact-producing phase. The latest bounded audit found no disposable outputs that could supply the required local headroom. The 90 percent guard remains in force for native builds and captures.
 
 City structured metadata uses a `city-json:` text prefix to preserve its string type through native loading,
 cloning and saves. The runtime accepts protected and legacy plain JSON text and protects subsequent state writes.
@@ -127,3 +127,147 @@ override remains an item/effect boundary. Script scheduling, event consumption,
 geometry, live actor ownership and original-versus-EE reconciliation remain pending.
 These tests/audits grant no native execution, gameplay, original parity, acceptance
 or ledger credit; all corresponding closure acceptance flags remain false.
+
+## Seven Suns warning conversation
+
+The warning merchant `AR0601#actor2` (`cityAr0601Actor2`, source dialogue `DOPPSM`)
+uses a finite native dialogue session for the twelve edges reachable from the normal
+entry state. The factual fixture `tests/fixtures/baldurs_gate_seven_suns_warning.json`
+retains all nine states and seventeen edges. External entries and their eight
+unreachable state/edge obligations remain planned. Installed EE records support
+these facts; they do not establish original-BG1 parity.
+
+The first accepted choice applies its ordered source-global writes immediately.
+`plugin_citySourceGlobals` stores shared source globals as protected JSON text;
+names are ASCII case-insensitive within the literal `GLOBAL` scope. Existing spelling,
+unrelated variables and unknown scopes are retained. Cancellation before any choice
+has no story effect. Cancellation after a choice retains the committed globals and
+talk bookkeeping. Reopening starts at the normal entry, with the saved globals.
+
+The terminal choices quietly retire the same living merchant with his actual items
+and effects. They grant no death, combat, experience, gold or loot credit. The
+separate `citySevenSunsWarningLead` journal entry remains open and grants no reward;
+it does not accept or complete Scar's quests. Raw journal flags `92` include the
+general journal bit. BG2-only quest-status bits are not used to infer a classic BG1
+unsolved status. The dialogue prose and lead are reworded for this engine.
+
+Each committed edge holds a bounded unsafe-operation lease. The session captures
+the game context, public map epoch, assigned player and exact registered source
+actor, and checks them across callbacks. The Python surface adds only the read-only
+`CGuiHandler.supportsSevenSunsWarning()` capability. Finite UI intents own the actual
+mutations. Uncertain partial work keeps a pending receipt and quarantines saves;
+the implementation does not claim arbitrary callback rollback.
+
+The optional serialized `CMap.sceneRetiredObjects` field retains retired objects.
+It is omitted when empty, and the save-format version is unchanged. A private
+lifetime anchor lets map destruction release retired actor/effect cycles without
+clearing effects during exploration or harming an actor adopted by another live map.
+The clock also retains the exact warning actor reference for replay checks.
+
+The ledger adds twenty-nine explicit obligations without removing older entries.
+Eleven authored MCP cases cover the reachable paths, cancellation, shared globals,
+the journal, identity preservation, refusal and save/reload across all five existing
+hero classes. Authored routes, the twenty-four native test cases and the fixed-work
+performance guard require actual execution before they count as evidence.
+
+Focused source and model checks:
+
+```powershell
+python -B -m unittest tests.test_baldurs_gate_seven_suns_warning tests.test_baldurs_gate_seven_suns_routes tests.test_baldurs_gate_city_ledger tests.test_native_test_profile -q
+python -B scripts/build_baldurs_gate_city.py --check
+python -B scripts/build_baldurs_gate_city_ledger.py --check
+```
+
+Original-source reconciliation, external DOPPSM entries, original automatic-dialogue
+timing, source/native acceptance of the separate DOPMER transformations and stock, Scar reward
+differences and Jhasso's departure remain open. This warning flow does not satisfy
+those obligations or the complete city acceptance matrix.
+
+## Seven Suns disguised merchants and replacement stock
+
+The four `DOPMER` actors retain distinct dialogue counters and source identities:
+`AR0601#actor1`, `AR0601#actor3`, `AR0602#actor1`, and `AR0602#actor2`.
+The factual graph retains all fourteen states, twenty-four edges, and thirteen
+terminal paths. The native UI flow offers the audited first, second, and third
+entries. Beginning a conversation commits its separate initiation counter, including
+when the player subsequently cancels. Later initiations have no audited entry and
+refuse cleanly. This counter timing is a documented conversion; original cancellation
+timing remains unproven. Saves with prior generic talk counts and no dedicated counter
+require a migration decision rather than silently resetting the conversation.
+
+Reveal choices apply their ordered shared `GLOBAL` writes and close the dialogue.
+On the next city-coordinator turn, the finite native service checks eligible merchants
+in the active source area. It quietly retires each exact disguise and publishes a
+new hostile native `CCreature` at the same location. Actors on other floors wait until
+their source area is active. Combat ownership or closed save admission postpones
+replacement before mutation. The registered name stays stable for the existing city
+death hooks, while retained old and new references distinguish the two creatures.
+The old disguise earns no death, gold, experience, loot, or quest-completion credit.
+
+The replacement uses audited base `DOPPSS` facts: 28 HP, a real equipped `S1-12`
+weapon with 1–12 native damage, and 420 experience through the actual owned defeat
+path. Its native body uses strength/agility/intelligence 6, stamina 4, hit 75, damage
+0, and critical chance 0. Weapon enchantment 1 is source metadata only. The weapon
+is undroppable and unstealable. The winner receives the fixed experience award once;
+other actors keep the existing scaled-experience rule. Source combat rules and party
+experience sharing are not established by this conversion.
+
+One fixed `RNDTRE05` selection resolves through six audited table rows to no item,
+gold, or one of ninety-seven concrete item codes. The bounded compiler snapshots
+validated source metadata once. Stacks use their audited capacity and quantity;
+nonstackable `*10` entries remain one item. Initial charges use the first three base
+ability maxima as an explicit native conversion. Each selected row consumes one
+native d20; authentic original table weights and creation-time charge semantics
+remain unresolved. A missing table column means no possession in this conversion;
+original missing-cell behavior remains unproven. Every selected item is a real owned
+object, never an unresolved random-family placeholder. Materialization uses base records, keeping the seventeen
+effective item differences introduced by installed mods outside the native stock.
+
+A closed, bounded certificate records the selected rows, exact outcome, initial
+owned descriptors, source fingerprints, and native conversion. The decoder replays
+the finite table closure and checks integer, boolean, string, object, and array types
+without narrowing. Initial publication additionally verifies the exact controllers,
+configured Attack action, equipped weapon, stock, and source metadata across
+callbacks. Later receipt checks permit legitimate damage, death, purchases, theft,
+and item transfers without regenerating the initial stock. Failed construction keeps
+its staged actor under a private map lifetime anchor before callback exposure.
+
+The ledger adds fifty-one obligations without dropping the previous 7,500 entries.
+Seventeen authored MCP cases span the thirteen paths and the five existing hero
+classes, with cancellation, area scheduling, repeated settlement, identity checks,
+and save/reload. These are route plans until executed against the exact staged binary.
+Native unit cases and deterministic bounded-work guards likewise require execution.
+
+The hostile-action script entry still needs an actual attack-attempt witness;
+damage alone cannot represent misses or offensive spells. The separate basement
+`DOPPSS` body and stock, Jhasso's departure and Scar's reward conditions
+remain distinct pending work. Potion, scroll, wand and ammunition abilities are
+explicitly unimplemented in this stock increment. Existing Scar quest completion
+and reward rules are unchanged. Installed EE evidence, source/model tests, native
+execution, visual inspection and owner acceptance remain separate claims.
+
+## Seven Suns five-death witness
+
+The city coordinator records one death for each of the four merchant lineages above
+and the basement `AR0603#actor2`. Both audited source creature records use the
+`SSDopple` death variable. The serialized witness retains the source actor, area,
+creature and original/replacement role; the clock retains the exact original and
+corpse references. A counted actor must be dead and absent from the live registry.
+Replacement credit additionally requires its committed replacement receipt and the
+same retained old/new owners. Quiet retirement, a same-name clone, unrelated deaths,
+forged counter rows and repeated destruction callbacks cannot grant credit.
+
+The witness joins the existing engine-owned destruction callback after generic
+corpse/death bookkeeping. Invalid witness data fails closed without preventing that
+bookkeeping. Old saves with generic deaths but no witness retain an unknown count;
+the implementation does not infer source credit from missing actors. The read-only
+`BaldursGateClock.sevenSunsDeathCount()` query validates the retained owners and
+serialized rows before returning a count. It does not change Scar's quest guards,
+grant rewards or establish original-game parity.
+
+One additional ledger row maps these five source identities. The authored Warrior
+MCP route requires a fresh native victory against every counted actor, checkpoints
+0, 2, 4 and 5, save/reload at 2 and 5, and unchanged resources on repeated queries
+and later ordinary turns. The route is pending until executed against the exact
+staged binary. Pre-transformation lethal attacks, attack-attempt timing, the basement
+body/stock/reward conversion and the original Scar outcome conditions remain open.

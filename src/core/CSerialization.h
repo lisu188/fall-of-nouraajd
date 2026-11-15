@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CJsonUtil.h"
 
+#include <chrono>
+#include <cstdint>
 #include <expected>
 #include <memory>
 #include <optional>
@@ -48,6 +50,50 @@ struct CSerializationError {
 
 template <typename T> using CSerializationResult = std::expected<T, CSerializationError>;
 
+enum class CSerializationVisit { Object, Property, ArrayEntry, MapEntry, GraphNode, Initialization };
+
+struct CSerializationProgressCounters {
+    std::uint64_t visits = 0;
+    std::uint64_t objects = 0;
+    std::uint64_t properties = 0;
+    std::uint64_t arrayEntries = 0;
+    std::uint64_t mapEntries = 0;
+    std::uint64_t graphNodes = 0;
+    std::uint64_t initializations = 0;
+    std::size_t records = 0;
+    std::size_t bytes = 0;
+};
+
+class CSerializationProgress {
+  public:
+    explicit CSerializationProgress(const char *direction = nullptr) noexcept {
+        if (direction)
+            begin(direction);
+    }
+    ~CSerializationProgress() { end(); }
+    CSerializationProgress(const CSerializationProgress &) = delete;
+    CSerializationProgress &operator=(const CSerializationProgress &) = delete;
+    void begin(const char *direction) noexcept;
+    void join() noexcept;
+    void end() noexcept;
+    void visit(CSerializationVisit kind) noexcept;
+    void finished() noexcept;
+    const CSerializationProgressCounters &counters() const noexcept;
+
+  private:
+    void mark(const char *stage) noexcept;
+    CSerializationProgressCounters counts;
+    CSerializationProgress *session = nullptr;
+    bool enabled = false;
+    bool complete = false;
+    const char *direction = nullptr;
+    const char *lastVisit = "none";
+    std::uint64_t identity = 0;
+    std::uint64_t nextVisit = 1;
+    int exceptions = 0;
+    std::chrono::steady_clock::time_point started{};
+};
+
 class CSerializationWriteContext {
   public:
     class State;
@@ -74,6 +120,8 @@ class CSerializationWriteContext {
     void finish(json &document);
     bool isRootOperation() const noexcept { return depth == 1; }
     State &state();
+    void visit(CSerializationVisit kind) noexcept { progress.visit(kind); }
+    const CSerializationProgressCounters &progressCounters() const noexcept { return progress.counters(); }
     const std::string &source() const noexcept { return sourceName; }
     const std::string &path() const noexcept { return propertyPath; }
     const std::string &objectType() const noexcept { return typeName; }
@@ -85,6 +133,7 @@ class CSerializationWriteContext {
     std::string typeName;
     bool includeDetached;
     std::size_t depth = 0;
+    CSerializationProgress progress;
     std::unique_ptr<State> operationState;
 };
 
@@ -119,6 +168,8 @@ class CSerializationReadContext {
     const json &prepare(const std::shared_ptr<CGame> &game, const json &document);
     bool isRootOperation() const noexcept { return depth == 1; }
     State &state();
+    void visit(CSerializationVisit kind) noexcept { progress.visit(kind); }
+    const CSerializationProgressCounters &progressCounters() const noexcept { return progress.counters(); }
     void keepDocument(std::shared_ptr<const json> document);
     bool isStrict() const noexcept { return strictPolicy; }
     const std::string &source() const noexcept { return sourceName; }
@@ -133,6 +184,7 @@ class CSerializationReadContext {
     std::string propertyName;
     std::string typeName;
     std::size_t depth = 0;
+    CSerializationProgress progress;
     std::unordered_map<int, std::shared_ptr<CCreature>> external;
     std::unique_ptr<State> operationState;
     std::vector<std::shared_ptr<const json>> documents;

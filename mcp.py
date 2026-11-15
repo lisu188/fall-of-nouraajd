@@ -85,6 +85,7 @@ MCP_ALLOWED_EXPORTS = {
     "randint",
 }
 MCP_ALLOWED_HANDLE_METHODS = {
+    "BaldursGateClock": {"sevenSunsDeathCount"},
     "CGameObject": {
         "addTag",
         "getBoolProperty",

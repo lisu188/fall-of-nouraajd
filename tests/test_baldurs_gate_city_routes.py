@@ -17,6 +17,134 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def jalanthaAudienceModel(self):
+        from types import SimpleNamespace
+
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        model = CityModel()
+        data = routes.documents()
+        names = ("cityAr0300Actor28", "cityAr0609Actor1", "cityAr0609ScriptActorJalant")
+        for name in names:
+            model.resources[name] = data["config"][name]
+        for name in names[:2]:
+            model.game_map.addObject(model.createObject(name))
+        definitions = decodeCityData(data["config"]["cityClock"]["properties"]["actorDefinitions"])
+        model.clock.setStringProperty(
+            "actorDefinitions", json.dumps([row for row in definitions if row["id"] == names[2]])
+        )
+        choices, contacts = [], []
+
+        def choose(dialog_id, action):
+            actor = model.game_map.getObjectByName(dialog_id.removesuffix("Dialog"))
+            self.assertIsNotNone(actor, "The route must choose on an actual placed actor")
+            choices.append((actor.getName(), action))
+            definition = data["config"][dialog_id]["properties"]
+            self.assertEqual(actor.getName(), definition["actorId"])
+            dialog = model.createObject("BaldursGateDialog")
+            dialog.setStringProperty("actorId", actor.getName())
+            entry = next(row["properties"] for row in definition["states"] if row["properties"]["stateId"] == "ENTRY")
+            visible = [
+                row["properties"]
+                for row in entry["options"]
+                if not row["properties"].get("condition") or getattr(dialog, row["properties"]["condition"])()
+            ]
+            self.assertEqual(1, sum(row.get("action") == action for row in visible), (dialog_id, action))
+            self.assertTrue(getattr(dialog, action)(), (actor.getName(), action))
+
+        driver = SimpleNamespace(
+            test=self,
+            player=model.player,
+            game_map=model.game_map,
+            object=lambda name, required=False: model.game_map.getObjectByName(name),
+            call=lambda owner, method, *args: getattr(owner, method)(*args),
+            string=model.game_map.getStringProperty,
+            number=model.game_map.getNumericProperty,
+            flag=model.game_map.getBoolProperty,
+            gold=model.player.getGold,
+            questNames=lambda: [quest.getTypeId() for quest in model.player.getQuests()],
+            choose=choose,
+        )
+        planner = routes.QuestRoute(driver)
+
+        def contact(name):
+            actor = model.game_map.getObjectByName(name)
+            self.assertIsNotNone(actor)
+            contacts.append(name)
+            model.dialog(actor)  # Model contact only; real routes still use authored travel and movement.
+
+        planner.contact = contact
+        return model, driver, planner, choices, contacts
+
+    def testJalanthaQuestRouteRequestsPaidAudienceBeforeResolvingItsScriptedGiver(self):
+        model, driver, planner, choices, contacts = self.jalanthaAudienceModel()
+        self.assertIsNone(driver.object("cityAr0609ScriptActorJalant"))
+        planner.accept("jalanthaBook")
+        self.assertEqual(
+            [
+                ("cityAr0300Actor28", "acceptMarekPoison"),
+                ("cityAr0609Actor1", "requestJalanthaAudience"),
+                ("cityAr0609ScriptActorJalant", "acceptJalanthaBook"),
+            ],
+            choices,
+        )
+        self.assertEqual([actor for actor, _ in choices], contacts)
+        self.assertEqual(50, driver.gold())
+        self.assertTrue(driver.flag("plugin_cityFlag_jalanthaSummoned"))
+        actual = driver.object("cityAr0609ScriptActorJalant")
+        self.assertEqual("JALANT", actual.getStringProperty("sourceCreature"))
+        self.assertEqual("AR0609", actual.getStringProperty("sourceArea"))
+        self.assertEqual("PUMBERL.DLG#spawn0", actual.getStringProperty("sourceSpawnFact"))
+        self.assertEqual((195, 74, 3), tuple(vars(actual.getCoords()).values()))
+        self.assertEqual("active", routes.state(driver, "marekPoison"))
+        self.assertEqual("active", routes.state(driver, "jalanthaBook"))
+        self.assertEqual([actual.getName()], decodeCityData(model.clock.getStringProperty("plugin_citySpawnedActors")))
+
+    def testJalanthaQuestRouteReusesAnAudienceWithoutAnotherChargeOrActor(self):
+        model, driver, planner, choices, _contacts = self.jalanthaAudienceModel()
+        planner.contact("cityAr0609Actor1")
+        driver.choose("cityAr0609Actor1Dialog", "requestJalanthaAudience")
+        actual = driver.object("cityAr0609ScriptActorJalant")
+        choices.clear()
+        planner.accept("jalanthaBook")
+        planner.accept("jalanthaBook")
+        self.assertEqual(50, driver.gold())
+        self.assertIs(actual, driver.object(actual.getName()))
+        self.assertEqual(
+            [("cityAr0300Actor28", "acceptMarekPoison"), (actual.getName(), "acceptJalanthaBook")], choices
+        )
+        self.assertEqual([actual.getName()], decodeCityData(model.clock.getStringProperty("plugin_citySpawnedActors")))
+        self.assertEqual(1, driver.questNames().count("cityJalanthaBookQuest"))
+
+    def testJalanthaQuestRouteDoesNotBypassAudienceRefusalOrResurrectMissingGiver(self):
+        for refusal in ("poor", "wrongPriest", "missingAfterAudience"):
+            with self.subTest(refusal=refusal):
+                model, driver, planner, choices, _contacts = self.jalanthaAudienceModel()
+                if refusal == "poor":
+                    model.player.addGold(-51)
+                elif refusal == "wrongPriest":
+                    driver.object("cityAr0609Actor1").setStringProperty("sourceCreature", "PUMBER2")
+                else:
+                    planner.contact("cityAr0609Actor1")
+                    driver.choose("cityAr0609Actor1Dialog", "requestJalanthaAudience")
+                    model.game_map.removeObject(driver.object("cityAr0609ScriptActorJalant"))
+                before = driver.gold()
+                with self.assertRaises(AssertionError):
+                    planner.accept("jalanthaBook")
+                self.assertEqual(before, driver.gold())
+                self.assertEqual("notStarted", routes.state(driver, "jalanthaBook"))
+                self.assertNotIn("cityJalanthaBookQuest", driver.questNames())
+                self.assertIsNone(driver.object("cityAr0609ScriptActorJalant"))
+                self.assertNotIn(("cityAr0609ScriptActorJalant", "acceptJalanthaBook"), choices)
+
+    def testOtherQuestAcceptanceDoesNotRequestOrChargeForJalanthaAudience(self):
+        _model, driver, planner, choices, _contacts = self.jalanthaAudienceModel()
+        planner.accept("marekPoison")
+        self.assertEqual([("cityAr0300Actor28", "acceptMarekPoison")], choices)
+        self.assertEqual(100, driver.gold())
+        self.assertFalse(driver.flag("plugin_cityFlag_jalanthaSummoned"))
+        self.assertIsNone(driver.object("cityAr0609ScriptActorJalant"))
+
     def testComponentAwarePlanningHasBoundedExpansionAndCellWork(self):
         geometry = routes.documents()["geometry"]
         walkable, portals = routes.cityMovementCells()
@@ -658,7 +786,11 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
-            },
+                "baldurs-gate-seven-suns-five-deaths",
+            }
+            | {case.id for case in routes.sevenSunsWarningCases()}
+            | {case.id for case in routes.sevenSunsMerchantCases()}
+            | {case.id for case in routes.generatedQuestCases() if case.isolated_gui},
             set(cases),
         )
         covered = {branch for case in cases.values() for branch in case.branches}
@@ -673,7 +805,11 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             self.assertIn("d.chooseUi", source)
             self.assertIn("saveAndReload", source)
             self.assertIn("itemInstances", source)
-        self.assertFalse(any(case.isolated_gui for case in routes.generatedQuestCases()))
+        self.assertEqual(
+            {case.run.keywords["key"] for case in routes.generatedQuestCases() if case.isolated_gui},
+            set(routes.sevenSunsUiQuestIds()),
+        )
+        self.assertFalse(any(case.isolated_gui for case in routes.generatedStoreCases()))
 
     def testCityHasNaturalRoutePlansForAllFiveExistingHeroClasses(self):
         self.assertEqual(set(PLAYER_CLASSES), {hero for case in routes.CASES for hero in case.classes})
@@ -724,6 +860,21 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertTrue(all("pending" in entry["reason"] for entry in routes.PENDING_GAMEPLAY_OBLIGATIONS.values()))
         self.assertFalse(ledger["acceptanceReady"])
         self.assertFalse(ledger["originalParityEstablished"])
+
+    def testWarningPendingEntriesReferenceRetainedLedgerIdsAndStatuses(self):
+        ledger = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_ledger.json").read_text(encoding="utf-8"))
+        by_id = {entry["id"]: entry for entry in ledger["entries"]}
+        for suffix, source_id in (
+            ("originalSourceAndExternalEntries", "DOPPSM.DLG:behavior"),
+            ("nativeOwnerAcceptance", "AR0601#actor2"),
+        ):
+            with self.subTest(boundary=suffix):
+                pending = routes.PENDING_GAMEPLAY_OBLIGATIONS[routes.SEVEN_SUNS_WARNING_PREFIX + suffix]
+                self.assertEqual(source_id, pending["sourceId"])
+                self.assertEqual("tests/fixtures/baldurs_gate_city_ledger.json", pending["ledger"])
+                self.assertEqual(by_id[source_id]["implementation"]["status"], pending["implementationStatus"])
+                self.assertIn("pending", pending["reason"])
+                self.assertEqual("pending", by_id[source_id]["testStatus"]["native"])
 
     def testRouteCodeCannotSetProgressMoveActorsDirectlyOrAnswerNativeChoiceByFixture(self):
         tree = ast.parse((ROOT / "tests/gameplay_routes_baldurs_gate.py").read_text(encoding="utf-8"))

@@ -101,6 +101,29 @@ class BindingSourceLayoutTest(unittest.TestCase):
                 digest = hashlib.sha256(registrationTokens(body).encode()).hexdigest()
                 self.assertEqual(group["registrationTokenSha256"], digest)
 
+    def testSevenSunsWarningExposesOnlyTheReadonlyCompiledCapabilityQuery(self):
+        source = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        gui_binding = source.split("py::class_<CGuiHandler,", 1)[1].split("py::class_<", 1)[0]
+        capability = registrationTokens(
+            '.def("supportsSevenSunsWarning", &CGuiHandler::supportsSevenSunsWarning, '
+            '"Whether the compiled finite Seven Suns warning UI-flow service is available.")'
+        )
+        self.assertEqual(1, registrationTokens(gui_binding).count(capability))
+        header = registrationTokens((ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8"))
+        self.assertEqual(1, header.count(registrationTokens("bool supportsSevenSunsWarning() const { return true; }")))
+        self.assertNotRegex(
+            gui_binding,
+            r'\.def(?:_static)?\(\s*"(?:begin|advance|end)SevenSunsWarning"',
+        )
+
+    def testSevenSunsMerchantsExposeOnlyTheReadonlyFixedServiceCapability(self):
+        source = (ROOT / "src/core/bindings/CModuleWorld.cpp").read_text(encoding="utf-8")
+        tokens = registrationTokens(source)
+        self.assertEqual(1, tokens.count('.def("supportsSevenSunsMerchants",&CGuiHandler::supportsSevenSunsMerchants,'))
+        self.assertNotRegex(tokens, r'\.def(?:_static)?\("(?:begin|advance|end|settle)SevenSunsMerchant')
+        header = registrationTokens((ROOT / "src/handler/CGuiHandler.h").read_text(encoding="utf-8"))
+        self.assertIn("boolsupportsSevenSunsMerchants()const;", header)
+
     def testAlliedCombatBindingsConvertAllThreeParticipantsWithoutChangingLegacyCalls(self):
         source = (ROOT / "src/core/bindings/CModuleServices.cpp").read_text(encoding="utf-8")
         for name, native_name in (

@@ -131,7 +131,13 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "loserDescription); requireDefeatCurrent(); "
+            "loserDescription); requireDefeatCurrent(); const bool sevenSunsReplacement = "
+            "CSevenSunsMerchantDialogue::isSettledReplacement(expectedGame.lock(), encounterMap, b, "
+            "requireDefeatCurrent); requireDefeatCurrent();",
+            text,
+        )
+        self.assertIn(
+            "if (sevenSunsReplacement) { a->addExp(420); } else { "
             'const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp"); '
             "requireDefeatCurrent();",
             text,
@@ -146,13 +152,26 @@ class DefeatContinuationSourceTest(unittest.TestCase):
         self.assertIn(
             "if (sourceKillXp >= 0) { a->addExp(sourceKillXp); } else { "
             "const auto rewardScale = b->getScale(); requireDefeatCurrent(); a->addExpScaled(rewardScale); "
-            "} requireDefeatCurrent();",
+            "} } requireDefeatCurrent();",
             text,
         )
         guard = self.requiredBlock(self.body, "const auto requireDefeatCurrent =")
         self.assertIn("!a->isAlive() || b->isAlive()", guard)
         self.assertIn("!is_registered_on_map(encounterMap, a)", guard)
         self.assertIn("!is_registered_on_map(encounterMap, b)", guard)
+
+    def testCertifiedSevenSunsRewardPrecedesOptionalSourceXp(self):
+        certified = self.requiredBlock(self.body, "if (sevenSunsReplacement)")
+        self.assertEqual(1, certified.count("a->addExp(420);"))
+        self.assertNotIn("sourceKillXp", certified)
+        fallback_start = self.body.index(certified) + len(certified)
+        fallback = self.requiredBlock(self.body[fallback_start:], "else")
+        self.assertIn('getBoolProperty("plugin_citySourceKillXp")', fallback)
+        self.assertIn("sourceKillXpPolicy && !playerDefeat", fallback)
+        self.assertIn("a->addExp(sourceKillXp);", fallback)
+        self.assertIn("a->addExpScaled(rewardScale);", fallback)
+        self.assertNotIn("a->addExp(420);", fallback)
+        self.assertEqual(1, self.body.count("CSevenSunsMerchantDialogue::isSettledReplacement("))
 
     def testGatheringAndItemMetadataAreCheckedBeforeTransfer(self):
         text = " ".join(self.body.split())
