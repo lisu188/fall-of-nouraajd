@@ -87,6 +87,28 @@ class BindingSourceLayoutTest(unittest.TestCase):
                     self.assertIn(imported.name + ".", prefixes)
                     self.assertIn(imported.asname, deleted)
 
+    def testNativeCombatBindingAdditionsPreserveEveryOriginalRegistrationToken(self):
+        source = (ROOT / "src/core/bindings/CModuleCreatures.cpp").read_text(encoding="utf-8")
+        tokens = registrationTokens(registrationBody(source, "bindCreatures"))
+        additions = (
+            '.def("hurtVictim", py::overload_cast<int>(&CEffect::hurtVictim))',
+            '.def("hurtVictim", py::overload_cast<float>(&CEffect::hurtVictim))',
+            '.def("hurtVictim", py::overload_cast<std::shared_ptr<CDamage>>(&CEffect::hurtVictim))',
+            '.def("getDmgFor", &CCreature::getDmgFor, py::arg("victim"), py::arg("allowCrit") = true)',
+            '.def("hurtFrom", py::overload_cast<std::shared_ptr<CCreature>, int>(&CCreature::hurtFrom))',
+            '.def("hurtFrom", py::overload_cast<std::shared_ptr<CCreature>, float>(&CCreature::hurtFrom))',
+            '.def("hurtFrom", py::overload_cast<std::shared_ptr<CCreature>, std::shared_ptr<CDamage>>(&CCreature::hurtFrom))',
+        )
+        for declaration in additions:
+            addition = registrationTokens(declaration)
+            self.assertEqual(1, tokens.count(addition), declaration)
+            tokens = tokens.replace(addition, "", 1)
+        self.assertEqual(
+            "65258021df8f67cc5ffb72e1131a5d59209e323b6e62aefb9016d1f113f8b1e0",
+            hashlib.sha256(tokens.encode()).hexdigest(),
+            "The seven reviewed additive APIs must preserve every original binding token and its order",
+        )
+
     def testRegistrationContractPreservesSignaturesDefaultsAliasesAndOrder(self):
         # This is a reviewed compatibility fixture, not a generated expected value from the implementation.
         # Intentional binding API changes must update the fixture alongside their runtime contract tests.
