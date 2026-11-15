@@ -1,0 +1,53 @@
+{
+  "boundary": "Static property/generator equivalence only; no native compile or runtime claim.",
+  "entries": [
+    {
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "originalBlob": "e1bea3909cf0eee7e9747634da4aeca6f130903c",
+      "path": "src/Stats.h",
+      "provenance": "Unverified missing Stats/Damage header reconstruction; preserves intact #257 9fc9416b1025044633a6b789212f67c56ecaafba:src/Stats.h public methods/property-accessor blocks and expands _Stats/_Damage using that commit classes.json, preprocessor.py and exact PROP getter/setter/zero-initialization semantics from src/Util.h. The next original commit #258 removes classes.json/preprocessor.py/macro.conf; donor gen/prop.h dependency is therefore absent. All 17 Stats and 5 Damage real Q_PROPERTY fields preserved; no stand-in classes or fake values. Native compilation/runtime still required.",
+      "sha256": "269a462a2f05c7e2290fc101a743732ad81f8672f12850531b167662975796fc",
+      "source": "recovery/payloads/reconstructions/e1/e1bea3909cf0eee7e9747634da4aeca6f130903c-Stats.h",
+      "stagedSha256": "269a462a2f05c7e2290fc101a743732ad81f8672f12850531b167662975796fc"
+    }
+  ],
+  "evidence": [
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "path": "src/Stats.h",
+      "sha256": "1c7d36421d0480273e019629aa5647eb95950d6d01ffc90d7f8327787a91534b"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "path": "src/Stats.cpp",
+      "sha256": "786df0871fa1760058f39167980584c230d8caea2543e94bd7590d5b5101ad52"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "path": "src/Util.h",
+      "sha256": "e1f5b78c6b071e80421a665883a37281a7d4f57dfc34f5cbf681b2fe97ddd9e5"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "path": "classes.json",
+      "sha256": "174a45a1ed4bc03b5359c17205da277413ab292fe52d87a9b58afbec5353d252"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "path": "preprocessor.py",
+      "sha256": "99341552a9d300e4374ad2efe3d74127e78bb91d4ce259b6aa59ea9cc4db275f"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "path": "macro.conf",
+      "sha256": "bed7706eb9398b225ab72df55537dcab98e78da80766ed884ea7d52fd4213ce3"
+    }
+  ],
+  "schemaVersion": 1,
+  "staticChecks": {
+    "DamageProperties": 5,
+    "StatsProperties": 17,
+    "propertyDescriptorsMatchOriginalGeneratorInput": true,
+    "removedGeneratedDependency": "../gen/prop.h"
+  }
+}
