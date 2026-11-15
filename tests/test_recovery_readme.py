@@ -11,7 +11,7 @@ import unittest
 
 from scripts.recovery_readme import snapshotDocumentation
 from scripts import history_source_prep
-from scripts.verify_history import REQUIRED_CHECKS, VerificationError
+from scripts.verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError
 from tests.test_history_smoke import pngBytes
 
 
@@ -72,6 +72,50 @@ class RecoveryReadmeTest(unittest.TestCase):
         self.assertEqual("startup.png", metadata["smoke"]["startup"]["frame"]["path"])
         self.assertEqual("/original/build/startup.png", self.report["smoke"]["startup"]["frame"]["path"])
 
+    def editorReport(self):
+        self.report["startupMode"] = "editor"
+        self.report["startupSelection"] = {
+            "mode": "editor",
+            "originalInputs": [
+                {"path": name, "blob": "d" * 40, "sha256": "e" * 64} for name in ("main.cpp", "config/init.json")
+            ],
+        }
+        startup = self.report["smoke"]["startup"]
+        startup.update(mode="editor", checks={name: True for name in EDITOR_CHECKS})
+        (self.evidence / "startup.json").write_text(json.dumps(startup))
+
+    def testAuthoredEditorDocumentationStatesItsValidationBoundary(self):
+        self.editorReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        readme = files["README.md"].decode()
+        self.assertIn("# Recovered editor snapshot", readme)
+        self.assertIn("Gameplay and player behavior were not verified", readme)
+        self.assertNotIn("healthy player", readme)
+        self.assertIn("config/init.json", readme)
+
+    def testEditorDocumentationRequiresOriginalEntrypointAndConfigurationPins(self):
+        self.editorReport()
+        for change in ("mode", "missing", "hash", "duplicate"):
+            with self.subTest(change=change):
+                report = copy.deepcopy(self.report)
+                selection = report["startupSelection"]
+                if change == "mode":
+                    selection["mode"] = "game"
+                elif change == "missing":
+                    selection["originalInputs"].pop()
+                elif change == "hash":
+                    selection["originalInputs"][0]["sha256"] = "bad"
+                else:
+                    selection["originalInputs"].append(selection["originalInputs"][0])
+                with self.assertRaises(VerificationError):
+                    snapshotDocumentation(report, self.evidence)
+
+    def testEditorModeCannotReplaceGameReadinessInDocumentation(self):
+        self.editorReport()
+        self.report["startupMode"] = "game"
+        with self.assertRaises(VerificationError):
+            snapshotDocumentation(self.report, self.evidence)
+
     def testReviewedForcedIncludeRemainsOnePortableQmakeArgument(self):
         flag = "QMAKE_CXXFLAGS+=-include functional"
         self.report["recipe"]["qmakeArguments"] = ["QMAKE_CXX=g++-5", flag]
@@ -82,12 +126,24 @@ class RecoveryReadmeTest(unittest.TestCase):
             shlex.split(line),
         )
 
+    def testReviewedProviderIncludePreservesLiteralQmakeExpansion(self):
+        flag = "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"
+        self.report["recipe"]["qmakeArguments"] = [flag]
+        files = snapshotDocumentation(self.report, self.evidence)
+        line = next(line for line in files["README.md"].decode().splitlines() if line.startswith("qmake "))
+        self.assertEqual(
+            ["qmake", "Game.pro", flag, "-after", "TARGET=RecoveryGame", "DESTDIR=."],
+            shlex.split(line),
+        )
+
     def testUnreviewedCompilerWhitespaceAndShellFragmentsAreRejected(self):
         for flag in (
             "QMAKE_CXXFLAGS+=-include unreviewed",
             "QMAKE_CXXFLAGS+=-include functional;id",
             "QMAKE_CXXFLAGS+=$(id)",
             "QMAKE_CXXFLAGS+=`id`",
+            "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider;id",
+            "INCLUDEPATH+=$(id)/provider",
             "QMAKE_CXXFLAGS+=-include functional\nid",
         ):
             with self.subTest(flag=flag):

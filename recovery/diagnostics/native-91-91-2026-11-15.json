@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "commit": "10d313da2d8f48f7ca90baa3655a479a80e66e30",
+      "firstCatalogOrder": 91,
+      "originalBlob": "5ea3a7f4a76e7f59c250e0141efd1745b4f3fd06",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #90 Map reconstruction to genuine #91 mapObjects std::set: set iterators/copies, insertion, erase and membership. No source-derived additional behavior change identified; original internal delta unavailable. Existing inferred JSON schema, factory and showAll provenance retained.",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "recovery/payloads/reconstructions/5e/5ea3a7f4a76e7f59c250e0141efd1745b4f3fd06-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 1,
+      "game": 0
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "283fdc4794a167a842e2c19be277507454e97f01923605527cc07f942e4d058f",
+        "sourceCommit": "10d313da2d8f48f7ca90baa3655a479a80e66e30",
+        "sourceTree": "5c81e58140bb504b054695985652e93033bda7a5",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

@@ -483,13 +483,25 @@ def progress() -> None:
                 continue
             if report.get("restoration", {}).get("restoredFilesFingerprint") != current:
                 continue
+            try:
+                startup_mode = vh.verifiedStartupMode(report)
+                startup = vh.validateSmokeReport(
+                    report_path.parent / "startup.json", report_path.parent, startup_mode, portable=True
+                )
+                if startup != report.get("smoke", {}).get("startup"):
+                    continue
+            except vh.VerificationError:
+                continue
             item = {
                 "originalCommit": commit,
                 "originalTree": report["sourceTree"],
                 "evidence": report_path.parent.relative_to(REPO).as_posix(),
                 "restoredFilesFingerprint": current,
                 "toolchainImage": image_id,
-                "validation": "build-and-startup-passed",
+                "startupMode": startup_mode,
+                "validation": (
+                    "build-and-editor-startup-passed" if startup_mode == "editor" else "build-and-startup-passed"
+                ),
                 "published": False,
             }
             old = published.get(commit)
@@ -511,6 +523,12 @@ def progress() -> None:
         "targetTreeCount": len(CATALOG["trees"]),
         "validatedCommitCount": len(snapshots),
         "validatedTreeCount": len(trees),
+        "validatedGameCommitCount": sum(item["startupMode"] == "game" for item in snapshots),
+        "validatedGameTreeCount": len({item["originalTree"] for item in snapshots if item["startupMode"] == "game"}),
+        "validatedEditorCommitCount": sum(item["startupMode"] == "editor" for item in snapshots),
+        "validatedEditorTreeCount": len(
+            {item["originalTree"] for item in snapshots if item["startupMode"] == "editor"}
+        ),
         "publishedCommitCount": sum(1 for item in snapshots if item["published"]),
         "snapshots": snapshots,
     }

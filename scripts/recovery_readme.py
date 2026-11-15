@@ -13,9 +13,15 @@ import re
 import shlex
 
 try:
-    from scripts.verify_history import REQUIRED_CHECKS, VerificationError, validatePng
+    from scripts.verify_history import (
+        EDITOR_CHECKS,
+        REQUIRED_CHECKS,
+        VerificationError,
+        validatePng,
+        verifiedStartupMode,
+    )
 except ModuleNotFoundError:
-    from verify_history import REQUIRED_CHECKS, VerificationError, validatePng
+    from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
 
 
 def requireIdentity(value, length, name):
@@ -147,9 +153,16 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     startup = smoke.get("startup", {})
     if startup.get("schemaVersion") != 1 or startup.get("status") != "ready":
         raise VerificationError("Recovered README requires the game's readiness report")
+    mode = verifiedStartupMode(report)
+    editor = mode == "editor"
     checks = startup.get("checks", {})
-    if any(checks.get(name) is not True for name in REQUIRED_CHECKS):
-        raise VerificationError("Recovered screenshot lacks map/player/render readiness")
+    required = EDITOR_CHECKS if editor else REQUIRED_CHECKS
+    if (
+        not isinstance(checks, dict)
+        or any(checks.get(name) is not True for name in required)
+        or (editor and "player" in checks)
+    ):
+        raise VerificationError("Recovered screenshot lacks mode-specific map/render readiness")
     evidence_dir = Path(evidence_dir).resolve()
     frame_path = evidence_dir / "startup.png"
     width, height = validatePng(frame_path)
@@ -204,7 +217,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             description = str(entry.get("provenance", "Recorded reconstructed replacement")).replace("\n", " ")
             provenance.append(f"- `{path}`: {description}")
     compiler_flags = report.get("recipe", {}).get("qmakeArguments", [])
-    reviewed_flags = {"QMAKE_CXXFLAGS+=-include functional"}
+    reviewed_flags = {"QMAKE_CXXFLAGS+=-include functional", "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"}
     if any(
         not isinstance(flag, str) or (flag not in reviewed_flags and not re.fullmatch(r"[A-Za-z0-9_+=./:-]+", flag))
         for flag in compiler_flags
@@ -218,7 +231,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     if include_preparation:
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
-        "# Recovered game snapshot",
+        f"# Recovered {mode} snapshot",
         "",
         f"Original commit: `{commit}`. Original tree: `{tree}`.",
         *(
@@ -227,10 +240,23 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             else []
         ),
         "",
-        "This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,",
-        "loaded its map and a healthy player, rendered the screenshot below, and exited normally.",
+        f"This recovered version compiled and linked on Linux, started the real {mode} on an isolated Xvfb display,",
+        (
+            "loaded its editor map, rendered the screenshot below, and exited normally."
+            if editor
+            else "loaded its map and a healthy player, rendered the screenshot below, and exited normally."
+        ),
+        *(
+            [
+                "Gameplay and player behavior were not verified. The surviving original `main.cpp` and",
+                "`config/init.json` selected the editor; their Git blob and SHA256 identities are recorded in",
+                "the attached verification metadata. The original entrypoint and configuration are preserved.",
+            ]
+            if editor
+            else []
+        ),
         "",
-        "![Actual startup of this recovered game](recovery/startup.png)",
+        f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
         "",

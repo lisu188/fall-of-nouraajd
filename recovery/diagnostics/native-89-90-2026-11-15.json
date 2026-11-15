@@ -1,0 +1,70 @@
+{
+  "entries": [
+    {
+      "commit": "70853de2b2731491f046ef03d3cf1d8268d8ef4c",
+      "firstCatalogOrder": 89,
+      "originalBlob": "5ced7ba291f7e0f7a3cea8089d242538242ed640",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 669fa586f024267c725f11e4432a1855fad509d4 (previous version of map/map.cpp)",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "recovery/payloads/reconstructions/5c/5ced7ba291f7e0f7a3cea8089d242538242ed640-map.cpp"
+    },
+    {
+      "commit": "accbb098658a602e0bd9be83ce1b9365cb22140e",
+      "firstCatalogOrder": 90,
+      "originalBlob": "08aeed78ab6f70d9baae08051034c418f5cf24ab",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 5ced7ba291f7e0f7a3cea8089d242538242ed640 (previous version of map/map.cpp)",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "recovery/payloads/reconstructions/08/08aeed78ab6f70d9baae08051034c418f5cf24ab-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 2,
+      "game": 0
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0c9d2ceb129e196db6738c9c371d1664f1bc922c46e1d55693e4c79f14911a8d",
+        "sourceCommit": "70853de2b2731491f046ef03d3cf1d8268d8ef4c",
+        "sourceTree": "c8fe2b11c0260b6b687a071d4027442e960ead51",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "939d2d74b2c8537915a639019a63b7462702b0085aba4e98600211f2b3183b6a",
+        "sourceCommit": "accbb098658a602e0bd9be83ce1b9365cb22140e",
+        "sourceTree": "95e32b05391f590dfc370e375b7a5a339173e6c3",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}
