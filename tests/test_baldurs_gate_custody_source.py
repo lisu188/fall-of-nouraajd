@@ -463,11 +463,36 @@ class BaldursGateCustodySourceTest(unittest.TestCase):
         owner = m.object(NativeObject, "cityCustody")
         owner.updatePatrols = lambda: events.append("custody")
         m.clock.advanceTicks = lambda _count: events.append("ticks")
+        m.clock.settleSevenSunsMerchantsFlow = lambda: iter(events.append("merchants") or ())
         m.clock.observeRegionsFlow = lambda: iter([{"operation": "observed"}])
         m.world.setBoolProperty("plugin_cityInitialized", True)
         flow = m.clock.onTurnFlow(None)
         self.assertEqual({"operation": "observed"}, next(flow))
+        self.assertEqual(["ticks", "custody", "merchants"], events)
+        flow.close()
+
+    def testObservationWaitsForMerchantSettlementAfterCustody(self):
+        m, events = self.model, []
+        owner = m.object(NativeObject, "cityCustody")
+        owner.updatePatrols = lambda: events.append("custody")
+        m.clock.advanceTicks = lambda _count: events.append("ticks")
+
+        def settleMerchants():
+            yield {"operation": "merchantSettlement"}
+            events.append("settled")
+
+        def observeRegions():
+            events.append("observation")
+            yield {"operation": "observed"}
+
+        m.clock.settleSevenSunsMerchantsFlow = settleMerchants
+        m.clock.observeRegionsFlow = observeRegions
+        m.world.setBoolProperty("plugin_cityInitialized", True)
+        flow = m.clock.onTurnFlow(None)
+        self.assertEqual({"operation": "merchantSettlement"}, next(flow))
         self.assertEqual(["ticks", "custody"], events)
+        self.assertEqual({"operation": "observed"}, flow.send(None))
+        self.assertEqual(["ticks", "custody", "settled", "observation"], events)
         flow.close()
 
     def testFullRestrictedPluginLoadUsesConstructibleBaseAndActualDecorators(self):

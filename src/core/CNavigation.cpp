@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cmath>
+#include <condition_variable>
 
 namespace {
 constexpr std::int64_t NAVIGATION_INFINITE_COST = std::numeric_limits<std::int64_t>::max() / 4;
@@ -452,9 +453,11 @@ struct CNavigationService::Data {
     std::shared_ptr<CNavigationBudget> budget;
     CNavigationFlow flow;
     mutable std::recursive_mutex mutex;
+    std::condition_variable_any workspaceAvailable;
     std::pmr::vector<std::shared_ptr<MapState>> maps;
     std::array<WorkspaceSlot, 4> workspaces;
     std::atomic_size_t searches{0};
+    std::atomic_size_t ownerThreadSearches{0};
     bool registered = false;
     Data(std::shared_ptr<CNavigationBudget> budget)
         : budget(std::move(budget)), flow(this->budget), maps(this->budget.get()) {}
@@ -480,6 +483,9 @@ std::shared_ptr<CNavigationService> CNavigationService::forMap(const std::shared
 }
 std::shared_ptr<CNavigationBudget> CNavigationService::budget() const { return data->budget; }
 std::size_t CNavigationService::searchCount() const { return data->searches.load(std::memory_order_relaxed); }
+std::size_t CNavigationService::ownerThreadSearchCount() const {
+    return data->ownerThreadSearches.load(std::memory_order_relaxed);
+}
 CNavigationFlowStatistics CNavigationService::flowStatistics() const { return data->flow.statistics(); }
 void CNavigationService::trimCaches() {
     while (data->flow.evictUnused()) {
@@ -581,8 +587,8 @@ std::optional<std::pmr::vector<Coords>> CNavigationService::changesSince(const s
     }
     return result;
 }
-CNavigationSearchResult CNavigationService::findPathResult(const std::shared_ptr<CMap> &map, Coords start,
-                                                           Coords goal) {
+CNavigationSearchResult CNavigationService::findPathResult(const std::shared_ptr<CMap> &map, Coords start, Coords goal,
+                                                           std::stop_token stop, bool waitForWorkspace) {
     auto failure = [&](CNavigationSearchStatus status) {
         CNavigationSearchResult result(data->budget);
         result.status = status;
@@ -590,19 +596,27 @@ CNavigationSearchResult CNavigationService::findPathResult(const std::shared_ptr
         return result;
     };
     for (int attempt = 0; attempt < 2; ++attempt) {
+        if (stop.stop_requested())
+            return failure(CNavigationSearchStatus::Cancelled);
         Data::WorkspaceSlot *slot = nullptr;
         try {
             auto graph = snapshot(map);
             if (!graph)
                 return failure(map ? CNavigationSearchStatus::Cancelled : CNavigationSearchStatus::InvalidInput);
             {
-                std::lock_guard lock(data->mutex);
-                for (auto &candidate : data->workspaces)
-                    if (!candidate.inUse) {
-                        slot = &candidate;
-                        slot->inUse = true;
-                        break;
-                    }
+                std::unique_lock lock(data->mutex);
+                auto acquireWorkspace = [&] {
+                    for (auto &candidate : data->workspaces)
+                        if (!candidate.inUse) {
+                            slot = &candidate;
+                            slot->inUse = true;
+                            return true;
+                        }
+                    return false;
+                };
+                if (!acquireWorkspace() && waitForWorkspace &&
+                    !data->workspaceAvailable.wait(lock, stop, acquireWorkspace))
+                    return failure(CNavigationSearchStatus::Cancelled);
             }
             if (!slot)
                 return failure(CNavigationSearchStatus::Deferred);
@@ -610,14 +624,21 @@ CNavigationSearchResult CNavigationService::findPathResult(const std::shared_ptr
                 Data *data;
                 Data::WorkspaceSlot *slot;
                 ~Release() {
-                    std::lock_guard lock(data->mutex);
-                    slot->inUse = false;
+                    {
+                        std::lock_guard lock(data->mutex);
+                        slot->inUse = false;
+                    }
+                    data->workspaceAvailable.notify_one();
                 }
             } release{data.get(), slot};
             if (!slot->workspace)
                 slot->workspace = std::make_unique<CNavigationSearchWorkspace>();
             data->searches.fetch_add(1, std::memory_order_relaxed);
-            auto result = CNavigationSearch::findPath(graph, start, goal, slot->workspace.get());
+            if (vstd::event_loop<>::instance()->isMainThread())
+                data->ownerThreadSearches.fetch_add(1, std::memory_order_relaxed);
+            CNavigationSearchLimits limits;
+            limits.stopToken = stop;
+            auto result = CNavigationSearch::findPath(graph, start, goal, slot->workspace.get(), limits);
             if (result.status == CNavigationSearchStatus::ResourceLimit && result.allocationDenied)
                 throw std::bad_alloc();
             if (!graph->isCurrent())

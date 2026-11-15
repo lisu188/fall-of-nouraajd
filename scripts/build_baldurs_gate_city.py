@@ -14,16 +14,19 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_source.json"
 QUESTS = ROOT / "tests/fixtures/baldurs_gate_city_quests.json"
 CUSTODY_SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_prison_source.json"
+MERCHANT_STOCK_SOURCE = ROOT / "tests/fixtures/baldurs_gate_seven_suns_stock.json"
 try:
     from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from scripts.build_baldurs_gate_city_relocations import buildRelocations
     from scripts.build_baldurs_gate_city_regions import buildRegions
     from scripts.build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
+    from scripts.build_baldurs_gate_merchant_stock import stockDefinitions
 except ModuleNotFoundError:
     from build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from build_baldurs_gate_city_relocations import buildRelocations
     from build_baldurs_gate_city_regions import buildRegions
     from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
+    from build_baldurs_gate_merchant_stock import stockDefinitions
 
 LANDMARKS = {
     "AR0002": "Temple of Helm",
@@ -183,6 +186,15 @@ def protectCityDefinitions(document):
         elif isinstance(row, list):
             pending.extend(row)
     return document
+
+
+def sevenSunsMerchantProperties(name, creature, source_creature):
+    lineages = ("cityAr0601Actor1", "cityAr0601Actor3", "cityAr0602Actor1", "cityAr0602Actor2")
+    if name not in lineages:
+        return {}
+    if creature != "DOPMER" or source_creature.get("allegiance") != 128:
+        raise ValueError("Reviewed Seven Suns merchant allegiance changed")
+    return {"sourceAllegiance": source_creature["allegiance"]}
 
 
 def definition(class_id, **properties):
@@ -652,6 +664,7 @@ def compileCity(source, quests=None):
                 ),
                 "gold": cre.get("gold", 0),
             }
+            props.update(sevenSunsMerchantProperties(name, actor["creature"], cre))
             if "LEAVECH7" in cre.get("scripts", []):
                 props.update(phaseMax=5, sourceDepartureScript="LEAVECH7")
             if actor.get("sourceGameNpc"):
@@ -1005,6 +1018,9 @@ def compileCity(source, quests=None):
     )
     place("cityCustody", usablePosition("AR0800", [3560, 1380], reserve=True))
     config["cityCustodyQuest"] = definition("BaldursGateCustodyQuest", description="The Flaming Fist pursuit")
+    config["citySevenSunsWarningLead"] = definition(
+        "BaldursGateSevenSunsWarningLeadQuest", description="Seven Suns: a merchant's warning"
+    )
     entry = usablePosition("AR0800", [3500, 1350], reserve=True)
     config["cityStart"] = definition(
         "BaldursGateStart", canStep=True, animation="images/misc/signpost", alwaysSimulate=True
@@ -1015,6 +1031,24 @@ def compileCity(source, quests=None):
         canStep=True,
         animation="images/ambient/street_lantern",
         alwaysSimulate=True,
+        sevenSunsMerchantDefinition=json.dumps(
+            {
+                "version": 1,
+                "dialogue": "DOPMER",
+                "fingerprint": "e0410b2b978573d0e921a63bf3a55fd53d49c291f556b6e0a045db63762030a7",
+                "stockContract": "doppss-native-v1",
+            },
+            separators=(",", ":"),
+        ),
+        sevenSunsWarningDefinition=json.dumps(
+            {
+                "version": 1,
+                "dialogue": "DOPPSM",
+                "fingerprint": "263ba285fac3cc7d486ce0c4223ce4af574b257b7ce224d8755b988906df6aac",
+                "journalQuest": "citySevenSunsWarningLead",
+            },
+            separators=(",", ":"),
+        ),
         areaAtlas=json.dumps(areas_metadata, separators=(",", ":")),
         activeSimulationRegion="AR0800",
         questDefinitions=json.dumps(quests, separators=(",", ":")),
@@ -1137,6 +1171,10 @@ def compileCity(source, quests=None):
         ],
         "sourceParityEstablished": False,
     }
+    stock_config = stockDefinitions(json.loads(MERCHANT_STOCK_SOURCE.read_text(encoding="utf-8")))
+    if set(config) & set(stock_config):
+        raise ValueError("Reviewed merchant stock IDs collide with existing city resources")
+    config.update(stock_config)
     protectCityDefinitions(config)
     return document, config, geometry
 

@@ -20,12 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CMapObject.h"
 #include "core/CGlobal.h"
 
+#include <memory>
+#include <optional>
+#include <vector>
+
 class CGame;
 
 class CCreature;
 
 class CTile : public CGameObject {
     friend class CMap;
+    friend class CGameObject;
     friend class CRandomMapGenerator;
 
     V_META(CTile, CGameObject, V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
@@ -76,6 +81,11 @@ class CTile : public CGameObject {
     bool step = false;
     int movementCost = 1;
     int posx = 0, posy = 0, posz = 0;
+    std::weak_ptr<CMap> terrainObserver;
+    std::unique_ptr<std::vector<std::weak_ptr<CMap>>> additionalTerrainObservers;
 
     void setXYZ(int x, int y, int z);
+    void addTerrainObserver(const std::shared_ptr<CMap> &map);
+    void removeTerrainObserver(const CMap *map);
+    void notifyTerrainChanged(std::optional<int> previousLevel = std::nullopt);
 };
