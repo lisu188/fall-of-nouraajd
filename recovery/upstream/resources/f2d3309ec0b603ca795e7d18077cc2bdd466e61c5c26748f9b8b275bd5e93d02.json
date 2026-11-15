@@ -1,0 +1,751 @@
+{
+  "AbyssalShadows": {
+    "anim": "images/interactions/abyssalshadows",
+    "effect": "AbyssalShadowsEffect",
+    "manaCost": 15
+  },
+  "AbyssalShadowsEffect": {
+    "duration": 4,
+    "handler": "CTypeHandler"
+  },
+  "ArmorOfEndlessWinter": {
+    "anim": "images/interactions/armorofendlesswinter",
+    "effect": "ArmorOfEndlessWinterEffect",
+    "manaCost": 60
+  },
+  "ArmorOfEndlessWinterEffect": {
+    "buff": true,
+    "duration": 3,
+    "handler": "CTypeHandler"
+  },
+  "Assasin": {
+    "actions": [
+      "Attack"
+    ],
+    "class": "Player",
+    "coords": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "exp": 0,
+    "hp": 70,
+    "initStats": {
+      "agility": 10,
+      "armor": 0,
+      "attack": 0,
+      "block": 0,
+      "crit": 5,
+      "damage": 0,
+      "dmgMax": 3,
+      "dmgMin": 1,
+      "fireResist": 0,
+      "frostResist": 0,
+      "hit": 75,
+      "intelligence": 10,
+      "main": "A",
+      "normalResist": 0,
+      "shadowResist": 0,
+      "stamina": 10,
+      "strength": 10,
+      "thunderResist": 0
+    },
+    "isPlayer": true,
+    "level": 1,
+    "levelStats": {
+      "agility": 1,
+      "crit": 1,
+      "dmgMax": 1,
+      "dmgMin": 1,
+      "hit": 1,
+      "intelligence": 1,
+      "stamina": 1,
+      "strength": 1
+    },
+    "mana": 70,
+    "path": "images/players/assasin/",
+    "sw": 0,
+    "type": "Player"
+  },
+  "Attack": {
+    "anim": "images/interactions/attack",
+    "tooltip": "Standard Attack"
+  },
+  "Backstab": {
+    "anim": "images/interactions/backstab",
+    "manaCost": 40
+  },
+  "Barrier": {
+    "anim": "images/interactions/barrier",
+    "manaCost": 17
+  },
+  "BarrierEffect": {
+    "buff": true,
+    "duration": 3,
+    "handler": "CTypeHandler"
+  },
+  "BeachTile": {
+    "animation": "images/tiles/beach",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/beach",
+    "type": "Tile"
+  },
+  "BloodThirst": {
+    "anim": "images/interactions/bloodthirst",
+    "manaCost": 35
+  },
+  "Bloodlash": {
+    "anim": "images/interactions/bloodlash",
+    "manaCost": 30
+  },
+  "BloodlashEffect": {
+    "duration": 3,
+    "handler": "CTypeHandler"
+  },
+  "Cave": {
+    "animation": "images/buildings/cave",
+    "chance": 15,
+    "class": "Cave",
+    "enabled": true,
+    "handler": "PyTypeHandler",
+    "monster": "Pritz",
+    "monsters": 5,
+    "path": "images/buildings/cave/",
+    "type": "Cave"
+  },
+  "ChaosBlast": {
+    "anim": "images/interactions/chaosblast",
+    "manaCost": 150
+  },
+  "ChestPlateOfTheNorth": {
+    "animation": "images/items/armors/chestplateofnorth",
+    "bonus": {
+      "agility": 8,
+      "armor": 375,
+      "block": 2,
+      "intelligence": 4,
+      "stamina": 15,
+      "strength": 12
+    },
+    "class": "Armor",
+    "handler": "CTypeHandler",
+    "path": "images/items/armors/chestplateofnorth/",
+    "power": 15,
+    "type": "Armor"
+  },
+  "Chloroform": {
+    "anim": "images/interactions/chloroform",
+    "manaCost": 25
+  },
+  "ChloroformEffect": {
+    "duration": 4,
+    "handler": "CTypeHandler"
+  },
+  "CrownOfNightmares": {
+    "animation": "images/items/helmets/crownofnightmares",
+    "bonus": {
+      "agility": 7,
+      "armor": 280,
+      "crit": 5,
+      "intelligence": 12,
+      "stamina": 14,
+      "strength": 4
+    },
+    "class": "Helmet",
+    "handler": "CTypeHandler",
+    "path": "images/items/helmets/crownofnightmares/",
+    "power": 18,
+    "type": "Helmet"
+  },
+  "DeathStrike": {
+    "anim": "images/interactions/deathstrike",
+    "manaCost": 45
+  },
+  "DesertTile": {
+    "animation": "images/tiles/desert",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/desert",
+    "type": "Tile"
+  },
+  "Devour": {
+    "anim": "images/interactions/devour",
+    "manaCost": 75
+  },
+  "DoubleAttack": {
+    "anim": "images/interactions/doubleattack",
+    "manaCost": 50
+  },
+  "ElemStaff": {},
+  "EndlessPain": {
+    "anim": "images/interactions/endlesspain",
+    "manaCost": 25
+  },
+  "EndlessPainEffect": {
+    "duration": 2,
+    "handler": "CTypeHandler"
+  },
+  "EradicatorsBoots": {
+    "animation": "images/items/boots/eradicatorsboots",
+    "bonus": {
+      "agility": 0,
+      "armor": 170,
+      "intelligence": 7,
+      "stamina": 8,
+      "strength": 10
+    },
+    "class": "Boots",
+    "handler": "CTypeHandler",
+    "path": "images/items/boots/eradicatorsboots/",
+    "power": 14,
+    "type": "Boots"
+  },
+  "Event": {
+    "class": "Event",
+    "handler": "CTypeHandler",
+    "type": "Event"
+  },
+  "FrostBolt": {
+    "anim": "images/interactions/frostbolt",
+    "manaCost": 20
+  },
+  "FullLifePotion": {
+    "animation": "images/items/potions/life",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/life/",
+    "power": 5,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "FullManaPotion": {
+    "animation": "images/items/potions/mana",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/mana/",
+    "power": 5,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "GlovesOfTheAssasin": {
+    "animation": "images/items/gloves/glovesoftheassasin",
+    "bonus": {
+      "agility": 15,
+      "armor": 295,
+      "crit": 2,
+      "intelligence": 9,
+      "stamina": 13,
+      "strength": 8
+    },
+    "class": "Gloves",
+    "handler": "CTypeHandler",
+    "path": "images/items/gloves/glovesoftheassasin/",
+    "power": 11,
+    "type": "Gloves"
+  },
+  "GrassTile": {
+    "animation": "images/tiles/grass",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/grass",
+    "type": "Tile"
+  },
+  "GreaterLifePotion": {
+    "animation": "images/items/potions/life",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/life/",
+    "power": 3,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "GreaterManaPotion": {
+    "animation": "images/items/potions/mana",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/mana/",
+    "power": 3,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "GroundTile": {
+    "animation": "images/tiles/ground",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/ground",
+    "type": "Tile"
+  },
+  "LavaTile": {
+    "animation": "images/tiles/lava",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/lava",
+    "type": "Tile"
+  },
+  "LeatherArmor": {
+    "animation": "images/items/armors/leatherarmor",
+    "bonus": {
+      "agility": 5,
+      "armor": 10,
+      "block": 5,
+      "crit": 2,
+      "stamina": 2
+    },
+    "class": "Armor",
+    "handler": "CTypeHandler",
+    "path": "images/items/armors/leatherarmor/",
+    "type": "Armor"
+  },
+  "LesserLifePotion": {
+    "animation": "images/items/potions/life",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/life/",
+    "power": 1,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "LesserManaPotion": {
+    "animation": "images/items/potions/mana",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/mana/",
+    "power": 1,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "LethalPoison": {
+    "anim": "images/interactions/lethalpoison",
+    "manaCost": 20
+  },
+  "LethalPoisonEffect": {
+    "duration": 6,
+    "handler": "CTypeHandler"
+  },
+  "LifePotion": {
+    "animation": "images/items/potions/life",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/life/",
+    "power": 2,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "MagicMissile": {
+    "anim": "images/interactions/magicmissile",
+    "manaCost": 5,
+    "tooltip": "Magic Missile"
+  },
+  "ManaPotion": {
+    "animation": "images/items/potions/mana",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/mana/",
+    "power": 3,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "MaxLifePotion": {
+    "animation": "images/items/potions/life",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/life/",
+    "power": 4,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "MaxManaPotion": {
+    "animation": "images/items/potions/mana",
+    "class": "Potion",
+    "handler": "CTypeHandler",
+    "path": "images/items/potions/mana/",
+    "power": 4,
+    "singleUse": true,
+    "type": "Potion"
+  },
+  "MountainTile": {
+    "animation": "images/tiles/mountain",
+    "canStep": false,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/mountain",
+    "type": "Tile"
+  },
+  "Mutilation": {
+    "anim": "images/interactions/mutilation",
+    "manaCost": 15
+  },
+  "MutilationEffect": {
+    "duration": 3,
+    "handler": "CTypeHandler"
+  },
+  "OctoBogz": {
+    "actions": [
+      "Attack"
+    ],
+    "class": "Monster",
+    "coords": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "exp": 0,
+    "hp": 70,
+    "initStats": {
+      "agility": 10,
+      "armor": 0,
+      "attack": 0,
+      "block": 0,
+      "crit": 5,
+      "damage": 0,
+      "dmgMax": 3,
+      "dmgMin": 1,
+      "fireResist": 0,
+      "frostResist": 0,
+      "hit": 75,
+      "intelligence": 10,
+      "main": "S",
+      "normalResist": 0,
+      "shadowResist": 0,
+      "stamina": 10,
+      "strength": 10,
+      "thunderResist": 0
+    },
+    "isPlayer": false,
+    "level": 1,
+    "levelStats": {
+      "agility": 1,
+      "crit": 1,
+      "dmgMax": 1,
+      "dmgMin": 1,
+      "hit": 1,
+      "intelligence": 1,
+      "stamina": 1,
+      "strength": 1
+    },
+    "mana": 70,
+    "path": "images/monsters/octobogz/",
+    "sw": 2,
+    "type": "Monster"
+  },
+  "PlateArmor": {
+    "animation": "images/items/armors/platearmor",
+    "bonus": {
+      "armor": 10,
+      "block": 5,
+      "stamina": 3,
+      "strength": 4
+    },
+    "class": "Armor",
+    "handler": "CTypeHandler",
+    "path": "images/items/armors/platearmor/",
+    "type": "Armor"
+  },
+  "Pritz": {
+    "actions": [
+      "Attack"
+    ],
+    "class": "Monster",
+    "coords": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "exp": 0,
+    "hp": 70,
+    "initStats": {
+      "agility": 10,
+      "armor": 0,
+      "attack": 0,
+      "block": 0,
+      "crit": 5,
+      "damage": 0,
+      "dmgMax": 3,
+      "dmgMin": 1,
+      "fireResist": 0,
+      "frostResist": 0,
+      "hit": 75,
+      "intelligence": 10,
+      "main": "S",
+      "normalResist": 0,
+      "shadowResist": 0,
+      "stamina": 10,
+      "strength": 10,
+      "thunderResist": 0
+    },
+    "isPlayer": false,
+    "level": 1,
+    "levelStats": {
+      "agility": 1,
+      "crit": 1,
+      "dmgMax": 1,
+      "dmgMin": 1,
+      "hit": 1,
+      "intelligence": 1,
+      "stamina": 1,
+      "strength": 1
+    },
+    "mana": 70,
+    "path": "images/monsters/pritz/",
+    "sw": 2,
+    "type": "Monster"
+  },
+  "PritzMage": {
+    "actions": [
+      "Attack"
+    ],
+    "class": "Monster",
+    "coords": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "exp": 0,
+    "hp": 70,
+    "initStats": {
+      "agility": 10,
+      "armor": 0,
+      "attack": 0,
+      "block": 0,
+      "crit": 5,
+      "damage": 0,
+      "dmgMax": 3,
+      "dmgMin": 1,
+      "fireResist": 0,
+      "frostResist": 0,
+      "hit": 75,
+      "intelligence": 10,
+      "main": "I",
+      "normalResist": 0,
+      "shadowResist": 0,
+      "stamina": 10,
+      "strength": 10,
+      "thunderResist": 0
+    },
+    "isPlayer": false,
+    "level": 1,
+    "levelStats": {
+      "agility": 1,
+      "crit": 1,
+      "dmgMax": 1,
+      "dmgMin": 1,
+      "hit": 1,
+      "intelligence": 1,
+      "stamina": 1,
+      "strength": 1
+    },
+    "mana": 70,
+    "path": "images/monsters/pritzmage/",
+    "sw": 2,
+    "type": "Monster"
+  },
+  "RoadTile": {
+    "animation": "images/tiles/road",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/road",
+    "type": "Tile"
+  },
+  "Robe": {
+    "animation": "images/items/armors/robe",
+    "bonus": {
+      "armor": 10,
+      "block": 5,
+      "intelligence": 3,
+      "stamina": 2
+    },
+    "class": "Armor",
+    "handler": "CTypeHandler",
+    "path": "images/items/armors/robe/",
+    "type": "Armor"
+  },
+  "Scroll": {
+    "animation": "images/items/scroll",
+    "class": "Item",
+    "handler": "CTypeHandler",
+    "path": "images/items/scroll/",
+    "power": 1,
+    "singleUse": false,
+    "type": "Item"
+  },
+  "ShadowBolt": {
+    "anim": "images/interactions/shadowbolt",
+    "manaCost": 45
+  },
+  "SneakAttack": {
+    "anim": "images/interactions/sneakattack",
+    "manaCost": 15
+  },
+  "SnowTile": {
+    "animation": "images/tiles/snow",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/snow",
+    "type": "Tile"
+  },
+  "Sorcerer": {
+    "actions": [
+      "Attack"
+    ],
+    "class": "Player",
+    "coords": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "exp": 0,
+    "hp": 70,
+    "initStats": {
+      "agility": 10,
+      "armor": 0,
+      "attack": 0,
+      "block": 0,
+      "crit": 5,
+      "damage": 0,
+      "dmgMax": 3,
+      "dmgMin": 1,
+      "fireResist": 0,
+      "frostResist": 0,
+      "hit": 75,
+      "intelligence": 10,
+      "main": "I",
+      "normalResist": 0,
+      "shadowResist": 0,
+      "stamina": 10,
+      "strength": 10,
+      "thunderResist": 0
+    },
+    "isPlayer": true,
+    "level": 1,
+    "levelStats": {
+      "agility": 1,
+      "crit": 1,
+      "dmgMax": 1,
+      "dmgMin": 1,
+      "hit": 1,
+      "intelligence": 1,
+      "stamina": 1,
+      "strength": 1
+    },
+    "mana": 70,
+    "path": "images/players/sorcerer/",
+    "sw": 0,
+    "type": "Player"
+  },
+  "Strike": {
+    "anim": "images/interactions/strike",
+    "manaCost": 25
+  },
+  "Stun": {
+    "duration": 2,
+    "handler": "CTypeHandler"
+  },
+  "Stunner": {
+    "anim": "images/interactions/stun",
+    "manaCost": 40
+  },
+  "SwampTile": {
+    "animation": "images/tiles/swamp",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/swamp",
+    "type": "Tile"
+  },
+  "Teleporter": {
+    "animation": "images/buildings/teleporter",
+    "class": "Teleporter",
+    "handler": "PyTypeHandler",
+    "path": "images/buildings/teleporter/",
+    "type": "Teleporter"
+  },
+  "UndestructibleBelt": {
+    "animation": "images/items/belts/undestructiblebelt",
+    "bonus": {
+      "agility": 14,
+      "armor": 300,
+      "block": 6,
+      "intelligence": 14,
+      "stamina": 14,
+      "strength": 14
+    },
+    "class": "Belt",
+    "handler": "CTypeHandler",
+    "path": "images/items/belts/undestructiblebelt/",
+    "power": 20,
+    "type": "Belt"
+  },
+  "Warrior": {
+    "actions": [
+      "Attack"
+    ],
+    "class": "Player",
+    "coords": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "exp": 0,
+    "hp": 70,
+    "initStats": {
+      "agility": 10,
+      "armor": 0,
+      "attack": 0,
+      "block": 0,
+      "crit": 5,
+      "damage": 0,
+      "dmgMax": 3,
+      "dmgMin": 1,
+      "fireResist": 0,
+      "frostResist": 0,
+      "hit": 75,
+      "intelligence": 10,
+      "main": "S",
+      "normalResist": 0,
+      "shadowResist": 0,
+      "stamina": 10,
+      "strength": 10,
+      "thunderResist": 0
+    },
+    "isPlayer": true,
+    "level": 1,
+    "levelStats": {
+      "agility": 1,
+      "crit": 1,
+      "dmgMax": 1,
+      "dmgMin": 1,
+      "hit": 1,
+      "intelligence": 1,
+      "stamina": 1,
+      "strength": 1
+    },
+    "mana": 70,
+    "path": "images/players/warrior/",
+    "sw": 0,
+    "type": "Player"
+  },
+  "WastelandTile": {
+    "animation": "images/tiles/wasteland",
+    "canStep": true,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/wasteland",
+    "type": "Tile"
+  },
+  "WaterTile": {
+    "animation": "images/tiles/water",
+    "canStep": false,
+    "class": "Tile",
+    "handler": "CTypeHandler",
+    "path": "images/tiles/water",
+    "type": "Tile"
+  }
+}

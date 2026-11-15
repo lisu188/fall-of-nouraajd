@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGamePanel.h"
+#include "gui/panel/CGameCharacterPanel.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CGuiTasks.h"
@@ -28,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CListView.h"
 
 #include <algorithm>
+#include <map>
 
 bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
     if (type == SDL_KEYDOWN && key == SDLK_ESCAPE) {
@@ -241,12 +243,67 @@ void CGamePanel::layoutResponsiveChildren(const std::shared_ptr<CGui> &gui, cons
     responsivePage = std::clamp(responsivePage, 0, responsivePageCount - 1);
     responsiveNarrow =
         rect->w < UiTheme::scaled(gui, 1200) || gui->getTextScale() > 1.5 * std::max(1.0, gui->getHeight() / 1080.0);
-    if (!responsiveNarrow)
-        responsiveHeaderPressed = 0;
     const double displayScale = std::max(1.0, gui->getHeight() / 1080.0);
     const int padding = static_cast<int>(24 * displayScale);
     const int gap = static_cast<int>(8 * displayScale);
     const int availableWidth = std::max(1, rect->w - padding * 2);
+    const bool normalizeCharacter = !responsiveNarrow && dynamic_cast<CGameCharacterPanel *>(this);
+    std::map<const CGameGraphicsObject *, std::shared_ptr<SDL_Rect>> wideBeforeRects;
+    int characterFooterTop = rect->y + rect->h - padding;
+    bool characterHasFooter = false;
+    if (normalizeCharacter) {
+        for (const auto &member : children) {
+            auto memberLayout = member->getLayout();
+            if (!memberLayout)
+                continue;
+            if (!member->getStringProperty("uiGroup").empty()) {
+                wideBeforeRects.emplace(member.get(), memberLayout->getRect(member));
+                member->setRuntimeHidden(false);
+                memberLayout->clearRuntimeRect();
+            }
+            if (auto button = vstd::cast<CButton>(member)) {
+                if (button->getBoolProperty("uiTab") || button->getBoolProperty("uiFooter"))
+                    memberLayout->clearRuntimeRect();
+                if (button->getBoolProperty("uiFooter")) {
+                    characterHasFooter = true;
+                    characterFooterTop = std::min(characterFooterTop, memberLayout->getRect(member)->y);
+                }
+            }
+        }
+    }
+    auto wideListHeight = [&](const auto &list, const auto &authored, int listBottom) {
+        const int pagerHeight =
+            std::max(UiTheme::scaled(gui, 40),
+                     gui->getTextManager()->measureText("Previous", 0, "body").second + UiTheme::scaled(gui, 16));
+        if (normalizeCharacter && list->getCollection() == "interactionsCollection") {
+            for (const auto &sibling : children) {
+                if (sibling == list || !sibling->isVisible() || !sibling->getLayout() ||
+                    sibling->getStringProperty("render") != "renderAbilityDetails")
+                    continue;
+                const auto details = sibling->getLayout()->getRect(sibling);
+                if (details->y > authored->y && details->x < authored->x + authored->w &&
+                    authored->x < details->x + details->w)
+                    listBottom = std::min(listBottom, details->y);
+            }
+        }
+        return std::min(authored->h,
+                        std::max(1, listBottom - gap - pagerHeight - UiTheme::scaled(gui, 4) - authored->y));
+    };
+    if (normalizeCharacter && characterHasFooter) {
+        for (const auto &child : children) {
+            if (auto list = vstd::cast<CListView>(child); list && list->getLayout() && list->getRows() &&
+                                                          list->getCollection() == "interactionsCollection" &&
+                                                          !list->getStringProperty("uiGroup").empty()) {
+                if (wideListHeight(list, list->getLayout()->getRect(list), characterFooterTop) <
+                    list->getCellSize(gui)) {
+                    responsiveNarrow = true;
+                    break;
+                }
+            }
+        }
+    }
+    if (!responsiveNarrow)
+        responsiveHeaderPressed = 0;
     std::vector<std::shared_ptr<CButton>> tabs;
     std::vector<std::shared_ptr<CButton>> footer;
     for (const auto &child : children) {
@@ -328,18 +385,15 @@ void CGamePanel::layoutResponsiveChildren(const std::shared_ptr<CGui> &gui, cons
         auto layout = child->getLayout();
         if (!layout)
             continue;
-        const auto before = layout->getRect(child);
+        const auto before = normalizeCharacter ? wideBeforeRects.at(child.get()) : layout->getRect(child);
         child->setRuntimeHidden(responsiveNarrow &&
                                 (group != groups[responsivePage] || child->getBoolProperty("uiHeading")));
         if (!responsiveNarrow) {
-            layout->clearRuntimeRect();
+            if (!normalizeCharacter)
+                layout->clearRuntimeRect();
             if (auto list = vstd::cast<CListView>(child); list && !footer.empty()) {
                 const auto authored = layout->getRect(child);
-                const int pagerHeight = std::max(UiTheme::scaled(gui, 40),
-                                                 gui->getTextManager()->measureText("Previous", 0, "body").second +
-                                                     UiTheme::scaled(gui, 16));
-                const int height = std::min(authored->h, std::max(1, wideFooterTop - gap - pagerHeight -
-                                                                         UiTheme::scaled(gui, 4) - authored->y));
+                const int height = wideListHeight(list, authored, wideFooterTop);
                 layout->setRuntimeRect(authored->x - rect->x, authored->y - rect->y, authored->w, height);
             }
             const auto after = layout->getRect(child);

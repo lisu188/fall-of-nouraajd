@@ -281,7 +281,7 @@ jobs:
       - name: Retain generated diff, outputs and exact-head receipt
         id: upload
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: city-${{ matrix.review }}-review-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: ${{ runner.temp }}/city-${{ matrix.review }}-review

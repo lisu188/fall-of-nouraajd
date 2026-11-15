@@ -59,6 +59,7 @@ class MovementPresentationCleanup {
 
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
 std::atomic_size_t mapCoordinateLookupProbeCounter{0};
+thread_local std::optional<performance_guard::MapTurnSelectionWork> mapTurnSelectionWork;
 
 void recordCoordinateLookupProbe() {
     if (mapCoordinateLookupProbeEnabled.load(std::memory_order_relaxed)) {
@@ -78,6 +79,59 @@ int normalize_wrapped_axis(int value, int max_value) {
     return static_cast<int>(normalized);
 }
 } // namespace
+
+struct CMap::ObjectSnapshot {
+    std::vector<std::shared_ptr<CMapObject>> objects;
+};
+
+struct CMap::SimulationSnapshot {
+    std::shared_ptr<const ObjectSnapshot> objects;
+    std::vector<std::size_t> activeIndices;
+    std::uint64_t revision = 0;
+};
+
+class CMap::SimulationCursor {
+  public:
+    SimulationCursor(CMap &map, std::shared_ptr<const SimulationSnapshot> snapshot)
+        : map(map), snapshot(std::move(snapshot)) {}
+
+    std::size_t capacity() const { return snapshot->activeIndices.size(); }
+
+    std::shared_ptr<CMapObject> next() {
+        if (snapshot->revision != map.simulationSelectionRevision) {
+            // Callbacks may activate dormant entries. Recheck only the original unvisited suffix;
+            // additions belong to the next phase, while removed entries still belong to this snapshot.
+            scanRemainder = true;
+        }
+        if (scanRemainder) {
+            if (nextPosition == snapshot->objects->objects.size()) {
+                return nullptr;
+            }
+            if (mapTurnSelectionWork) {
+                ++mapTurnSelectionWork->candidateVisits;
+                ++mapTurnSelectionWork->fallbackVisits;
+            }
+            return snapshot->objects->objects[nextPosition++];
+        }
+        if (activeOffset == snapshot->activeIndices.size()) {
+            nextPosition = snapshot->objects->objects.size();
+            return nullptr;
+        }
+        const auto index = snapshot->activeIndices[activeOffset++];
+        nextPosition = index + 1;
+        if (mapTurnSelectionWork) {
+            ++mapTurnSelectionWork->candidateVisits;
+        }
+        return snapshot->objects->objects[index];
+    }
+
+  private:
+    CMap &map;
+    std::shared_ptr<const SimulationSnapshot> snapshot;
+    std::size_t nextPosition = 0;
+    std::size_t activeOffset = 0;
+    bool scanRemainder = false;
+};
 
 CMap::CMap() : saveAdmissionState(CGameContext::makeSaveAdmissionState()) {}
 
@@ -100,6 +154,224 @@ CMap::~CMap() {
             }
         }
     }
+}
+
+namespace {
+int readStaticTerrainInteger(const json &value, int minimum, int maximum) {
+    if (!value.is_number_integer())
+        throw std::invalid_argument("Static terrain requires an integer");
+    const auto number = value.get<unsigned long long>();
+    if (number < static_cast<unsigned long long>(minimum) || number > static_cast<unsigned long long>(maximum))
+        throw std::invalid_argument("Static terrain integer is out of range");
+    return static_cast<int>(number);
+}
+
+void checkStaticTerrainDepth(const std::string &data) {
+    int depth = 0;
+    bool quoted = false;
+    bool escaped = false;
+    for (const char value : data) {
+        if (quoted) {
+            if (escaped)
+                escaped = false;
+            else if (value == '\\')
+                escaped = true;
+            else if (value == '"')
+                quoted = false;
+        } else if (value == '"') {
+            quoted = true;
+        } else if (value == '[' || value == '{') {
+            if (++depth > 16)
+                throw std::invalid_argument("Static terrain descriptor nesting exceeds its limit");
+        } else if (value == ']' || value == '}') {
+            if (--depth < 0)
+                throw std::invalid_argument("Unbalanced static terrain descriptor");
+        }
+    }
+    if (depth != 0 || quoted)
+        throw std::invalid_argument("Unbalanced static terrain descriptor");
+}
+
+void checkStaticTerrainPalette(const json &configuration) {
+    if (!configuration.is_object() || configuration.size() != 2 || !configuration.contains("class") ||
+        !configuration["class"].is_string() || configuration["class"].get<std::string>() != "CTile" ||
+        !configuration.contains("properties") || !configuration["properties"].is_object())
+        throw std::invalid_argument("Static terrain requires a plain native tile configuration");
+    for (const auto &[key, value] : configuration["properties"].items()) {
+        if (key == "canStep") {
+            if (!value.is_boolean())
+                throw std::invalid_argument("Static tile passability must be boolean");
+        } else if (key == "movementCost") {
+            static_cast<void>(readStaticTerrainInteger(value, 0, std::numeric_limits<int>::max()));
+        } else if ((key == "animation" || key == "label" || key == "description" || key == "tileType") &&
+                   value.is_string()) {
+            continue;
+        } else {
+            throw std::invalid_argument("Static tile configuration has unsupported properties");
+        }
+    }
+}
+} // namespace
+
+std::string CMap::getStaticTerrainData() const {
+    std::lock_guard lock(navigationMutex);
+    return staticTerrainData;
+}
+
+void CMap::validateStaticTerrainBounds() const {
+    std::lock_guard lock(navigationMutex);
+    for (const auto &[z, raster] : staticTerrainLevels) {
+        if (!hasBounds(z) || raster.width - 1 > xBounds.at(z) || raster.height - 1 > yBounds.at(z) || wrapsX(z) ||
+            wrapsY(z))
+            throw std::logic_error("Static terrain requires enclosing nonwrapping authored bounds");
+    }
+}
+
+void CMap::validateStaticTerrainConfiguration() {
+    if (staticTerrainLevels.empty())
+        return;
+    auto game = getGame();
+    if (!game)
+        throw std::logic_error("Static terrain requires its game owner");
+    auto handler = game->getObjectHandler();
+    const auto revision = handler->getNavigationConfigRevision();
+    if (staticTerrainConfigOwner.lock() == handler && revision == staticTerrainConfigRevision)
+        return;
+    for (const auto &[type, expected] : staticTerrainConfigurations) {
+        auto actual = handler->getConfig(type);
+        if (!actual || actual->dump() != expected || !handler->getStaticTileNavigation(type))
+            throw std::logic_error("Static terrain palette configuration changed");
+    }
+    staticTerrainConfigRevision = revision;
+    staticTerrainConfigOwner = handler;
+}
+
+void CMap::setStaticTerrainData(std::string data) {
+    std::lock_guard lock(navigationMutex);
+    if (data == staticTerrainData) {
+        if (!data.empty()) {
+            validateStaticTerrainConfiguration();
+            validateStaticTerrainBounds();
+        }
+        return;
+    }
+    if (!staticTerrainData.empty())
+        throw std::logic_error("Static terrain is immutable after admission");
+    constexpr std::size_t MAX_STATIC_CELLS = 65536;
+    constexpr std::size_t MAX_STATIC_BYTES = 131072;
+    if (data.size() > MAX_STATIC_BYTES)
+        throw std::invalid_argument("Static terrain descriptor exceeds its byte limit");
+    checkStaticTerrainDepth(data);
+    auto descriptor = json::parse(data);
+    if (!descriptor.is_object() || descriptor.size() != 2 || !descriptor.contains("version") ||
+        !descriptor["version"].is_number_integer() || readStaticTerrainInteger(descriptor["version"], 1, 1) != 1 ||
+        !descriptor.contains("levels") || !descriptor["levels"].is_array() || descriptor["levels"].empty() ||
+        descriptor["levels"].size() > 8)
+        throw std::invalid_argument("Invalid static terrain descriptor");
+    auto game = getGame();
+    if (!game)
+        throw std::logic_error("Static terrain admission requires a game owner");
+    auto handler = game->getObjectHandler();
+    std::map<int, StaticTerrainLevel> levels;
+    std::map<std::string, std::string> configurations;
+    std::size_t total = 0;
+    for (const auto &level : descriptor["levels"]) {
+        if (!level.is_object() || level.size() != 6 || !level.contains("level") ||
+            !level["level"].is_number_integer() || !level.contains("width") || !level["width"].is_number_integer() ||
+            !level.contains("height") || !level["height"].is_number_integer() || !level.contains("palette") ||
+            !level["palette"].is_array() || level["palette"].empty() || level["palette"].size() > 16 ||
+            !level.contains("rows") || !level["rows"].is_array() || !level.contains("area") ||
+            !level["area"].is_string() || level["area"].get<std::string>().empty() ||
+            level["area"].get<std::string>().size() > 64)
+            throw std::invalid_argument("Invalid static terrain level");
+        const int z = readStaticTerrainInteger(level["level"], 0, std::numeric_limits<int>::max());
+        const int width = readStaticTerrainInteger(level["width"], 1, static_cast<int>(MAX_STATIC_CELLS));
+        const int height = readStaticTerrainInteger(level["height"], 1, static_cast<int>(MAX_STATIC_CELLS));
+        if (z < 0 || levels.contains(z) || width <= 0 || height <= 0 ||
+            static_cast<std::size_t>(width) > MAX_STATIC_CELLS / static_cast<std::size_t>(height) ||
+            level["rows"].size() != static_cast<std::size_t>(height))
+            throw std::invalid_argument("Invalid or duplicate static terrain extent");
+        const auto cells = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+        if (cells > MAX_STATIC_CELLS - total)
+            throw std::invalid_argument("Static terrain exceeds its cell limit");
+        total += cells;
+        StaticTerrainLevel raster{width, height, {}, {}, {}};
+        for (const auto &entry : level["palette"]) {
+            if (!entry.is_object() || entry.size() != 2 || !entry.contains("type") || !entry["type"].is_string() ||
+                !entry.contains("configuration") || !entry["configuration"].is_object())
+                throw std::invalid_argument("Invalid static terrain palette entry");
+            const auto type = entry["type"].get<std::string>();
+            if (type.empty() || type.size() > 128 || std::ranges::find(raster.palette, type) != raster.palette.end())
+                throw std::invalid_argument("Invalid or duplicate static terrain palette type");
+            auto actual = handler->getConfig(type);
+            const auto expected = entry["configuration"].dump();
+            checkStaticTerrainPalette(entry["configuration"]);
+            auto navigation = handler->getStaticTileNavigation(type);
+            if (!actual || expected.size() > 4096 || actual->dump() != expected || !navigation)
+                throw std::invalid_argument("Static terrain requires an unchanged native tile palette");
+            configurations[type] = expected;
+            raster.palette.push_back(type);
+            raster.navigation.push_back(*navigation);
+        }
+        raster.cells.reserve(cells);
+        for (const auto &row : level["rows"]) {
+            if (!row.is_string())
+                throw std::invalid_argument("Static terrain row must be a string");
+            const auto text = row.get<std::string>();
+            if (text.size() != static_cast<std::size_t>(width))
+                throw std::invalid_argument("Static terrain row width mismatch");
+            for (const unsigned char value : text) {
+                const auto digit = std::string_view("0123456789abcdef").find(value);
+                if (digit >= raster.palette.size())
+                    throw std::invalid_argument("Static terrain cell has no palette entry");
+                raster.cells.push_back(static_cast<std::uint8_t>(digit));
+            }
+        }
+        levels.emplace(z, std::move(raster));
+    }
+    // Strict save construction precedes authored bounds; the loader validates the same descriptor again afterward.
+    for (const auto &[z, raster] : levels) {
+        if (hasBounds(z) &&
+            (raster.width - 1 > xBounds.at(z) || raster.height - 1 > yBounds.at(z) || wrapsX(z) || wrapsY(z)))
+            throw std::invalid_argument("Static terrain exceeds its authored nonwrapping bounds");
+    }
+    staticTerrainLevels = std::move(levels);
+    staticTerrainConfigurations = std::move(configurations);
+    staticTerrainConfigRevision = handler->getNavigationConfigRevision();
+    staticTerrainConfigOwner = handler;
+    staticTerrainData = std::move(data);
+    routingChanged();
+    recordDirectPropertyChanged("staticTerrainData");
+}
+
+std::optional<std::pair<bool, int>> CMap::lookupStaticTerrainCell(Coords coords) {
+    if (staticTerrainLevels.empty())
+        return std::nullopt;
+    validateStaticTerrainConfiguration();
+    validateStaticTerrainBounds();
+    const auto level = staticTerrainLevels.find(coords.z);
+    if (level == staticTerrainLevels.end())
+        return std::nullopt;
+    const auto &raster = level->second;
+    if (isOutOfBounds(coords) || coords.x < 0 || coords.y < 0 || coords.x >= raster.width ||
+        coords.y >= raster.height) {
+        // Only an already validated native palette entry can replace a transient fallback tile.
+        const auto type = fallbackTileType(coords);
+        const auto found = std::ranges::find(raster.palette, type);
+        if (found == raster.palette.end())
+            return std::nullopt;
+        return raster.navigation[static_cast<std::size_t>(std::distance(raster.palette.begin(), found))];
+    }
+    return raster.navigation[raster.cells[static_cast<std::size_t>(coords.y) * raster.width + coords.x]];
+}
+
+std::optional<std::string> CMap::staticTerrainTileType(Coords coords) {
+    if (!lookupStaticTerrainCell(coords))
+        return std::nullopt;
+    const auto &raster = staticTerrainLevels.at(coords.z);
+    if (isOutOfBounds(coords) || coords.x < 0 || coords.y < 0 || coords.x >= raster.width || coords.y >= raster.height)
+        return std::nullopt;
+    return raster.palette[raster.cells[static_cast<std::size_t>(coords.y) * raster.width + coords.x]];
 }
 
 std::map<int, std::pair<int, int>> CMap::getBounds() {
@@ -231,6 +503,7 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
         for (auto object : getObjects()) {
             if (object && object->getName() == "player") {
                 player = vstd::cast<CPlayer>(object);
+                invalidateSimulationSelection();
                 if (player) {
                     if (!std::dynamic_pointer_cast<CPlayerController>(player->getController())) {
                         player->setController(getGame()->createObject<CPlayerController>());
@@ -258,6 +531,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     player->setFightController(getGame()->createObject<CPlayerFightController>());
     resetDefeatedPlayerForAssignment(player);
     this->player = player;
+    invalidateSimulationSelection();
     registerPlayerTriggers();
     addObject(player);
     player->moveTo(entryx, entryy, entryz);
@@ -279,6 +553,7 @@ vstd::task<void> CMap::setPlayerAsync(std::shared_ptr<CPlayer> player) {
         player->setFightController(map->getGame()->createObject<CPlayerFightController>());
         map->resetDefeatedPlayerForAssignment(player);
         map->player = player;
+        map->invalidateSimulationSelection();
         map->registerPlayerTriggers();
         if (map->getObjectByName("player") == player) {
             co_await finishPlayerCreationAsync(map, player, map->getEntry());
@@ -314,6 +589,7 @@ std::shared_ptr<CPlayer> CMap::detachPlayer() {
     }
     resetDefeatedPlayerForAssignment(nullptr);
     player.reset();
+    invalidateSimulationSelection();
     return detachedPlayer ? detachedPlayer : canonicalPlayer;
 }
 
@@ -340,6 +616,7 @@ void CMap::attachPlayer(std::shared_ptr<CPlayer> player, Coords coords) {
     player->setFightController(getGame()->createObject<CPlayerFightController>());
     resetDefeatedPlayerForAssignment(player);
     this->player = player;
+    invalidateSimulationSelection();
     registerPlayerTriggers();
 
     const auto target = normalizeCoords(coords);
@@ -380,6 +657,7 @@ vstd::task<void> CMap::attachPlayerAsync(std::shared_ptr<CPlayer> player, Coords
         player->setFightController(map->getGame()->createObject<CPlayerFightController>());
         map->resetDefeatedPlayerForAssignment(player);
         map->player = player;
+        map->invalidateSimulationSelection();
         player->cancelMove();
         player->relocateWithoutMoveHooks(map->normalizeCoords(coords));
         map->registerPlayerTriggers();
@@ -430,6 +708,7 @@ bool CMap::restorePlayerAfterLoad(std::string &error) {
         }
         defeatedPlayer->setOwningMap(this->ptr<CMap>());
         player = defeatedPlayer;
+        invalidateSimulationSelection();
         registerPlayerTriggers();
         return true;
     }
@@ -450,6 +729,7 @@ bool CMap::restorePlayerAfterLoad(std::string &error) {
         restoredPlayer->setFightController(getGame()->createObject<CPlayerFightController>());
     }
     player = restoredPlayer;
+    invalidateSimulationSelection();
     registerPlayerTriggers();
     return true;
 }
@@ -528,6 +808,8 @@ CNavigationCell CMap::lookupNavigationCell(Coords coords, std::optional<CNavigat
     auto tile = tiles.find(coords);
     if (tile != tiles.end() && tile->second) {
         result = {tile->second->canStep(), tile->second->getMovementCost()};
+    } else if (auto cell = lookupStaticTerrainCell(coords)) {
+        result = {cell->first, cell->second};
     } else if (fallback) {
         result = *fallback;
     } else {
@@ -635,6 +917,14 @@ std::size_t CMap::unregisterNavigationEdgesForObject(const std::string &sourceOb
 }
 
 std::size_t CMap::getObjectCacheEntryCountForTesting() const { return mapObjectsCache.size(); }
+
+void performance_guard::resetMapTurnSelectionProbe() { mapTurnSelectionWork.emplace(); }
+
+performance_guard::MapTurnSelectionWork performance_guard::mapTurnSelectionProbeStats() {
+    return mapTurnSelectionWork.value_or(MapTurnSelectionWork{});
+}
+
+void performance_guard::disableMapTurnSelectionProbe() { mapTurnSelectionWork.reset(); }
 
 void performance_guard::resetMapCoordinateLookupProbe() {
     mapCoordinateLookupProbeCounter.store(0, std::memory_order_relaxed);
@@ -784,6 +1074,15 @@ int CMap::getMovementCost(Coords coords) {
 }
 
 int CMap::lookupMovementCost(int x, int y, int z) {
+    {
+        std::lock_guard lock(navigationMutex);
+        const auto coords = normalizeCoords(Coords(x, y, z));
+        const auto stored = tiles.find(coords);
+        if (stored != tiles.end() && stored->second)
+            return std::max(1, stored->second->getMovementCost());
+        if (auto cell = lookupStaticTerrainCell(coords))
+            return std::max(1, cell->second);
+    }
     auto tile = resolveTileForLookup(Coords(x, y, z));
     return tile ? std::max(1, tile->getMovementCost()) : 1;
 }
@@ -861,6 +1160,7 @@ bool CMap::addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) 
         return false;
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
+    invalidateObjectSnapshot();
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
     if (!mapObject->getCanStep())
@@ -898,6 +1198,7 @@ vstd::task<void> CMap::removeObjectAsync(std::shared_ptr<CMapObject> mapObject) 
         }
         const auto registeredName = registered->first;
         map->mapObjects.erase(registered);
+        map->invalidateObjectSnapshot();
         vstd::erase_if(map->mapObjectsCache, [&registeredName](auto entry) { return entry.second == registeredName; });
         map->bumpNavigationRevision();
         if (!object->getCanStep()) {
@@ -972,6 +1273,7 @@ bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObjec
     const auto registeredName = map_object_it->first;
     const auto coords = mapObject->getCoords();
     mapObjects.erase(map_object_it);
+    invalidateObjectSnapshot();
     vstd::erase_if(mapObjectsCache, [&registeredName](auto it) { return it.second == registeredName; });
     mapObject->clearOwningMap(this->ptr<CMap>());
     bumpNavigationRevision();
@@ -1007,10 +1309,68 @@ bool CMap::isMoving() { return moving; }
 
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
-    auto clone = mapObjects;
-    for (std::shared_ptr<CMapObject> object : clone | std::views::values | std::views::filter(predicate)) {
-        func(object);
+    const auto snapshot = getObjectSnapshot();
+    for (const auto &object : snapshot->objects) {
+        if (predicate(object)) {
+            func(object);
+        }
     }
+}
+
+std::shared_ptr<const CMap::ObjectSnapshot> CMap::getObjectSnapshot() {
+    std::lock_guard lock(navigationMutex);
+    if (!objectSnapshot) {
+        auto snapshot = std::make_shared<ObjectSnapshot>();
+        snapshot->objects.reserve(mapObjects.size());
+        for (const auto &object : mapObjects | std::views::values) {
+            snapshot->objects.push_back(object);
+        }
+        if (mapTurnSelectionWork) {
+            ++mapTurnSelectionWork->objectSnapshotBuilds;
+            mapTurnSelectionWork->objectSnapshotEntries += snapshot->objects.size();
+        }
+        objectSnapshot = std::move(snapshot);
+    }
+    return objectSnapshot;
+}
+
+std::shared_ptr<const CMap::SimulationSnapshot> CMap::getSimulationSnapshot() {
+    if (simulationSnapshot) {
+        return simulationSnapshot;
+    }
+    auto snapshot = std::make_shared<SimulationSnapshot>();
+    snapshot->objects = getObjectSnapshot();
+    snapshot->revision = simulationSelectionRevision;
+    if (mapTurnSelectionWork) {
+        ++mapTurnSelectionWork->selectionBuilds;
+    }
+    for (std::size_t index = 0; index < snapshot->objects->objects.size(); ++index) {
+        const auto &object = snapshot->objects->objects[index];
+        const auto &properties = static_cast<const CGameObject &>(*object).dynamic_props();
+        const bool liveProperties =
+            (!properties.contains("simulationRegion") && object->hasProperty("simulationRegion")) ||
+            (!properties.contains("alwaysSimulate") && object->hasProperty("alwaysSimulate"));
+        // Retained foreign entries and computed getters can change without notifying this map.
+        if (object->owningMap.lock().get() != this || liveProperties || isSimulationActive(object)) {
+            snapshot->activeIndices.push_back(index);
+        }
+    }
+    if (snapshot->revision == simulationSelectionRevision) {
+        simulationSnapshot = snapshot;
+    }
+    return snapshot;
+}
+
+CMap::SimulationCursor CMap::simulationObjects() { return SimulationCursor(*this, getSimulationSnapshot()); }
+
+void CMap::invalidateObjectSnapshot() {
+    objectSnapshot.reset();
+    invalidateSimulationSelection();
+}
+
+void CMap::invalidateSimulationSelection() {
+    ++simulationSelectionRevision;
+    simulationSnapshot.reset();
 }
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
@@ -1103,8 +1463,8 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         };
 
         game.reset();
-        const auto turnObjects = map->mapObjects;
-        for (const auto &object : turnObjects | std::views::values) {
+        auto turnObjects = map->simulationObjects();
+        while (auto object = turnObjects.next()) {
             if (!canApplyDeferredMoveWork()) {
                 finishInterruptedRegionTurn();
                 co_return;
@@ -1147,9 +1507,14 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
         std::vector<vstd::task_handle<Coords>> pending;
         vstd::task_group standalone_plans;
         std::vector<std::shared_ptr<CCreature>> actors;
-        actors.reserve(map->mapObjects.size());
-        for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
-            actors.push_back(vstd::cast<CCreature>(object));
+        {
+            auto actorObjects = map->simulationObjects();
+            actors.reserve(actorObjects.capacity());
+            while (auto object = actorObjects.next()) {
+                if (pred(object)) {
+                    actors.push_back(vstd::cast<CCreature>(object));
+                }
+            }
         }
         for (auto creature : actors) {
             if (!canApplyDeferredMoveWork()) {
@@ -1282,16 +1647,17 @@ vstd::task<void> CMap::moveOwnedAsync(std::shared_ptr<CMap> map, CMovementPresen
             }
         }
 
-        map->forObjects(
-            [](std::shared_ptr<CMapObject> object) {
-                if (auto creature = vstd::cast<CCreature>(object)) {
+        {
+            auto endingObjects = map->simulationObjects();
+            while (auto object = endingObjects.next()) {
+                if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
+                    break;
+                }
+                if (auto creature = vstd::cast<CCreature>(object); creature && map->isSimulationActive(object)) {
                     creature->getController()->onTurnEnded(creature);
                 }
-            },
-            [map, expectedSimulationRegionRevision](std::shared_ptr<CMapObject> object) {
-                return map->simulationRegionRevision == expectedSimulationRegionRevision &&
-                       vstd::castable<CCreature>(object) && map->isSimulationActive(object);
-            });
+            }
+        }
 
         if (map->simulationRegionRevision != expectedSimulationRegionRevision) {
             for (const auto &planned : plannedCreatures) {
@@ -1369,10 +1735,14 @@ void CMap::setActiveSimulationRegion(std::string region) {
     }
     activeSimulationRegion = std::move(region);
     ++simulationRegionRevision;
+    invalidateSimulationSelection();
     recordDirectPropertyChanged("activeSimulationRegion");
 }
 
 bool CMap::isSimulationActive(const std::shared_ptr<CMapObject> &object) const {
+    if (mapTurnSelectionWork) {
+        ++mapTurnSelectionWork->simulationChecks;
+    }
     if (!object) {
         return false;
     }
@@ -1437,6 +1807,7 @@ void CMap::setObjectsChecked(std::set<std::shared_ptr<CMapObject>> objects) {
 
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
     std::lock_guard lock(navigationMutex);
+    invalidateObjectSnapshot();
     auto map = this->ptr<CMap>();
     for (const auto &[name, object] : mapObjects) {
         if (object) {
@@ -1702,7 +2073,8 @@ std::shared_ptr<CTile> CMap::resolveTileForLookup(Coords coords) {
         if (found != tiles.end())
             return found->second;
         game = getGame();
-        type = fallbackTileType(coords);
+        const auto rasterType = staticTerrainTileType(coords);
+        type = rasterType ? *rasterType : fallbackTileType(coords);
     }
     if (!game)
         return nullptr;
