@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
 #include "handler/CRngHandler.h"
+#include "handler/CSevenSunsMerchantDialogue.h"
 
 struct CCombatOwnership {
     CCombatOwnership() = default;
@@ -125,6 +126,10 @@ class CCombatParticipantGuard {
     std::shared_ptr<CCombatOwnership> identity;
     bool admitted = false;
 };
+
+bool CFightHandler::hasActiveCombatClaim(const std::shared_ptr<CCreature> &actor) {
+    return CCombatParticipantGuard::isOwned(actor);
+}
 
 template <typename Callback> class DefeatScopeExit {
   public:
@@ -1432,18 +1437,25 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     requireDefeatCurrent();
     vstd::logger::debug(winnerDescription, a->getName(), "defeated", loserDescription);
     requireDefeatCurrent();
-    const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp");
+    const bool sevenSunsReplacement =
+        CSevenSunsMerchantDialogue::isSettledReplacement(expectedGame.lock(), encounterMap, b, requireDefeatCurrent);
     requireDefeatCurrent();
-    const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp");
-    requireDefeatCurrent();
-    const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1;
-    requireDefeatCurrent();
-    if (sourceKillXp >= 0) {
-        a->addExp(sourceKillXp);
+    if (sevenSunsReplacement) {
+        a->addExp(420);
     } else {
-        const auto rewardScale = b->getScale();
+        const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp");
         requireDefeatCurrent();
-        a->addExpScaled(rewardScale);
+        const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp");
+        requireDefeatCurrent();
+        const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1;
+        requireDefeatCurrent();
+        if (sourceKillXp >= 0) {
+            a->addExp(sourceKillXp);
+        } else {
+            const auto rewardScale = b->getScale();
+            requireDefeatCurrent();
+            a->addExpScaled(rewardScale);
+        }
     }
     requireDefeatCurrent();
     const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");

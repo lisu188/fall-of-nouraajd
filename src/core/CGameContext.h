@@ -88,6 +88,7 @@ class CGameContext {
         UnsafeOperationLease &operator=(const UnsafeOperationLease &) = delete;
         ~UnsafeOperationLease() noexcept;
         bool isCurrent() const;
+        bool isSaveAdmissionHealthy() const;
         void finish() noexcept;
         void quarantine() noexcept;
 
