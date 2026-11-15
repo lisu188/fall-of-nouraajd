@@ -93546,6 +93546,153 @@
       "provenance": "content reconstruction of the BFG-removed original; from the 0340e81f reconstruction: addBonus and removeBonus take Stats by value (same-commit stats.h)",
       "sha256": "1477ca1f6deb13877151c3d873dba47e0e689c30d2d03a5c0fcc686e5ebdc109",
       "source": "payloads/reconstructions/fe/fe3928a0ea5a4797adac383747b1d278f0c7b012-stats.cpp"
+    },
+    {
+      "originalBlob": "206d84bacf195c7145d70343b4f0b64be9269820",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 3ffa66f1 reconstruction: Player(path, map) and an equipped-items view (same-commit player.h)",
+      "sha256": "0ec04b68be4020f011dcc11c6228f5ab0ddd6ec89598cda40333f39f4c1f3ba2",
+      "source": "payloads/reconstructions/20/206d84bacf195c7145d70343b4f0b64be9269820-player.cpp"
+    },
+    {
+      "originalBlob": "3843e1471f952d44d8404d5615deb3dd3721d0e1",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 6dc1be85 reconstruction: tiles are saved grouped by type as coordinates and recreated with the surviving Tile::getTile(type, x, y) (same-commit tile.cpp)",
+      "sha256": "7a3f534eaba6c2952de46e5d435af6425c6e1fb8993e8f9b61a5861207500e00",
+      "source": "payloads/reconstructions/38/3843e1471f952d44d8404d5615deb3dd3721d0e1-map.cpp"
+    },
+    {
+      "originalBlob": "44595a0a1221d2947c49bad089eeab94be578642",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the cf8025b1 reconstruction: Creature(path, map) loads configurations and saved games through loadFromJson (actions, items, equipped weapon/armor, coordinates, saved level/exp/hp/mana) with the matching saveToJson, and keeps the equipped list (same-commit creature.h, player.json, configs)",
+      "sha256": "0141fc5cc263748f76224a4bd852c69ba9f03cb4047ae117a6b77625b81d7c32",
+      "source": "payloads/reconstructions/44/44595a0a1221d2947c49bad089eeab94be578642-creature.cpp"
+    },
+    {
+      "originalBlob": "6dc1be851f97a86f883776b64f7ac1061cff706b",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the cde8ba2e reconstruction: saved maps skip objects whose canSave is false and loading recreates tiles through the surviving Tile::getTile",
+      "sha256": "e524a80c24787b56065ee14611d630bd80eced30180d670133069fc8b2e94912",
+      "source": "payloads/reconstructions/6d/6dc1be851f97a86f883776b64f7ac1061cff706b-map.cpp"
+    },
+    {
+      "originalBlob": "7f754424f45caca4a6d7a1f4bc26137ef7734cbe",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the d73ccec8 reconstruction with the Json::Value constructor (same-commit player.h)",
+      "sha256": "360f8277453ea1a08d0d6ea3e9d9a204d2424ef1d2fd82cdbfea6dfdc452c6b7",
+      "source": "payloads/reconstructions/7f/7f754424f45caca4a6d7a1f4bc26137ef7734cbe-player.cpp"
+    },
+    {
+      "originalBlob": "a9e9a3e3502ea6af3db322eb00d5ec3012970adc",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the b1f98e58 reconstruction: the player is restored from the saved player.json introduced in this commit",
+      "sha256": "4e95fb7f765852c0bc6dea17f887fe1c4f5850391943b89ca7e5e1cb55e3622e",
+      "source": "payloads/reconstructions/a9/a9e9a3e3502ea6af3db322eb00d5ec3012970adc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "aad65fa32f80eb4b4f194d256abba6d754c40534",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 27745415 reconstruction: MapObject::moveTo gains the silent flag declared in the same-commit map.h (silent moves only place the object)",
+      "sha256": "9b603fa5ba305ebc3025f7c909e75ab0ae1949b5154e86cbe62fd72d1e3e6ab0",
+      "source": "payloads/reconstructions/aa/aad65fa32f80eb4b4f194d256abba6d754c40534-map.cpp"
+    },
+    {
+      "originalBlob": "b3c72b5223bf75a02ad419ac7f90431d89b0f062",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the b5dc5c70 reconstruction: Creature(Json::Value, map) takes the configuration itself, and canSave leaves defeated creatures out of saves (same-commit creature.h/map.h)",
+      "sha256": "1067651d741ff741de9f989b79df5a3aaa03796968aee11f8bed4ef57e61b0e4",
+      "source": "payloads/reconstructions/b3/b3c72b5223bf75a02ad419ac7f90431d89b0f062-creature.cpp"
+    },
+    {
+      "originalBlob": "b53f162880b9e7a11d28e171b902ac423003c19d",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the aad65fa3 reconstruction: the object list is a value member and Map gains loadFromJson/saveToJson over tiles and objects (same-commit map.h; Tile and Cave serializers survive)",
+      "sha256": "ae6d53f37afa06722a15ee138c0a1237877361eba407f7ce205084e4d005e501",
+      "source": "payloads/reconstructions/b5/b53f162880b9e7a11d28e171b902ac423003c19d-map.cpp"
+    },
+    {
+      "originalBlob": "b5dc5c7038ca4be2cf3bc22ab20ad038c8e0772e",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 44595a0a reconstruction: the configuration's animation path and levelling table are kept as members (animPath, levelling) and getCoordsString is gone (same-commit creature.h)",
+      "sha256": "3b4729f141f33eea5f2368607b2d42a02a1203484c8e25ea8383c8f44eae408e",
+      "source": "payloads/reconstructions/b5/b5dc5c7038ca4be2cf3bc22ab20ad038c8e0772e-creature.cpp"
+    },
+    {
+      "originalBlob": "bcc6eba508085367cc0e3f6957c33713a2ec62cc",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the f1ad1b8f reconstruction: GameScene::setPlayer returns void (same-commit gamescene.h)",
+      "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
+      "source": "payloads/reconstructions/bc/bcc6eba508085367cc0e3f6957c33713a2ec62cc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "c609dca28291f13355c10923feed107fb0614abb",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9ee96a8e2bf78f077cdfbfd98442a2512e79febc (previous version of interactions/interaction.cpp)",
+      "sha256": "a23ac59f2a891d16f5d60553ed948f068575912768808206d50ba3f0872a1a3c",
+      "source": "payloads/reconstructions/c6/c609dca28291f13355c10923feed107fb0614abb-interaction.cpp"
+    },
+    {
+      "originalBlob": "cde8ba2e2c6a6b91eb43531a93ec3c72b62277ab",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b53f162880b9e7a11d28e171b902ac423003c19d (previous version of map/map.cpp)",
+      "sha256": "ae6d53f37afa06722a15ee138c0a1237877361eba407f7ce205084e4d005e501",
+      "source": "payloads/reconstructions/cd/cde8ba2e2c6a6b91eb43531a93ec3c72b62277ab-map.cpp"
+    },
+    {
+      "originalBlob": "d30a3f796dd94c2813b25027982c9f8c263d762c",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)",
+      "sha256": "658cd0089bcd7f371105eeb3261850fae34e25d69f71935fefd43e6337498e0a",
+      "source": "payloads/reconstructions/d3/d30a3f796dd94c2813b25027982c9f8c263d762c-stats.cpp"
+    },
+    {
+      "originalBlob": "d73ccec874a9d7aa81276ee9c182349b8cfab8f6",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 206d84ba reconstruction with the renamed constructor parameter",
+      "sha256": "bf5fc793c8b5dc20406754e516632b7b65ab7097fc3534415d5118442a08a7d4",
+      "source": "payloads/reconstructions/d7/d73ccec874a9d7aa81276ee9c182349b8cfab8f6-player.cpp"
+    },
+    {
+      "originalBlob": "e29597b4fc9c4ba8569fd03bb81b2b02b0252c62",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e34408f131b5d6791bf47010b2b65339307989cf (previous version of view/gamescene.cpp)",
+      "sha256": "eb524fed15c276f0aba4a3b1e2baf619560fd910c224896501938f46c9d88975",
+      "source": "payloads/reconstructions/e2/e29597b4fc9c4ba8569fd03bb81b2b02b0252c62-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e34408f131b5d6791bf47010b2b65339307989cf",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the a9e9a3e3 reconstruction: player.json was deleted in this commit, so the player starts from config/players/warrior.json (the class of the deleted save)",
+      "sha256": "eb524fed15c276f0aba4a3b1e2baf619560fd910c224896501938f46c9d88975",
+      "source": "payloads/reconstructions/e3/e34408f131b5d6791bf47010b2b65339307989cf-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of bcc6eba508085367cc0e3f6957c33713a2ec62cc (previous version of view/gamescene.cpp)",
+      "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
+      "source": "payloads/reconstructions/e6/e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e80827d44783b0a705644f8ce4b5f111d2c4b5b2",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b3c72b5223bf75a02ad419ac7f90431d89b0f062 (previous version of creatures/creature.cpp)",
+      "sha256": "1067651d741ff741de9f989b79df5a3aaa03796968aee11f8bed4ef57e61b0e4",
+      "source": "payloads/reconstructions/e8/e80827d44783b0a705644f8ce4b5f111d2c4b5b2-creature.cpp"
+    },
+    {
+      "originalBlob": "f1ad1b8f30df3be73d3ad1a48f7868d33c88ea9c",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the e29597b4 reconstruction: the player is built from the warrior configuration value, and GameScene::setPlayer is defined (same-commit gamescene.h)",
+      "sha256": "618e65529f7a0586138f192595952e088bd1366468cfc80dd9ec7b60d5ccad14",
+      "source": "payloads/reconstructions/f1/f1ad1b8f30df3be73d3ad1a48f7868d33c88ea9c-gamescene.cpp"
+    },
+    {
+      "originalBlob": "f1dcf2969637e9b1aadbb80cf1dddc6b82250a8e",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e6e1fd9e14238f2bdfb0fda4ce8ca9614ab86074 (previous version of view/gamescene.cpp)",
+      "sha256": "3c2ed7d253f1cd7f266ac867b8224f28404fb525c5281485bfd203564cd069e8",
+      "source": "payloads/reconstructions/f1/f1dcf2969637e9b1aadbb80cf1dddc6b82250a8e-gamescene.cpp"
     }
   ],
   "schemaVersion": 1

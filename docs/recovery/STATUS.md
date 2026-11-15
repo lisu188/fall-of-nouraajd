@@ -22,9 +22,9 @@ vendored jsoncpp/zlib/tmxparser/Boost.Python sources, images, and often `Game.pr
 
 ## Current state
 
-**31 original commits (31 trees) pass real build and headless startup** on the pinned
-historical toolchain (GCC 5.4, Qt 5.5.1, Ubuntu 16.04): the first thirty trees of the
-December 2013 line (`b9ae428b` … `7e36b9a1`, catalog order #1–#30) and the 2026
+**40 original commits (40 trees) pass real build and headless startup** on the pinned
+historical toolchain (GCC 5.4, Qt 5.5.1, Ubuntu 16.04): the first thirty-nine trees of the
+December 2013 line (`b9ae428b` … `49e97768`, catalog order #1–#39) and the 2026
 reconstruction commit `108bdcbe`. Evidence for each is in `recovery/evidence/<commit>/`
 and summarized in `recovery/progress.json`. These runs use only **unmodified surviving
 original files**: the earlier root-era "compatibility repairs" that edited original
@@ -37,6 +37,9 @@ opens `config/items/Robe.json` while the file is `robe.json`. Exact paths behave
 The verification build force-includes `<functional>` (recorded in `qt5.json`): the
 original MinGW 4.8 headers provided it transitively and several historical headers rely on
 that, while libstdc++ 5 does not.
+Windows import libraries that BFG removed as binaries but the original projects link
+(`-lzdll`) are aliased to the platform library with the same API (`libz.so`) during
+verification; no binary is recreated.
 The next tree needing manual work is reported by `history_workbench.py auto 21 …`.
 
 All 365 trees restore with no unresolved inputs and no BFG markers. Most of the later
@@ -80,7 +83,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 31 160    # carry forward until the first failing tree
+python3 scripts/history_workbench.py auto 40 170    # carry forward until the first failing tree
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -89,7 +92,7 @@ python3 scripts/history_workbench.py progress
 
 ## Remaining work
 
-- Continue the chronological walk from #31 (December 2013 → April 2015), verifying
+- Continue the chronological walk from #40 (December 2013 → April 2015), verifying
   each tree; replace unverified donor proposals with content-keyed reconstructions.
 - Python-era trees: 40 declare several Python ABIs, 48 have initialization APIs that
   conflict with the declared ABI, and 18 use Python without declaring it, so recipe

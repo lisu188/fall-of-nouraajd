@@ -182,8 +182,13 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         shutil.rmtree(output, ignore_errors=True)
     output.mkdir(parents=True, exist_ok=True)
     project = sorted(source.glob("*.pro"))[0]
+    aliases = output / "library-aliases"
+    aliases.mkdir(exist_ok=True)
+    if not (aliases / "libzdll.so").is_symlink():
+        (aliases / "libzdll.so").symlink_to("/usr/lib/x86_64-linux-gnu/libz.so")
     result = docker(
         f"qmake QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' "
+        f"'LIBS+=-L{aliases}' "
         f"{project} -o Makefile > qmake.log 2>&1; "
         f"make -k -j{os.cpu_count() or 1} > make.log 2>&1; echo rc=$?; "
         f"grep -E 'error|undefined reference' make.log | sort | uniq | head -{lines}",

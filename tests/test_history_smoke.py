@@ -113,6 +113,22 @@ class HistoricalSmokeTest(unittest.TestCase):
             )
             self.assertEqual(["robe exact", "absent"], result.stdout.split("\n")[:2])
 
+    def testWindowsImportLibrariesAliasOnlyWhatTheProjectLinks(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            system = root / "system"
+            system.mkdir()
+            (system / "libz.so").write_bytes(b"zlib")
+            source = root / "source"
+            source.mkdir()
+            (source / "Game.pro").write_text("SOURCES += main.cpp\n")
+            with mock.patch.object(verify, "SYSTEM_LIBRARY_DIRS", (str(system),)):
+                self.assertEqual({}, verify.prepareLibraryAliases(source, root / "plain")["aliases"])
+                (source / "Game.pro").write_text("unix: LIBS += -L$$PWD/lib/ -lzdll\n")
+                result = verify.prepareLibraryAliases(source, root / "linked")
+            self.assertEqual({"zdll": str(system / "libz.so")}, result["aliases"])
+            self.assertEqual(b"zlib", (Path(result["directory"]) / "libzdll.so").read_bytes())
+
     def testObserverDoesNotReplaceHistoricalMain(self):
         source = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
         self.assertIn("Q_COREAPP_STARTUP_FUNCTION", source)
