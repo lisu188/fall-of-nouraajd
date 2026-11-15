@@ -219,6 +219,23 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     aliases = vh.prepareLibraryAliases(source, output)
     environment = ["env", *(name + "=" + str(value) for name, value in recipe.get("environment", {}).items())]
     commands = ["set -e"]
+    if vh.source_prep.preparationRequired(source):
+        commands.append(
+            shlex.join(
+                [
+                    hr.CONTROLLER,
+                    str(REPO / "scripts/history_source_prep.py"),
+                    "--source-root",
+                    str(source),
+                    "--output-dir",
+                    str(output / "preparation"),
+                    "--recipes",
+                    str(REPO / "recovery/toolchains/qt5.json"),
+                    "--recipe",
+                    recipe["id"],
+                ]
+            )
+        )
     for project in [*projects["dependencies"], projects["application"]]:
         build_root = output / project.relative_to(source).parent
         build_root.mkdir(parents=True, exist_ok=True)
@@ -419,7 +436,15 @@ def export() -> None:
                 continue
             target = REPO / "recovery/evidence" / commit
             target.mkdir(parents=True, exist_ok=True)
-            for name in ("verification.json", "startup.json", "startup.png", "configure.log", "startup.log"):
+            for name in (
+                "verification.json",
+                "startup.json",
+                "startup.png",
+                "configure.log",
+                "startup.log",
+                "source-preparation.json",
+                "source-preparation.log",
+            ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
             with gzip.GzipFile(target / "build.log.gz", "wb", mtime=0) as stream:

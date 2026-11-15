@@ -11,6 +11,8 @@ on:
       - scripts/recovery_readme.py
       - scripts/history_rootfs.py
       - scripts/history_workbench.py
+      - scripts/history_source_prep.py
+      - scripts/history_prepare_includes.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
       - tests/test_history_smoke.py
@@ -21,6 +23,8 @@ on:
       - tests/test_history_resources.py
       - tests/test_history_rootfs.py
       - tests/test_history_workbench.py
+      - tests/test_history_source_prep.py
+      - tests/test_history_prepare_includes.py
       - tests/test_recovery_workflow.py
 
 permissions:
@@ -46,7 +50,7 @@ jobs:
             tests.test_recovery_workflow tests.test_history_overrides \
             tests.test_history_config tests.test_recovery_readme \
             tests.test_history_payloads tests.test_history_resources tests.test_history_rootfs \
-            tests.test_history_workbench
+            tests.test_history_workbench tests.test_history_source_prep tests.test_history_prepare_includes
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

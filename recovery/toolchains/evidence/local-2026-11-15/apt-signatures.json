@@ -1,0 +1,22 @@
+{
+  "archive.ubuntu.com_ubuntu_dists_xenial-backports_InRelease": {
+    "sha256": "af6564097d591217c37c19a0692ec19be62b472763c77dd9f0e4afec140baad8",
+    "url": "https://archive.ubuntu.com/ubuntu/dists/xenial-backports/InRelease",
+    "verified": true
+  },
+  "archive.ubuntu.com_ubuntu_dists_xenial-updates_InRelease": {
+    "sha256": "1d62a44f11ebef680302fe8f1e8964db30558323cd5cc3c9a462583dfea12bf2",
+    "url": "https://archive.ubuntu.com/ubuntu/dists/xenial-updates/InRelease",
+    "verified": true
+  },
+  "archive.ubuntu.com_ubuntu_dists_xenial_InRelease": {
+    "sha256": "30e9ff343d9ec0b64d28d27010bf472090bb3399b4b6bc5aee077085e920e89b",
+    "url": "https://archive.ubuntu.com/ubuntu/dists/xenial/InRelease",
+    "verified": true
+  },
+  "security.ubuntu.com_ubuntu_dists_xenial-security_InRelease": {
+    "sha256": "34ee43815214efa80dd2c4fda2e2066b46ada5153fbf26e357abf7396d969640",
+    "url": "https://security.ubuntu.com/ubuntu/dists/xenial-security/InRelease",
+    "verified": true
+  }
+}

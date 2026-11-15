@@ -1,0 +1,21 @@
+{
+  "archive.ubuntu.com_ubuntu_dists_xenial-backports_InRelease": "af6564097d591217c37c19a0692ec19be62b472763c77dd9f0e4afec140baad8",
+  "archive.ubuntu.com_ubuntu_dists_xenial-backports_main_binary-amd64_Packages.lz4": "b7666ae5bc4626f8bc5918ee01ce97ac5ee871b6ec7023fbc9244d0b285d3e57",
+  "archive.ubuntu.com_ubuntu_dists_xenial-backports_universe_binary-amd64_Packages.lz4": "0f35a25f24b08f8b2304764939902b9278e04ed28c1d4d99bab464f501d44222",
+  "archive.ubuntu.com_ubuntu_dists_xenial-updates_InRelease": "1d62a44f11ebef680302fe8f1e8964db30558323cd5cc3c9a462583dfea12bf2",
+  "archive.ubuntu.com_ubuntu_dists_xenial-updates_main_binary-amd64_Packages.lz4": "49a55f2dc30f798166dadfb4ffcf847708d48927696ed8a5b5b39525f673f0cd",
+  "archive.ubuntu.com_ubuntu_dists_xenial-updates_multiverse_binary-amd64_Packages.lz4": "a788931c82f2d8db46595ac54b8ae6f61bdbba25041dd3ea8574dc4579367401",
+  "archive.ubuntu.com_ubuntu_dists_xenial-updates_restricted_binary-amd64_Packages.lz4": "4b479b60f44e157025dc06085ed7fd852e815d228188b9bb5d7c3003615d2020",
+  "archive.ubuntu.com_ubuntu_dists_xenial-updates_universe_binary-amd64_Packages.lz4": "5309f93522f547a5c030a9a6affc143f10ced81afe05d234e11ca1fb1671bc90",
+  "archive.ubuntu.com_ubuntu_dists_xenial_InRelease": "30e9ff343d9ec0b64d28d27010bf472090bb3399b4b6bc5aee077085e920e89b",
+  "archive.ubuntu.com_ubuntu_dists_xenial_main_binary-amd64_Packages.lz4": "d9c24112252ef684397fb178c2525b6154afeaeb27b52412d8f5ef007c340c34",
+  "archive.ubuntu.com_ubuntu_dists_xenial_multiverse_binary-amd64_Packages.lz4": "19f0a1a4e1e6f556a08a66c77f1502b51f25a17a9fbd714cbed6808b7595f4e3",
+  "archive.ubuntu.com_ubuntu_dists_xenial_restricted_binary-amd64_Packages.lz4": "fe55f6dda3d2839a4a15a167ca864043768a4ad9a6126614966cd5e7a6a6b28b",
+  "archive.ubuntu.com_ubuntu_dists_xenial_universe_binary-amd64_Packages.lz4": "a6886de7adbfe2561d6ab778935fe312c6b070b1e18b08fb643f8981ad264271",
+  "lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "security.ubuntu.com_ubuntu_dists_xenial-security_InRelease": "34ee43815214efa80dd2c4fda2e2066b46ada5153fbf26e357abf7396d969640",
+  "security.ubuntu.com_ubuntu_dists_xenial-security_main_binary-amd64_Packages.lz4": "f24a648daf2980e90be7b4b66d177803ec14559fceba05e5b3d0822405527606",
+  "security.ubuntu.com_ubuntu_dists_xenial-security_multiverse_binary-amd64_Packages.lz4": "444f0080881d4ca4e67dc2c57b6fe688b8da8996bc8b29854cefee7e73a50488",
+  "security.ubuntu.com_ubuntu_dists_xenial-security_restricted_binary-amd64_Packages.lz4": "f0aca99152f3e6f7bbc1dc568c8012edf9298310e9d36d1173d31e549c0a7d87",
+  "security.ubuntu.com_ubuntu_dists_xenial-security_universe_binary-amd64_Packages.lz4": "d9bb07b808d73223d50e9505506b49948213baa4598666b746d3cdd0f77ae976"
+}

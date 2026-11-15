@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "commit": "00b9212a0944c4032bebc65310406734d3c678a3",
+      "firstCatalogOrder": 68,
+      "originalBlob": "b1887076550bbe1277bf49c7150dddbd5313e4d3",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried validated preceding reconstruction da95c3f67d6972bf6691068f50df6b83b8e3da89 unchanged; genuine #68 source header/API has no further required implementation change; original internal delta unavailable",
+      "sha256": "2408404d6f7b0c26434383c31c0f30a7ad0d7e1b0a34beefaa9d03798090d284",
+      "source": "recovery/payloads/reconstructions/b1/b1887076550bbe1277bf49c7150dddbd5313e4d3-creature.cpp"
+    },
+    {
+      "commit": "00b9212a0944c4032bebc65310406734d3c678a3",
+      "firstCatalogOrder": 68,
+      "originalBlob": "defc5a5ae7d4df39ba319bcae3c0af405d296d3b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #66 3D map reconstruction to genuine #68 ordered tile-cache container and removal of currentMap field; active depth remains a local derived from the actual player",
+      "sha256": "4c63037f677f9aa5e0453e8dbe0f2bbca9854ecc20b15a11ef9f8c2fb1b9ff79",
+      "source": "recovery/payloads/reconstructions/de/defc5a5ae7d4df39ba319bcae3c0af405d296d3b-map.cpp"
+    },
+    {
+      "commit": "00b9212a0944c4032bebc65310406734d3c678a3",
+      "firstCatalogOrder": 68,
+      "originalBlob": "60df516e7238ae7c82de2b8cd46e789c366add85",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried validated preceding reconstruction 04dd60f289264b4c5c53a0705ae2c71768251ee0 unchanged; genuine #68 source header/API has no further required implementation change; original internal delta unavailable",
+      "sha256": "dce86b7ab5947c956a06981817e5eef65c783ec70674e7f1a83c48b226e97267",
+      "source": "recovery/payloads/reconstructions/60/60df516e7238ae7c82de2b8cd46e789c366add85-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay, original internal deltas and missing data schemas remain underdetermined; real compilation/startup proof only.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "6e3fcac0ce46435123e75abb38a83b9b62e903d5cf9e22e9e8a61be4905aa355",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

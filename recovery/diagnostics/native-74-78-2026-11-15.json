@@ -1,0 +1,112 @@
+{
+  "entries": [
+    {
+      "commit": "2e3be1ab489eb4d62156adf63296c0be80aced02",
+      "firstCatalogOrder": 74,
+      "originalBlob": "c5bdae73af402231ef03169c35131eab8974d398",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c7f33fe213c8bbfc9aa83675708a0c2884514a5b (previous version of map/map.cpp)",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "recovery/payloads/reconstructions/c5/c5bdae73af402231ef03169c35131eab8974d398-map.cpp"
+    },
+    {
+      "commit": "25a25733afccb1fb4ad76840bb99dcb6e8798252",
+      "firstCatalogOrder": 75,
+      "originalBlob": "7b24180a42173ba0cb3db3d77c27d61d8e11a1fb",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c5bdae73af402231ef03169c35131eab8974d398 (previous version of map/map.cpp)",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "recovery/payloads/reconstructions/7b/7b24180a42173ba0cb3db3d77c27d61d8e11a1fb-map.cpp"
+    },
+    {
+      "commit": "25a25733afccb1fb4ad76840bb99dcb6e8798252",
+      "firstCatalogOrder": 75,
+      "originalBlob": "1752a2bd95834d2d633da852facf3d24e72bc2d6",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 11bf98aead92078dbb6f61d22c2e78c53249a186 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "recovery/payloads/reconstructions/17/1752a2bd95834d2d633da852facf3d24e72bc2d6-gamescene.cpp"
+    },
+    {
+      "commit": "e8a1b61a3368362508693275b990c748aa19957f",
+      "firstCatalogOrder": 76,
+      "originalBlob": "64dbd84133b57f3ca6b087378b4b9c99b34d5196",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Implemented genuine #76 combined Map::loadFromJson/saveToJson declarations and #79 surviving scene calls; map/state nesting and default-depth/object grouping inferred from unverified #129 config/map.json donor (bf32a4c9), not original #79 bytes. Cave/Dungeon numeric arrays follow their intact serializers; Player/Monster construction uses surviving named constructors and reconstructed Creature persistence. Unknown state classes are retained opaque rather than cast into unavailable MapObject types; exact world-item behavior remains missing. Legacy split tiles/objects input remains supported. Internal metadata storage and class discrimination are inferred.",
+      "sha256": "ea423c4a0c51bd8e8ebc3b4d33ea67b45a8290262146f2d597c9bc3b0cd19bed",
+      "source": "recovery/payloads/reconstructions/64/64dbd84133b57f3ca6b087378b4b9c99b34d5196-map.cpp"
+    },
+    {
+      "commit": "e8a1b61a3368362508693275b990c748aa19957f",
+      "firstCatalogOrder": 76,
+      "originalBlob": "cd401b1eb82497358b263bfe9076f3a953ddb1b2",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1752a2bd95834d2d633da852facf3d24e72bc2d6 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "recovery/payloads/reconstructions/cd/cd401b1eb82497358b263bfe9076f3a953ddb1b2-gamescene.cpp"
+    },
+    {
+      "commit": "8771a58cabd47a1c713e4a380b73529c50104e56",
+      "firstCatalogOrder": 77,
+      "originalBlob": "decb7a1696457aa23ec7fd6b5456ee5a0a94e14a",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Implemented genuine #76 combined Map::loadFromJson/saveToJson declarations and #79 surviving scene calls; map/state nesting and default-depth/object grouping inferred from unverified #129 config/map.json donor (bf32a4c9), not original #79 bytes. Cave/Dungeon numeric arrays follow their intact serializers; Player/Monster construction uses surviving named constructors and reconstructed Creature persistence. Unknown state classes are retained opaque rather than cast into unavailable MapObject types; exact world-item behavior remains missing. Legacy split tiles/objects input remains supported. Internal metadata storage and class discrimination are inferred.",
+      "sha256": "ea423c4a0c51bd8e8ebc3b4d33ea67b45a8290262146f2d597c9bc3b0cd19bed",
+      "source": "recovery/payloads/reconstructions/de/decb7a1696457aa23ec7fd6b5456ee5a0a94e14a-map.cpp"
+    },
+    {
+      "commit": "7e7241ec50535484682d7426658d516e46c22100",
+      "firstCatalogOrder": 78,
+      "originalBlob": "8c9e7098861c07060206c2435478ae62b19c71bc",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cd401b1eb82497358b263bfe9076f3a953ddb1b2 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "recovery/payloads/reconstructions/8c/8c9e7098861c07060206c2435478ae62b19c71bc-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "proofs": [
+      {
+        "fingerprint": "0f749639b0bf9d25fc781bcdee81cda499b8a5ebaddce322ede2e798d5f33ba3",
+        "sourceCommit": "2e3be1ab489eb4d62156adf63296c0be80aced02",
+        "sourceTree": "5188a0a2607cfea0b500de4052dafe34e48e5eb0",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "be739c83abb721c8c5a01e277eb46774ee44f4764113c08832dfb1abc1bd912d",
+        "sourceCommit": "25a25733afccb1fb4ad76840bb99dcb6e8798252",
+        "sourceTree": "46f6130e2cf50eb90c670c44aa73590220b74bb2",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "015b6238645aa83ad257e5c7fc9d8084ee29b8d10430c4c77c28f6caf19d9aa2",
+        "sourceCommit": "e8a1b61a3368362508693275b990c748aa19957f",
+        "sourceTree": "826ee789cd3962272ddbeaefa743db9d3e39adcd",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "d87a8dacf31d21cc995ad1ea22c9100c7b14a374b498f530b04f1762a255a4b8",
+        "sourceCommit": "8771a58cabd47a1c713e4a380b73529c50104e56",
+        "sourceTree": "d6acd13e01d2a9ecee8899f530afe8fe37532716",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "282161b86b2480929f8324050ca691d6e212f0cf803fec57486b3d9cadbd27e6",
+        "sourceCommit": "7e7241ec50535484682d7426658d516e46c22100",
+        "sourceTree": "1a7dd2bea693bb9d637311626d095838cc79870d",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

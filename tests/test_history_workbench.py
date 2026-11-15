@@ -4,6 +4,7 @@
 
 import contextlib
 import io
+import json
 from pathlib import Path
 import shlex
 import subprocess
@@ -77,6 +78,43 @@ class HistoricalWorkbenchBuildTest(unittest.TestCase):
 
         with mock.patch.object(workbench, "docker", side_effect=run):
             self.assertFalse(workbench.build(self.commit))
+
+    def testBuildRunsTheSharedSourcePreparationBeforeQmake(self):
+        (self.source / "game.pro").write_text("LIBS += -lpython2.7\n")
+        (self.source / "preprocessor.py").write_text("# original property generator\n")
+        result = subprocess.CompletedProcess([], 0, "rc=0", "")
+        with mock.patch.object(workbench, "docker", return_value=result) as run:
+            self.assertTrue(workbench.build(self.commit))
+        command = run.call_args.args[0]
+        self.assertLess(command.index("history_source_prep.py"), command.index("QMAKE_CXX=test-compiler"))
+        self.assertIn("--source-root " + str(self.source), command)
+        self.assertIn("--recipe test-python27", command)
+
+    def testExportRetainsOriginalGeneratorPreparationProof(self):
+        fingerprint = "b" * 64
+        evidence = self.root / "verify/evidence" / fingerprint
+        evidence.mkdir(parents=True)
+        report = {
+            "status": "success",
+            "sourceCommit": self.commit,
+            "restoration": {"restoredFilesFingerprint": fingerprint},
+        }
+        (evidence / "verification.json").write_text(json.dumps(report))
+        (evidence / "build.log").write_bytes(b"real build log\n")
+        files = {"source-preparation.json": b'{"status":"success"}\n', "source-preparation.log": b"generator log\n"}
+        for name, data in files.items():
+            (evidence / name).write_bytes(data)
+        repository = self.root / "repository"
+        with (
+            mock.patch.object(workbench, "REPO", repository),
+            mock.patch.object(workbench, "workbenchOverrides", return_value=self.root / "overrides.json"),
+            mock.patch.object(workbench.rh, "loadOverrides", return_value={}),
+            mock.patch.object(workbench.rh, "GitObjects"),
+            mock.patch.object(workbench.rh, "prepareSnapshot", return_value=({}, report["restoration"])),
+        ):
+            workbench.export()
+        for name, data in files.items():
+            self.assertEqual(data, (repository / "recovery/evidence" / self.commit / name).read_bytes())
 
 
 if __name__ == "__main__":

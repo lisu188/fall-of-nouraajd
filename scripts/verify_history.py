@@ -19,6 +19,11 @@ import tempfile
 import time
 import zlib
 
+try:
+    from scripts import history_source_prep as source_prep
+except ModuleNotFoundError:
+    import history_source_prep as source_prep
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SMOKE_SOURCE = REPO_ROOT / "recovery/smoke/game_startup.cpp"
 # The historical game targeted Windows; startup runs with case-insensitive file lookup.
@@ -587,6 +592,13 @@ def exportEvidence(result: dict, output_root: Path) -> None:
                     output.write(("\n=== " + dependency["project"] + " ===\n").encode())
                     output.write(Path(dependency[key]["log"]).read_bytes())
                 output.write(log_path.read_bytes())
+    preparation = result.get("sourcePreparation", {})
+    if preparation.get("steps"):
+        with (evidence_dir / "source-preparation.log").open("wb") as output:
+            for step in preparation["steps"]:
+                output.write(("\n=== " + step["name"] + " ===\n").encode())
+                output.write(Path(step["log"]).read_bytes())
+        writeJson(evidence_dir / "source-preparation.json", preparation)
     result["evidenceDir"] = str(evidence_dir.resolve())
     writeJson(evidence_dir / "verification.json", result)
 
@@ -624,10 +636,19 @@ def verifySnapshot(
         environment = dict(os.environ)
         environment.update({key: str(value) for key, value in recipe.get("environment", {}).items()})
         toolchain = toolchainFingerprint(recipe, environment)
+        preparation = source_prep.prepareSources(
+            source_root, work_root / "preparation", recipe, environment, runCommand, min(build_timeout, 120)
+        )
+        result["sourcePreparation"] = preparation
+        if preparation["status"] == "failed":
+            raise VerificationError(preparation["reason"])
+        runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer")
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
         identity = {
             "sourceTree": tree["tree"],
+            "sourcePreparation": preparation["identity"],
+            "runtimePreparation": {"directories": runtime_directories},
             "recipe": recipe,
             "toolchain": toolchain,
             "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
@@ -759,6 +780,10 @@ def verifySnapshot(
             smoke_environment["LD_LIBRARY_PATH"] = ":".join(
                 [*library_dirs, environment.get("LD_LIBRARY_PATH", "")]
             ).rstrip(":")
+        if runtime_directories:
+            result["runtimePreparation"] = source_prep.prepareRuntimeDirectories(
+                projects["application"].parent, runtime_directories
+            )
         result["smoke"] = runSmoke(
             ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
             projects["application"].parent,

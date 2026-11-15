@@ -1,0 +1,22 @@
+{
+  "historicalKeyringSha256": "5b3e31962f59e859a654af2f01380dcdc24cc6afa37cafb0a00bd03864556347",
+  "indexSha256": "8d6ab57abf517d7712e4e4d23d762485af49f8140a83b221ea7282f82a51c795",
+  "keyringSha256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31",
+  "packages": [
+    {
+      "name": "fakeroot",
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/downloads/ubuntu/fakeroot_1.20.2-1ubuntu1_amd64.deb",
+      "sha256": "d2b1cb1f69c4aacf61bc031f897d3eca907b25be1a7a91bd6ada190eeb530952",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/f/fakeroot/fakeroot_1.20.2-1ubuntu1_amd64.deb",
+      "version": "1.20.2-1ubuntu1"
+    },
+    {
+      "name": "libfakeroot",
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/downloads/ubuntu/libfakeroot_1.20.2-1ubuntu1_amd64.deb",
+      "sha256": "f41bfcf343c050544f3d91a4ecb9f975e59fce89200bc061d5d8ee2cd1048b20",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/f/fakeroot/libfakeroot_1.20.2-1ubuntu1_amd64.deb",
+      "version": "1.20.2-1ubuntu1"
+    }
+  ],
+  "releaseSha256": "30e9ff343d9ec0b64d28d27010bf472090bb3399b4b6bc5aee077085e920e89b"
+}

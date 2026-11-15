@@ -1,0 +1,104 @@
+{
+  "aptArchiveCount": 263,
+  "baseManifestDigest": "sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+  "commands": {
+    "resumeBootstrap": "python3 /tmp/nouraajd-bfg-recovery/toolchain-build/bootstrap.py build",
+    "runnerProbe": "python3 scripts/history_rootfs.py run --rootfs /tmp/nouraajd-bfg-recovery/toolchain-build/rootfs --repo /tmp/nouraajd-bfg-recovery/source --writable /tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe -- /tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe/probe.py",
+    "selectRootfs": "HISTORY_TOOLCHAIN_ROOTFS=/tmp/nouraajd-bfg-recovery/toolchain-build/rootfs"
+  },
+  "imageId": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+  "installedInventorySha256": "89d5e42cf1af1c7bc9a246fa4f82608641b5a216c7151baa062098c889a26793",
+  "isolation": {
+    "networkInterfaces": [
+      "lo"
+    ],
+    "qtWidgetsXvfb": "passed",
+    "readonlyToolchainSourceAndGit": true
+  },
+  "kind": "local-bwrap-fakeroot",
+  "limitations": [
+    "Local content-identified toolchain, not a downloaded CI image",
+    "Controller lacks optional SSL, hashlib/OpenSSL, lzma, dbm and Tk extensions; builtin SHA256/gzip/json/ctypes and the network-isolated verifier are supported",
+    "Runner smoke validates Qt/toolchain/isolation; each restored game tree still needs its verifier run"
+  ],
+  "manifests": {
+    "apt-index-hashes.json": "001ab4d16bc5382649e8f633c721ae0d4a0a81cce2a1c00e9b7eab89f4827b79",
+    "apt-packages.json": "1fe49c6fe06c87ba7b8ba2bdf2ef37737666805677ea3b7467157f1ae48775c2",
+    "apt-signatures.json": "cdaf311703475379845eb77aa2eb38d25da9cb4c78a44f01a4b22916be1d2b13",
+    "base-provenance.json": "75dacc3071350360b472141a7ce31b8669f3632c038120ebe7bae379a961cc72",
+    "bootstrap-packages.json": "f90a04811a1146d05431dbb4c5940a4942c1d4840de72ffd31cd23d7057816a9",
+    "local-image-config.json": "d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+    "local-image-manifest.json": "bbe7e84e078a497af491cd0f51028a0c7a495c03a72e5f0249efd0401d445f74",
+    "recipe-provenance.json": "b58cb7b580b2dd670789fa0804810f4fc772a0418e6e650d147f398f3695b244"
+  },
+  "rootfsLayerBytes": 1596794880,
+  "rootfsLayerDiffId": "sha256:19e2e6e57136da76dc6cb248cf8a6f0a7e5323cbdbb8d1b6a1dca9f0c4a18584",
+  "schemaVersion": 1,
+  "sourceArchives": [
+    {
+      "archiveBytes": 12854736,
+      "name": "python-2.7.18",
+      "sha256": "b62c0e7937551d0cc02b8fd5cb0f544f9405bafc9a54d3808ed4594812edef43",
+      "url": "https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tar.xz"
+    },
+    {
+      "archiveBytes": 12160392,
+      "name": "python-3.3.7",
+      "sha256": "85f60c327501c36bc18c33370c14d472801e6af2f901dafbba056f61685429fe",
+      "url": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz"
+    },
+    {
+      "archiveBytes": 14559088,
+      "name": "python-3.4.10",
+      "sha256": "d46a8f6fe91679e199c671b1b0a30aaf172d2acb5bcab25beb35f16c3d195b4e",
+      "url": "https://www.python.org/ftp/python/3.4.10/Python-3.4.10.tar.xz"
+    },
+    {
+      "archiveBytes": 20502440,
+      "name": "python-3.12.9-controller",
+      "sha256": "7220835d9f90b37c006e9842a8dff4580aaca4318674f947302b8d28f3f81112",
+      "url": "https://www.python.org/ftp/python/3.12.9/Python-3.12.9.tar.xz"
+    },
+    {
+      "archiveBytes": 70394057,
+      "checksumSource": "https://archives.boost.io/release/1.58.0/source/boost_1_58_0.tar.bz2.json",
+      "name": "boost-1.58.0",
+      "sha256": "fdfc204fc33ec79c99b9a74944c3e54bd78be4f7f15e260c0e2700a36dc7d3e5",
+      "url": "https://archives.boost.io/release/1.58.0/source/boost_1_58_0.tar.bz2"
+    }
+  ],
+  "status": "success",
+  "storage": {
+    "capBytes": 17179869184,
+    "linuxFreeBytes": 827683074048,
+    "retainedBytes": 1716062351,
+    "windowsFreeBytes": 339749707776
+  },
+  "toolchain": {
+    "controller": "Python 3.12.9",
+    "gcc": "5.4.0",
+    "pythonAbis": {
+      "2.7.18": {
+        "boost": "1.58.0",
+        "loadedLibraries": [
+          "/opt/recovery/boost/py27/lib/libboost_python.so.1.58.0"
+        ]
+      },
+      "3.3.7": {
+        "boost": "1.58.0",
+        "loadedLibraries": [
+          "/opt/recovery/boost/py33/lib/libboost_python.so.1.58.0",
+          "/opt/recovery/boost/py33/lib/libboost_python3.so.1.58.0"
+        ]
+      },
+      "3.4.10": {
+        "boost": "1.58.0",
+        "loadedLibraries": [
+          "/opt/recovery/boost/py34/lib/libboost_python.so.1.58.0",
+          "/opt/recovery/boost/py34/lib/libboost_python3.so.1.58.0"
+        ]
+      }
+    },
+    "qt": "5.5.1"
+  }
+}

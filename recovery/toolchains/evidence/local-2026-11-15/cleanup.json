@@ -1,0 +1,47 @@
+{
+  "authenticatedAptCacheRemovedBytes": 112844906,
+  "bootstrapBytecodeRemoved": [
+    {
+      "bytes": 27016,
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/__pycache__/bootstrap.cpython-312.pyc"
+    }
+  ],
+  "buildScratch": {
+    "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/tmp/recovery-toolchain-build",
+    "present": false,
+    "reason": "Removed by unchanged successful pinned build.sh; exact removed size not sampled"
+  },
+  "generatedProbeFilesRemoved": [
+    {
+      "bytes": 15718,
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe/Makefile"
+    },
+    {
+      "bytes": 271,
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe/main.cpp"
+    },
+    {
+      "bytes": 3328,
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe/main.o"
+    },
+    {
+      "bytes": 103,
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe/probe.pro"
+    },
+    {
+      "bytes": 9368,
+      "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/runner-probe/qt-probe"
+    }
+  ],
+  "partialBaseRemoved": {
+    "bytes": 7435305,
+    "path": "/tmp/nouraajd-bfg-recovery/toolchain-build/rootfs",
+    "reason": "Incomplete reproducible extraction; verified base layers retained"
+  },
+  "retained": [
+    "rootfs: required compiler/runtime",
+    "downloads: verified offline dependencies",
+    "small manifests, signed metadata, build output and probe script/report: reproducible evidence"
+  ],
+  "windowsAllocationReclaimed": false
+}

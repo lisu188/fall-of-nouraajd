@@ -1,0 +1,2244 @@
+{
+  "boundary": "Authentic declaration reconstruction only; original bytes and missing CCreature.cpp implementation deltas remain unavailable. No compile/runtime acceptance.",
+  "entries": [
+    {
+      "bytes": 4668,
+      "commits": [
+        "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+        "f873badeef24b84b8940982d21a2a9b87545fb30",
+        "eb8276b2fc795f3af5f36370c209db85c1fb818d",
+        "7c79af080a5bd21526ff5af890cb3f9559f689ac",
+        "44fe765077f6eb320afd672dd222d0a46c033157"
+      ],
+      "compileAssumptions": [
+        "The non-template Comparer used by intact playerlistview.h is expected from missing CMap.h, matching the dependency of the preceding creature.h; its original declaration is unavailable.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+          "paths": [
+            "src/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+          "paths": [
+            "src/gamescene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+          "paths": [
+            "src/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+          "paths": [
+            "src/playerlistview.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+          "paths": [
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 248,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "2208d3050e09e8d8e00852ea8f61c035b435cc2f",
+      "path": "src/CCreature.h",
+      "positions": [
+        248,
+        249,
+        250,
+        251,
+        252
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "a2ec06d9feebda217dd7899b45a68577a882f1a66dd751da3e24e1a1701c950f",
+      "source": "recovery/payloads/reconstructions/22/2208d3050e09e8d8e00852ea8f61c035b435cc2f-CCreature.h",
+      "stagedSha256": "b0593d16d0d952dc0e80d61c9474160328ff5591115674fb4eea7d2200bf278d"
+    },
+    {
+      "bytes": 4706,
+      "commits": [
+        "a9534481e30ae59be3bee52c6ff23aaba2dbae48"
+      ],
+      "compileAssumptions": [
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 253,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "7cd48c708e02e43d681d2e5d8828f81c2a59216b",
+      "path": "src/CCreature.h",
+      "positions": [
+        253
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "722782b0059738cefeaab022bfb7e7cf8e9633e2007bbdc45d01cc3abbcab689",
+      "source": "recovery/payloads/reconstructions/7c/7cd48c708e02e43d681d2e5d8828f81c2a59216b-CCreature.h",
+      "stagedSha256": "adb37c1a9b0f78dd53385a901557046c31383c6e2985315f20f6af823d09933d"
+    },
+    {
+      "bytes": 4694,
+      "commits": [
+        "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+        "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+        "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+        "9fc9416b1025044633a6b789212f67c56ecaafba"
+      ],
+      "compileAssumptions": [
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+          "paths": [
+            "src/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+          "paths": [
+            "src/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+          "paths": [
+            "src/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+          "paths": [
+            "src/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+          "paths": [
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 254,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "9025f98936023719244d4e6c0cb5211e20c9e996",
+      "path": "src/CCreature.h",
+      "positions": [
+        254,
+        255,
+        256,
+        257
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "0d5f38815531d9a8d9d9defba65f3c1fef5231c7ee900b3c496d9bfd34cb770f",
+      "source": "recovery/payloads/reconstructions/90/9025f98936023719244d4e6c0cb5211e20c9e996-CCreature.h",
+      "stagedSha256": "90309c85f9f5a01b144bf857b68fee3afab50d4103398a3896e4fb0ba482f9db"
+    },
+    {
+      "bytes": 4694,
+      "commits": [
+        "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+        "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+      ],
+      "compileAssumptions": [
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 258,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "e394a1244576a21686835e3413157d4d4a1e679f",
+      "path": "src/CCreature.h",
+      "positions": [
+        258,
+        259
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "0d5f38815531d9a8d9d9defba65f3c1fef5231c7ee900b3c496d9bfd34cb770f",
+      "source": "recovery/payloads/reconstructions/e3/e394a1244576a21686835e3413157d4d4a1e679f-CCreature.h",
+      "stagedSha256": "90309c85f9f5a01b144bf857b68fee3afab50d4103398a3896e4fb0ba482f9db"
+    },
+    {
+      "bytes": 4656,
+      "commits": [
+        "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+        "b4954bbcaad2b59cd68f24beb69fe05cbbe46081",
+        "e8b7c3d0e6da989122a0587943a98504342da3cd",
+        "be8b99dfdfe8c13c33f4d60610f24dc7199031a7",
+        "e398df1047d75ac0b2885d0dcfc03ad4c35990c2",
+        "cce51b01010c31cc69119e695dc3133c8c372210"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+          "paths": [
+            "src/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+          "paths": [
+            "src/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+          "paths": [
+            "src/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+          "paths": [
+            "src/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+          "paths": [
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 260,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "791d3aa8fd52e427714e6eb3e8b3e01cec2877d1",
+      "path": "src/CCreature.h",
+      "positions": [
+        260,
+        261,
+        262,
+        263,
+        264,
+        265
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "f9ee1eb0d93c810ac6e5b5829fd057e701eddd23e82f375bbee620bae53c4204",
+      "source": "recovery/payloads/reconstructions/79/791d3aa8fd52e427714e6eb3e8b3e01cec2877d1-CCreature.h",
+      "stagedSha256": "236825c65bb526f9150c19ce390f8acdf982540d70b7b52d3d01b5fd27611606"
+    },
+    {
+      "bytes": 4619,
+      "commits": [
+        "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+        "f2c254b087ffa7ab035dc86946997dbb5a4fe6c0",
+        "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073",
+        "1b30a29102065bad6bd0e3cf4d0d4dd652d856b9",
+        "e4a4821fb1ed08fe7f72f63e49748c23390f16ac",
+        "c4d43a9f8ddd1980f4b39a659d63c68c6a2de31c",
+        "8d5eb7f18f89ff70ea633f463a57b72f46aaf2e4",
+        "2017b1ead3293bf0b53bfe1a7b3804310911173b",
+        "23add7278f50e9ad1c7b232eb7717597ff3ea0ae"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+          "paths": [
+            "src/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+          "paths": [
+            "src/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+          "paths": [
+            "src/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+          "paths": [
+            "src/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+          "paths": [
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 266,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "4eafa3bb21ecb4d8713a1de689509cb7e1fb771b",
+      "path": "src/CCreature.h",
+      "positions": [
+        266,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "9adc2b919ebfbb28f27d438d69029595a749432c8d6ae6d505107860b554dacd",
+      "source": "recovery/payloads/reconstructions/4e/4eafa3bb21ecb4d8713a1de689509cb7e1fb771b-CCreature.h",
+      "stagedSha256": "13236c8db4fd7e4273e2d12f8df955a8e37ae15cb53e577ed75bb6957ffa84d9"
+    },
+    {
+      "bytes": 4578,
+      "commits": [
+        "75d178f1ac4574316543e76af9234f93e38ead59",
+        "2f1b611df0ace34f501a30acdf50c0c14282cf0c",
+        "fe01b5980ebbec1a29dc3b2210597e7003ff729f",
+        "cd9f1194b608d647a67b040689f48730dfa921e5",
+        "25124a740fb59242695fb5b477d318b40e7d0121"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "75d178f1ac4574316543e76af9234f93e38ead59",
+          "paths": [
+            "game/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75d178f1ac4574316543e76af9234f93e38ead59",
+          "paths": [
+            "game/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75d178f1ac4574316543e76af9234f93e38ead59",
+          "paths": [
+            "game/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75d178f1ac4574316543e76af9234f93e38ead59",
+          "paths": [
+            "game/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75d178f1ac4574316543e76af9234f93e38ead59",
+          "paths": [
+            "game/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 275,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "be1e1b544b0e27942d9391bcca8e6d36b5981fb0",
+      "path": "game/CCreature.h",
+      "positions": [
+        275,
+        276,
+        277,
+        278,
+        279
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "ae2b19afe7ad091022d1515cf07a7da6b2ea1be361b5de856e6fe79a4a6c905b",
+      "source": "recovery/payloads/reconstructions/be/be1e1b544b0e27942d9391bcca8e6d36b5981fb0-CCreature.h",
+      "stagedSha256": "66da6d9c2958b422f87f7b87c91c01be7f317fc1077cd83230a85f9399aad444"
+    },
+    {
+      "bytes": 4581,
+      "commits": [
+        "9dfc6e513419db09902f141de4b1583c511e6200",
+        "86487a820bd6d2130e684d4d6b0c5681dbb6b561",
+        "9843aa0b06bc706fdaeee61f20339c29a9d3a6de",
+        "161a04cd7a7b4e57e4170b925f32dfd5d14ee66c",
+        "b18ba43aca75315aeee3f07bd2ca269a0060d1ce",
+        "e5b5c9b397541ae896c999ee1810f0f293cf10fa",
+        "00d9708014417b8142294022d65ec201ccdfa29a",
+        "be7f9ca9af9d2f73ab4833a4ef884e71b798eb79"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "9dfc6e513419db09902f141de4b1583c511e6200",
+          "paths": [
+            "game/CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9dfc6e513419db09902f141de4b1583c511e6200",
+          "paths": [
+            "game/CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9dfc6e513419db09902f141de4b1583c511e6200",
+          "paths": [
+            "game/CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9dfc6e513419db09902f141de4b1583c511e6200",
+          "paths": [
+            "game/CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9dfc6e513419db09902f141de4b1583c511e6200",
+          "paths": [
+            "game/ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 280,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "1a59afabf635f94728c6b8d3fe4b97cb3637bb33",
+      "path": "game/CCreature.h",
+      "positions": [
+        280,
+        281,
+        282,
+        283,
+        284,
+        285,
+        286,
+        287
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "81cfbb6c98257b33c002719d2ba988d8a850b8d62c6e081131ae5d0cdfbb577c",
+      "source": "recovery/payloads/reconstructions/1a/1a59afabf635f94728c6b8d3fe4b97cb3637bb33-CCreature.h",
+      "stagedSha256": "771a91cba9d4cc9455d04284b264c038359995897680f16da5d7d0f343726bd2"
+    },
+    {
+      "bytes": 4581,
+      "commits": [
+        "18f71340e6334db61d3abc88ac99ac118270d7d1",
+        "712b84e04439d96e4baeb4a9b739895370185682"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "18f71340e6334db61d3abc88ac99ac118270d7d1",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "18f71340e6334db61d3abc88ac99ac118270d7d1",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "18f71340e6334db61d3abc88ac99ac118270d7d1",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "18f71340e6334db61d3abc88ac99ac118270d7d1",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "18f71340e6334db61d3abc88ac99ac118270d7d1",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 288,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "f31f0f27e62808f4afd70e284d765d5a1bc18e0c",
+      "path": "CCreature.h",
+      "positions": [
+        288,
+        289
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "81cfbb6c98257b33c002719d2ba988d8a850b8d62c6e081131ae5d0cdfbb577c",
+      "source": "recovery/payloads/reconstructions/f3/f31f0f27e62808f4afd70e284d765d5a1bc18e0c-CCreature.h",
+      "stagedSha256": "771a91cba9d4cc9455d04284b264c038359995897680f16da5d7d0f343726bd2"
+    },
+    {
+      "bytes": 4640,
+      "commits": [
+        "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+        "58259116b3208867a11fdc532caa0c8b8afd5be7",
+        "559ead9db96da50ae2e451d4c15fc0eb9985aa8f",
+        "77581ebb8c9133ed56b11e6ecf6d5a10980f73e4",
+        "104edb40b2c18764b57630d15a6e1c12630752da",
+        "a2567aac4099cd68008bbd8390d6cf8a02b6bc81",
+        "5e6bd51644b16327a27dfe0f4c44cce307050146",
+        "e899bef6df6f290bc79088296a169152ece3f10a"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 290,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "b01b2b509e98c766caeacb4cb1ad46529ad0944b",
+      "path": "CCreature.h",
+      "positions": [
+        290,
+        291,
+        292,
+        293,
+        294,
+        295,
+        296,
+        297
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "recovery/payloads/reconstructions/b0/b01b2b509e98c766caeacb4cb1ad46529ad0944b-CCreature.h",
+      "stagedSha256": "dd782c7409716bd00a810e20eafc499d53fc4f190e9b63c77e37ff38ee989a50"
+    },
+    {
+      "bytes": 4640,
+      "commits": [
+        "a5fc4556044a945e8c88d949177499a9ff7c95de"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "a5fc4556044a945e8c88d949177499a9ff7c95de",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "a5fc4556044a945e8c88d949177499a9ff7c95de",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a5fc4556044a945e8c88d949177499a9ff7c95de",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a5fc4556044a945e8c88d949177499a9ff7c95de",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a5fc4556044a945e8c88d949177499a9ff7c95de",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "a5fc4556044a945e8c88d949177499a9ff7c95de",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 298,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "8aa9effa93cb967fc3a695421025c0e5e43fd783",
+      "path": "CCreature.h",
+      "positions": [
+        298
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "recovery/payloads/reconstructions/8a/8aa9effa93cb967fc3a695421025c0e5e43fd783-CCreature.h",
+      "stagedSha256": "dd782c7409716bd00a810e20eafc499d53fc4f190e9b63c77e37ff38ee989a50"
+    },
+    {
+      "bytes": 4640,
+      "commits": [
+        "eae1adecf2efe90f29c1b9b4a136c82de041a796"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 299,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "8d524333f93f73034534e142f3d9b1778269d518",
+      "path": "CCreature.h",
+      "positions": [
+        299
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "recovery/payloads/reconstructions/8d/8d524333f93f73034534e142f3d9b1778269d518-CCreature.h",
+      "stagedSha256": "dd782c7409716bd00a810e20eafc499d53fc4f190e9b63c77e37ff38ee989a50"
+    },
+    {
+      "bytes": 4640,
+      "commits": [
+        "b544b03385befb58c2f805109ebafecd632cdef0"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "b544b03385befb58c2f805109ebafecd632cdef0",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "b544b03385befb58c2f805109ebafecd632cdef0",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b544b03385befb58c2f805109ebafecd632cdef0",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b544b03385befb58c2f805109ebafecd632cdef0",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b544b03385befb58c2f805109ebafecd632cdef0",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b544b03385befb58c2f805109ebafecd632cdef0",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 300,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "aee8eac00794009cfea9f53df2e7ab20c862ed6c",
+      "path": "CCreature.h",
+      "positions": [
+        300
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "recovery/payloads/reconstructions/ae/aee8eac00794009cfea9f53df2e7ab20c862ed6c-CCreature.h",
+      "stagedSha256": "dd782c7409716bd00a810e20eafc499d53fc4f190e9b63c77e37ff38ee989a50"
+    },
+    {
+      "bytes": 4640,
+      "commits": [
+        "229ade513a8962ea399d9cc4251f0968acdd62b1",
+        "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 301,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "03eac07a28c6c54b5b776f9ef7766bca4297713d",
+      "path": "CCreature.h",
+      "positions": [
+        301,
+        302
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "recovery/payloads/reconstructions/03/03eac07a28c6c54b5b776f9ef7766bca4297713d-CCreature.h",
+      "stagedSha256": "dd782c7409716bd00a810e20eafc499d53fc4f190e9b63c77e37ff38ee989a50"
+    },
+    {
+      "bytes": 4383,
+      "commits": [
+        "30f2226a11e58b114692d6990323f26af5646e58"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 303,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "25e2c224f89417c642ba1c0ee27722add4d97018",
+      "path": "CCreature.h",
+      "positions": [
+        303
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "recovery/payloads/reconstructions/25/25e2c224f89417c642ba1c0ee27722add4d97018-CCreature.h",
+      "stagedSha256": "784dbf2274937a650cf505db1ad12a792c4437f9c659aaaa3110463283f189cc"
+    },
+    {
+      "bytes": 4421,
+      "commits": [
+        "8c67b6c5800deaa0bd6b95d636e4e9de72b80490"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 304,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "7df65b454ee43e8b906490450927ad04d78d319b",
+      "path": "CCreature.h",
+      "positions": [
+        304
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "de8e13ca36a6779f3ba1f1c0a73c49881833faceecf546c49db34fe6e1232b54",
+      "source": "recovery/payloads/reconstructions/7d/7df65b454ee43e8b906490450927ad04d78d319b-CCreature.h",
+      "stagedSha256": "8bff06b51fa2f60eba2cf2f071e2868d59129494324cd9e4175a0fec0b332b30"
+    },
+    {
+      "bytes": 4421,
+      "commits": [
+        "471be57fbbd86d75c56133e610a1f28bb68446bb"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 305,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "df4495b6ce640f09469c04b4286a27aa7a84c3d4",
+      "path": "CCreature.h",
+      "positions": [
+        305
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "de8e13ca36a6779f3ba1f1c0a73c49881833faceecf546c49db34fe6e1232b54",
+      "source": "recovery/payloads/reconstructions/df/df4495b6ce640f09469c04b4286a27aa7a84c3d4-CCreature.h",
+      "stagedSha256": "8bff06b51fa2f60eba2cf2f071e2868d59129494324cd9e4175a0fec0b332b30"
+    },
+    {
+      "bytes": 4383,
+      "commits": [
+        "3439d0c4e5572aa51cd1ba324b0e844a9633bc82"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 306,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "80933a5b4b3f9d3518a0d61b5f1962772a64949e",
+      "path": "CCreature.h",
+      "positions": [
+        306
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "recovery/payloads/reconstructions/80/80933a5b4b3f9d3518a0d61b5f1962772a64949e-CCreature.h",
+      "stagedSha256": "784dbf2274937a650cf505db1ad12a792c4437f9c659aaaa3110463283f189cc"
+    },
+    {
+      "bytes": 4383,
+      "commits": [
+        "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+        "86dedc767b8d8012c8b20121feb74a0d4bf810f4"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 307,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "c11fd54964dcf987fc8de84b601353624cfdb737",
+      "path": "CCreature.h",
+      "positions": [
+        307,
+        308
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "recovery/payloads/reconstructions/c1/c11fd54964dcf987fc8de84b601353624cfdb737-CCreature.h",
+      "stagedSha256": "784dbf2274937a650cf505db1ad12a792c4437f9c659aaaa3110463283f189cc"
+    },
+    {
+      "bytes": 4383,
+      "commits": [
+        "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 309,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "9b86f95898c8c8d1dcfd788d180b7cbb7a17eefc",
+      "path": "CCreature.h",
+      "positions": [
+        309
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "recovery/payloads/reconstructions/9b/9b86f95898c8c8d1dcfd788d180b7cbb7a17eefc-CCreature.h",
+      "stagedSha256": "784dbf2274937a650cf505db1ad12a792c4437f9c659aaaa3110463283f189cc"
+    },
+    {
+      "bytes": 4383,
+      "commits": [
+        "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 310,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "f47b6186fc4ffebbc5b54b0564b561995f745f7e",
+      "path": "CCreature.h",
+      "positions": [
+        310
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "recovery/payloads/reconstructions/f4/f47b6186fc4ffebbc5b54b0564b561995f745f7e-CCreature.h",
+      "stagedSha256": "784dbf2274937a650cf505db1ad12a792c4437f9c659aaaa3110463283f189cc"
+    },
+    {
+      "bytes": 4383,
+      "commits": [
+        "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+        "c0677233f5ab2a7d634ace65231546f061999cff",
+        "bf5670cf24fbfe04f4c3b1be827a94a593230bb5"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 311,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "ae348d4b20379ec078d9aeefbaafadeec22b83b9",
+      "path": "CCreature.h",
+      "positions": [
+        311,
+        312,
+        313
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "recovery/payloads/reconstructions/ae/ae348d4b20379ec078d9aeefbaafadeec22b83b9-CCreature.h",
+      "stagedSha256": "784dbf2274937a650cf505db1ad12a792c4437f9c659aaaa3110463283f189cc"
+    },
+    {
+      "bytes": 4450,
+      "commits": [
+        "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Creature onEnter is removed with the intact Visitable split; CCreature does not inherit Visitable in the nearest subsequent original. Event callback declarations match the intact CMapObject timeline; player destruction behavior needs implementation reconstruction.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 314,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "5a21646570aa1b83490e21515d6b51889d993ff9",
+      "path": "CCreature.h",
+      "positions": [
+        314
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "e592c0876e1d98f0b876d6518519ea6bd5cd81e03566dd22b68fbdc1ce8981de",
+      "source": "recovery/payloads/reconstructions/5a/5a21646570aa1b83490e21515d6b51889d993ff9-CCreature.h",
+      "stagedSha256": "1912ff3c44078d59bf209e37e5739234b936a859c754d1afb91573a707bc6d4e"
+    },
+    {
+      "bytes": 4450,
+      "commits": [
+        "34edc762d65df823025750663241ff65fd6c060d"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Creature onEnter is removed with the intact Visitable split; CCreature does not inherit Visitable in the nearest subsequent original. Event callback declarations match the intact CMapObject timeline; player destruction behavior needs implementation reconstruction.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "34edc762d65df823025750663241ff65fd6c060d",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "34edc762d65df823025750663241ff65fd6c060d",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "34edc762d65df823025750663241ff65fd6c060d",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "34edc762d65df823025750663241ff65fd6c060d",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "34edc762d65df823025750663241ff65fd6c060d",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "34edc762d65df823025750663241ff65fd6c060d",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 315,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "49bf8c5df78af24ab592774e04f0c36428c4c863",
+      "path": "CCreature.h",
+      "positions": [
+        315
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "e592c0876e1d98f0b876d6518519ea6bd5cd81e03566dd22b68fbdc1ce8981de",
+      "source": "recovery/payloads/reconstructions/49/49bf8c5df78af24ab592774e04f0c36428c4c863-CCreature.h",
+      "stagedSha256": "1912ff3c44078d59bf209e37e5739234b936a859c754d1afb91573a707bc6d4e"
+    },
+    {
+      "bytes": 4600,
+      "commits": [
+        "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+        "a763a6322c2e2d3dc7785ffbb04fc54f1e71c2e3"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Creature onEnter is removed with the intact Visitable split; CCreature does not inherit Visitable in the nearest subsequent original. Event callback declarations match the intact CMapObject timeline; player destruction behavior needs implementation reconstruction.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h",
+            "object/CMonster.h"
+          ],
+          "role": "real movement implementations and derived class declarations bracketing new Moveable interface"
+        },
+        {
+          "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 316,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "dba92cbb333824995f7bf91ad457dad5eef5a10b",
+      "path": "CCreature.h",
+      "positions": [
+        316,
+        317
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b93cfd53305846f863590c54e3ae277297cb85dbb044e39ef0eda3836b3efb68",
+      "source": "recovery/payloads/reconstructions/db/dba92cbb333824995f7bf91ad457dad5eef5a10b-CCreature.h",
+      "stagedSha256": "2ea99eae29c1995df173eb54b4a9abab326af9f93c73442897d0113f26098aa9"
+    },
+    {
+      "bytes": 4600,
+      "commits": [
+        "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+        "f6b016214b3367ba302c2a6ed47face5d27f3c13",
+        "a64e71fc174103f81e7f3ef44ab8a79a312ea18b",
+        "ead6e0b8498679734b6a4d05b88884a810527fed",
+        "8ccff81bf2bb22a0d526742eaef570653e47e63c",
+        "74594f17271a871a3241e60f19aaa8f5c587409e",
+        "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139",
+        "61369722a47d404eddf30cd505d82066af4f9b6e",
+        "35b69687549d2b68864d26b1711931835b819670",
+        "a97769c921cf57d945ffc10f70fd940ac86f3774",
+        "d732bf46e0b8a059330fdcbf4619ee7caf1c8381",
+        "8998701baa7ee3659346922c4dc2f143d619eeb1"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Creature onEnter is removed with the intact Visitable split; CCreature does not inherit Visitable in the nearest subsequent original. Event callback declarations match the intact CMapObject timeline; player destruction behavior needs implementation reconstruction.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h",
+            "object/CMonster.h"
+          ],
+          "role": "real movement implementations and derived class declarations bracketing new Moveable interface"
+        },
+        {
+          "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+          "paths": [
+            "CMapObject.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 318,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "2b468657718b52d26660e4fd22254468842fd160",
+      "path": "CCreature.h",
+      "positions": [
+        318,
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325,
+        326,
+        327,
+        328,
+        329
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "854a822fe0ef3788c0ce9b74ecadc3f031041c062713dfb3c2bf7844f2fa7904",
+      "source": "recovery/payloads/reconstructions/2b/2b468657718b52d26660e4fd22254468842fd160-CCreature.h",
+      "stagedSha256": "7f31e26774dd2a965692e9951816a417ce5f0ef353bc2cbc28d3fadc376b778f"
+    },
+    {
+      "bytes": 4600,
+      "commits": [
+        "ee6512a07829eaf651364996d604b043bfcdee8f"
+      ],
+      "compileAssumptions": [
+        "The named player constructor is removed after the intact scene changes to default construction through CObjectHandler; default/copy constructors remain from neighboring originals.",
+        "The removed loadFromJson member follows the intact same-commit CMapObject and object-handler transition; configuration properties beyond the preceding numeric properties remain unresolved.",
+        "The selected-action player model is inferred backward from the intact #331 split header at the first intact CInteraction.cpp use of setSelectedAction. Exact removal dates for old unused fight-list members cannot be recovered.",
+        "Creature onEnter is removed with the intact Visitable split; CCreature does not inherit Visitable in the nearest subsequent original. Event callback declarations match the intact CMapObject timeline; player destruction behavior needs implementation reconstruction.",
+        "CMapObject.h is missing in this tree; callback/movement declarations are carried from the unchanged surrounding #329 API and the intact #331 split player/monster headers.",
+        "Unknown original internal changes between content-keyed header revisions are not recoverable; declarations and storage are carried only from surrounding genuine headers/callers. Original CCreature.cpp is also missing, so donor implementations may require independent reconstruction. Stats pointer/container return signatures are retained from the preceding genuine API until a surviving declaration proves a transition."
+      ],
+      "evidence": [
+        {
+          "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+          "paths": [
+            "src/creature.h",
+            "src/player.h",
+            "src/monster.h"
+          ],
+          "role": "intact nearest preceding full declarations"
+        },
+        {
+          "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+          "paths": [
+            "CInteraction.cpp",
+            "CMapObject.h"
+          ],
+          "role": "direct creature bonus calls and nonvirtual setMap"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h"
+          ],
+          "role": "nearest subsequent real selected-action/enemy player declaration; same-commit CInteraction.cpp proves setSelectedAction at this boundary"
+        },
+        {
+          "commit": "beef9d877e9f594fbcc0792794379070921ded15",
+          "paths": [
+            "object/CPlayer.h",
+            "object/CMonster.h"
+          ],
+          "role": "real movement implementations and derived class declarations bracketing new Moveable interface"
+        },
+        {
+          "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+          "paths": [
+            "CGameScene.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+          "paths": [
+            "CInteraction.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+          "paths": [
+            "CPlayerView.h"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        },
+        {
+          "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+          "paths": [
+            "ReflectTypes.cpp"
+          ],
+          "role": "same-commit surviving API/caller/type registration"
+        }
+      ],
+      "firstCatalogOrder": 330,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "ed39bc74efac2e60bcec9bb857ab74cb026436e8",
+      "path": "CCreature.h",
+      "positions": [
+        330
+      ],
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "854a822fe0ef3788c0ce9b74ecadc3f031041c062713dfb3c2bf7844f2fa7904",
+      "source": "recovery/payloads/reconstructions/ed/ed39bc74efac2e60bcec9bb857ab74cb026436e8-CCreature.h",
+      "stagedSha256": "7f31e26774dd2a965692e9951816a417ce5f0ef353bc2cbc28d3fadc376b778f"
+    }
+  ],
+  "schemaVersion": 1
+}

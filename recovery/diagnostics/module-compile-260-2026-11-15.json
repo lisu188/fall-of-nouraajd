@@ -1,0 +1,140 @@
+{
+  "actualCompilerCommand": "g++-5 -c -m64 -pipe -include functional -std=c++11 -O3 -flto -march=native -Wall -W -D_REENTRANT -fPIC -DGAME_RECOVERY_PREFIXED_TILE -DGAME_RECOVERY_PREFIXED_SCENE_HEADER -DQT_NO_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../source -I. -isystem /usr/include/python2.7 -isystem /usr/include -I../source -I../observer -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtOpenGL -isystem /usr/include/x86_64-linux-gnu/qt5/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64 -o GameScript.o ../source/src/GameScript.cpp",
+  "actualCompilerVersion": "g++-5 (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609",
+  "boundary": "Real GameScript object compile and init_game symbol under sealed GCC5.4/Qt5.5.1/Python2.7/Boost1.58 only; full-tree link and startup remain blocked by unrelated donors.",
+  "diagnosticBuildOverlay": {
+    "afterSha256": "41f2f4d9ff2cde3f00799d92d6dcc49f56a46ff292c69c25302067d3e048a117",
+    "beforeLog": "module-build-before-bool-fix.log",
+    "beforeLogSha256": "cdad8e824460bc29fedfe8ea0f7cdbe8a3944e027bc55b55336089f7cda566cc",
+    "beforeSha256": "c44ad3ff332fb217d7362175b851d0e4e4e58c7f1f4ea0eea669838d8b35413e",
+    "boundary": "Diagnostic build-source overlay only; full-tree verification restoration fingerprint remains from the preceding failed attempt.",
+    "reason": "Boost1.58 method_result conversion ambiguity in genuine bool-return CPotion API; use method_result.as<Result>()",
+    "sourcePosition": 260
+  },
+  "diagnosticSourceFileSetFingerprint": "30ca55b457130cb2ebd166ed6cf83b21404d45a8c6fa5e64fb3652b30e383d96",
+  "initializerSymbol": [
+    "00000000 T init_game"
+  ],
+  "makefileSha256": "4b08c85227fed7df81d9916e6700a78c7a624c4df66da62c57a3bd78e1502a4b",
+  "moduleObject": {
+    "bytes": 3740504,
+    "path": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-zq5wca3e/build/GameScript.o",
+    "sha256": "638029d43d599fc8ae0342baad957445624d48f9c7420ed42d1c33c9675c8ada"
+  },
+  "originalCompileLog": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-zq5wca3e/module-build.log",
+  "originalCompileLogSha256": "cdad8e824460bc29fedfe8ea0f7cdbe8a3944e027bc55b55336089f7cda566cc",
+  "recipe": {
+    "compilerCommand": "g++-5",
+    "environment": {
+      "CPATH": "/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+      "PATH": "/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/2.7.18",
+      "QT_OPENGL": "software",
+      "QT_X11_NO_MITSHM": "1"
+    },
+    "id": "qt5-python27",
+    "makeCommand": "make",
+    "pythonAbi": "2.7",
+    "qmakeArguments": [
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional"
+    ],
+    "qmakeCommand": "qmake",
+    "toolchainLock": {
+      "compatibility": [
+        "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+      ],
+      "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+      "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+      "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+      "schemaVersion": 1,
+      "sourceLock": "recovery/toolchains/sources.json",
+      "sourceLockSha256": "d94f274c60a4bd52aaeedfe01bc5d3e4a116c5181443def07ce6edd59c14d10f"
+    }
+  },
+  "schemaVersion": 1,
+  "sourceCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+  "sourceInputSha256": {
+    "game.pro": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
+    "src/CBuilding.h": "56eac83edf265df551aeab939a26ab2b505e1b93a87504e79a92285830fb9b9e",
+    "src/CCreature.h": "f9ee1eb0d93c810ac6e5b5829fd057e701eddd23e82f375bbee620bae53c4204",
+    "src/CInteraction.h": "cae2654d50db5bd66edb8afa82353a49043cbeed8faa44460cdb46f78c50062f",
+    "src/CItem.h": "17d6e97f2ddbff87a0ba4d7e380c367458709ed25052616e98d69a75b5c3bb9c",
+    "src/CMap.h": "eeec7a31222fce18ea09ed3f3bd2dfcc4c24adf762575daca327550b71eac31a",
+    "src/CMapObject.h": "8304b479e592cad1e26f101fe62ebedd14ab1f7d26020b402f0b412b1dae17c8",
+    "src/CTile.h": "2d5955ebe737dd59b0c3d3e28a747e9a10fa39664ea220ef3ae3179030d2fb22",
+    "src/GameScript.cpp": "41f2f4d9ff2cde3f00799d92d6dcc49f56a46ff292c69c25302067d3e048a117",
+    "src/Stats.h": "269a462a2f05c7e2290fc101a743732ad81f8672f12850531b167662975796fc",
+    "src/Util.h": "59a65b65dab02a31214f491296cf45f6a0aef6b43ef8871d106d075466e55b8b"
+  },
+  "sourcePosition": 260,
+  "sourceTree": "7692be9ed922eb74b1616b09eaf54d0a56718c63",
+  "steps": [
+    {
+      "command": [
+        "env",
+        "PATH=/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+        "PYTHONHOME=/opt/recovery/python/2.7.18",
+        "CPATH=/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+        "LIBRARY_PATH=/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+        "LD_LIBRARY_PATH=/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+        "LIBGL_ALWAYS_SOFTWARE=1",
+        "QT_OPENGL=software",
+        "QT_X11_NO_MITSHM=1",
+        "g++-5",
+        "--version"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-zq5wca3e/module-compiler.log",
+      "logSha256": "4a53910265374c9491cd9dbd2576c84012bc25a8dd3b04614f9d581d4c57b9a1",
+      "name": "compiler",
+      "returnCode": 0
+    },
+    {
+      "command": [
+        "env",
+        "PATH=/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+        "PYTHONHOME=/opt/recovery/python/2.7.18",
+        "CPATH=/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+        "LIBRARY_PATH=/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+        "LD_LIBRARY_PATH=/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+        "LIBGL_ALWAYS_SOFTWARE=1",
+        "QT_OPENGL=software",
+        "QT_X11_NO_MITSHM=1",
+        "make",
+        "-j4",
+        "GameScript.o"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-zq5wca3e/module-target-check.log",
+      "logSha256": "cb4f7179e88e74d13e9e2ead645f52c3fd2e5bfbd5f25b8bd328a458d58062c8",
+      "name": "target-check",
+      "returnCode": 0
+    },
+    {
+      "command": [
+        "env",
+        "PATH=/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+        "PYTHONHOME=/opt/recovery/python/2.7.18",
+        "CPATH=/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+        "LIBRARY_PATH=/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+        "LD_LIBRARY_PATH=/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+        "LIBGL_ALWAYS_SOFTWARE=1",
+        "QT_OPENGL=software",
+        "QT_X11_NO_MITSHM=1",
+        "gcc-nm-5",
+        "-g",
+        "--defined-only",
+        "GameScript.o"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-zq5wca3e/module-symbols.log",
+      "logSha256": "1a9b9fdfddaa4234aaf6d263e87034106b8a1dbf9614557958c2840bebce5c12",
+      "name": "symbols",
+      "returnCode": 0
+    }
+  ],
+  "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+}
