@@ -16,6 +16,68 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def eldothSnapshotDriver(self, present=True, wrong_owner=False):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        driver = GameplayBranchDriver.__new__(GameplayBranchDriver)
+        driver.test = self
+        driver.game_map, driver.player = object(), object()
+        clock, actor = object(), object()
+        history = {"eldoth": "joined" if present else "absent"}
+
+        def call(owner, method, *args):
+            if owner is driver.game_map:
+                if method == "getObjectByName":
+                    return clock if args[0] == "cityClock" else actor if present else None
+                if method == "getBoolProperty":
+                    return present and args[0] == "plugin_cityFlag_eldothJoined"
+                if method == "getStringProperty":
+                    return (
+                        "city-json:" + json.dumps(history)
+                        if args[0] == "plugin_cityHistory"
+                        else "cityCampaignNpc16" if present else ""
+                    )
+            if owner is clock:
+                if method == "getObjectProperty":
+                    return object() if wrong_owner else actor if present else None
+                if method == "getStringProperty":
+                    return "city-json:" + json.dumps(["cityCampaignNpc16"] if present else [])
+            if owner is driver.player:
+                if method == "getItems":
+                    return []
+                if method == "getGold":
+                    return 1000
+                if method == "getNumericProperty":
+                    return 1000 if args[0] == "gold" else 10000
+            if owner is actor:
+                values = {
+                    "getHp": 14,
+                    "getItems": [],
+                    "getEquipped": {},
+                    "getStringProperty": "cityParty",
+                    "isPlayer": False,
+                }
+                if method in values:
+                    return values[method]
+            raise AssertionError(("Unexpected driver API call", method, args))
+
+        driver.call = call
+        return driver
+
+    def testEldothSnapshotUsesActualDriverMapForPresentAndAbsentActors(self):
+        for present in (False, True):
+            with self.subTest(present=present):
+                driver = self.eldothSnapshotDriver(present)
+                snapshot = routes.eldothHistorySnapshot(driver)
+                self.assertEqual("joined" if present else "absent", snapshot["history"]["eldoth"])
+                self.assertEqual(present, snapshot["joined"])
+                self.assertEqual(1000, snapshot["resources"][0])
+                self.assertEqual(present, snapshot["actor"] is not None)
+
+    def testEldothSnapshotRejectsAnUnownedRegisteredCompanion(self):
+        with self.assertRaises(AssertionError):
+            routes.eldothHistorySnapshot(self.eldothSnapshotDriver(wrong_owner=True))
+
     def testNortheastArrivalCannotReachItsWestExitEvenWithOtherPortalCellsAllowed(self):
         walkable, portals = routes.cityMovementCells()
         bounds = routes.documents()["geometry"]["atlas"]["AR0300"]["bounds"]
