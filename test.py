@@ -27932,9 +27932,17 @@ class TestRunnerSuiteTest(unittest.TestCase):
         restore = workflowStep(job, "Restore Python test timings")
         save = workflowStep(job, "Save Python test timings after coverage")
         coverage = workflowStep(job, "coverage")
-        revision = "27d5ce7f107fe9357f9df03efb73ab90386fccae"
-        self.assertEqual("actions/cache/restore@" + revision, workflowScalar(restore, "uses", 8))
-        self.assertEqual("actions/cache/save@" + revision, workflowScalar(save, "uses", 8))
+        reviewed_pairs = (
+            (
+                "actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae",
+                "actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae",
+            ),
+            (
+                "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+                "actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae",
+            ),
+        )
+        self.assertIn((workflowScalar(restore, "uses", 8), workflowScalar(save, "uses", 8)), reviewed_pairs)
         self.assertTrue(evaluateCondition(workflowScalar(save, "if", 8), {}, prior_success=False))
         self.assertEqual("always()", workflowScalar(save, "if", 8))
         self.assertEqual("$" + "{{ env.GAME_TEST_TIMINGS_FILE }}", workflowScalar(restore, "path", 10))
@@ -27950,6 +27958,46 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertLess(job.index(coverage), job.index(save))
         self.assertEqual("./scripts/run_coverage.sh", workflowScalar(coverage, "run", 8))
         self.assertEqual("60", workflowScalar(coverage, "timeout-minutes", 8))
+
+    def testCoverageTimingCachePinsStayReviewedAndPaired(self):
+        from tests import test_mcp_branch_workflow as workflow
+        from unittest import mock
+
+        job = workflow.workflowJob("linux-coverage")
+        restore = workflow.workflowStep(job, "Restore Python test timings")
+        save = workflow.workflowStep(job, "Save Python test timings after coverage")
+
+        def checkPair(restore_use, save_use, accepted):
+            modified = job
+            for step, use in ((restore, restore_use), (save, save_use)):
+                previous = "uses: " + workflow.workflowScalar(step, "uses", 8)
+                self.assertEqual(1, step.count(previous))
+                self.assertEqual(1, modified.count(step))
+                modified = modified.replace(step, step.replace(previous, "uses: " + use, 1), 1)
+            with mock.patch.object(workflow, "workflowJob", return_value=modified):
+                if accepted:
+                    self.testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails()
+                else:
+                    with self.assertRaises(AssertionError):
+                        self.testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails()
+
+        old_revision = "27d5ce7f107fe9357f9df03efb73ab90386fccae"
+        new_restore_revision = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
+        for restore_revision in (old_revision, new_restore_revision):
+            with self.subTest(accepted=restore_revision):
+                checkPair("actions/cache/restore@" + restore_revision, "actions/cache/save@" + old_revision, True)
+        for restore_revision, save_revision in (
+            ("f" * 40, old_revision),
+            (old_revision, "f" * 40),
+            ("v4", old_revision),
+            (old_revision, "v4"),
+            ("main", old_revision),
+            (old_revision[:12], old_revision),
+            (old_revision, new_restore_revision),
+            (new_restore_revision, new_restore_revision),
+        ):
+            with self.subTest(rejected=(restore_revision, save_revision)):
+                checkPair("actions/cache/restore@" + restore_revision, "actions/cache/save@" + save_revision, False)
 
     def testCmakeCopiesCanonicalRunnerWithoutInterpretingWorkflowExpressions(self):
         cmake_executable = shutil.which("cmake")
