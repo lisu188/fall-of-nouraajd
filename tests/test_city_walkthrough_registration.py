@@ -186,9 +186,16 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
         names = harness.discover_unittest_test_names(["test.py", "CityNativeLoadingRuntimeTest"])
         self.assertEqual(
             {
+                "CityNativeLoadingRuntimeTest.testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce",
+                "CityNativeLoadingRuntimeTest.testBook08NativeUseBeforeHandInBlocksBookEntryAfterSave",
+                "CityNativeLoadingRuntimeTest.testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave",
+                "CityNativeLoadingRuntimeTest.testBook08SpentStateSurvivesNativeSaveReload",
+                "CityNativeLoadingRuntimeTest.testBook08UnspentSubclassSurvivesNativeSaveReloadThenUses",
                 "CityNativeLoadingRuntimeTest.testCityLoadsNativePlacedAndDeferredActorsWithBlockedLayerFallback",
+                "CityNativeLoadingRuntimeTest.testCityQuestHintNativeDispatchReadsNonvirtualBackingTextOnce",
                 "CityNativeLoadingRuntimeTest.testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
                 "CityNativeLoadingRuntimeTest.testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument",
+                "CityNativeLoadingRuntimeTest.testOptionalCityReferencesRespectActualNativeMissingPropertyContract",
                 "CityNativeLoadingRuntimeTest.testNativeLoadDiagnosticsAreExactOptInAndPreserveOwnedItems",
                 "CityNativeLoadingRuntimeTest.testNativeLoadDiagnosticsIdentifyBackupAndMalformedFailureWithoutChangingTheMap",
             },

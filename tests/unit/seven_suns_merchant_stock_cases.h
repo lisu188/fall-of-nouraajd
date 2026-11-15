@@ -92,6 +92,8 @@ void testSevenSunsStockPreparedFourLineagesUseRealWeaponAndConcretePossessions()
         CSevenSunsMerchantStock::validatePrepared(prepared, f.game, SevenSunsMerchantFixture::Names[index], area,
                                                   [] {});
         auto actor = prepared.actor;
+        expect_true(actor && actor->getAnimation() == "maps/baldursGate/images/npc/doppelganger",
+                    "all four native revealed merchant lineages use the staged city doppelganger artwork");
         expect_true(actor && actor != old && actor->getName() == SevenSunsMerchantFixture::Names[index] &&
                         actor->getStringProperty("sourceActor") == SevenSunsMerchantFixture::Sources[index] &&
                         actor->getController() == prepared.controller &&

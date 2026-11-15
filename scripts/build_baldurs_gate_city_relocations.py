@@ -32,6 +32,7 @@ def buildRelocations(source, *, usablePosition):
     first_active = {"questStages": {"narlenLookout": "active"}}
     second_active = {"questStages": {"narlenRogueStone": "active"}}
     stone = {"items": [{"item": "MISC45"}]}
+    officer_killed = {"kills": [{"creature": "WATCHM", "area": "AR0300"}]}
     guild = scene(
         "guild",
         "AR0153.BCS#spawn6",
@@ -39,7 +40,7 @@ def buildRelocations(source, *, usablePosition):
         {
             "any": [
                 {"questStages": {"narlenLookout": "notStarted"}},
-                {"kills": [{"creature": "WATCHM", "area": "AR0300"}]},
+                officer_killed,
                 {"all": [{"flags": ["narlenWarning"]}, {"not": second_active}]},
                 {"all": [second_active, stone]},
                 {"questStages": {"narlenRogueStone": "completed"}},
@@ -62,7 +63,7 @@ def buildRelocations(source, *, usablePosition):
                     "lookout",
                     "AR0300.BCS#spawn3",
                     "AR0300",
-                    {"all": [first_active, {"absentFlags": ["narlenWarning"]}]},
+                    {"all": [first_active, {"absentFlags": ["narlenWarning"]}, {"not": officer_killed}]},
                     time=night,
                 ),
                 guild,

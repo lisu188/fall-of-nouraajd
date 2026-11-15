@@ -327,7 +327,7 @@ CSevenSunsMerchantStock::Prepared CSevenSunsMerchantStock::prepare(const std::sh
         actor->setTypeId(::seven_suns_merchant_stock_detail::ActorId);
         actor->setName(lineage);
         actor->setLabel("Revealed doppelganger");
-        actor->setAnimation("images/monsters/cultist");
+        actor->setAnimation("maps/baldursGate/images/npc/doppelganger");
         actor->setNpc(false);
         actor->setLevel(1);
         actor->setSw(-20);
