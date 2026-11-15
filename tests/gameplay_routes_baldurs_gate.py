@@ -1098,7 +1098,7 @@ class QuestRoute:
                 for _ in range(outcome["conditions"]["minTalks"]):
                     self.d.choose(name + "Dialog", "talk")
             self.conditions(outcome.get("conditions", {}))
-            if key == "narlenRogueStone" and outcome["id"] == "complete":
+            if (key, outcome["id"]) in {("narlenRogueStone", "complete"), ("narlenLookout", "officerKilled")}:
                 travel(self.d, "AR0153")
                 names = [
                     name

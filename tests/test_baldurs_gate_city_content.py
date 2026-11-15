@@ -1117,6 +1117,130 @@ class BaldursGateCityContentTest(unittest.TestCase):
         self.assertFalse(dialog.canQuestNarlenLookoutComplete())
         self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_narlenWarning"))
 
+    def testNightLookoutOfficerDeathReturnsCanonicalNarlenBeforeGuildRewardAndDeparture(self):
+        from unittest.mock import patch
+        from tests import gameplay_routes_baldurs_gate as routes
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        for creature, area in (("WATCHM", "AR0300"), ("WATCHM", "AR0100"), ("FLAM6", "AR0300")):
+            with self.subTest(creature=creature, area=area):
+                model = CityModel(agility=12)
+                narlen = model.canonical("NARLEN")
+                ring = model.item("RING16", narlen)
+                self.assertTrue(model.dialog(narlen).acceptNarlenLookout())
+                model.clock.advanceTicks(700)
+                officer_name = model.installLookoutOfficer()
+                self.assertTrue(model.dialog(narlen).beginNarlenLookout())
+                model.clock.advanceTicks(133)
+                self.assertEqual(833, model.game_map.getNumericProperty("plugin_cityTicks"))
+                self.assertEqual("AR0300", narlen.getStringProperty("sourceArea"))
+                self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_narlenWarning"))
+                if (creature, area) == ("WATCHM", "AR0300"):
+                    victim = model.game_map.getObjectByName(officer_name)
+                else:
+                    victim = model.actor("Unrelated guard", area, sourceCreature=creature)
+                model.kill(victim)
+                self.assertFalse(victim.isAlive())
+                self.assertIsNone(model.game_map.getObjectByName(victim.getName()))
+                if (creature, area) != ("WATCHM", "AR0300"):
+                    for _ in range(17):
+                        model.clock.advanceTicks(1)
+                    self.assertIs(narlen, model.game_map.getObjectByName(narlen.getName()))
+                    self.assertEqual("AR0300", narlen.getStringProperty("sourceArea"))
+                    self.assertIn(ring, narlen.items)
+                    self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_narlenLookout"))
+                    continue
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                owned_before = tuple(narlen.items)
+                gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                events, actions = [], []
+                location = {"area": "AR0300", "waits": 0}
+                driver = SimpleNamespace(
+                    test=self,
+                    player=model.player,
+                    game_map=model.game_map,
+                    object=lambda name, required=False: model.game_map.getObjectByName(name),
+                    call=lambda owner, method, *args: getattr(owner, method)(*args),
+                    number=model.game_map.getNumericProperty,
+                    string=model.game_map.getStringProperty,
+                    gold=model.player.getGold,
+                    coords=lambda: tuple(vars(model.player.getCoords()).values()),
+                    snapshot=lambda: dict(location),
+                    questNames=lambda completed=False: [
+                        quest.getName()
+                        for quest in (model.player.getCompletedQuests() if completed else model.player.getQuests())
+                    ],
+                )
+
+                def tick():
+                    self.assertEqual(owned_before, tuple(narlen.items))
+                    model.clock.advanceTicks(1)
+
+                def waitTurns(limit, predicate):
+                    self.assertEqual(25, limit)
+                    before = model.game_map.getNumericProperty("plugin_cityTicks")
+                    GameplayBranchDriver.waitTurns(driver, limit, predicate)
+                    location["waits"] += model.game_map.getNumericProperty("plugin_cityTicks") - before
+
+                def travel(actual, destination):
+                    self.assertIs(driver, actual)
+                    self.assertEqual("AR0153", destination)
+                    location["area"] = destination
+                    events.append(("travel", destination))
+                    for _ in range(3):
+                        tick()
+
+                def hold(point):
+                    self.assertEqual(driver.coords(), point)
+                    events.append(("hold", location["area"]))
+
+                def contact(name):
+                    self.assertEqual(narlen.getName(), name)
+                    self.assertEqual("AR0153", location["area"])
+                    self.assertIs(narlen, model.game_map.getObjectByName(name))
+                    self.assertTrue(narlen.isAlive())
+                    self.assertEqual("AR0153", narlen.getStringProperty("sourceArea"))
+                    events.append(("contact", name))
+
+                def choose(dialog_id, action):
+                    self.assertEqual(
+                        (narlen.getName() + "Dialog", "questNarlenLookoutOfficerKilled"), (dialog_id, action)
+                    )
+                    self.assertEqual("AR0153", location["area"])
+                    actions.append((dialog_id, action))
+                    self.assertTrue(getattr(model.dialog(narlen), action)())
+
+                driver.tick, driver.waitTurns, driver.navigateCoords, driver.choose = tick, waitTurns, hold, choose
+                planner = routes.QuestRoute(driver)
+                planner.contact = contact
+                with patch.object(routes, "travel", side_effect=travel):
+                    name, outcome = planner.settle("narlenLookout", "officerKilled")
+                    self.assertEqual((narlen.getName(), "officerKilled"), (name, outcome["id"]))
+                    self.assertEqual(14, location["waits"])
+                    self.assertEqual(850, model.game_map.getNumericProperty("plugin_cityTicks"))
+                    self.assertEqual(300, model.player.getGold() - gold)
+                    self.assertEqual(xp, model.player.getNumericProperty("exp"))
+                    self.assertEqual(owned_before, tuple(narlen.items))
+                    self.assertTrue(narlen.isAlive(), "Authored departure must not kill Narlen")
+                    self.assertIsNone(model.game_map.getObjectByName(name))
+                    self.assertTrue(narlen.getBoolProperty("plugin_cityDeparted"))
+                    self.assertFalse(model.game_map.getBoolProperty("plugin_cityDeath_" + name))
+                    self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_narlenWarning"))
+                    self.assertEqual("completed", routes.state(driver, "narlenLookout"))
+                    self.assertEqual("notStarted", routes.state(driver, "narlenRogueStone"))
+                    before = routes.resources(driver), tuple(events), tuple(actions), tuple(narlen.items)
+                    self.assertIsNone(planner.settle("narlenLookout", "officerKilled"))
+                    self.assertEqual(
+                        before, (routes.resources(driver), tuple(events), tuple(actions), tuple(narlen.items))
+                    )
+                self.assertEqual([("travel", "AR0153"), ("hold", "AR0153")], events[:2])
+                self.assertEqual(1, len(actions))
+                self.assertEqual("active", routes.state(driver, "quinnDagger"))
+                self.assertIn("cityQuinnDaggerQuest", driver.questNames())
+                self.assertFalse(planner.pending)
+                self.assertFalse(planner.pending_outcomes)
+
     def testCanonicalNarlenMovesByNightAndReturnsWithSameBelongings(self):
         model = CityModel(agility=12)
         narlen = model.canonical("NARLEN")
