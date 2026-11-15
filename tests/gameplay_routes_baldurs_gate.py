@@ -763,6 +763,13 @@ class QuestRoute:
             self.d.test.assertTrue(self.d.flag("plugin_cityFlag_tamokoMove2"))
             return
         self.conditions(row.get("acceptConditions", {}))
+        if key == "jalanthaBook" and not self.d.flag("plugin_cityFlag_jalanthaSummoned"):
+            attendant = self.actorName([{"creature": "PUMBERL", "area": "AR0609"}])
+            self.contact(attendant)
+            gold = self.d.gold()
+            self.d.choose(attendant + "Dialog", "requestJalanthaAudience")
+            self.d.test.assertTrue(self.d.flag("plugin_cityFlag_jalanthaSummoned"))
+            self.d.test.assertEqual(gold - 50, self.d.gold(), "The authored audience must charge exactly once")
         name = self.actorName(row["givers"])
         self.contact(name)
         if self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"):

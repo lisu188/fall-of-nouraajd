@@ -16,6 +16,123 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+
+    def testJalanthaQuestAcceptanceRequestsTheActualPaidAudienceAfterItsPrerequisite(self):
+        from types import SimpleNamespace
+        from tests.test_baldurs_gate_city_content import CityCreature, CityModel
+
+        def exercise(gold, prepaid=False):
+            model = CityModel()
+            model.player.addGold(gold - model.player.getGold())
+            config = routes.documents()["config"]
+            priest = "cityAr0609Actor1"
+            jalantha = "cityAr0609ScriptActorJalant"
+            lothander = next(
+                name
+                for name, entry in config.items()
+                if entry.get("class") in routes.ACTOR_CLASSES and entry["properties"].get("label") == "Lothander"
+            )
+            for name in (priest, lothander):
+                properties = {key: config[name]["properties"][key] for key in ("label", "sourceArea", "sourceCreature")}
+                model.game_map.addObject(CityCreature(model, name, **properties))
+            model.resources[jalantha] = {
+                "class": "CCreature",
+                "properties": {
+                    key: config[jalantha]["properties"][key]
+                    for key in ("label", "sourceArea", "sourceCreature", "sourceSpawnFact")
+                },
+            }
+            definition = next(
+                row
+                for row in decodeCityData(config["cityClock"]["properties"]["actorDefinitions"])
+                if row["id"] == jalantha
+            )
+            self.assertEqual("jalanthaSummoned", definition["requiresFlag"])
+            self.assertEqual("JALANT", definition["sourceCreature"])
+            model.clock.setStringProperty("actorDefinitions", json.dumps([definition]))
+            events = []
+
+            def objectByName(name, required=True):
+                actor = model.game_map.getObjectByName(name)
+                if required:
+                    self.assertIsNotNone(actor, name)
+                return actor
+
+            def contact(name):
+                events.append(("contact", name))
+                actor = objectByName(name)
+                model.player.moveTo(*vars(actor.getCoords()).values())
+
+            def choose(dialog_name, action):
+                name = dialog_name.removesuffix("Dialog")
+                self.assertEqual(("contact", name), events[-1])
+                events.append(("choose", name, action))
+                if action == "requestJalanthaAudience":
+                    self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_marekPoison"))
+                return getattr(model.dialog(objectByName(name)), action)()
+
+            driver = SimpleNamespace(
+                test=self,
+                player=model.player,
+                game_map=model.game_map,
+                object=objectByName,
+                string=model.game_map.getStringProperty,
+                number=model.game_map.getNumericProperty,
+                flag=model.game_map.getBoolProperty,
+                call=lambda owner, method, *args: getattr(owner, method)(*args),
+                gold=model.player.getGold,
+                choose=choose,
+                questNames=lambda: [quest.getTypeId() for quest in model.player.getQuests()],
+            )
+            planner = routes.QuestRoute(driver)
+            planner.contact = contact
+            if prepaid:
+                model.game_map.setStringProperty("plugin_cityQuest_marekPoison", "active")
+                contact(priest)
+                self.assertTrue(choose(priest + "Dialog", "requestJalanthaAudience"))
+                events.clear()
+            original_conditions = planner.conditions
+
+            def conditions(value):
+                events.append(("conditions", value))
+                return original_conditions(value)
+
+            planner.conditions = conditions
+            before = model.player.getGold()
+            if gold < 50:
+                with self.assertRaises(AssertionError):
+                    planner.accept("jalanthaBook")
+                self.assertEqual(before, model.player.getGold())
+                self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_jalanthaSummoned"))
+                self.assertIsNone(model.game_map.getObjectByName(jalantha))
+                self.assertEqual("", model.game_map.getStringProperty("plugin_cityQuest_jalanthaBook"))
+            else:
+                planner.accept("jalanthaBook")
+                actual = objectByName(jalantha)
+                self.assertEqual("JALANT", actual.getStringProperty("sourceCreature"))
+                self.assertEqual("AR0609", actual.getStringProperty("sourceArea"))
+                self.assertEqual(before - (0 if prepaid else 50), model.player.getGold())
+                self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_jalanthaBook"))
+                snapshot = list(events)
+                planner.accept("jalanthaBook")
+                self.assertEqual(snapshot, events)
+                self.assertIs(actual, objectByName(jalantha))
+                self.assertEqual(before - (0 if prepaid else 50), model.player.getGold())
+            self.assertEqual(("conditions", {"questStages": {"marekPoison": "active"}}), events[0])
+            requests = [entry for entry in events if entry[:2] == ("choose", priest)]
+            self.assertEqual([] if prepaid else [("choose", priest, "requestJalanthaAudience")], requests)
+            if not prepaid:
+                self.assertLess(
+                    events.index(("choose", lothander, "acceptMarekPoison")),
+                    events.index(("choose", priest, "requestJalanthaAudience")),
+                )
+            if gold >= 50:
+                self.assertEqual(("choose", jalantha, "acceptJalanthaBook"), events[-1])
+
+        for gold, prepaid in ((100, False), (50, False), (49, False), (100, True)):
+            with self.subTest(gold=gold, prepaid=prepaid):
+                exercise(gold, prepaid)
+
     def book08McpExports(self):
         tree = ast.parse((ROOT / "mcp.py").read_text(encoding="utf-8"))
         names = {}
