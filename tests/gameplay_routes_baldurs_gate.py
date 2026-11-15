@@ -819,6 +819,32 @@ class QuestRoute:
             self.contact(name)
             self.d.choose(name + "Dialog", "warnNarlen")
             self.d.test.assertTrue(self.d.flag("plugin_cityFlag_narlenWarning"))
+        else:
+            actor = self.d.object(officer)
+            position = self.d.coords()
+            destination = self.d.coords(actor)
+            self.d.test.assertEqual(
+                position[2], destination[2], "The lookout patrol must approach on its authored level"
+            )
+            approach = cityApproachPath(
+                destination, position, self.data["geometry"]["atlas"]["AR0300"]["bounds"], *cityMovementCells()
+            )
+
+            def withinReceptionRange():
+                current = self.d.object(officer)
+                self.d.test.assertEqual(
+                    actor["__handle__"], current["__handle__"], "The actual lookout officer changed"
+                )
+                self.d.test.assertEqual(position, self.d.coords(), "The hero left the authored lookout reception cell")
+                point = self.d.coords(current)
+                return (
+                    point[2] == position[2]
+                    and sum(abs(a - b) for a, b in zip(position, point)) == 2
+                    and (point[0] == position[0] or point[1] == position[1])
+                )
+
+            self.d.navigateCoords(position)
+            self.d.waitTurns(max(0, len(approach) - 2), withinReceptionRange)
         return officer
 
     def item(self, requirement):

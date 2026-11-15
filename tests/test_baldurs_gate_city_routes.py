@@ -2061,6 +2061,130 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             exercise("inventedOfficer")
 
+    def narlenOfficerReceptionModel(self, *, stall=False):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        test = self
+        data = routes.documents()
+        walkable, portals = routes.cityMovementCells()
+        bounds = data["geometry"]["atlas"]["AR0300"]["bounds"]
+        hero = {"__handle__": "actualPlayer"}
+        officer = {"__handle__": "actualWatchman"}
+        state = SimpleNamespace(
+            test=test,
+            player=hero,
+            game_map={"__handle__": "map"},
+            map_name="baldursGate",
+            trace_path="modeled-native-trace",
+            _combat_trace_seq=0,
+            turns=0,
+            steps=0,
+            hero=(161, 51, 0),
+            officer=(155, 32, 0),
+            planned=None,
+            entry=None,
+            _coordinate_values={},
+            contact=False,
+            npc_entries=0,
+            waits=0,
+        )
+
+        def coords(owner=None):
+            return state.officer if owner is officer else state.hero
+
+        def call(owner, method, *args):
+            if method == "isAlive":
+                return True
+            if method == "getStringProperty":
+                test.assertEqual(("sourceSpawnFact",), args)
+                return "AR0300.BCS#spawn7"
+            if method == "getBoolProperty":
+                test.assertEqual(("npc",), args)
+                return True
+            if method == "getController":
+                return "playerController"
+            if method == "getCoords":
+                return {"__handle__": "officerPoint"}
+            if method == "setTarget":
+                point = args[-1]
+                state.planned = state.officer if isinstance(point, dict) else tuple(point)
+                return
+            if method == "getNavigationNeighbors":
+                x, y, z = args[0]
+                return [(x + dx, y + dy, z) for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))]
+            raise AssertionError(("Unexpected modeled call", method))
+
+        def nextStep(origin, target):
+            if origin == target:
+                return origin
+            return routes.cityApproachPath(origin, target, bounds, walkable, portals)[0]
+
+        def tick():
+            old_hero, old_officer = state.hero, state.officer
+            # Both controllers plan from start-of-turn positions; officer commits first.
+            officer_step = old_officer if stall else nextStep(old_officer, old_hero)
+            player_step = nextStep(old_hero, state.planned)
+            state.officer = officer_step
+            if officer_step != old_officer and officer_step == old_hero:
+                state.npc_entries += 1
+            state.hero = player_step
+            state.turns += 1
+            state._combat_trace_seq += 1
+            if player_step != old_hero and player_step == state.officer:
+                state.entry = {"seq": state._combat_trace_seq, "target": officer}
+
+        def remember(actor, identities, entry):
+            test.assertIs(actor, officer)
+            test.assertIs(entry, state.entry)
+            state.contact = True
+
+        state.object = lambda name, required=True: officer
+        state.coords, state.call, state.tick = coords, call, tick
+        state.assertNativeCombatOutcomes = lambda: None
+        state._nativeObjectIdentity = lambda owner: {"name": owner["__handle__"]}
+        state._playerEntryForTarget = lambda identities, after_seq: (
+            state.entry if state.entry and state.entry["seq"] > after_seq else None
+        )
+        state._rememberNpcContact = remember
+        state._continuedNpcContact = lambda *args: False
+        state._coordinateHandle = tuple
+        state._traversedTarget = lambda *args: False
+        state.snapshot = lambda: {"hero": state.hero, "officer": state.officer, "turn": state.turns}
+        state.canStep = lambda point: point in walkable and point not in portals
+        state.number = lambda key: 720 + state.turns if key == "plugin_cityTicks" else 0
+        state.flag = lambda key: key in {"plugin_cityFlag_narlenLookoutStarted", "plugin_cityFlag_narlenOfficerDue"}
+        state.assertSurvival = lambda: None
+        state.waitTurns = lambda limit, predicate: GameplayBranchDriver.waitTurns(state, limit, predicate)
+        state.navigateCoords = lambda point: GameplayBranchDriver.navigateCoords(state, point)
+        planner = routes.QuestRoute(state)
+        planner.accept = planner.contact = lambda *args: None
+        planner.actorName = lambda selectors: (
+            "actualWatchman" if selectors[0]["creature"] == "WATCHM" else "actualNarlen"
+        )
+        with patch.object(routes, "travel"):
+            test.assertEqual("actualWatchman", planner.narlenLookout(warn=False))
+        received = state.hero, state.officer, state.turns, state.entry
+        GameplayBranchDriver.navigateTo(state, "actualWatchman")
+        test.assertEqual(
+            ((161, 51, 0), (161, 49, 0), 23, None),
+            received,
+            "The real player-entry witness must still be absent at the authored reception checkpoint",
+        )
+        test.assertTrue(state.contact)
+        test.assertIsNotNone(state.entry)
+        test.assertEqual(24, state.turns)
+        test.assertEqual(0, state.npc_entries)
+        return state
+
+    def testNarlenOfficerReceptionPreservesTheNativePlayerEntryAndFailsIfPatrolStalls(self):
+        state = self.narlenOfficerReceptionModel()
+        self.assertEqual((161, 50, 0), state.hero)
+        self.assertEqual(state.hero, state.officer)
+        with self.assertRaisesRegex(AssertionError, "Turn budget exhausted.*23"):
+            self.narlenOfficerReceptionModel(stall=True)
+
     def testGuardKillPrerequisiteUsesAnAuthoredHallGuardAndRequiresItsRecordedDeath(self):
         from types import SimpleNamespace
         from unittest.mock import patch
