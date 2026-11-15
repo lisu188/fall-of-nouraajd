@@ -340,6 +340,111 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+
+    def testAngelKillSelectorsUseTheSameAuditedAreaCreature(self):
+        from tests.gameplay_routes_baldurs_gate import documents, selectorMatches
+
+        source = documents()["source"]["areas"]["AR0005"]["actors"]
+        actual = [row for row in source if row["creature"] == "CATP"]
+        self.assertEqual(1, len(actual))
+        self.assertEqual("AR0005#actor2", actual[0]["sourceId"])
+        self.assertEqual("Angel the Cat", actual[0]["displayName"])
+        selector = {"creature": actual[0]["creature"], "area": "AR0005"}
+        outcomes = [
+            outcome
+            for row in DOCUMENT["quests"]
+            for outcome in row["outcomes"]
+            if (row["id"] == "bherenCat" or row["id"] == "petrineRing" and outcome["id"] == "catKilled")
+        ]
+        self.assertEqual(3, len(outcomes))
+        for outcome in outcomes:
+            with self.subTest(outcome=outcome["id"]):
+                self.assertEqual([selector], outcome["conditions"]["kills"])
+                matches = [
+                    name
+                    for name, entry in documents()["config"].items()
+                    if entry.get("class") == "CCreature"
+                    and selectorMatches(entry["properties"], outcome["conditions"]["kills"][0], name)
+                ]
+                self.assertEqual(["cityAr0005Actor2"], matches)
+        self.assertFalse(
+            selectorMatches({"label": "Angel", "sourceCreature": "CAT", "sourceArea": "AR0005"}, selector, "decoy")
+        )
+        self.assertFalse(
+            selectorMatches(
+                {"label": "Angel the Cat", "sourceCreature": "CATP", "sourceArea": "AR0004"}, selector, "decoy"
+            )
+        )
+
+    def testBherenCatRewardsRejectLookalikesAndTransferTheActualCloakOnce(self):
+        for reputation, outcome, alternate in ((8, "complete", "lowStanding"), (7, "lowStanding", "complete")):
+            with self.subTest(reputation=reputation, outcome=outcome):
+                model = CityModel()
+                model.game_map.setNumericProperty("plugin_cityReputation", reputation)
+                bheren = model.actor("Bheren", "AR0004", sourceCreature="BHEREN")
+                dialog = model.dialog(bheren)
+                self.assertTrue(dialog.acceptBherenCat())
+                cloak = next(
+                    item for item in bheren.items if item.getStringProperty("plugin_citySourceItem") == "CLCK01"
+                )
+                self.assertFalse(dialog.canQuestOutcome("bherenCat", outcome))
+                for label, area, creature in (("Angel", "AR0005", "CAT"), ("Angel the Cat", "AR0004", "CATP")):
+                    model.kill(model.actor(label, area, sourceCreature=creature))
+                    self.assertFalse(dialog.canQuestOutcome("bherenCat", outcome))
+                cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+                self.assertFalse(dialog.canQuestOutcome("bherenCat", outcome))
+                model.kill(cat)
+                self.assertTrue(dialog.canQuestOutcome("bherenCat", outcome))
+                self.assertFalse(dialog.canQuestOutcome("bherenCat", alternate))
+                gold = model.player.getGold()
+                xp = model.player.getNumericProperty("exp")
+                standing = model.game_map.getNumericProperty("plugin_cityStanding")
+                self.assertTrue(dialog.performQuestOutcome("bherenCat", outcome))
+                self.assertEqual(gold, model.player.getGold())
+                self.assertEqual(xp + (400 if reputation == 8 else 0), model.player.getNumericProperty("exp"))
+                self.assertEqual(
+                    standing - (1 if reputation == 8 else 0), model.game_map.getNumericProperty("plugin_cityStanding")
+                )
+                self.assertEqual("completed", model.game_map.getStringProperty("plugin_cityQuest_bherenCat"))
+                if reputation == 7:
+                    self.assertIn(cloak, model.player.items)
+                    self.assertNotIn(cloak, bheren.items)
+                else:
+                    self.assertIn(cloak, bheren.items)
+                    self.assertNotIn(cloak, model.player.items)
+                before = (model.player.getGold(), model.player.getNumericProperty("exp"), tuple(model.player.items))
+                self.assertFalse(dialog.performQuestOutcome("bherenCat", outcome))
+                self.assertEqual(
+                    before, (model.player.getGold(), model.player.getNumericProperty("exp"), tuple(model.player.items))
+                )
+
+    def testPetrineCatDeathRequiresTheAuditedCatAndRetainsTheUnreturnedRing(self):
+        model = CityModel()
+        petrine = model.actor("Petrine", "AR0200")
+        dialog = model.dialog(petrine)
+        self.assertTrue(dialog.acceptPetrineRing())
+        ring = model.item("RING16")
+        for label, area, creature in (("Angel", "AR0005", "CAT"), ("Angel the Cat", "AR0004", "CATP")):
+            model.kill(model.actor(label, area, sourceCreature=creature))
+            self.assertFalse(dialog.canQuestPetrineRingCatKilled())
+        cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+        self.assertFalse(dialog.canQuestPetrineRingCatKilled())
+        model.kill(cat)
+        self.assertTrue(dialog.canQuestPetrineRingCatKilled())
+        gold = model.player.getGold()
+        xp = model.player.getNumericProperty("exp")
+        standing = model.game_map.getNumericProperty("plugin_cityStanding")
+        self.assertTrue(dialog.questPetrineRingCatKilled())
+        self.assertEqual(gold, model.player.getGold())
+        self.assertEqual(xp, model.player.getNumericProperty("exp"))
+        self.assertEqual(standing - 1, model.game_map.getNumericProperty("plugin_cityStanding"))
+        self.assertIn(ring, model.player.items)
+        self.assertNotIn(ring, petrine.items)
+        self.assertEqual("completed", model.game_map.getStringProperty("plugin_cityQuest_petrineRing"))
+        self.assertFalse(dialog.questPetrineRingCatKilled())
+        self.assertEqual(standing - 1, model.game_map.getNumericProperty("plugin_cityStanding"))
+        self.assertIn(ring, model.player.items)
+
     def testOptionalRelocationReferencesUseNativePresenceBeforeTypedObjectReads(self):
         original = ModelObject.getObjectProperty
 
