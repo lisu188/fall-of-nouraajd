@@ -20,11 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
+#include "core/CList.h"
 #include "core/CStats.h"
 #include "core/CSaveFormat.h"
 #include "core/CMap.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
+#include "core/CWrapper.h"
 #include "gui/CAnimation.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CTooltipHandler.h"
@@ -62,6 +64,106 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 namespace {
+
+template <typename Collection> using CollectionValues = decltype(std::declval<Collection &>().getValues());
+
+template <typename Collection>
+concept HasCollectionAddValue = requires(
+    Collection &collection, typename CollectionValues<Collection>::value_type value) { collection.addValue(value); };
+
+static_assert(HasCollectionAddValue<CListString>);
+static_assert(HasCollectionAddValue<CListInt>);
+static_assert(!HasCollectionAddValue<CMapStringString>);
+static_assert(!HasCollectionAddValue<CMapStringInt>);
+static_assert(!HasCollectionAddValue<CMapIntString>);
+static_assert(!HasCollectionAddValue<CMapIntInt>);
+
+template <typename Collection, typename Values>
+void verifyCollectionAccessors(const char *name, const Values &initial, const Values &replacement) {
+    static_assert(std::same_as<CollectionValues<Collection>, Values>);
+    CTypes::register_type_metadata<Collection, CGameObject>();
+    auto collection = std::make_shared<Collection>();
+    std::shared_ptr<CGameObject> base = collection;
+    auto metadata = collection->meta();
+    expect_true(metadata->name() == name && metadata->super() == CGameObject::static_meta(),
+                "collection metadata must retain its concrete name and CGameObject parent");
+    expect_true(collection->getValues().empty(), "new collection values must start empty");
+
+    auto input = initial;
+    collection->setValues(input);
+    input.clear();
+    expect_true(collection->getValues() == initial, "collection setters must copy their by-value input");
+    auto directCopy = collection->getValues();
+    directCopy.clear();
+    expect_true(collection->getValues() == initial, "direct collection getters must return independent copies");
+
+    auto propertyCopy = metadata->template get_property<Collection, Values>("values", collection);
+    expect_true(propertyCopy == initial, "reflected property getters must invoke inherited collection accessors");
+    propertyCopy.clear();
+    expect_true(collection->getValues() == initial, "reflected property results must be independent copies");
+    metadata->template set_property<CGameObject, Values>("values", base, replacement);
+    expect_true(collection->getValues() == replacement && base->getProperty<Values>("values") == replacement,
+                "reflected property setters must accept a concrete collection through CGameObject");
+
+    metadata->template invoke_method<void, CGameObject, Values>("setValues", base, initial);
+    auto methodCopy = metadata->template invoke_method<Values, CGameObject>("getValues", base);
+    expect_true(methodCopy == initial && collection->getValues() == initial,
+                "reflected getter and setter methods must preserve inherited collection accessors");
+    methodCopy.clear();
+    expect_true(collection->getValues() == initial, "reflected method results must be independent copies");
+}
+
+void testPrimitiveCollectionAccessorsPreserveReflectionAndCopies() {
+    verifyCollectionAccessors<CListString>("CListString", std::set<std::string>{"first", "second"},
+                                           std::set<std::string>{"replacement"});
+    verifyCollectionAccessors<CListInt>("CListInt", std::set<int>{1, 2}, std::set<int>{7});
+    verifyCollectionAccessors<CMapStringString>("CMapStringString", string_string_map{{"first", "value"}},
+                                                string_string_map{{"replacement", "other"}});
+    verifyCollectionAccessors<CMapStringInt>("CMapStringInt", string_int_map{{"first", 1}},
+                                             string_int_map{{"replacement", 7}});
+    verifyCollectionAccessors<CMapIntString>("CMapIntString", int_string_map{{1, "first"}},
+                                             int_string_map{{7, "replacement"}});
+    verifyCollectionAccessors<CMapIntInt>("CMapIntInt", int_int_map{{1, 2}}, int_int_map{{7, 8}});
+
+    CListString strings;
+    strings.addValue("first");
+    strings.addValue("first");
+    CListInt integers;
+    integers.addValue(7);
+    integers.addValue(7);
+    expect_true(strings.getValues() == std::set<std::string>{"first"} && integers.getValues() == std::set<int>{7},
+                "list addValue must retain set insertion and duplicate suppression");
+}
+
+template <typename Item> void verifyEquipmentWrapperMetadata(const char *name) {
+    using Wrapper = CWrapper<Item>;
+    using Callback = void (Wrapper::*)(std::shared_ptr<CGameEvent>);
+    static_assert(std::same_as<decltype(&Wrapper::onEquip), Callback>);
+    static_assert(std::same_as<decltype(&Wrapper::onUnequip), Callback>);
+    static_assert(std::same_as<decltype(&Wrapper::onUse), Callback>);
+    auto wrapper = std::make_shared<Wrapper>();
+    std::shared_ptr<Item> item = wrapper;
+    auto metadata = item->meta();
+    expect_true(metadata->name() == name && metadata->super() == Item::static_meta(),
+                "equipment wrappers must preserve their concrete metadata name and parent");
+    expect_true(metadata->inherits("CItem") && std::dynamic_pointer_cast<Wrapper>(item) == wrapper,
+                "equipment templates must retain their runtime item hierarchy");
+}
+
+void testEquipmentWrapperTemplatesPreserveConcreteMetadata() {
+    verifyEquipmentWrapperMetadata<CArmor>("CWrapper<CArmor>");
+    verifyEquipmentWrapperMetadata<CHelmet>("CWrapper<CHelmet>");
+    verifyEquipmentWrapperMetadata<CBoots>("CWrapper<CBoots>");
+    verifyEquipmentWrapperMetadata<CGloves>("CWrapper<CGloves>");
+    verifyEquipmentWrapperMetadata<CBelt>("CWrapper<CBelt>");
+    verifyEquipmentWrapperMetadata<CShield>("CWrapper<CShield>");
+    verifyEquipmentWrapperMetadata<CPants>("CWrapper<CPants>");
+    verifyEquipmentWrapperMetadata<CWeapon>("CWrapper<CWeapon>");
+    verifyEquipmentWrapperMetadata<CSmallWeapon>("CWrapper<CSmallWeapon>");
+    expect_true(CWrapper<CPotion>::static_meta()->name() == "CWrapper<CPotion>" &&
+                    CWrapper<CScroll>::static_meta()->name() == "CWrapper<CScroll>",
+                "potion and scroll wrappers must retain their separate specializations");
+}
 
 class PropertyChangeProbe : public CGameObject {
     V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
@@ -4212,6 +4314,8 @@ void testConfiguredAliasInspectionRejectsCyclesMissingAndMalformedDefinitions() 
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    testPrimitiveCollectionAccessorsPreserveReflectionAndCopies();
+    testEquipmentWrapperTemplatesPreserveConcreteMetadata();
     testConfiguredAliasChainsReportTheConstructibleClassAndCurrentSubtypes();
     testConfiguredAliasInspectionRejectsCyclesMissingAndMalformedDefinitions();
     test_signal_slots_fail_closed_on_bad_config();

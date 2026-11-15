@@ -131,7 +131,22 @@ class DefeatContinuationSourceTest(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "loserDescription); requireDefeatCurrent(); const auto rewardScale = b->getScale(); requireDefeatCurrent(); a->addExpScaled(rewardScale); requireDefeatCurrent();",
+            "loserDescription); requireDefeatCurrent(); "
+            'const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp"); '
+            "requireDefeatCurrent();",
+            text,
+        )
+        self.assertIn(
+            'const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp"); '
+            "requireDefeatCurrent(); "
+            'const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1; '
+            "requireDefeatCurrent();",
+            text,
+        )
+        self.assertIn(
+            "if (sourceKillXp >= 0) { a->addExp(sourceKillXp); } else { "
+            "const auto rewardScale = b->getScale(); requireDefeatCurrent(); a->addExpScaled(rewardScale); "
+            "} requireDefeatCurrent();",
             text,
         )
         guard = self.requiredBlock(self.body, "const auto requireDefeatCurrent =")

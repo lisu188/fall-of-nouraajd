@@ -23,6 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CGameContext.h"
+#include "core/CSerialization.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
+#include "handler/CObjectHandler.h"
 #include "object/CTile.h"
 #include "test_harness.h"
 
@@ -894,6 +899,213 @@ void testWeightedConnectorCostsStayWithinWorkBound() {
     }
 }
 
+class StaticTerrainWorkProbe : public CMap {
+    V_META(StaticTerrainWorkProbe, CMap,
+           V_PROPERTY(StaticTerrainWorkProbe, int, serializationVisit, getSerializationVisit, setSerializationVisit))
+
+  public:
+    int getSerializationVisit() {
+        ++serializationVisits;
+        return 1;
+    }
+    void setSerializationVisit(int) {}
+    std::size_t serializationVisits = 0;
+};
+
+std::size_t countStaticTerrainTileDefinitions(const json &value) {
+    std::size_t result =
+        value.is_object() && value.value("class", std::string()) == "CTile" && value.contains("properties") ? 1 : 0;
+    if (value.is_object()) {
+        for (const auto &[key, child] : value.items())
+            result += countStaticTerrainTileDefinitions(child);
+    } else if (value.is_array()) {
+        for (const auto &child : value)
+            result += countStaticTerrainTileDefinitions(child);
+    }
+    return result;
+}
+
+void testStaticTerrainNativeWorkIsBounded() {
+    constexpr int REPEATS = 64;
+    constexpr int SNAPSHOTS = 8;
+    constexpr std::size_t CELLS = 25;
+    constexpr std::size_t PROMOTED = 2;
+    CTypes::register_type<CMap, CGameObject>();
+    CTypes::register_type<CTile, CGameObject>();
+    CTypes::register_type<StaticTerrainWorkProbe, CMap, CGameObject>();
+    std::size_t native_tile_constructions = 0;
+    auto game = std::make_shared<CGame>();
+    auto handler = game->getObjectHandler();
+    handler->registerNativeType("CTile", [&native_tile_constructions] {
+        ++native_tile_constructions;
+        return std::make_shared<CTile>();
+    });
+    type_registration::registerGameplayTypes(game);
+    json palette = json::array();
+    for (const auto &[type, walkable] :
+         std::vector<std::pair<std::string, bool>>{{"staticGuardWallTile", false}, {"staticGuardFloorTile", true}}) {
+        auto config = std::make_shared<const json>(json{
+            {"class", "CTile"}, {"properties", {{"canStep", walkable}, {"movementCost", 1}, {"tileType", "guard"}}}});
+        handler->registerConfig(type, config);
+        palette[palette.size()] = {{"type", type}, {"configuration", *config}};
+    }
+    const json raster = {
+        {"version", 1},
+        {"levels", json::array({{{"area", "staticWorkGuard"},
+                                 {"level", 0},
+                                 {"width", 5},
+                                 {"height", 5},
+                                 {"palette", palette},
+                                 {"rows", json::array({"00000", "01110", "00010", "01110", "00000"})}}})}};
+    json data = json::array();
+    for (std::size_t index = 0; index < CELLS; ++index)
+        data[index] = 0;
+    const json document = {
+        {"properties", {{"x", 1}, {"y", 1}, {"z", 0}, {"staticTerrainData", raster.dump()}}},
+        {"tilesets", json::array()},
+        {"layers", json::array({{{"type", "tilelayer"},
+                                 {"width", 5},
+                                 {"height", 5},
+                                 {"properties",
+                                  {{"level", 0},
+                                   {"default", "staticGuardWallTile"},
+                                   {"outOfBounds", "staticGuardWallTile"},
+                                   {"xBound", 4},
+                                   {"yBound", 4}}},
+                                 {"data", data}}})},
+    };
+    auto map = std::make_shared<StaticTerrainWorkProbe>();
+    map->setGame(game);
+    game->setMap(map);
+    CMapLoader::loadFromTmx(map, std::make_shared<const json>(document));
+    const auto cold_recipes = handler->getTileRecipeDiagnostics();
+    const auto cold_constructions = native_tile_constructions;
+    auto navigation = map->getNavigationService();
+    auto snapshot = navigation->snapshot(map);
+    expect_true(snapshot->canStep(Coords(1, 1, 0)) && !snapshot->canStep(Coords(1, 2, 0)),
+                "static work fixture must warm the actual native collision chunk");
+    const auto epoch = map->getRoutingEpoch();
+    const auto revision = map->getNavigationRevision();
+    const auto chunks = snapshot->chunkCount();
+    for (int repeat = 0; repeat < REPEATS; ++repeat) {
+        expect_true(map->canStep(1, 1, 0) && !map->canStep(1, 2, 0) && !map->canStep(5, 1, 0) &&
+                        snapshot->canStep(Coords(1, 1, 0)) && !snapshot->canStep(Coords(1, 2, 0)) &&
+                        map->lookupMovementCost(1, 1, 0) == 1 && snapshot->movementCost(Coords(1, 1, 0)) == 1 &&
+                        map->lookupMovementCost(5, 1, 0) == 1 && snapshot->movementCost(Coords(5, 1, 0)) == 1,
+                    "fixed native scalar/snapshot work must retain raster and bound fallback results");
+        expect_true(navigation->snapshot(map) == snapshot && snapshot->isCurrent(),
+                    "unchanged static terrain must reuse its current native snapshot");
+    }
+    const auto steady_recipes = handler->getTileRecipeDiagnostics();
+    const auto scalar_constructions = native_tile_constructions - cold_constructions;
+    const auto epoch_after = map->getRoutingEpoch();
+    expect_true(map->getTiles().empty() && scalar_constructions == 0 &&
+                    steady_recipes.applications == cold_recipes.applications &&
+                    steady_recipes.compilations == cold_recipes.compilations &&
+                    map->getNavigationRevision() == revision && epoch_after == epoch && chunks == 1 &&
+                    snapshot->chunkCount() == chunks,
+                "fixed scalar work must construct zero tiles, keep routing epoch stable and reuse one chunk");
+    auto path = navigation->findPathResult(map, Coords(1, 1, 0), Coords(1, 3, 0));
+    expect_true(path.status == CNavigationSearchStatus::Found && path.path.size() == 6 && path.cost == 6 &&
+                    std::ranges::find(path.path, Coords(1, 2, 0)) == path.path.end(),
+                "the native work guard must follow the six-step masonry bend");
+    expectMetricAtMost("static raster search records", path.statistics.records, CELLS, CELLS);
+    expectMetricAtMost("static raster search expansions", path.statistics.expansions, CELLS, CELLS);
+    expectMetricAtMost("static raster search cost calls", path.statistics.costCalls, CELLS * 4, CELLS * 4);
+    expect_true(snapshot->chunkCount() == 1 && map->getTiles().empty() && map->getRoutingEpoch() == epoch,
+                "one bounded search must reuse the scalar chunk without promoting terrain or changing its epoch");
+    auto floor = map->getTile(1, 1, 0);
+    auto wall = map->getTile(1, 2, 0);
+    auto promoted_snapshot = navigation->snapshot(map);
+    expect_true(!promoted_snapshot->canStep(Coords(1, 2, 0)),
+                "the promotion fixture must warm a current snapshot before mutation");
+    const auto promoted_epoch = map->getRoutingEpoch();
+    for (int repeat = 0; repeat < REPEATS; ++repeat)
+        expect_true(map->getTile(1, 1, 0) == floor && map->getTile(1, 2, 0) == wall,
+                    "native promotion work must be bounded by distinct coordinates");
+    const auto promoted_recipes = handler->getTileRecipeDiagnostics();
+    expect_true(floor && wall && floor != wall && map->getTiles().size() == PROMOTED &&
+                    promoted_recipes.applications - cold_recipes.applications == PROMOTED &&
+                    promoted_recipes.compilations - cold_recipes.compilations == PROMOTED &&
+                    native_tile_constructions - cold_constructions == PROMOTED &&
+                    map->getRoutingEpoch() == promoted_epoch && navigation->snapshot(map) == promoted_snapshot,
+                "two queried coordinates require exactly two canonical objects and two native recipes");
+    if (!floor || !wall) {
+        game->getContext()->shutdown();
+        return;
+    }
+    wall->setCanStep(true);
+    wall->setMovementCost(7);
+    wall->setStringProperty("staticWorkMutation", "retained");
+    auto changed = navigation->snapshot(map);
+    expect_true(!promoted_snapshot->isCurrent() && changed != promoted_snapshot && changed->canStep(Coords(1, 2, 0)) &&
+                    changed->movementCost(Coords(1, 2, 0)) == 7,
+                "real canonical mutations must invalidate the old chunk and reach the fresh snapshot");
+    const auto changed_epoch = map->getRoutingEpoch();
+    map->serializationVisits = 0;
+    std::size_t max_bytes = 0;
+    for (int pass = 0; pass < SNAPSHOTS; ++pass) {
+        auto serialized = CSerialization::serializeExpected(map);
+        expect_true(serialized.has_value(), "the guard must serialize the actual static native map");
+        if (!serialized)
+            continue;
+        max_bytes = std::max(max_bytes, serialized->dump().size());
+        expect_true(countStaticTerrainTileDefinitions(*serialized) == PROMOTED &&
+                        (*serialized)["properties"]["staticTerrainData"].get<std::string>() == raster.dump() &&
+                        map->serializationVisits == static_cast<std::size_t>(pass + 1),
+                    "each native snapshot visits its map once and defines only the two materialized tiles");
+        expect_true(map->getTiles().size() == PROMOTED && map->getTile(1, 2, 0) == wall && wall->canStep() &&
+                        wall->getMovementCost() == 7 && wall->getStringProperty("staticWorkMutation") == "retained" &&
+                        map->getRoutingEpoch() == changed_epoch && navigation->snapshot(map) == changed,
+                    "serializing must preserve complete overlay state and current routing without growing terrain");
+    }
+    expect_true(map->serializationVisits == SNAPSHOTS && native_tile_constructions - cold_constructions == PROMOTED &&
+                    handler->getTileRecipeDiagnostics().applications == promoted_recipes.applications &&
+                    handler->getTileRecipeDiagnostics().compilations == promoted_recipes.compilations,
+                "repeated snapshots must add no terrain construction or recipe compilation");
+    handler->registerConfig("staticGuardUnboundOutsideTile", handler->getConfig("staticGuardWallTile"));
+    map->setOutOfBoundsTiles({{0, "staticGuardUnboundOutsideTile"}});
+    const auto unbound_before = handler->getTileRecipeDiagnostics().applications;
+    const auto unbound_constructors_before = native_tile_constructions;
+    const auto unbound_walkable = map->canStep(6, 1, 0);
+    const auto unbound_cost = map->lookupMovementCost(6, 1, 0);
+    const auto unbound_applications = handler->getTileRecipeDiagnostics().applications - unbound_before;
+    const auto unbound_constructors = native_tile_constructions - unbound_constructors_before;
+    expect_true(!unbound_walkable && unbound_cost == 1 && unbound_applications == 2 && unbound_constructors == 2 &&
+                    map->getTiles().size() == PROMOTED,
+                "an unbound fallback id must retain two native transient constructor applications");
+    auto legacy_document = document;
+    legacy_document["properties"].erase("staticTerrainData");
+    auto legacy = std::make_shared<CMap>();
+    legacy->setGame(game);
+    game->setMap(legacy);
+    CMapLoader::loadFromTmx(legacy, std::make_shared<const json>(legacy_document));
+    const auto legacy_before = handler->getTileRecipeDiagnostics().applications;
+    const auto legacy_constructors_before = native_tile_constructions;
+    const auto legacy_walkable = legacy->canStep(1, 1, 0);
+    const auto legacy_cost = legacy->lookupMovementCost(1, 1, 0);
+    const auto legacy_applications = handler->getTileRecipeDiagnostics().applications - legacy_before;
+    const auto legacy_constructors = native_tile_constructions - legacy_constructors_before;
+    expect_true(!legacy_walkable && legacy_cost == 1 && legacy_applications == 2 && legacy_constructors == 2 &&
+                    legacy->getTiles().empty(),
+                "unopted legacy maps must retain two native transient constructor applications");
+    std::cout << "static terrain work guard: repeats=" << REPEATS << " scalarConstructorCalls=" << scalar_constructions
+              << " scalarRecipeDelta=" << steady_recipes.applications - cold_recipes.applications
+              << " scalarRecipeCompilationDelta=" << steady_recipes.compilations - cold_recipes.compilations
+              << " routingEpoch=" << epoch << " routingEpochAfter=" << epoch_after << " chunks=" << chunks
+              << " searchRecords=" << path.statistics.records << " searchExpansions=" << path.statistics.expansions
+              << " searchCostCalls=" << path.statistics.costCalls << " recordBudget=" << CELLS
+              << " costBudget=" << CELLS * 4 << " promoted=" << map->getTiles().size()
+              << " promotionBudget=" << PROMOTED << " snapshots=" << SNAPSHOTS
+              << " mapVisits=" << map->serializationVisits << " mapVisitBudget=" << SNAPSHOTS
+              << " maxSerializedBytesDiagnostic=" << max_bytes
+              << " unboundConstructorApplications=" << unbound_applications
+              << " unboundConstructorCalls=" << unbound_constructors
+              << " legacyConstructorApplications=" << legacy_applications
+              << " legacyConstructorCalls=" << legacy_constructors << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
@@ -914,4 +1126,5 @@ void run_pathfinder_performance_tests() {
     testMovementCostPathStaysWithinWorkBound();
     testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork();
     testWeightedConnectorCostsStayWithinWorkBound();
+    testStaticTerrainNativeWorkIsBounded();
 }
