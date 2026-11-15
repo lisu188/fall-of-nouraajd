@@ -17,6 +17,107 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
 
+    def testBherenLowStandingRouteReportsTheSameCatToPetrineBeforeClaimingItsCloak(self):
+        from unittest.mock import patch
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        class SourcePrefixCompleted(Exception):
+            pass
+
+        for outcome_key in ("complete", "lowStanding"):
+            with self.subTest(outcome=outcome_key):
+                model = CityModel()
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                petrine = model.actor("Petrine", "AR0200")
+                bheren = model.actor("Bheren", "AR0004", sourceCreature="BHEREN")
+                cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+                events = []
+                combats = []
+                test = self
+
+                class SourcePlanner:
+                    quests = {row["id"]: row for row in routes.documents()["quests"]}
+
+                    def settle(self, key, outcome):
+                        events.append((key, outcome))
+                        owner = petrine if key == "petrineRing" else bheren
+                        dialog = model.dialog(owner)
+                        test.assertTrue(dialog.acceptQuest(key))
+                        if cat.isAlive():
+                            test.assertEqual(10, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            test.assertTrue(model.dialog(cat).attack())
+                            model.kill(cat)
+                            combats.append(cat)
+                            test.assertEqual(8, model.game_map.getNumericProperty("plugin_cityReputation"))
+                        dialog = model.dialog(owner)
+                        if key == "petrineRing":
+                            test.assertEqual("catKilled", outcome)
+                            test.assertEqual([cat], combats)
+                            gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                            test.assertTrue(dialog.questPetrineRingCatKilled())
+                            test.assertEqual(7, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            test.assertEqual(
+                                (gold, xp), (model.player.getGold(), model.player.getNumericProperty("exp"))
+                            )
+                            return owner.getName(), self.quests[key]["outcomes"][1]
+                        test.assertEqual("bherenCat", key)
+                        test.assertTrue(dialog.canQuestOutcome(key, outcome))
+                        cloak = next(
+                            item for item in bheren.items if item.getStringProperty("plugin_citySourceItem") == "CLCK01"
+                        )
+                        gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                        test.assertTrue(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(gold, model.player.getGold())
+                        test.assertEqual(
+                            xp + (400 if outcome == "complete" else 0), model.player.getNumericProperty("exp")
+                        )
+                        if outcome == "lowStanding":
+                            test.assertIn(cloak, model.player.items)
+                            test.assertNotIn(cloak, bheren.items)
+                        else:
+                            test.assertNotIn(cloak, model.player.items)
+                            test.assertIn(cloak, bheren.items)
+                        before = (
+                            model.player.getGold(),
+                            model.player.getNumericProperty("exp"),
+                            tuple(model.player.items),
+                        )
+                        test.assertFalse(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(
+                            before,
+                            (model.player.getGold(), model.player.getNumericProperty("exp"), tuple(model.player.items)),
+                        )
+                        raise SourcePrefixCompleted()
+
+                planner = SourcePlanner()
+                with (
+                    patch.object(routes, "start"),
+                    patch.object(routes, "QuestRoute", return_value=planner),
+                    self.assertRaises(SourcePrefixCompleted),
+                ):
+                    routes.questRoute(object(), "bherenCat", outcome_key)
+                self.assertEqual([cat], combats, "The same recorded cat death must not be fought again")
+                self.assertEqual(
+                    (
+                        [("petrineRing", "catKilled"), ("bherenCat", "lowStanding")]
+                        if outcome_key == "lowStanding"
+                        else [("bherenCat", "complete")]
+                    ),
+                    events,
+                )
+                completed = {quest.getTypeId() for quest in model.player.getCompletedQuests()}
+                self.assertEqual(
+                    (
+                        {"cityPetrineRingQuest", "cityBherenCatQuest"}
+                        if outcome_key == "lowStanding"
+                        else {"cityBherenCatQuest"}
+                    ),
+                    completed,
+                )
+                self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_quinnDagger"))
+                self.assertIn("cityQuinnDaggerQuest", {quest.getTypeId() for quest in model.player.getQuests()})
+
     def testJalanthaQuestAcceptanceRequestsTheActualPaidAudienceAfterItsPrerequisite(self):
         from types import SimpleNamespace
         from tests.test_baldurs_gate_city_content import CityCreature, CityModel

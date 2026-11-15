@@ -1117,6 +1117,8 @@ def questRoute(d, key, outcome_key, *, item_first=False):
         for requirement in outcome.get("conditions", {}).get("items", []):
             planner.item(requirement)
         d.test.assertEqual("notStarted", state(d, key))
+    if key == "bherenCat" and outcome_key == "lowStanding":
+        planner.settle("petrineRing", "catKilled")
     name, result = planner.settle(key, outcome_key)
     if key == "tamokoMercy" and outcome_key == "fight":
         nativeVictory(d, name)
