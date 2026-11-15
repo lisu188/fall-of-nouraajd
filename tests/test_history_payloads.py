@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The committed recovery payloads must match the SHA-256 pins that reference them."""
 
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -40,7 +41,7 @@ class HistoryPayloadPinsTest(unittest.TestCase):
         self.assertEqual([], mismatched, "Payload bytes differ from their pins (line-ending normalization?)")
 
     def testPayloadDirectoriesAreExemptFromLineEndingNormalization(self):
-        for directory in ("upstream", "payloads"):
+        for directory in ("upstream", "payloads", "evidence"):
             probe = f"recovery/{directory}/probe.cpp"
             result = subprocess.run(
                 ["git", "-C", str(RECOVERY_ROOT.parent), "check-attr", "text", "--", probe],
@@ -51,6 +52,12 @@ class HistoryPayloadPinsTest(unittest.TestCase):
             if result.returncode:
                 self.skipTest("Git attributes are unavailable outside a Git checkout")
             self.assertTrue(result.stdout.strip().endswith(": text: unset"), result.stdout)
+
+
+    def testCompressedEvidenceLogsAreIntact(self):
+        for log in sorted((RECOVERY_ROOT / "evidence").glob("*/build.log.gz")):
+            with self.subTest(log=log.parent.name):
+                self.assertTrue(gzip.decompress(log.read_bytes()))
 
 
 if __name__ == "__main__":
