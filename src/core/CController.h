@@ -226,6 +226,15 @@ class CRangeController : public CController {
 };
 
 namespace performance_guard {
+struct InteractionSelectionWork {
+    std::size_t targetSnapshots = 0;
+    std::size_t targetEffectEntries = 0;
+    std::size_t weakeningEvaluations = 0;
+    std::size_t admissionLookups = 0;
+};
+void resetInteractionSelectionProbe();
+InteractionSelectionWork interactionSelectionProbeCounts();
+void disableInteractionSelectionProbe();
 std::size_t targetFlowCacheSize();
 void clearTargetFlowCache();
 void resetHealingItemSelectionProbe();
