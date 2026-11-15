@@ -14,6 +14,14 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 
 
+APPROVED_MCP_RUNTIME_UPLOAD_ACTIONS = frozenset(
+    {
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+    }
+)
+
+
 def workflowJob(name):
     workflow = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
     start = workflow.index("\n  " + name + ":\n") + 1
@@ -114,13 +122,15 @@ class McpBranchWorkflowTest(unittest.TestCase):
             exec(self.aggregateProgram(), {"__name__": "__main__"})
 
     def testRuntimeReadinessComesOnlyFromTheActualSuccessfulPinnedUpload(self):
+        upload_actions = {}
         for platform in ("linux", "windows"):
             with self.subTest(platform=platform):
                 job = workflowJob(platform)
                 output = workflowScalar(job, "runtime-ready", 6)
                 upload = workflowStep(job, "Upload current " + platform.title() + " MCP runtime")
                 self.assertEqual("mcp-runtime-upload", workflowScalar(upload, "id", 8))
-                self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", upload)
+                upload_actions[platform] = workflowScalar(upload, "uses", 8)
+                self.assertIn(upload_actions[platform], APPROVED_MCP_RUNTIME_UPLOAD_ACTIONS)
                 self.assertEqual("error", workflowScalar(upload, "if-no-files-found", 10))
                 self.assertNotIn("continue-on-error:", upload)
                 for outcome in ("", "skipped", "failure", "cancelled", "success"):
@@ -136,6 +146,55 @@ class McpBranchWorkflowTest(unittest.TestCase):
                     ),
                     "A failed native build/import/bundle cannot bypass the upload's default success guard",
                 )
+
+        self.assertEqual(upload_actions["linux"], upload_actions["windows"])
+
+    def testRuntimeUploadPinsAcceptOnlyReviewedHeadAndMergeRevisions(self):
+        approved_actions = (
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+        )
+        self.assertEqual(frozenset(approved_actions), APPROVED_MCP_RUNTIME_UPLOAD_ACTIONS)
+        original_jobs = {platform: workflowJob(platform) for platform in ("linux", "windows")}
+        candidates = [(action, True) for action in approved_actions] + [
+            ("actions/upload-artifact@v7", False),
+            ("actions/upload-artifact@" + "0" * 40, False),
+            ("actions/upload-artifact@" + "f" * 40, False),
+            ("other/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", False),
+            ("actions/upload-artifact", False),
+            ("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a-extra", False),
+            ("other/action@" + "0" * 40 + " # actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", False),
+        ]
+        for action, accepted in candidates:
+            with self.subTest(action=action):
+                jobs = {}
+                for platform, job in original_jobs.items():
+                    upload = workflowStep(job, "Upload current " + platform.title() + " MCP runtime")
+                    self.assertEqual(1, len(re.findall(r"(?m)^        uses: .*", upload)))
+                    changed_upload = re.sub(r"(?m)^(        uses: ).*$", lambda match: match[1] + action, upload)
+                    jobs[platform] = job.replace(upload, changed_upload, 1)
+                case = type(self)("testRuntimeReadinessComesOnlyFromTheActualSuccessfulPinnedUpload")
+                with patch.dict(globals(), {"workflowJob": jobs.__getitem__}):
+                    if accepted:
+                        case.testRuntimeReadinessComesOnlyFromTheActualSuccessfulPinnedUpload()
+                    else:
+                        with self.assertRaises(AssertionError):
+                            case.testRuntimeReadinessComesOnlyFromTheActualSuccessfulPinnedUpload()
+
+    def testRuntimeUploadPinsRejectMixedApprovedVersions(self):
+        actions = sorted(APPROVED_MCP_RUNTIME_UPLOAD_ACTIONS)
+        original_jobs = {platform: workflowJob(platform) for platform in ("linux", "windows")}
+        for versions in (actions, list(reversed(actions))):
+            with self.subTest(versions=versions):
+                jobs = {}
+                for platform, action in zip(("linux", "windows"), versions):
+                    job = original_jobs[platform]
+                    upload = workflowStep(job, "Upload current " + platform.title() + " MCP runtime")
+                    changed_upload = re.sub(r"(?m)^(        uses: ).*$", lambda match: match[1] + action, upload)
+                    jobs[platform] = job.replace(upload, changed_upload, 1)
+                case = type(self)("testRuntimeReadinessComesOnlyFromTheActualSuccessfulPinnedUpload")
+                with patch.dict(globals(), {"workflowJob": jobs.__getitem__}), self.assertRaises(AssertionError):
+                    case.testRuntimeReadinessComesOnlyFromTheActualSuccessfulPinnedUpload()
 
     def testSuccessfulUploadAllowsDiagnosticShardsAfterLaterParentGameplayFailure(self):
         for platform in ("linux", "windows"):
