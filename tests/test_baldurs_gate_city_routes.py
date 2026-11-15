@@ -1904,6 +1904,99 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
 
         return Driver()
 
+    def testGenericContainerRevisitUsesActualTargetAndAvoidsTheRetainedCompulsorySewerLoop(self):
+        from unittest.mock import patch
+
+        data = routes.documents()
+        geometry = data["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        name, target = "cityAr0800Container1", (176, 67, 0)
+        self.assertEqual("AR0800#container1", data["config"][name]["properties"]["sourceContainer"])
+        map_data = json.loads((ROOT / "res/maps/baldursGate/map.json").read_text(encoding="utf-8"))
+        authored = next(row for layer in map_data["layers"] for row in layer.get("objects", []) if row["name"] == name)
+        self.assertEqual(target[:2], (authored["x"] // map_data["tilewidth"], authored["y"] // map_data["tileheight"]))
+        links = {row["object"]: row for row in geometry["connections"]}
+        entrance, returning = links["cityAr0800Portal21"], links["cityAr0226Portal10"]
+        self.assertEqual(([171, 88, 0], [125, 26, 3]), (entrance["origin"], entrance["target"]))
+        self.assertEqual(([125, 25, 3], [172, 88, 0]), (returning["origin"], returning["target"]))
+        forced = {tuple(row["origin"]): tuple(row["target"]) for row in (entrance, returning)}
+
+        for origin, expected_steps in (((157, 111, 0), 67), ((172, 88, 0), 29)):
+            with self.subTest(origin=origin):
+                driver = self.ownershipDriver()
+                driver.position, driver.turns = origin, 0
+                driver.identity = {"__handle__": "sameAlreadyLootedContainer"}
+                driver.looted, driver.contents, driver.gold_value = True, [], 1017
+                ring = {"plugin_citySourceItem": "RING10", "plugin_cityQuantity": 1}
+                driver.items = {"originalSourceRing": ring}
+                driver.moves, driver.portal_entries, driver.native_contacts = [], [], []
+                original_call, original_choose = driver.call, driver.choose
+                driver.object = lambda actual, required=True: driver.identity if actual == name else None
+                driver.coords = lambda owner=None: target if owner is not None else driver.position
+                driver.number = lambda _key: 5
+                driver.flag = lambda _key: False
+                driver.call = lambda owner, method, *args: original_call(
+                    "chest" if isinstance(owner, dict) else owner, method, *args
+                )
+
+                def advance(point):
+                    point = tuple(point)
+                    self.assertIn(point, walkable)
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, point)))
+                    driver.moves.append((driver.position, point))
+                    driver.position = forced.get(point, point)
+                    if point in forced:
+                        driver.portal_entries.append(point)
+                    driver.turns += 1
+
+                def navigateCoords(point, *, limit):
+                    self.assertGreater(limit, 0)
+                    advance(point)
+
+                def navigateTo(actual, *, after_tick=None):
+                    self.assertEqual(name, actual)
+                    budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, target)) + 128)
+                    for _ in range(budget):
+                        if driver.position == target:
+                            driver.native_contacts.append(driver.identity)
+                            return
+                        area_id = routes.currentArea(driver)
+                        goal = target if area_id == "AR0800" else tuple(returning["origin"])
+                        # This source-geometry transport model exposes compulsory entrance effects; it is not native replay.
+                        path = routes.cityApproachPath(
+                            driver.position, goal, geometry["atlas"][area_id]["bounds"], walkable, frozenset()
+                        )
+                        advance(path[0])
+                        if after_tick:
+                            after_tick()
+                    raise AssertionError(("Authored route budget exhausted", actual, budget, driver.position))
+
+                def choose(dialog, action):
+                    self.assertEqual((name + "Dialog", "open"), (dialog, action))
+                    self.assertEqual(target, driver.position)
+                    self.assertTrue(driver.native_contacts)
+                    return original_choose(dialog, action)
+
+                driver.navigateCoords, driver.navigateTo, driver.choose = navigateCoords, navigateTo, choose
+                before = routes.resources(driver)
+                with patch.object(routes, "travel", wraps=routes.travel) as travel:
+                    self.assertIsNone(routes.visit(driver, name, "open"))
+                    self.assertIsNone(routes.visit(driver, name, "open"))
+                self.assertEqual(2, travel.call_count)
+                for call in travel.call_args_list:
+                    self.assertEqual((driver, "AR0800"), call.args)
+                    self.assertEqual({"target": target}, call.kwargs)
+                self.assertEqual(target, driver.position)
+                self.assertEqual(expected_steps, driver.turns)
+                self.assertLessEqual(driver.turns, max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128))
+                self.assertEqual([], driver.portal_entries)
+                self.assertEqual([driver.identity, driver.identity], driver.native_contacts)
+                self.assertEqual(before, routes.resources(driver))
+                self.assertIs(ring, driver.items["originalSourceRing"])
+                self.assertEqual([], driver.contents)
+                self.assertTrue(driver.looted)
+                self.assertEqual(2, sum(action[0] == "choice" for action in driver.actions))
+
     def testOwnershipRouteRequiresNaturalContactExactDeltasAndAnInertRepeatedOpen(self):
         from unittest.mock import patch
 

@@ -321,9 +321,7 @@ def travel(d, destination, *, target=None):
 
 
 def visit(d, actor, action="talk"):
-    properties = documents()["config"][actor]["properties"]
-    travel(d, properties["sourceArea"])
-    d.navigateTo(actor)
+    QuestRoute(d).contact(actor)
     return d.choose(actor + "Dialog", action)
 
 
