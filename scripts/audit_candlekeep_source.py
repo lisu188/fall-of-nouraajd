@@ -46,6 +46,12 @@ EXTERNAL_SCRIPTS = {
 }
 MAX_RESOURCE_BYTES = 16 * 1024 * 1024
 MAX_RECORDS = 1000000
+MAX_ITEM_ABILITIES = 16
+MAX_ITEM_EFFECTS = 64
+MAX_ITEM_EFFECT_REFERENCES = 128
+ITEM_HEADER_BYTES = 0x72
+ITEM_ABILITY_BYTES = 0x38
+ITEM_EFFECT_BYTES = 0x30
 NONE_REFS = {"", "NONE", "*"}
 CITY_EXTERIORS = {
     "AR0100": "Northwest ward",
@@ -756,7 +762,153 @@ def parseStore(data):
     return result, refs, []
 
 
-def parseItem(data):
+def requireItemEffect(condition, code):
+    if not condition:
+        raise AuditError(code)
+
+
+def itemEffectSpan(data, offset, size):
+    requireItemEffect(type(offset) is int and type(size) is int and offset >= 0 and size >= 0, "invalid-span")
+    requireItemEffect(offset <= len(data) and size <= len(data) - offset, "span-outside-payload")
+    return data[offset : offset + size]
+
+
+def itemEffectNumber(data, offset, kind="I"):
+    return struct.unpack("<" + kind, itemEffectSpan(data, offset, struct.calcsize("<" + kind)))[0]
+
+
+def itemEffectFieldText(data, offset):
+    raw = itemEffectSpan(data, offset, 8)
+    stripped = raw.rstrip(bytes([0]))
+    return {
+        "text": stripped.decode("ascii") if all(32 <= value < 127 for value in stripped) else None,
+        "asciiPrintableOrNulPadded": all(32 <= value < 127 for value in stripped),
+        "fieldBytes": 8,
+        "fieldSha256": hashlib.sha256(raw).hexdigest(),
+        "followed": False,
+    }
+
+
+def itemEffectSigned32(value):
+    return value if value < 2**31 else value - 2**32
+
+
+def decodeInlineItemEffect(data, offset, index):
+    itemEffectSpan(data, offset, ITEM_EFFECT_BYTES)
+    first, second = itemEffectNumber(data, offset + 4), itemEffectNumber(data, offset + 8)
+    return {
+        "index": index,
+        "offset": offset,
+        "bytes": ITEM_EFFECT_BYTES,
+        "format": "embedded EFF V1 (not standalone EFF V2)",
+        "opcodeU16": itemEffectNumber(data, offset, "H"),
+        "targetU8": itemEffectNumber(data, offset + 2, "B"),
+        "powerU8": itemEffectNumber(data, offset + 3, "B"),
+        "parameter1U32": first,
+        "parameter1Signed32View": itemEffectSigned32(first),
+        "parameter2U32": second,
+        "parameter2Signed32View": itemEffectSigned32(second),
+        "timingU8": itemEffectNumber(data, offset + 12, "B"),
+        "resistanceU8": itemEffectNumber(data, offset + 13, "B"),
+        "durationU32": itemEffectNumber(data, offset + 14),
+        "probabilityFirstU8": itemEffectNumber(data, offset + 18, "B"),
+        "probabilitySecondU8": itemEffectNumber(data, offset + 19, "B"),
+        "sameProbabilityStorageU16": itemEffectNumber(data, offset + 18, "H"),
+        "resourceOrOpcodeSpecificField": itemEffectFieldText(data, offset + 20),
+        "diceThrownOrMaxLevelU32": itemEffectNumber(data, offset + 28),
+        "diceSidesOrMinLevelU32": itemEffectNumber(data, offset + 32),
+        "savingThrowTypeU32": itemEffectNumber(data, offset + 36),
+        "savingThrowBonusSigned32": itemEffectNumber(data, offset + 40, "i"),
+        "specialU32": itemEffectNumber(data, offset + 44),
+        "recordSha256": hashlib.sha256(itemEffectSpan(data, offset, ITEM_EFFECT_BYTES)).hexdigest(),
+        "semanticsEvaluated": False,
+    }
+
+
+def decodeItemEffects(data):
+    requireItemEffect(isinstance(data, (bytes, bytearray)), "bytes-required")
+    requireItemEffect(len(data) <= MAX_RESOURCE_BYTES, "item-payload-cap")
+    data = bytes(data)
+    requireItemEffect(itemEffectSpan(data, 0, 8) == b"ITM V1  ", "unsupported-itm-signature")
+    itemEffectSpan(data, 0, ITEM_HEADER_BYTES)
+    ability_offset, count = itemEffectNumber(data, 0x64), itemEffectNumber(data, 0x68, "H")
+    effect_offset = itemEffectNumber(data, 0x6A)
+    itemEffectSpan(data, effect_offset, 0)
+    equip_first, equip_count = itemEffectNumber(data, 0x6E, "H"), itemEffectNumber(data, 0x70, "H")
+    requireItemEffect(count <= MAX_ITEM_ABILITIES and equip_count <= MAX_ITEM_EFFECT_REFERENCES, "record-count-cap")
+    itemEffectSpan(data, ability_offset, count * ITEM_ABILITY_BYTES)
+    requireItemEffect(not count or ability_offset >= ITEM_HEADER_BYTES, "ability-overlaps-header")
+    abilities = []
+    references = list(range(equip_first, equip_first + equip_count))
+    for index in range(count):
+        offset = ability_offset + index * ITEM_ABILITY_BYTES
+        feature_count, first = itemEffectNumber(data, offset + 0x1E, "H"), itemEffectNumber(data, offset + 0x20, "H")
+        requireItemEffect(feature_count <= MAX_ITEM_EFFECT_REFERENCES, "record-count-cap")
+        indices = list(range(first, first + feature_count))
+        references.extend(indices)
+        requireItemEffect(len(references) <= MAX_ITEM_EFFECT_REFERENCES, "effect-reference-cap")
+        abilities.append(
+            {
+                "index": index,
+                "offset": offset,
+                "bytes": ITEM_ABILITY_BYTES,
+                "attackTypeU8": itemEffectNumber(data, offset, "B"),
+                "identificationRequirementU8": itemEffectNumber(data, offset + 1, "B"),
+                "locationU8": itemEffectNumber(data, offset + 2, "B"),
+                "targetTypeU8": itemEffectNumber(data, offset + 0xC, "B"),
+                "targetCountU8": itemEffectNumber(data, offset + 0xD, "B"),
+                "rangeU16": itemEffectNumber(data, offset + 0xE, "H"),
+                "featureCountU16": feature_count,
+                "firstFeatureIndexU16": first,
+                "featureIndicesInOrder": indices,
+                "maxChargesU16": itemEffectNumber(data, offset + 0x22, "H"),
+                "depletionU16": itemEffectNumber(data, offset + 0x24, "H"),
+                "flagsU32": itemEffectNumber(data, offset + 0x26),
+                "projectileU16": itemEffectNumber(data, offset + 0x2A, "H"),
+                "recordSha256": hashlib.sha256(itemEffectSpan(data, offset, ITEM_ABILITY_BYTES)).hexdigest(),
+            }
+        )
+    indices = sorted(set(references))
+    requireItemEffect(len(indices) <= MAX_ITEM_EFFECTS, "unique-feature-cap")
+    requireItemEffect(not indices or effect_offset >= ITEM_HEADER_BYTES, "effect-overlaps-header")
+    effects = []
+    ability_end = ability_offset + count * ITEM_ABILITY_BYTES
+    for index in indices:
+        offset = effect_offset + index * ITEM_EFFECT_BYTES
+        requireItemEffect(
+            not count or offset + ITEM_EFFECT_BYTES <= ability_offset or offset >= ability_end,
+            "effect-overlaps-ability",
+        )
+        effects.append(decodeInlineItemEffect(data, offset, index))
+    return {
+        "signature": "ITM V1",
+        "payloadBytes": len(data),
+        "payloadSha256": hashlib.sha256(data).hexdigest(),
+        "headerBytes": ITEM_HEADER_BYTES,
+        "flagsU32": itemEffectNumber(data, 0x18),
+        "itemTypeU16": itemEffectNumber(data, 0x1C, "H"),
+        "replacementField": itemEffectFieldText(data, 0x10),
+        "abilityOffsetU32": ability_offset,
+        "abilityCountU16": count,
+        "effectOffsetU32": effect_offset,
+        "equippingFirstIndexU16": equip_first,
+        "equippingEffectCountU16": equip_count,
+        "equippingEffectIndicesInOrder": list(range(equip_first, equip_first + equip_count)),
+        "abilities": abilities,
+        "referencedFeatureIndices": indices,
+        "referencedFeatureCount": len(indices),
+        "referencedFeatureReferenceCount": len(references),
+        "effects": effects,
+        "allDeclaredAbilityAndEquippingEffectsDecoded": True,
+        "unusedFeatureOrPaddingBytesNotInterpreted": True,
+        "interpretation": "Counts/fields only. Zero declared effects is not proof that external scripts cannot use an item.",
+        "resourceFieldsFollowed": False,
+        "runtimeOrOriginalParity": False,
+    }
+
+
+def parseItem(data, *, itemEffects=False):
+    item_effects = decodeItemEffects(data) if itemEffects else None
     reader = Binary(data)
     reader.signature(b"ITM V1  ", 0x72)
     replacement = reader.ref(0x10)
@@ -779,6 +931,7 @@ def parseItem(data):
             "ability_count": len(abilities),
             "equipped_effect_count": reader.number(0x70, "H"),
             "effects_interpreted": False,
+            **({"item_effects": item_effects} if itemEffects else {}),
         },
         [reference(replacement, "ITM", "replacement item")],
         [],
@@ -932,13 +1085,17 @@ def attachText(value, talk):
                 attachText(entry, talk)
 
 
-def auditInstallation(game_root, language="en_US", area="AR2600", encoding=None, scope="candlekeep"):
+def auditInstallation(
+    game_root, language="en_US", area="AR2600", encoding=None, scope="candlekeep", *, itemEffects=False
+):
     if scope == "city":
         try:
             from scripts.build_baldurs_gate_source_fixture import buildCityFixture
         except ModuleNotFoundError:
             from build_baldurs_gate_source_fixture import buildCityFixture
 
+        if itemEffects:
+            return buildCityFixture(game_root, language, encoding, itemEffects=True)
         return buildCityFixture(game_root, language, encoding)
     if scope != "candlekeep":
         raise AuditError(f"unsupported audit scope: {scope}")
@@ -997,6 +1154,8 @@ def auditInstallation(game_root, language="en_US", area="AR2600", encoding=None,
         "ITM": parseItem,
         "GAM": parseGame,
     }
+    if itemEffects:
+        parsers["ITM"] = lambda data: parseItem(data, itemEffects=True)
     for view in ("base", "effective"):
         ids = {}
         ids_evidence = {}
@@ -1103,13 +1262,19 @@ def main(argv=None):
     parser.add_argument(
         "--output-dir", type=Path, required=True, help="local ignored output; contains copyrighted dialogue"
     )
+    parser.add_argument(
+        "--item-effects",
+        action="store_true",
+        help="decode bounded ITM V1 inline fields; no effect execution or resource follows",
+    )
     args = parser.parse_args(argv)
     try:
         output = args.output_dir.resolve()
         game_root = args.game_root.resolve()
         if output == game_root or output.is_relative_to(game_root):
             raise AuditError("output must be outside the game installation")
-        report = auditInstallation(game_root, args.language, args.area, args.encoding, args.scope)
+        item_options = {"itemEffects": True} if args.item_effects else {}
+        report = auditInstallation(game_root, args.language, args.area, args.encoding, args.scope, **item_options)
         output.mkdir(parents=True, exist_ok=True)
         destination = output / ("city-source-audit.json.gz" if args.scope == "city" else "source-audit.json.gz")
         with gzip.open(destination, "wt", encoding="utf-8") as stream:

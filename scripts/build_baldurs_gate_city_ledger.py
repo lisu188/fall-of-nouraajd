@@ -10,6 +10,15 @@ import hashlib
 import json
 from pathlib import Path
 
+try:
+    from scripts.build_baldurs_gate_poison_ledger import POISON_PATH, buildPoisonObligations
+except ModuleNotFoundError:
+    from build_baldurs_gate_poison_ledger import POISON_PATH, buildPoisonObligations
+
+try:
+    from scripts.build_baldurs_gate_poison_followup_ledger import FOLLOWUP_PATH, buildFollowupObligations
+except ModuleNotFoundError:
+    from build_baldurs_gate_poison_followup_ledger import FOLLOWUP_PATH, buildFollowupObligations
 if __package__:
     from scripts.build_baldurs_gate_seven_suns_ledger import WARNING_PATH, addWarningObligations
     from scripts.build_baldurs_gate_dopmer_ledger import (
@@ -83,7 +92,9 @@ def dialogActions(value):
             yield from dialogActions(child)
 
 
-def buildLedger(source, quests, config, script, warning=None, dopmer=None, routes=None, stock=None):
+def buildLedger(
+    source, quests, config, script, warning=None, dopmer=None, routes=None, stock=None, *, poison=None, followup=None
+):
     """All obligations originate in source rows, never in the set of implemented objects."""
     entries = []
     methods = methodNames(script)
@@ -707,6 +718,10 @@ def buildLedger(source, quests, config, script, warning=None, dopmer=None, route
                 urls=row.get("sources", []),
             )
 
+    if poison is not None:
+        entries.extend(buildPoisonObligations(poison))
+    if followup is not None:
+        entries.extend(buildFollowupObligations(followup))
     if warning is not None:
         addWarningObligations(source, config, methods, warning, add, entries)
 
@@ -729,6 +744,8 @@ def buildLedger(source, quests, config, script, warning=None, dopmer=None, route
             QUEST_PATH: fingerprint(quests),
             CONFIG_PATH: fingerprint(config),
             SCRIPT_PATH: hashlib.sha256(script.encode()).hexdigest(),
+            **({POISON_PATH: fingerprint(poison)} if poison is not None else {}),
+            **({FOLLOWUP_PATH: fingerprint(followup)} if followup is not None else {}),
             **({WARNING_PATH: fingerprint(warning)} if warning is not None else {}),
             **({DOPMER_PATH: fingerprint(dopmer)} if dopmer is not None else {}),
             **({STOCK_PATH: fingerprint(stock)} if stock is not None else {}),
@@ -822,6 +839,8 @@ def validateLedger(ledger, expected=None, require_mapped=False, require_acceptan
             if not proof.get("pointer", "").startswith("/") or proof.get("fixture") not in {
                 SOURCE_PATH,
                 QUEST_PATH,
+                POISON_PATH,
+                FOLLOWUP_PATH,
                 WARNING_PATH,
                 DOPMER_PATH,
                 STOCK_PATH,
@@ -871,6 +890,8 @@ def main(argv=None):
         readJson(ROOT / QUEST_PATH),
         readJson(ROOT / CONFIG_PATH),
         (ROOT / SCRIPT_PATH).read_text(encoding="utf-8"),
+        poison=readJson(ROOT / POISON_PATH),
+        followup=readJson(ROOT / FOLLOWUP_PATH),
         warning=readJson(ROOT / WARNING_PATH) if (ROOT / WARNING_PATH).is_file() else None,
         dopmer=readJson(ROOT / DOPMER_PATH) if (ROOT / DOPMER_PATH).is_file() else None,
         stock=readJson(ROOT / STOCK_PATH) if (ROOT / STOCK_PATH).is_file() else None,

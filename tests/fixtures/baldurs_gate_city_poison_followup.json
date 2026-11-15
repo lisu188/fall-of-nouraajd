@@ -1,0 +1,4481 @@
+{
+  "schemaVersion": 1,
+  "kind": "CityPoisonFollowupSourceInventory",
+  "sourceEdition": "installedBg1eeSupporting",
+  "publishedBaseInventorySha256": "50ffdb1d6456f4873acc3dc8685231edf59607e398a3fde4df20895582e19e0d",
+  "existing218InventoryChanged": false,
+  "executedEvidenceSha256": "5c7b21651200a585ae8edccf7ad2fb35114231871a227062cc9f0bd253111f31",
+  "keySha256": "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce",
+  "dialogue": {
+    "resource": "TENYA2.DLG",
+    "bytes": 2372,
+    "sha256": "b51f94e39da55fcbcf6b7034573c2a9b161b3c8f03331d19f8fa5d5c899e62a9",
+    "baseEffectiveComparison": "wholePayloadByteEqual",
+    "states": [
+      {
+        "index": 0,
+        "sourceId": "TENYA2.DLG:state0",
+        "actorStrref": 9933,
+        "entryConditions": [
+          {
+            "type": "call",
+            "operation": "GlobalLT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "Global",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "HelpTenya"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 2
+              }
+            ]
+          }
+        ],
+        "hasEntryTrigger": true,
+        "edges": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "index": 1,
+        "sourceId": "TENYA2.DLG:state1",
+        "actorStrref": 9935,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      {
+        "index": 2,
+        "sourceId": "TENYA2.DLG:state2",
+        "actorStrref": 9936,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          10
+        ]
+      },
+      {
+        "index": 3,
+        "sourceId": "TENYA2.DLG:state3",
+        "actorStrref": 9937,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          11
+        ]
+      },
+      {
+        "index": 4,
+        "sourceId": "TENYA2.DLG:state4",
+        "actorStrref": 9938,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          12
+        ]
+      },
+      {
+        "index": 5,
+        "sourceId": "TENYA2.DLG:state5",
+        "actorStrref": 9939,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          13
+        ]
+      },
+      {
+        "index": 6,
+        "sourceId": "TENYA2.DLG:state6",
+        "actorStrref": 9940,
+        "entryConditions": [
+          {
+            "type": "call",
+            "operation": "GlobalLT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "Global",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "HelpTenya"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "hasEntryTrigger": true,
+        "edges": [
+          14,
+          15,
+          16,
+          17
+        ]
+      },
+      {
+        "index": 7,
+        "sourceId": "TENYA2.DLG:state7",
+        "actorStrref": 9941,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          18
+        ]
+      },
+      {
+        "index": 8,
+        "sourceId": "TENYA2.DLG:state8",
+        "actorStrref": 9942,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          19
+        ]
+      },
+      {
+        "index": 9,
+        "sourceId": "TENYA2.DLG:state9",
+        "actorStrref": 9943,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          20
+        ]
+      },
+      {
+        "index": 10,
+        "sourceId": "TENYA2.DLG:state10",
+        "actorStrref": 9944,
+        "entryConditions": [],
+        "hasEntryTrigger": false,
+        "edges": [
+          21
+        ]
+      },
+      {
+        "index": 11,
+        "sourceId": "TENYA2.DLG:state11",
+        "actorStrref": 9945,
+        "entryConditions": [
+          {
+            "type": "call",
+            "operation": "Global",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "hasEntryTrigger": true,
+        "edges": [
+          22
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "index": 0,
+        "sourceId": "TENYA2.DLG:edge0",
+        "owners": [
+          0
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9946,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "ReactionGT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "symbol",
+                "value": "HOSTILE_UPPER"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 2
+      },
+      {
+        "index": 1,
+        "sourceId": "TENYA2.DLG:edge1",
+        "owners": [
+          0
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9947,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "ReactionLT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "symbol",
+                "value": "NEUTRAL_LOWER"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 3
+      },
+      {
+        "index": 2,
+        "sourceId": "TENYA2.DLG:edge2",
+        "owners": [
+          0
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9948,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "Dead",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "Jebadoh"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 4
+      },
+      {
+        "index": 3,
+        "sourceId": "TENYA2.DLG:edge3",
+        "owners": [
+          0
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9952,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "Dead",
+            "negated": true,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "Jebadoh"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 3
+      },
+      {
+        "index": 4,
+        "sourceId": "TENYA2.DLG:edge4",
+        "owners": [
+          0
+        ],
+        "rawFlags": 1,
+        "replyStrref": 9953,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 5
+      },
+      {
+        "index": 5,
+        "sourceId": "TENYA2.DLG:edge5",
+        "owners": [
+          1
+        ],
+        "rawFlags": 9,
+        "replyStrref": 9954,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 6,
+        "sourceId": "TENYA2.DLG:edge6",
+        "owners": [
+          1
+        ],
+        "rawFlags": 9,
+        "replyStrref": 9955,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 7,
+        "sourceId": "TENYA2.DLG:edge7",
+        "owners": [
+          1
+        ],
+        "rawFlags": 9,
+        "replyStrref": 9956,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 8,
+        "sourceId": "TENYA2.DLG:edge8",
+        "owners": [
+          1
+        ],
+        "rawFlags": 9,
+        "replyStrref": 9957,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 9,
+        "sourceId": "TENYA2.DLG:edge9",
+        "owners": [
+          1
+        ],
+        "rawFlags": 9,
+        "replyStrref": 9960,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 10,
+        "sourceId": "TENYA2.DLG:edge10",
+        "owners": [
+          2
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 1827,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 11,
+        "sourceId": "TENYA2.DLG:edge11",
+        "owners": [
+          3
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 6332,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "Shout",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "integer",
+                "value": 99
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 12,
+        "sourceId": "TENYA2.DLG:edge12",
+        "owners": [
+          4
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 1827,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 13,
+        "sourceId": "TENYA2.DLG:edge13",
+        "owners": [
+          5
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 6332,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "Shout",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "integer",
+                "value": 99
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 14,
+        "sourceId": "TENYA2.DLG:edge14",
+        "owners": [
+          6
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9961,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "ReactionLT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "symbol",
+                "value": "NEUTRAL_LOWER"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 7
+      },
+      {
+        "index": 15,
+        "sourceId": "TENYA2.DLG:edge15",
+        "owners": [
+          6
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9962,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "ReactionGT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "symbol",
+                "value": "HOSTILE_UPPER"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 8
+      },
+      {
+        "index": 16,
+        "sourceId": "TENYA2.DLG:edge16",
+        "owners": [
+          6
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9964,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "ReactionGT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "symbol",
+                "value": "NEUTRAL_UPPER"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 9
+      },
+      {
+        "index": 17,
+        "sourceId": "TENYA2.DLG:edge17",
+        "owners": [
+          6
+        ],
+        "rawFlags": 3,
+        "replyStrref": 9965,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "ReactionLT",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "symbol",
+                "value": "FRIENDLY_LOWER"
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "TENYA2",
+        "targetState": 10
+      },
+      {
+        "index": 18,
+        "sourceId": "TENYA2.DLG:edge18",
+        "owners": [
+          7
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 6354,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "Shout",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "integer",
+                "value": 99
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 19,
+        "sourceId": "TENYA2.DLG:edge19",
+        "owners": [
+          8
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 6354,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 20,
+        "sourceId": "TENYA2.DLG:edge20",
+        "owners": [
+          9
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 6354,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "GiveItemCreate",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "symbol",
+                "value": "LastTalkedToBy"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "EscapeArea",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 21,
+        "sourceId": "TENYA2.DLG:edge21",
+        "owners": [
+          10
+        ],
+        "rawFlags": 92,
+        "replyStrref": null,
+        "journalStrref": 6355,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "Shout",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "integer",
+                "value": 99
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "BOYBODY"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "CreateItem",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "MISC54"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "Enemy",
+            "negated": false,
+            "arguments": []
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      },
+      {
+        "index": 22,
+        "sourceId": "TENYA2.DLG:edge22",
+        "owners": [
+          11
+        ],
+        "rawFlags": 280,
+        "replyStrref": null,
+        "journalStrref": 6356,
+        "conditions": [],
+        "actions": [],
+        "targetResource": "",
+        "targetState": null
+      }
+    ],
+    "entryCandidatesInStateOrder": [
+      0,
+      6,
+      11
+    ],
+    "nullEntryTriggerIsNotTrue": true,
+    "syntacticEntryReachableStates": [
+      0,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "unlinkedWithinRetainedGraph": [
+      1
+    ],
+    "syntacticPaths": [
+      {
+        "entry": 0,
+        "edges": [
+          0,
+          10
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 0,
+        "edges": [
+          1,
+          11
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 0,
+        "edges": [
+          2,
+          12
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 0,
+        "edges": [
+          3,
+          11
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 0,
+        "edges": [
+          4,
+          13
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 6,
+        "edges": [
+          14,
+          18
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 6,
+        "edges": [
+          15,
+          19
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 6,
+        "edges": [
+          16,
+          20
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 6,
+        "edges": [
+          17,
+          21
+        ],
+        "conditionsEvaluated": false
+      },
+      {
+        "entry": 11,
+        "edges": [
+          22
+        ],
+        "conditionsEvaluated": false
+      }
+    ],
+    "unlinkedEdges": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "pools": {
+      "stateConditions": [
+        {
+          "index": 0,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "GlobalLT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "Global",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "HelpTenya"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "GlobalLT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "Global",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "HelpTenya"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Global",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "transitionConditions": [
+        {
+          "index": 0,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "ReactionGT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "symbol",
+                  "value": "HOSTILE_UPPER"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "ReactionLT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "symbol",
+                  "value": "NEUTRAL_LOWER"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Dead",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "Jebadoh"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Dead",
+              "negated": true,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "Jebadoh"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "ReactionLT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "symbol",
+                  "value": "NEUTRAL_LOWER"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "ReactionGT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "symbol",
+                  "value": "HOSTILE_UPPER"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "ReactionGT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "symbol",
+                  "value": "NEUTRAL_UPPER"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "ReactionLT",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "symbol",
+                  "value": "FRIENDLY_LOWER"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "index": 0,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Shout",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "integer",
+                  "value": 99
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Shout",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "integer",
+                  "value": 99
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Shout",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "integer",
+                  "value": 99
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "GiveItemCreate",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "symbol",
+                  "value": "LastTalkedToBy"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "EscapeArea",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "calls": [
+            {
+              "type": "call",
+              "operation": "Shout",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "integer",
+                  "value": 99
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "SetGlobal",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "BOYBODY"
+                },
+                {
+                  "type": "identifier",
+                  "value": "GLOBAL"
+                },
+                {
+                  "type": "integer",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "CreateItem",
+              "negated": false,
+              "arguments": [
+                {
+                  "type": "identifier",
+                  "value": "MISC54"
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                },
+                {
+                  "type": "integer",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "call",
+              "operation": "Enemy",
+              "negated": false,
+              "arguments": []
+            }
+          ]
+        }
+      ]
+    },
+    "poolLinkIndicesPublished": false,
+    "headerFlagsPublished": false,
+    "conditionsEvaluated": false,
+    "journalCategoriesInterpreted": false,
+    "externalEntryOrActorAvailabilityEstablished": false
+  },
+  "spell": {
+    "resource": "BDMAREK.SPL",
+    "bytes": 250,
+    "sha256": "9d2dae5eaa76628b8b6dc09a19881be2b9b6cc198769863dd29fca787f35d193",
+    "baseEffectiveComparison": "wholePayloadByteEqual",
+    "header": {
+      "headerBytes": 114,
+      "nameStrrefU32": 4294967295,
+      "identifiedNameStrrefU32": 4294967295,
+      "completionSoundField": {
+        "storedIdentifier": "",
+        "printableOrNulPadded": true,
+        "fieldBytes": 8,
+        "fieldSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+        "followed": false
+      },
+      "flagsU32": 0,
+      "spellTypeU16": 4,
+      "exclusionFlagsU32": 0,
+      "castingGraphicsU16": 0,
+      "primaryTypeU8": 0,
+      "secondaryTypeU8": 0,
+      "spellLevelU32": 0,
+      "descriptionStrrefU32": 4294967295,
+      "identifiedDescriptionStrrefU32": 9999999,
+      "abilityOffsetU32": 114,
+      "abilityCountU16": 1,
+      "effectOffsetU32": 154,
+      "castingFirstIndexU16": 0,
+      "castingEffectCountU16": 0,
+      "castingEffectIndicesInOrder": [],
+      "referencedFeatureIndices": [
+        0,
+        1
+      ],
+      "referencedFeatureReferenceCount": 2,
+      "allDeclaredCastingAndAbilityEffectsDecoded": true,
+      "unusedFeatureOrPaddingBytesNotInterpreted": true,
+      "resourceFieldsFollowed": false,
+      "casterLevelSelectionEvaluated": false,
+      "runtimeApplicationOrOriginalParity": false,
+      "sourceId": "BDMAREK.SPL:header"
+    },
+    "abilities": [
+      {
+        "index": 0,
+        "offset": 114,
+        "bytes": 40,
+        "spellFormU8": 2,
+        "flagsU8": 0,
+        "locationU16": 2,
+        "memorisedIconField": {
+          "storedIdentifier": "",
+          "printableOrNulPadded": true,
+          "fieldBytes": 8,
+          "fieldSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+          "followed": false
+        },
+        "targetU8": 1,
+        "targetCountU8": 0,
+        "rangeU16": 60,
+        "levelRequiredU16": 1,
+        "castingTimeU16": 2,
+        "timesPerDayU16": 0,
+        "unusedDiceSidesU16": 6,
+        "unusedDiceThrownU16": 0,
+        "unusedEnchantedU16": 0,
+        "unusedDamageTypeU16": 1,
+        "featureCountU16": 2,
+        "firstFeatureIndexU16": 0,
+        "featureIndicesInOrder": [
+          0,
+          1
+        ],
+        "unusedChargesU16": 1,
+        "unusedDepletionU16": 1,
+        "projectileU16": 1,
+        "recordSha256": "17efb8cf540fd2283424e854f59df23751e35ec8fde3a44141eb252d9a192bde",
+        "sourceId": "BDMAREK.SPL:ability0"
+      }
+    ],
+    "effects": [
+      {
+        "index": 0,
+        "offset": 154,
+        "bytes": 48,
+        "opcodeU16": 215,
+        "targetU8": 2,
+        "powerU8": 0,
+        "parameter1U32": 0,
+        "parameter1Signed32View": 0,
+        "parameter2U32": 0,
+        "parameter2Signed32View": 0,
+        "timingU8": 1,
+        "resistanceU8": 2,
+        "durationU32": 0,
+        "probabilityFirstU8": 100,
+        "probabilitySecondU8": 0,
+        "sameProbabilityStorageU16": 100,
+        "diceThrownOrMaxLevelU32": 0,
+        "diceSidesOrMinLevelU32": 0,
+        "savingThrowTypeU32": 0,
+        "savingThrowBonusSigned32": 0,
+        "specialU32": 0,
+        "recordSha256": "3d985424fce8295463fe4f371007fb5235e81c4448026f40a1f7039fcc5e2509",
+        "semanticsEvaluated": false,
+        "ownerFormat": "SPL_V1",
+        "ownersInDeclaredOrder": [
+          {
+            "kind": "ability",
+            "index": 0
+          }
+        ],
+        "sourceId": "BDMAREK.SPL:effect0",
+        "opcodeSpecificField": {
+          "storedIdentifier": "SHACID",
+          "printableOrNulPadded": true,
+          "fieldBytes": 8,
+          "fieldSha256": "880fac17d55f1f7a01f05c129f92bad122bdb4dbdef4e17626939dbc54e88ce8",
+          "followed": false
+        }
+      },
+      {
+        "index": 1,
+        "offset": 202,
+        "bytes": 48,
+        "opcodeU16": 142,
+        "targetU8": 2,
+        "powerU8": 0,
+        "parameter1U32": 0,
+        "parameter1Signed32View": 0,
+        "parameter2U32": 193,
+        "parameter2Signed32View": 193,
+        "timingU8": 9,
+        "resistanceU8": 2,
+        "durationU32": 0,
+        "probabilityFirstU8": 100,
+        "probabilitySecondU8": 0,
+        "sameProbabilityStorageU16": 100,
+        "diceThrownOrMaxLevelU32": 0,
+        "diceSidesOrMinLevelU32": 0,
+        "savingThrowTypeU32": 0,
+        "savingThrowBonusSigned32": 0,
+        "specialU32": 0,
+        "recordSha256": "97754308110695ddc321249775bda19ef90e991d320882c067ec29ee22d4bbe1",
+        "semanticsEvaluated": false,
+        "ownerFormat": "SPL_V1",
+        "ownersInDeclaredOrder": [
+          {
+            "kind": "ability",
+            "index": 0
+          }
+        ],
+        "sourceId": "BDMAREK.SPL:effect1",
+        "opcodeSpecificField": {
+          "storedIdentifier": null,
+          "printableOrNulPadded": false,
+          "fieldBytes": 8,
+          "fieldSha256": "93b108535a2a6b33449ba65b1507ba8c54a4f296788cb8ddb513f4f2cc10c11f",
+          "followed": false
+        }
+      }
+    ],
+    "resourceFieldsFollowed": false,
+    "declared309EffectPresent": false,
+    "causalExclusivityEstablished": false
+  },
+  "timers": {
+    "resource": "GTIMES.IDS",
+    "bytes": 1795,
+    "sha256": "d0fef0f123b4f7cdf7bf093dcd6359fdffcbeb159082c7f40404779ddc85b41c",
+    "baseEffectiveComparison": "wholePayloadByteEqual",
+    "constants": [
+      {
+        "sourceId": "GTIMES.IDS:ONE_DAY",
+        "name": "ONE_DAY",
+        "value": 7200
+      },
+      {
+        "sourceId": "GTIMES.IDS:TEN_DAYS",
+        "name": "TEN_DAYS",
+        "value": 72000
+      }
+    ],
+    "sourceLineCount": 99,
+    "otherRowsNotPublished": true,
+    "nativeUnitMappingEstablished": false
+  },
+  "timerBindings": {
+    "initialSourceEdges": [
+      {
+        "sourceId": "LOTHAN.DLG:edge0",
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobalTimer",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "PoisonParty"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "symbol",
+                "value": "ONE_DAY"
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "SetGlobalTimer",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "PoisonParty2"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "symbol",
+                "value": "TEN_DAYS"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "sourceId": "LOTHAN.DLG:edge1",
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobalTimer",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "PoisonParty"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "symbol",
+                "value": "ONE_DAY"
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "SetGlobalTimer",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "PoisonParty2"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "symbol",
+                "value": "TEN_DAYS"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "separateNamedTimers": [
+      {
+        "name": "PoisonParty",
+        "scope": "GLOBAL",
+        "constant": "ONE_DAY",
+        "value": 7200
+      },
+      {
+        "name": "PoisonParty2",
+        "scope": "GLOBAL",
+        "constant": "TEN_DAYS",
+        "value": 72000
+      }
+    ],
+    "laterAgreementEdge": "LOTHAN.DLG:edge14",
+    "timersAreNotSummed": true,
+    "selectedBaldurBlocks": [
+      {
+        "index": 35,
+        "sourceId": "BALDUR.BCS:block35",
+        "startOffset": 18312,
+        "records": [
+          {
+            "order": 0,
+            "kind": "condition",
+            "opcode": 16448,
+            "operation": "GlobalTimerExpired",
+            "recordOffset": 18318,
+            "storedIdentifiers": [
+              "PoisonParty",
+              "GLOBAL"
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 1,
+            "kind": "condition",
+            "opcode": 16437,
+            "operation": "GlobalLT",
+            "recordOffset": 18393,
+            "storedIdentifiers": [
+              "GLOBALPoisonWarning",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              9,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 2,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 18470,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 3,
+            "kind": "action",
+            "opcode": 115,
+            "operation": "SetGlobalTimer",
+            "recordOffset": 18556,
+            "storedIdentifiers": [
+              "GLOBALPoisonParty",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              7200,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 4,
+            "kind": "action",
+            "opcode": 109,
+            "operation": "IncrementGlobal",
+            "recordOffset": 18696,
+            "storedIdentifiers": [
+              "GLOBALPoisonWarning",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 5,
+            "kind": "action",
+            "opcode": 151,
+            "operation": "DisplayString",
+            "recordOffset": 18835,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              11833,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 6,
+            "kind": "action",
+            "opcode": 36,
+            "operation": "Continue",
+            "recordOffset": 18959,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          }
+        ]
+      },
+      {
+        "index": 36,
+        "sourceId": "BALDUR.BCS:block36",
+        "startOffset": 19087,
+        "records": [
+          {
+            "order": 0,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 19093,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 1,
+            "kind": "condition",
+            "opcode": 16448,
+            "operation": "GlobalTimerExpired",
+            "recordOffset": 19167,
+            "storedIdentifiers": [
+              "PoisonParty",
+              "GLOBAL"
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 2,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 19242,
+            "storedIdentifiers": [
+              "GLOBALPoisonPartyIcon",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 3,
+            "kind": "action",
+            "opcode": 30,
+            "operation": "SetGlobal",
+            "recordOffset": 19333,
+            "storedIdentifiers": [
+              "GLOBALPoisonPartyIcon",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 4,
+            "kind": "action",
+            "opcode": 160,
+            "operation": "ApplySpell",
+            "recordOffset": 19473,
+            "storedIdentifiers": [
+              "bdmarek",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          }
+        ]
+      },
+      {
+        "index": 37,
+        "sourceId": "BALDUR.BCS:block37",
+        "startOffset": 19610,
+        "records": [
+          {
+            "order": 0,
+            "kind": "condition",
+            "opcode": 16448,
+            "operation": "GlobalTimerExpired",
+            "recordOffset": 19616,
+            "storedIdentifiers": [
+              "PoisonParty2",
+              "GLOBAL"
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 1,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 19692,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 2,
+            "kind": "action",
+            "opcode": 131,
+            "operation": "Kill",
+            "recordOffset": 19778,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          }
+        ]
+      },
+      {
+        "index": 43,
+        "sourceId": "BALDUR.BCS:block43",
+        "startOffset": 26356,
+        "records": [
+          {
+            "order": 0,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 26362,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 1,
+            "kind": "condition",
+            "opcode": 16608,
+            "operation": "NextTriggerObject",
+            "recordOffset": 26436,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 2,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 26495,
+            "storedIdentifiers": [
+              "LOCALSbdmarek",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              1,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 3,
+            "kind": "condition",
+            "opcode": 16465,
+            "operation": "Dead",
+            "recordOffset": 26566,
+            "storedIdentifiers": [
+              "Marek",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 4,
+            "kind": "action",
+            "opcode": 30,
+            "operation": "SetGlobal",
+            "recordOffset": 26641,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 5,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 26776,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 6,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 26905,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 22
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 7,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 27034,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 23
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 8,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 27163,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 24
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 9,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 27292,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 25
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 10,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 27421,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 26
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 11,
+            "kind": "action",
+            "opcode": 173,
+            "operation": "AddJournalEntry",
+            "recordOffset": 27550,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27253,
+              0,
+              0,
+              2,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 12,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 27674,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              26793,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 13,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 27798,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              26982,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 14,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 27922,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27240,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 15,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 28046,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27241,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 16,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 28170,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27242,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 17,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 28294,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27243,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 18,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 28418,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27183,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 19,
+            "kind": "action",
+            "opcode": 151,
+            "operation": "DisplayString",
+            "recordOffset": 28542,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              20675,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 20,
+            "kind": "action",
+            "opcode": 164,
+            "operation": "AddexperienceParty",
+            "recordOffset": 28667,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              10000,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          }
+        ]
+      },
+      {
+        "index": 44,
+        "sourceId": "BALDUR.BCS:block44",
+        "startOffset": 28800,
+        "records": [
+          {
+            "order": 0,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 28806,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 1,
+            "kind": "condition",
+            "opcode": 16608,
+            "operation": "NextTriggerObject",
+            "recordOffset": 28880,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 2,
+            "kind": "condition",
+            "opcode": 16399,
+            "operation": "Global",
+            "recordOffset": 28939,
+            "storedIdentifiers": [
+              "LOCALSbdmarek",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              1,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 3,
+            "kind": "condition",
+            "opcode": 16465,
+            "operation": "Dead",
+            "recordOffset": 29010,
+            "storedIdentifiers": [
+              "Marek",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              1,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 4,
+            "kind": "action",
+            "opcode": 30,
+            "operation": "SetGlobal",
+            "recordOffset": 29085,
+            "storedIdentifiers": [
+              "GLOBALPartyCured",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 5,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 29220,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 6,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 29349,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 22
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 7,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 29478,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 23
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 8,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 29607,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 24
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 9,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 29736,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 25
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 10,
+            "kind": "action",
+            "opcode": 169,
+            "operation": "DestroyItem",
+            "recordOffset": 29865,
+            "storedIdentifiers": [
+              "LOPOTN20",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 26
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 11,
+            "kind": "action",
+            "opcode": 173,
+            "operation": "AddJournalEntry",
+            "recordOffset": 29994,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              31188,
+              0,
+              0,
+              2,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 12,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30118,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              26793,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 13,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30242,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              26982,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 14,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30366,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27240,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 15,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30490,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27241,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 16,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30614,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27242,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 17,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30738,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27243,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 18,
+            "kind": "action",
+            "opcode": 263,
+            "operation": "EraseJournalEntry",
+            "recordOffset": 30862,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              27183,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 19,
+            "kind": "action",
+            "opcode": 151,
+            "operation": "DisplayString",
+            "recordOffset": 30986,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              20675,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": [
+                  {
+                    "position": 7,
+                    "value": 21
+                  }
+                ]
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          },
+          {
+            "order": 20,
+            "kind": "action",
+            "opcode": 164,
+            "operation": "AddexperienceParty",
+            "recordOffset": 31111,
+            "storedIdentifiers": [
+              "",
+              ""
+            ],
+            "integerFieldsInStorageOrder": [
+              10000,
+              0,
+              0,
+              0,
+              0
+            ],
+            "selectors": [
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              },
+              {
+                "name": "",
+                "nonzeroFilterFields": []
+              }
+            ],
+            "semanticsEvaluated": false
+          }
+        ]
+      }
+    ],
+    "sourceSchedulingEvaluated": false,
+    "allBaldurMechanismsPublished": false
+  },
+  "contextBindings": {
+    "priestCreature": {
+      "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+      "pointer": "/creatures/TENYA2",
+      "resource": "TENYA2.CRE",
+      "sha256": "a5bc5c9091c5b0a48d4855feca65b663b0c75e30375714c817622e0b0b5aee0e",
+      "deathVariable": "Tenya2",
+      "dialogue": "TENYA2",
+      "scripts": [
+        "SHOUT",
+        "INITDLG",
+        "PRIEST3",
+        "NONE",
+        "WDASIGHT"
+      ]
+    },
+    "summoningDialogue": {
+      "resource": "PUMBERL.DLG",
+      "sha256": "b35b9a470bd0f8e1a161b9f75d800a263d70c6b0446ba337801df39932cf3de6",
+      "prerequisiteEdge": {
+        "index": 3,
+        "sourceId": "PUMBERL.DLG:edge3",
+        "owners": [
+          0
+        ],
+        "rawFlags": 3,
+        "replyStrref": 1412,
+        "journalStrref": null,
+        "conditions": [
+          {
+            "type": "call",
+            "operation": "Dead",
+            "negated": true,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "Tenya"
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "Global",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "TalkedToTenya"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "Global",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "TENAPPEAR"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "Global",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "TremainQuest"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "actions": [],
+        "targetResource": "PUMBERL",
+        "targetState": 7
+      },
+      "spawnAndImmediateDialogEdge": {
+        "index": 12,
+        "sourceId": "PUMBERL.DLG:edge12",
+        "owners": [
+          7
+        ],
+        "rawFlags": 12,
+        "replyStrref": null,
+        "journalStrref": null,
+        "conditions": [],
+        "actions": [
+          {
+            "type": "call",
+            "operation": "SetGlobal",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "TENAPPEAR"
+              },
+              {
+                "type": "identifier",
+                "value": "GLOBAL"
+              },
+              {
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "CreateCreature",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "TENYA2"
+              },
+              {
+                "type": "point",
+                "x": 536,
+                "y": 648
+              },
+              {
+                "type": "symbol",
+                "value": "S"
+              }
+            ]
+          },
+          {
+            "type": "call",
+            "operation": "ActionOverride",
+            "negated": false,
+            "arguments": [
+              {
+                "type": "identifier",
+                "value": "Tenya2"
+              },
+              {
+                "type": "call",
+                "operation": "Dialog",
+                "negated": false,
+                "arguments": [
+                  {
+                    "type": "selectorSymbol",
+                    "value": "PC"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "targetResource": "",
+        "targetState": null
+      }
+    },
+    "lothanderFallbackConditionEdge": {
+      "index": 19,
+      "sourceId": "LOTHAN.DLG:edge19",
+      "owners": [
+        12
+      ],
+      "rawFlags": 3,
+      "replyStrref": 26790,
+      "journalStrref": null,
+      "conditions": [
+        {
+          "type": "call",
+          "operation": "PartyHasItem",
+          "negated": true,
+          "arguments": [
+            {
+              "type": "identifier",
+              "value": "SCRLJALA"
+            }
+          ]
+        },
+        {
+          "type": "call",
+          "operation": "OR",
+          "negated": false,
+          "arguments": [
+            {
+              "type": "integer",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "type": "call",
+          "operation": "Dead",
+          "negated": false,
+          "arguments": [
+            {
+              "type": "identifier",
+              "value": "pumberl"
+            }
+          ]
+        },
+        {
+          "type": "call",
+          "operation": "Dead",
+          "negated": false,
+          "arguments": [
+            {
+              "type": "identifier",
+              "value": "Jalantha"
+            }
+          ]
+        },
+        {
+          "type": "call",
+          "operation": "Dead",
+          "negated": false,
+          "arguments": [
+            {
+              "type": "identifier",
+              "value": "Tenya2"
+            }
+          ]
+        }
+      ],
+      "actions": [],
+      "targetResource": "LOTHAN",
+      "targetState": 16
+    }
+  },
+  "sourceRecordCounts": {
+    "states": 12,
+    "edges": 23,
+    "spellHeaders": 1,
+    "spellAbilities": 1,
+    "spellEffects": 2,
+    "timerConstants": 2,
+    "total": 41
+  },
+  "resolvedSelectedFacts": [
+    "tenya2DialogueStructure",
+    "bdmarekDeclaredEffectTable",
+    "installedGtimesTwoConstants"
+  ],
+  "retainedFrontiers": [
+    "fortyTwoBaldurBlocksNotPublished",
+    "manualUseExclusivityUnknown",
+    "nativeTenya2OwnerAndHistoryBridgePending",
+    "nativeThreePriestDeathWitnessPending",
+    "shout99ListenersAndAiSchedulingPending",
+    "nativeClockMappingPending",
+    "classicAuthorityUnavailable",
+    "nativeExecutionAndOwnerAcceptancePending"
+  ],
+  "canonicalLedgerChanged": false,
+  "implementationStatusCredit": false,
+  "nativeValidated": false,
+  "originalParityEstablished": false,
+  "ownerAccepted": false,
+  "newResourceFollows": false,
+  "tlkReads": false
+}

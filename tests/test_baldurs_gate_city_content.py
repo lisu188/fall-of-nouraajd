@@ -15,7 +15,7 @@ import unittest
 import weakref
 from unittest.mock import Mock, patch
 
-from scripts.build_baldurs_gate_city import decodeCityData
+from scripts.build_baldurs_gate_city import compileDialogs, decodeCityData
 from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, renderCallbacks, storeDialogRows
 from scripts.build_baldurs_gate_city_relocations import buildRelocations
 from tests.hook_flow_support import installHookFlows
@@ -26,7 +26,7 @@ SCRIPT = ROOT / "res/maps/baldursGate/script.py"
 DOCUMENT = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_quests.json").read_text(encoding="utf-8"))
 
 
-def nativePluginBuiltins():
+def nativePluginBuiltins(resource_api=None):
     source = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
     declaration = re.search(r"const std::vector<std::string> allowedNames = \{(.*?)\};", source, re.S)
     if not declaration:
@@ -36,6 +36,8 @@ def nativePluginBuiltins():
     def resourceImport(name, globals=None, locals=None, fromlist=(), level=0):
         if level or name not in ("game", "json"):
             raise ImportError("Native resource plugins may only import game and json")
+        if name == "game" and resource_api is not None:
+            return resource_api
         return builtins.__import__(name, globals, locals, fromlist, level)
 
     result["__import__"] = resourceImport
@@ -175,12 +177,34 @@ class CityModel:
         self.gui = Mock()
         self.player = CityPlayer(self, **stats)
         self.game_map = CityMap(self)
+        self.game_map.setStringProperty("mapName", "baldursGate")
+        self.map_binding_epoch = 0
+        self.context = SimpleNamespace(generation=0, active=True)
+        self.context.getTransitionGeneration = lambda: self.context.generation
+        self.context.isTransitionGenerationCurrent = (
+            lambda value: self.context.active and value == self.context.generation
+        )
         self.game_map.setNumericProperty("plugin_cityPhase", 5)
         self.game_map.setNumericProperty("plugin_cityReputation", 10)
         self.game_map.setStringProperty("activeSimulationRegion", "AR0100")
         api = ModuleType("game")
         api.CCreature = CityCreature
-        for name in ("CDialog", "CBuilding", "CQuest", "CTrigger", "CEvent"):
+        api.CGameObject = type(
+            "BoundGameObjectApi",
+            (),
+            {
+                name: staticmethod(getattr(ModelObject, name))
+                for name in ("getGame", "getStringProperty", "getBoolProperty", "setBoolProperty")
+            },
+        )
+        api.CGame = type(
+            "BoundGameApi",
+            (),
+            {name: staticmethod(getattr(CityModel, name)) for name in ("getMap", "getContext", "getMapBindingEpoch")},
+        )
+        api.CMap = type("BoundMapApi", (), {"getObjectByName": staticmethod(ModelMap.getObjectByName)})
+        api.CMapObject = type("BoundMapObjectApi", (), {"getMap": staticmethod(ModelObject.getMap)})
+        for name in ("CDialog", "CBuilding", "CQuest", "CTrigger", "CEvent", "CScrollBase"):
             setattr(api, name, type(name, (CityObject,), {}))
 
         def register(_context):
@@ -202,9 +226,10 @@ class CityModel:
 
         api.claim_once = claimOnce
         installHookFlows(api)
+        api.flowGame = lambda game: SimpleNamespace(resolve=lambda: game)
         api.showReader = lambda *_args: self.readers.append(_args)
         api.choose = lambda *_args: getattr(self, "choice", "")
-        namespace = {"__builtins__": nativePluginBuiltins(), "__name__": "baldursGateResource"}
+        namespace = {"__builtins__": nativePluginBuiltins(api), "__name__": "baldursGateResource"}
         with patch.dict(sys.modules, game=api):
             exec(compile(SCRIPT.read_text(encoding="utf-8"), str(SCRIPT), "exec"), namespace)
             namespace["load"](None, self)
@@ -222,6 +247,12 @@ class CityModel:
 
     def getMap(self):
         return self.game_map
+
+    def getContext(self):
+        return self.context
+
+    def getMapBindingEpoch(self):
+        return self.map_binding_epoch
 
     def getGuiHandler(self):
         return self.gui
@@ -323,6 +354,210 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+
+    def testAngelKillSelectorsUseTheSameAuditedAreaCreature(self):
+        from tests.gameplay_routes_baldurs_gate import documents, selectorMatches
+
+        source = documents()["source"]["areas"]["AR0005"]["actors"]
+        actual = [row for row in source if row["creature"] == "CATP"]
+        self.assertEqual(1, len(actual))
+        self.assertEqual("AR0005#actor2", actual[0]["sourceId"])
+        self.assertEqual("Angel the Cat", actual[0]["displayName"])
+        selector = {"creature": actual[0]["creature"], "area": "AR0005"}
+        outcomes = [
+            outcome
+            for row in DOCUMENT["quests"]
+            for outcome in row["outcomes"]
+            if (row["id"] == "bherenCat" or row["id"] == "petrineRing" and outcome["id"] == "catKilled")
+        ]
+        self.assertEqual(3, len(outcomes))
+        for outcome in outcomes:
+            with self.subTest(outcome=outcome["id"]):
+                self.assertEqual([selector], outcome["conditions"]["kills"])
+                matches = [
+                    name
+                    for name, entry in documents()["config"].items()
+                    if entry.get("class") == "CCreature"
+                    and selectorMatches(entry["properties"], outcome["conditions"]["kills"][0], name)
+                ]
+                self.assertEqual(["cityAr0005Actor2"], matches)
+        self.assertFalse(
+            selectorMatches({"label": "Angel", "sourceCreature": "CAT", "sourceArea": "AR0005"}, selector, "decoy")
+        )
+        self.assertFalse(
+            selectorMatches(
+                {"label": "Angel the Cat", "sourceCreature": "CATP", "sourceArea": "AR0004"}, selector, "decoy"
+            )
+        )
+
+    def testBherenCatRewardsRejectLookalikesAndTransferTheActualCloakOnce(self):
+        for reputation, outcome, alternate in ((8, "complete", "lowStanding"), (7, "lowStanding", "complete")):
+            with self.subTest(reputation=reputation, outcome=outcome):
+                model = CityModel()
+                model.game_map.setNumericProperty("plugin_cityReputation", reputation)
+                bheren = model.actor("Bheren", "AR0004", sourceCreature="BHEREN")
+                dialog = model.dialog(bheren)
+                self.assertTrue(dialog.acceptBherenCat())
+                cloak = next(
+                    item for item in bheren.items if item.getStringProperty("plugin_citySourceItem") == "CLCK01"
+                )
+                self.assertFalse(dialog.canQuestOutcome("bherenCat", outcome))
+                for label, area, creature in (("Angel", "AR0005", "CAT"), ("Angel the Cat", "AR0004", "CATP")):
+                    model.kill(model.actor(label, area, sourceCreature=creature))
+                    self.assertFalse(dialog.canQuestOutcome("bherenCat", outcome))
+                cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+                self.assertFalse(dialog.canQuestOutcome("bherenCat", outcome))
+                model.kill(cat)
+                self.assertTrue(dialog.canQuestOutcome("bherenCat", outcome))
+                self.assertFalse(dialog.canQuestOutcome("bherenCat", alternate))
+                gold = model.player.getGold()
+                xp = model.player.getNumericProperty("exp")
+                standing = model.game_map.getNumericProperty("plugin_cityStanding")
+                self.assertTrue(dialog.performQuestOutcome("bherenCat", outcome))
+                self.assertEqual(gold, model.player.getGold())
+                self.assertEqual(xp + (400 if reputation == 8 else 0), model.player.getNumericProperty("exp"))
+                self.assertEqual(
+                    standing - (1 if reputation == 8 else 0), model.game_map.getNumericProperty("plugin_cityStanding")
+                )
+                self.assertEqual("completed", model.game_map.getStringProperty("plugin_cityQuest_bherenCat"))
+                if reputation == 7:
+                    self.assertIn(cloak, model.player.items)
+                    self.assertNotIn(cloak, bheren.items)
+                else:
+                    self.assertIn(cloak, bheren.items)
+                    self.assertNotIn(cloak, model.player.items)
+                before = (model.player.getGold(), model.player.getNumericProperty("exp"), tuple(model.player.items))
+                self.assertFalse(dialog.performQuestOutcome("bherenCat", outcome))
+                self.assertEqual(
+                    before, (model.player.getGold(), model.player.getNumericProperty("exp"), tuple(model.player.items))
+                )
+
+    def testPetrineCatDeathRequiresTheAuditedCatAndRetainsTheUnreturnedRing(self):
+        model = CityModel()
+        petrine = model.actor("Petrine", "AR0200")
+        dialog = model.dialog(petrine)
+        self.assertTrue(dialog.acceptPetrineRing())
+        ring = model.item("RING16")
+        for label, area, creature in (("Angel", "AR0005", "CAT"), ("Angel the Cat", "AR0004", "CATP")):
+            model.kill(model.actor(label, area, sourceCreature=creature))
+            self.assertFalse(dialog.canQuestPetrineRingCatKilled())
+        cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+        self.assertFalse(dialog.canQuestPetrineRingCatKilled())
+        model.kill(cat)
+        self.assertTrue(dialog.canQuestPetrineRingCatKilled())
+        gold = model.player.getGold()
+        xp = model.player.getNumericProperty("exp")
+        standing = model.game_map.getNumericProperty("plugin_cityStanding")
+        self.assertTrue(dialog.questPetrineRingCatKilled())
+        self.assertEqual(gold, model.player.getGold())
+        self.assertEqual(xp, model.player.getNumericProperty("exp"))
+        self.assertEqual(standing - 1, model.game_map.getNumericProperty("plugin_cityStanding"))
+        self.assertIn(ring, model.player.items)
+        self.assertNotIn(ring, petrine.items)
+        self.assertEqual("completed", model.game_map.getStringProperty("plugin_cityQuest_petrineRing"))
+        self.assertFalse(dialog.questPetrineRingCatKilled())
+        self.assertEqual(standing - 1, model.game_map.getNumericProperty("plugin_cityStanding"))
+        self.assertIn(ring, model.player.items)
+
+    def testOptionalRelocationReferencesUseNativePresenceBeforeTypedObjectReads(self):
+        original = ModelObject.getObjectProperty
+
+        def strict_object(owner, key):
+            if key not in owner.properties:
+                raise IndexError("vstd::meta: property not found: " + key)
+            value = original(owner, key)
+            if value is not None and not isinstance(value, ModelObject):
+                raise RuntimeError("bad any_cast")
+            return value
+
+        for location in ("absent", "live", "cached", "parked", "corpse", "wrongType"):
+            with self.subTest(location=location):
+                model = CityModel()
+                name = "optionalCanonical"
+                actor = model.actor(name, "AR0100", sourceCreature="NARLEN")
+                model.clock.setStringProperty(
+                    "relocationDefinitions",
+                    json.dumps(
+                        [
+                            {
+                                "id": "narlen",
+                                "canonicalActorId": actor.getName(),
+                                "sourceCreature": "NARLEN",
+                                "scenes": [],
+                            }
+                        ]
+                    ),
+                )
+                cache = "plugin_cityRelocationActor_narlen"
+                if location != "live":
+                    model.game_map.removeObject(actor)
+                if location in ("cached", "parked", "corpse"):
+                    key = cache if location == "cached" else "plugin_city" + location.title() + "_" + actor.getName()
+                    model.clock.setObjectProperty(key, actor)
+                if location == "wrongType":
+                    model.clock.setStringProperty(cache, "wrong primitive type")
+                with patch.object(ModelObject, "getObjectProperty", strict_object):
+                    if location == "wrongType":
+                        with self.assertRaisesRegex(RuntimeError, "bad any_cast"):
+                            model.clock.relocateActors()
+                    else:
+                        model.clock.relocateActors()
+                        if location == "absent":
+                            self.assertFalse(hasattr(model.clock, cache))
+                        else:
+                            self.assertIs(actor, model.clock.getObjectProperty(cache))
+
+    def testCityModelKeepsLateResourceImportsBoundToItsNativeShapedApi(self):
+        model = CityModel()
+        other = CityModel()
+        source_method = type(model.clock).ensureCitySourceKillXp
+        self.assertEqual(str(SCRIPT), source_method.__code__.co_filename)
+        resource_import = source_method.__globals__["__builtins__"]["__import__"]
+        api = resource_import("game", fromlist=("CGame",))
+        other_api = type(other.clock).ensureCitySourceKillXp.__globals__["__builtins__"]["__import__"]("game")
+        self.assertIsNot(api, other_api)
+        self.assertFalse(hasattr(api.CGameObject, "getMap"))
+        self.assertTrue(hasattr(api.CMapObject, "getMap"))
+        self.assertFalse(hasattr(model, "resolve"))
+        self.assertFalse(hasattr(api.CGame, "resolve"))
+        with patch.dict(sys.modules, game=ModuleType("foreignGame")):
+            self.assertIs(api, resource_import("game"))
+            self.assertTrue(model.clock.ensureCitySourceKillXp())
+        self.assertTrue(model.game_map.getBoolProperty("plugin_citySourceKillXp"))
+        self.assertFalse(other.game_map.getBoolProperty("plugin_citySourceKillXp"))
+        for name, level in (("os", 0), ("_game", 0), ("game", 1)):
+            with self.subTest(name=name, level=level), self.assertRaises(ImportError):
+                resource_import(name, level=level)
+
+    def testCityModelUsesRealPolicyToRefuseForeignAndStaleBindings(self):
+        for invalid in ("foreignMap", "inactiveContext", "missingClock", "epochChangedAfterWrite"):
+            with self.subTest(invalid=invalid):
+                model = CityModel()
+                if invalid == "foreignMap":
+                    model.game_map.setStringProperty("mapName", "candlekeep")
+                    self.assertFalse(model.clock.ensureCitySourceKillXp())
+                    self.assertFalse(model.game_map.getBoolProperty("plugin_citySourceKillXp"))
+                    continue
+                if invalid == "inactiveContext":
+                    model.context.active = False
+                elif invalid == "missingClock":
+                    model.game_map.removeObject(model.clock)
+                else:
+                    original = ModelObject.setBoolProperty
+
+                    def setAndInvalidate(obj, key, value):
+                        original(obj, key, value)
+                        model.map_binding_epoch += 1
+
+                    api = type(model.clock).ensureCitySourceKillXp.__globals__["__builtins__"]["__import__"]("game")
+                    api.CGameObject.setBoolProperty = staticmethod(setAndInvalidate)
+                with self.assertRaises(model.clock.PoisonBindingChanged):
+                    model.clock.ensureCitySourceKillXp()
+                self.assertEqual(
+                    invalid == "epochChangedAfterWrite",
+                    model.game_map.getBoolProperty("plugin_citySourceKillXp"),
+                )
+
     def sevenSunsDeathModel(self):
         model = CityModel()
         originals = []
@@ -1754,6 +1989,130 @@ class BaldursGateCityContentTest(unittest.TestCase):
         self.assertFalse(dialog.canQuestNarlenLookoutComplete())
         self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_narlenWarning"))
 
+    def testNightLookoutOfficerDeathReturnsCanonicalNarlenBeforeGuildRewardAndDeparture(self):
+        from unittest.mock import patch
+        from tests import gameplay_routes_baldurs_gate as routes
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        for creature, area in (("WATCHM", "AR0300"), ("WATCHM", "AR0100"), ("FLAM6", "AR0300")):
+            with self.subTest(creature=creature, area=area):
+                model = CityModel(agility=12)
+                narlen = model.canonical("NARLEN")
+                ring = model.item("RING16", narlen)
+                self.assertTrue(model.dialog(narlen).acceptNarlenLookout())
+                model.clock.advanceTicks(700)
+                officer_name = model.installLookoutOfficer()
+                self.assertTrue(model.dialog(narlen).beginNarlenLookout())
+                model.clock.advanceTicks(133)
+                self.assertEqual(833, model.game_map.getNumericProperty("plugin_cityTicks"))
+                self.assertEqual("AR0300", narlen.getStringProperty("sourceArea"))
+                self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_narlenWarning"))
+                if (creature, area) == ("WATCHM", "AR0300"):
+                    victim = model.game_map.getObjectByName(officer_name)
+                else:
+                    victim = model.actor("Unrelated guard", area, sourceCreature=creature)
+                model.kill(victim)
+                self.assertFalse(victim.isAlive())
+                self.assertIsNone(model.game_map.getObjectByName(victim.getName()))
+                if (creature, area) != ("WATCHM", "AR0300"):
+                    for _ in range(17):
+                        model.clock.advanceTicks(1)
+                    self.assertIs(narlen, model.game_map.getObjectByName(narlen.getName()))
+                    self.assertEqual("AR0300", narlen.getStringProperty("sourceArea"))
+                    self.assertIn(ring, narlen.items)
+                    self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_narlenLookout"))
+                    continue
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                owned_before = tuple(narlen.items)
+                gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                events, actions = [], []
+                location = {"area": "AR0300", "waits": 0}
+                driver = SimpleNamespace(
+                    test=self,
+                    player=model.player,
+                    game_map=model.game_map,
+                    object=lambda name, required=False: model.game_map.getObjectByName(name),
+                    call=lambda owner, method, *args: getattr(owner, method)(*args),
+                    number=model.game_map.getNumericProperty,
+                    string=model.game_map.getStringProperty,
+                    gold=model.player.getGold,
+                    coords=lambda: tuple(vars(model.player.getCoords()).values()),
+                    snapshot=lambda: dict(location),
+                    questNames=lambda completed=False: [
+                        quest.getName()
+                        for quest in (model.player.getCompletedQuests() if completed else model.player.getQuests())
+                    ],
+                )
+
+                def tick():
+                    self.assertEqual(owned_before, tuple(narlen.items))
+                    model.clock.advanceTicks(1)
+
+                def waitTurns(limit, predicate):
+                    self.assertEqual(25, limit)
+                    before = model.game_map.getNumericProperty("plugin_cityTicks")
+                    GameplayBranchDriver.waitTurns(driver, limit, predicate)
+                    location["waits"] += model.game_map.getNumericProperty("plugin_cityTicks") - before
+
+                def travel(actual, destination):
+                    self.assertIs(driver, actual)
+                    self.assertEqual("AR0153", destination)
+                    location["area"] = destination
+                    events.append(("travel", destination))
+                    for _ in range(3):
+                        tick()
+
+                def hold(point):
+                    self.assertEqual(driver.coords(), point)
+                    events.append(("hold", location["area"]))
+
+                def contact(name):
+                    self.assertEqual(narlen.getName(), name)
+                    self.assertEqual("AR0153", location["area"])
+                    self.assertIs(narlen, model.game_map.getObjectByName(name))
+                    self.assertTrue(narlen.isAlive())
+                    self.assertEqual("AR0153", narlen.getStringProperty("sourceArea"))
+                    events.append(("contact", name))
+
+                def choose(dialog_id, action):
+                    self.assertEqual(
+                        (narlen.getName() + "Dialog", "questNarlenLookoutOfficerKilled"), (dialog_id, action)
+                    )
+                    self.assertEqual("AR0153", location["area"])
+                    actions.append((dialog_id, action))
+                    self.assertTrue(getattr(model.dialog(narlen), action)())
+
+                driver.tick, driver.waitTurns, driver.navigateCoords, driver.choose = tick, waitTurns, hold, choose
+                planner = routes.QuestRoute(driver)
+                planner.contact = contact
+                with patch.object(routes, "travel", side_effect=travel):
+                    name, outcome = planner.settle("narlenLookout", "officerKilled")
+                    self.assertEqual((narlen.getName(), "officerKilled"), (name, outcome["id"]))
+                    self.assertEqual(14, location["waits"])
+                    self.assertEqual(850, model.game_map.getNumericProperty("plugin_cityTicks"))
+                    self.assertEqual(300, model.player.getGold() - gold)
+                    self.assertEqual(xp, model.player.getNumericProperty("exp"))
+                    self.assertEqual(owned_before, tuple(narlen.items))
+                    self.assertTrue(narlen.isAlive(), "Authored departure must not kill Narlen")
+                    self.assertIsNone(model.game_map.getObjectByName(name))
+                    self.assertTrue(narlen.getBoolProperty("plugin_cityDeparted"))
+                    self.assertFalse(model.game_map.getBoolProperty("plugin_cityDeath_" + name))
+                    self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_narlenWarning"))
+                    self.assertEqual("completed", routes.state(driver, "narlenLookout"))
+                    self.assertEqual("notStarted", routes.state(driver, "narlenRogueStone"))
+                    before = routes.resources(driver), tuple(events), tuple(actions), tuple(narlen.items)
+                    self.assertIsNone(planner.settle("narlenLookout", "officerKilled"))
+                    self.assertEqual(
+                        before, (routes.resources(driver), tuple(events), tuple(actions), tuple(narlen.items))
+                    )
+                self.assertEqual([("travel", "AR0153"), ("hold", "AR0153")], events[:2])
+                self.assertEqual(1, len(actions))
+                self.assertEqual("active", routes.state(driver, "quinnDagger"))
+                self.assertIn("cityQuinnDaggerQuest", driver.questNames())
+                self.assertFalse(planner.pending)
+                self.assertFalse(planner.pending_outcomes)
+
     def testCanonicalNarlenMovesByNightAndReturnsWithSameBelongings(self):
         model = CityModel(agility=12)
         narlen = model.canonical("NARLEN")
@@ -2294,6 +2653,133 @@ class BaldursGateCityContentTest(unittest.TestCase):
         with patch.object(owner, "SCRIPT", source), patch.object(owner, "CityModel", return_value=model):
             with self.assertRaisesRegex(AssertionError, "next"):
                 self.testResourceCallbacksUseOnlyNativeAllowedBuiltins()
+
+    def interludeFixture(self):
+        model = CityModel()
+        start = model.createObject("BaldursGateStart")
+        start.setStringProperty("name", "cityStart")
+        model.game_map.addObject(start)
+        dialog = model.dialog(start)
+        self.assertTrue(
+            callable(getattr(dialog, "canCityInterlude", None)), "Departure needs its own visible-condition predicate"
+        )
+        self.assertTrue(
+            callable(getattr(dialog, "canReturnFromInterlude", None)),
+            "Return needs its own visible-condition predicate",
+        )
+        return model, dialog
+
+    def interludeOptions(self):
+        document = compileDialogs(
+            {"cityStart": {"class": "BaldursGateStart", "properties": {"label": "City history and journeys"}}},
+            DOCUMENT,
+        )
+        return document["cityStartDialog"]["properties"]["states"][0]["properties"]["options"]
+
+    def testInterludeOptionsUseExistingActionEligibilityAndStableNumbers(self):
+        options = self.interludeOptions()
+        expected = {"cityInterlude": "canCityInterlude", "returnFromInterlude": "canReturnFromInterlude"}
+        for action, condition in expected.items():
+            matching = [option["properties"] for option in options if option["properties"].get("action") == action]
+            self.assertEqual(1, len(matching))
+            self.assertEqual(condition, matching[0].get("condition"))
+            self.assertEqual("ENTRY", matching[0]["nextStateId"])
+        self.assertEqual(
+            [(4, "cityInterlude"), (5, "returnFromInterlude")],
+            [
+                (option["properties"]["number"], option["properties"]["action"])
+                for option in options
+                if option["properties"].get("action") in expected
+            ],
+        )
+        history = [
+            option["properties"] for option in options if option["properties"].get("action") == "finishHistoryChoices"
+        ]
+        self.assertEqual("canFinishHistoryChoices", history[0]["condition"])
+
+    def testFreshInterludeOptionsAndRejectedActionsLeaveCityUnchanged(self):
+        model, dialog = self.interludeFixture()
+        before = dict(model.game_map.properties)
+        self.assertFalse(dialog.canCityInterlude())
+        self.assertFalse(dialog.canReturnFromInterlude())
+        self.assertFalse(dialog.cityInterlude())
+        self.assertFalse(dialog.returnFromInterlude())
+        self.assertEqual(before, model.game_map.properties)
+        self.assertEqual([], model.readers)
+        self.assertEqual([], model.player.getQuests())
+
+    def testInterludeReadinessAndInteractionMatchDepartureActionExactly(self):
+        for interaction in (False, True):
+            for ready in (False, True):
+                with self.subTest(interaction=interaction, ready=ready):
+                    model, dialog = self.interludeFixture()
+                    dialog.canInteract = lambda: interaction
+                    model.game_map.setBoolProperty("plugin_cityFlag_cityInterludeReady", ready)
+                    before = dict(model.game_map.properties)
+                    expected = interaction and ready
+                    self.assertIs(dialog.canCityInterlude(), expected)
+                    self.assertEqual(before, model.game_map.properties)
+                    self.assertIs(dialog.cityInterlude(), expected)
+                    self.assertEqual(5, model.game_map.getNumericProperty("plugin_cityPhase"))
+                    self.assertEqual(expected, model.game_map.getBoolProperty("plugin_cityFlag_interludeOffered"))
+                    self.assertEqual(1 if expected else 0, len(model.readers))
+                    if not expected:
+                        self.assertEqual(before, model.game_map.properties)
+
+    def testInterludeReturnMatchesOfferInteractionAndExistingPhaseSevenBoundary(self):
+        for interaction in (False, True):
+            for offered in (False, True):
+                for phase in (4, 5, 6, 7, 8):
+                    with self.subTest(interaction=interaction, offered=offered, phase=phase):
+                        model, dialog = self.interludeFixture()
+                        dialog.canInteract = lambda: interaction
+                        model.clock.spawnActors = Mock()
+                        model.clock.applySchedules = Mock()
+                        model.game_map.setBoolProperty("plugin_cityFlag_interludeOffered", offered)
+                        model.game_map.setNumericProperty("plugin_cityPhase", phase)
+                        before = dict(model.game_map.properties)
+                        expected = interaction and offered and phase != 7
+                        self.assertIs(dialog.canReturnFromInterlude(), expected)
+                        self.assertEqual(before, model.game_map.properties)
+                        self.assertIs(dialog.returnFromInterlude(), expected)
+                        if expected:
+                            self.assertEqual(7, model.game_map.getNumericProperty("plugin_cityPhase"))
+                            self.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_fugitive"))
+                            model.clock.spawnActors.assert_called_once_with()
+                            model.clock.applySchedules.assert_called_once_with()
+                        else:
+                            self.assertEqual(before, model.game_map.properties)
+                            model.clock.spawnActors.assert_not_called()
+                            model.clock.applySchedules.assert_not_called()
+                        self.assertEqual([], model.readers)
+
+    def testInterludePredicateDoesNotInventOfferedOrPhaseRestrictions(self):
+        model, dialog = self.interludeFixture()
+        model.game_map.setBoolProperty("plugin_cityFlag_cityInterludeReady", True)
+        model.game_map.setBoolProperty("plugin_cityFlag_interludeOffered", True)
+        model.game_map.setNumericProperty("plugin_cityPhase", 7)
+        before = dict(model.game_map.properties)
+        self.assertTrue(dialog.canInteract())
+        self.assertTrue(dialog.canCityInterlude())
+        self.assertFalse(dialog.canReturnFromInterlude())
+        self.assertEqual(before, model.game_map.properties)
+
+    def testDeferringInterludeReturnPreservesCityProgressAndExplorationExit(self):
+        model, dialog = self.interludeFixture()
+        model.game_map.setBoolProperty("plugin_cityFlag_cityInterludeReady", True)
+        model.game_map.setStringProperty("plugin_cityQuest_optionalDeferred", "active")
+        self.assertTrue(dialog.cityInterlude())
+        after_offer = dict(model.game_map.properties)
+        for _ in range(3):
+            self.assertTrue(dialog.canReturnFromInterlude())
+            self.assertTrue(dialog.canCityInterlude())
+        self.assertEqual(after_offer, model.game_map.properties)
+        self.assertEqual(5, model.game_map.getNumericProperty("plugin_cityPhase"))
+        self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_optionalDeferred"))
+        exit_option = self.interludeOptions()[-1]["properties"]
+        self.assertEqual("Return to exploration.", exit_option["text"])
+        self.assertEqual("EXIT", exit_option["nextStateId"])
+        self.assertNotIn("action", exit_option)
 
 
 if __name__ == "__main__":

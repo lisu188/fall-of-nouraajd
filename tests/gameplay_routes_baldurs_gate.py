@@ -166,8 +166,22 @@ def cityApproachPath(origin, destination, bounds, walkable, portals):
 
 
 def cityTravelPath(
-    origin, start_area, destination, connections, allowed, atlas, walkable, portals, destination_point=None
+    origin,
+    start_area,
+    destination,
+    connections,
+    allowed,
+    atlas,
+    walkable,
+    portals,
+    destination_point=None,
+    *,
+    target=None,
 ):
+    if target is not None:
+        if destination_point is not None and tuple(destination_point) != tuple(target):
+            raise ValueError("Conflicting city travel destination points")
+        destination_point = target
     edges = defaultdict(list)
     for link in connections:
         if allowed(link):
@@ -264,7 +278,7 @@ def contactCityObject(d, name):
     requireCurrent()
 
 
-def travel(d, destination, *, destination_point=None):
+def travel(d, destination, *, destination_point=None, target=None):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
 
@@ -281,6 +295,9 @@ def travel(d, destination, *, destination_point=None):
                 return False
         return True
 
+    destination_options = {"target": target} if destination_point is None else {"destination_point": destination_point}
+    if destination_point is not None and target is not None:
+        destination_options["target"] = target
     route = cityTravelPath(
         d.coords(),
         currentArea(d),
@@ -289,7 +306,7 @@ def travel(d, destination, *, destination_point=None):
         allowed,
         geometry["atlas"],
         *cityMovementCells(),
-        destination_point=destination_point,
+        **destination_options,
     )
     traversed = []
     for link in route:
@@ -330,9 +347,7 @@ def travel(d, destination, *, destination_point=None):
 
 
 def visit(d, actor, action="talk"):
-    properties = documents()["config"][actor]["properties"]
-    travel(d, properties["sourceArea"])
-    d.navigateTo(actor)
+    QuestRoute(d).contact(actor)
     return d.choose(actor + "Dialog", action)
 
 
@@ -381,29 +396,142 @@ def cityTour(d):
     )
 
 
+def historyDialogUi(d, action=None):
+    """Inspect or select actual filtered history replies through the isolated native panel."""
+    from tests.gameplay_branch_driver import readNewNativeTrace
+
+    gui = d.enableIsolatedGui()
+    d.test.assertIsNotNone(d.trace_path, "Native history choices require the actual option trace")
+    d.test.assertIsNone(d.nativePanel("CGameDialogPanel", required=False), "An earlier dialog is still open")
+    dialog_id = "cityStartDialog"
+    dialog = d.call(d.game, "createObject", dialog_id)
+    options = [
+        row["properties"]
+        for row in sorted(d._dialogStates(dialog_id)["ENTRY"]["options"], key=lambda row: row["properties"]["number"])
+        if not row["properties"].get("condition") or d.call(dialog, "invokeCondition", row["properties"]["condition"])
+    ]
+    d.test.assertLessEqual(len(options), 32, "Bounded native history reply inspection")
+    for method in ("canCityInterlude", "canReturnFromInterlude"):
+        d.test.assertFalse(d.call(dialog, "invokeCondition", method), "An unearned interlude offer became available")
+    d.test.assertFalse({"cityInterlude", "returnFromInterlude"} & {row.get("action") for row in options})
+    d.assertNativeCombatOutcomes()
+    after_seq = d._combat_trace_seq
+    handler = d.call(d.game, "getGuiHandler")
+    panel = d.call(handler, "openDialog", dialog)
+    d.test.assertEqual(panel, d.nativePanel("CGameDialogPanel"))
+    actual_dialog = d.call(panel, "getObjectProperty", "dialog")
+    d.test.assertEqual(dialog_id, d.call(actual_dialog, "getTypeId"))
+    observed = {}
+
+    def inspectButtons():
+        for child in d.call(panel, "getChildren"):
+            if d.call(child, "getType") != "CButton":
+                continue
+            click = d.call(child, "getStringProperty", "click")
+            if not click.startswith("chooseReply"):
+                continue
+            suffix = click.removeprefix("chooseReply")
+            d.test.assertTrue(suffix.isdecimal(), ("Unexpected native reply callback", click))
+            index = int(suffix)
+            d.test.assertLess(index, len(options), "A native reply is absent from the filtered authored catalog")
+            row = options[index]
+            text = str(index + 1) + "  " + (row.get("actionLabel", "") + "\n" if row.get("actionLabel") else "")
+            text += row["text"]
+            d.test.assertEqual(text, d.call(child, "getStringProperty", "text"), "Native reply text/action mismatch")
+            observed[index] = {"action": row.get("action", ""), "text": row["text"], "number": row["number"]}
+
+    inspectButtons()
+    if action is None:
+        for _ in options:
+            d.call(panel, "keyboardEvent", gui, 768, 1073741905)
+            inspectButtons()
+        d.test.assertEqual(set(range(len(options))), set(observed), "Native history pagination omitted a reply")
+    else:
+        indexes = [index for index, row in enumerate(options) if row.get("action") == action]
+        d.test.assertEqual(1, len(indexes), ("Expected one available native history action", action))
+        index = indexes[0]
+        for _ in range(index + 1):
+            d.call(panel, "keyboardEvent", gui, 768, 1073741905)
+        inspectButtons()
+        d.test.assertIn(index, observed, "The selected reply must be present in the actual native viewport")
+        d.call(panel, "keyboardEvent", gui, 768, 13)
+        d.pump()
+    d.call(panel, "keyboardEvent", gui, 768, 27)
+    d.pump()
+    d.test.assertIsNone(d.call(panel, "getParent"), "Native history inspection left its dialog open")
+    records = readNewNativeTrace(d.trace_path, {}, after_seq)
+    selections = [row for row in records if row.get("event") == "dialog_option_selected"]
+    if action is None:
+        d.test.assertFalse(selections, "Inspecting and cancelling must not choose an authored reply")
+    else:
+        d.test.assertEqual(1, len(selections), "Native history choice requires exactly one input receipt")
+        selection = selections[0]
+        d.test.assertEqual(
+            (dialog_id, "ENTRY", action, options[index]["number"]),
+            (
+                selection.get("dialog", {}).get("typeId"),
+                selection.get("stateId"),
+                selection.get("action"),
+                selection.get("optionNumber"),
+            ),
+            "Native history receipt does not identify the selected authored reply",
+        )
+    witness = {
+        "kind": "nativeHistoryChoice" if action else "nativeUnofferedHistoryInspection",
+        "dialog": dialog_id,
+        "action": action,
+        "replies": [observed[index] for index in sorted(observed)],
+        "nativeOptionSeq": selections[0]["seq"] if selections else None,
+    }
+    d.record({"nativeHistoryUi": witness}, replay=True)
+    return witness
+
+
 def history(d, outcome):
     start(d)
     d.navigateTo("cityStart")
-    d.choose("cityStartDialog", "historyAldeth" + outcome)
-    d.choose("cityStartDialog", "historyTenya" + outcome)
+    origin = d.coords()
+    walkable, portals = cityMovementCells()
+    neighbors = [(origin[0] + dx, origin[1] + dy, origin[2]) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+    neighbor = next((point for point in neighbors if point in walkable - portals and d.canStep(point)), None)
+    d.test.assertIsNotNone(neighbor, "The real hero needs an authored step away from the starting event")
+    d.navigateCoords(neighbor, limit=8)
+    d.test.assertEqual(neighbor, d.coords())
+    d.navigateTo("cityStart")
+    d.test.assertEqual(origin, d.coords())
+    before = resources(d)
+    historyDialogUi(d)
+    d.test.assertEqual(before, resources(d))
+    d.test.assertEqual({}, read(d, d.game_map, "plugin_cityHistory", {}))
+    d.test.assertEqual(5, d.number("plugin_cityPhase"))
+    historyDialogUi(d, "historyAldeth" + outcome)
+    historyDialogUi(d, "historyTenya" + outcome)
     expected = {"aldeth": outcome.lower(), "tenya": outcome.lower()}
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
     other = "Killed" if outcome == "Helped" else "Helped"
-    d.choose("cityStartDialog", "historyAldeth" + other)
-    d.choose("cityStartDialog", "historyTenya" + other)
+    historyDialogUi(d, "historyAldeth" + other)
+    historyDialogUi(d, "historyTenya" + other)
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
-    d.choose("cityStartDialog", "finishHistoryChoices")
-    d.choose("cityStartDialog", "historyEldothAbsent")
+    historyDialogUi(d, "finishHistoryChoices")
+    historyDialogUi(d, "historyEldothAbsent")
+    expected["eldoth"] = "unspecified"
     d.test.assertTrue(d.flag("plugin_cityHistoryFrozen"))
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityHistory", {}))
     d.test.assertEqual(expected, read(d, d.game_map, "plugin_cityStartingProfile", {})["history"])
-    before = resources(d)
-    d.choose("cityStartDialog", "returnFromInterlude")
+    historyDialogUi(d)
     d.test.assertEqual(5, d.number("plugin_cityPhase"))
     d.test.assertEqual(before, resources(d))
     d.saveAndReload("city-history-" + outcome.lower())
+    d.test.assertEqual(before, resources(d))
+    d.test.assertFalse(d.condition("cityStartDialog", "canCityInterlude"))
+    d.test.assertFalse(d.condition("cityStartDialog", "canReturnFromInterlude"))
     d.check("baldursGate.history." + outcome.lower(), expected == read(d, d.game_map, "plugin_cityHistory", {}))
-    d.check("baldursGate.interlude.earlyReturnRefused", d.number("plugin_cityPhase") == 5)
+    d.check(
+        "baldursGate.interlude.earlyReturnRefused",
+        d.number("plugin_cityPhase") == 5,
+        outcome="unavailable-unoffered",
+        nativeInspection=True,
+    )
 
 
 def openContainer(d, name, *, forced=False):
@@ -634,7 +762,7 @@ class QuestRoute:
         actor = self.d.object(name, required=False)
         area_id = currentArea(self.d, actor) if actor else ""
         area_id = area_id or self.data["config"][name]["properties"].get("sourceArea", "AR0800")
-        travel(self.d, area_id)
+        travel(self.d, area_id, target=self.d.coords(actor) if actor else None)
         contactCityObject(self.d, name)
 
     def ensurePhase(self, minimum):
@@ -663,12 +791,17 @@ class QuestRoute:
         if key == "jalanthaBook" and not self.d.flag("plugin_cityFlag_jalanthaSummoned"):
             attendant = self.actorName([{"creature": "PUMBERL", "area": "AR0609"}])
             self.contact(attendant)
-            before = self.d.gold()
+            gold = self.d.gold()
             self.d.choose(attendant + "Dialog", "requestJalanthaAudience")
-            self.d.test.assertEqual(before - 50, self.d.gold(), "The authored audience costs 50 gold exactly once")
             self.d.test.assertTrue(self.d.flag("plugin_cityFlag_jalanthaSummoned"))
+            self.d.test.assertEqual(gold - 50, self.d.gold(), "The authored audience must charge exactly once")
         name = self.actorName(row["givers"])
         self.contact(name)
+        if self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"):
+            self.item({"item": "SCRLPET"})
+            self.contact(name)
+            self.d.choose(name + "Dialog", "restoreStatue")
+            self.d.test.assertFalse(self.d.call(self.d.object(name), "getBoolProperty", "plugin_cityPetrified"))
         self.d.choose(name + "Dialog", "accept" + upperFirst(key))
         self.d.test.assertEqual("active", state(self.d, key), key)
         self.d.test.assertIn("city" + upperFirst(key) + "Quest", self.d.questNames())
@@ -710,6 +843,32 @@ class QuestRoute:
             self.contact(name)
             self.d.choose(name + "Dialog", "warnNarlen")
             self.d.test.assertTrue(self.d.flag("plugin_cityFlag_narlenWarning"))
+        else:
+            actor = self.d.object(officer)
+            position = self.d.coords()
+            destination = self.d.coords(actor)
+            self.d.test.assertEqual(
+                position[2], destination[2], "The lookout patrol must approach on its authored level"
+            )
+            approach = cityApproachPath(
+                destination, position, self.data["geometry"]["atlas"]["AR0300"]["bounds"], *cityMovementCells()
+            )
+
+            def withinReceptionRange():
+                current = self.d.object(officer)
+                self.d.test.assertEqual(
+                    actor["__handle__"], current["__handle__"], "The actual lookout officer changed"
+                )
+                self.d.test.assertEqual(position, self.d.coords(), "The hero left the authored lookout reception cell")
+                point = self.d.coords(current)
+                return (
+                    point[2] == position[2]
+                    and sum(abs(a - b) for a, b in zip(position, point)) == 2
+                    and (point[0] == position[0] or point[1] == position[1])
+                )
+
+            self.d.navigateCoords(position)
+            self.d.waitTurns(max(0, len(approach) - 2), withinReceptionRange)
         return officer
 
     def item(self, requirement):
@@ -923,7 +1082,8 @@ class QuestRoute:
                 self.d.call(self.d.player, "getStats"), "getNumericProperty", "intelligence"
             ) + self.d.number("plugin_cityStanding")
         if condition.get("guardKills") and not self.d.number("plugin_cityGuardKills"):
-            nativeVictory(self.d, self.actorName([{"label": "Flaming Fist"}]))
+            nativeVictory(self.d, self.actorName([{"creature": "FLAM6", "area": "AR0130"}]))
+            self.d.test.assertGreater(self.d.number("plugin_cityGuardKills"), 0)
         if condition.get("noGuardKills"):
             self.d.test.assertEqual(0, self.d.number("plugin_cityGuardKills"))
         if condition.get("thiefInParty"):
@@ -970,6 +1130,28 @@ class QuestRoute:
                 for _ in range(outcome["conditions"]["minTalks"]):
                     self.d.choose(name + "Dialog", "talk")
             self.conditions(outcome.get("conditions", {}))
+            if (key, outcome["id"]) in {("narlenRogueStone", "complete"), ("narlenLookout", "officerKilled")}:
+                travel(self.d, "AR0153")
+                names = [
+                    name
+                    for name, entry in self.data["config"].items()
+                    if entry.get("class") in ACTOR_CLASSES
+                    and entry["properties"].get("sourceCreature") == "NARLEN"
+                    and entry["properties"].get("sourceArea") == "AR0153"
+                ]
+                self.d.test.assertEqual(1, len(names), "The source must identify one canonical guild Narlen")
+
+                def returnedToGuild():
+                    actor = self.d.object(names[0], required=False)
+                    return (
+                        actor is not None
+                        and self.d.call(actor, "isAlive")
+                        and self.d.call(actor, "getStringProperty", "sourceCreature") == "NARLEN"
+                        and self.d.call(actor, "getStringProperty", "sourceArea") == "AR0153"
+                    )
+
+                self.d.navigateCoords(self.d.coords())
+                self.d.waitTurns(25, returnedToGuild)
             if (
                 key == "cythandriaDiary"
                 and self.d.flag("plugin_cityFlag_tamokoMove2")
@@ -1016,6 +1198,10 @@ def questRoute(d, key, outcome_key, *, item_first=False):
         for requirement in outcome.get("conditions", {}).get("items", []):
             planner.item(requirement)
         d.test.assertEqual("notStarted", state(d, key))
+    if key == "bherenCat" and outcome_key == "lowStanding":
+        planner.settle("petrineRing", "catKilled")
+    if key == "cordyrSirines" and outcome_key == "complete":
+        planner.settle("petrineRing", "catKilled")
     name, result = planner.settle(key, outcome_key)
     if key == "tamokoMercy" and outcome_key == "fight":
         nativeVictory(d, name)
@@ -1568,6 +1754,187 @@ def inventoryReaderLines(d, owner):
     ] or ["No carried belongings."]
 
 
+BOOK08_PENDING_OUTCOMES = ("successfulUse", "handInBeforeUse", "useBeforeHandIn", "originalParity")
+
+
+def book08StatsSnapshot(d, stats):
+    values = d.properties(stats)
+    fields = (
+        "strength",
+        "agility",
+        "stamina",
+        "intelligence",
+        "armor",
+        "block",
+        "dmgMin",
+        "dmgMax",
+        "attack",
+        "hit",
+        "crit",
+        "fireResist",
+        "frostResist",
+        "normalResist",
+        "thunderResist",
+        "shadowResist",
+        "damage",
+        "mainStat",
+    )
+    d.test.assertTrue(set(fields) <= set(values), "A complete native CStats snapshot is required")
+    return {key: values[key] for key in fields}
+
+
+def book08DisabledSnapshot(d, name):
+    clock = d.object("cityClock")
+    for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+        d.test.assertIs(
+            d.call(clock, "getBoolProperty", flag), False, "The public route requires disabled source flags"
+        )
+    items = itemInstances(d, d.player)
+    d.test.assertIn(name, items, "Disabled use must retain the actual carried tome")
+    book = items[name]
+    d.test.assertEqual("cityItemBook08", d.call(book, "getTypeId"))
+    d.test.assertEqual(
+        "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
+    )
+    d.test.assertEqual("BOOK08", d.call(book, "getStringProperty", "plugin_citySourceItem"))
+    d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityBook08Consumed"))
+    d.test.assertEqual(
+        1, sum(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in items.values())
+    )
+    source_state = read(d, clock, "plugin_cityPoisonSourceState", {})
+    d.test.assertNotIn("book08Use:" + name, source_state.get("receipts", {}), "Disabled use must create no use receipt")
+    owner_items = itemInstances(d, d.object("cityAr0132Actor1"))
+    d.test.assertNotIn(name, owner_items, "The original owner must not retain a duplicate tome")
+    d.test.assertFalse(
+        any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in owner_items.values())
+    )
+    base = d.call(d.player, "getObjectProperty", "baseStats")
+    d.test.assertIsNotNone(base)
+    return {
+        "book": {
+            "name": name,
+            "type": d.call(book, "getTypeId"),
+            "nativeType": d.call(book, "getType"),
+            "quantity": d.call(book, "getNumericProperty", "plugin_cityQuantity"),
+            "charges": read(d, book, "plugin_cityCharges", []),
+            "unidentified": d.call(book, "getBoolProperty", "plugin_cityUnidentified"),
+            "stolen": d.call(book, "getBoolProperty", "plugin_cityStolen"),
+        },
+        "baseStats": book08StatsSnapshot(d, base),
+        "composedStats": book08StatsSnapshot(d, d.call(d.player, "getStats")),
+        "inventory": {key: d.call(item, "getTypeId") for key, item in items.items()},
+        "ownerInventory": {key: d.call(item, "getTypeId") for key, item in owner_items.items()},
+        "equipment": {
+            slot: d.call(item, "getName") if item else None for slot, item in d.call(d.player, "getEquipped").items()
+        },
+        "resources": resources(d),
+        "activeQuests": sorted(d.questNames()),
+        "completedQuests": sorted(d.questNames(completed=True)),
+        "phase": d.number("plugin_cityPhase"),
+        "standing": d.number("plugin_cityStanding"),
+        "crimes": d.number("plugin_cityCrimes"),
+        "history": read(d, d.game_map, "plugin_cityHistory", {}),
+        "sourceState": source_state,
+    }
+
+
+def book08DisabledUse(d):
+    """A normal-source denial witness; successful use and hand-in outcomes remain pending."""
+    start(d)
+    for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+        d.test.assertIs(d.call(d.object("cityClock"), "getBoolProperty", flag), False)
+    name = "cityAr0132Actor1"
+    QuestRoute(d).contact(name)
+    owner = d.object(name)
+    d.test.assertEqual("AR0132", currentArea(d))
+    d.test.assertEqual("CHANTH", d.call(owner, "getStringProperty", "sourceCreature"))
+    before_owner, before_player = itemInstances(d, owner), itemInstances(d, d.player)
+    books = [
+        item for item in before_owner.values() if d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08"
+    ]
+    d.test.assertEqual(1, len(books), "Chanthalas must own his one actual source tome")
+    book = books[0]
+    selected = d.call(book, "getName")
+    d.test.assertTrue(selected)
+    d.test.assertEqual("cityItemBook08", d.call(book, "getTypeId"))
+    d.test.assertEqual(
+        "BaldursGateUnderstandingTome", d.call(book, "getType"), "The actual registered native tome class is required"
+    )
+    d.test.assertEqual(1, d.call(book, "getNumericProperty", "plugin_cityQuantity"))
+    d.test.assertNotIn(selected, before_player)
+    d.test.assertFalse(
+        any(d.call(item, "getStringProperty", "plugin_citySourceItem") == "BOOK08" for item in before_player.values())
+    )
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityUnstealable"))
+    d.test.assertFalse(d.call(book, "getBoolProperty", "plugin_cityUndroppable"))
+    d.test.assertFalse(d.call(owner, "getBoolProperty", "plugin_cityUnavoidableDetection"))
+    d.test.assertGreaterEqual(
+        d.call(d.call(d.player, "getStats"), "getNumericProperty", "agility"),
+        d.call(owner, "getNumericProperty", "plugin_cityTheftAgility") or 16,
+    )
+    before = resources(d)
+    crime, standing = d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")
+    theft = d.chooseUi(name + "Dialog", "pickPocket", selected_id=selected)
+    after_player, after_owner = itemInstances(d, d.player), itemInstances(d, owner)
+    d.test.assertEqual(set(before_player) | {selected}, set(after_player))
+    d.test.assertEqual(set(before_owner) - {selected}, set(after_owner))
+    d.test.assertEqual(
+        book["__handle__"], after_player[selected]["__handle__"], "The chooser must transfer the exact original tome"
+    )
+    d.test.assertEqual(before[:2], resources(d)[:2])
+    d.test.assertEqual(before[2] + Counter({"BOOK08": 1}), resources(d)[2])
+    d.test.assertEqual((crime, standing), (d.number("plugin_cityCrimes"), d.number("plugin_cityStanding")))
+    initial = book08DisabledSnapshot(d, selected)
+    d.test.assertEqual([0, 0, 0], initial["book"]["charges"], "Retain the original source charge triple")
+    for checkpoint in ("before-use", "after-use"):
+        d.saveAndReload("city-book08-disabled-" + checkpoint)
+        d.test.assertEqual(
+            initial, book08DisabledSnapshot(d, selected), "Reload must preserve the exact disabled-use state"
+        )
+        d.enableIsolatedGui()
+        for repeat in range(2):
+            for panel in ("CGameTextPanel", "CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                d.test.assertIsNone(
+                    d.nativePanel(panel, required=False), "A prior native modal would hide the use outcome"
+                )
+            carried = itemInstances(d, d.player)[selected]
+            d.call(d.player, "useItem", carried)
+            d.pump()
+            for panel in ("CGameTextPanel", "CGameDialogPanel", "CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                d.test.assertIsNone(
+                    d.nativePanel(panel, required=False),
+                    "Disabled tome use must not run the default native scroll text action",
+                )
+            d.test.assertEqual(
+                initial, book08DisabledSnapshot(d, selected), "Disabled use changed tome, stats or city progress"
+            )
+            d.record(
+                {
+                    "nativeBook08DisabledUse": {
+                        "item": selected,
+                        "checkpoint": checkpoint,
+                        "repeat": repeat + 1,
+                        "outcome": "disabledUseNoMutation",
+                        "successfulUse": False,
+                        "noDefaultTextPanel": True,
+                    }
+                },
+                replay=True,
+            )
+    d.check(
+        "baldursGate.book08.disabledUseNoMutation",
+        True,
+        sourceActor="AR0132#actor1",
+        item=selected,
+        nativeTheft=theft,
+        nativeUses=4,
+        saveCheckpoints=2,
+        sourceFlagsEnabled=False,
+        pendingOutcomes=BOOK08_PENDING_OUTCOMES,
+    )
+
+
 def inventoryUi(d, *, failed=False):
     start(d)
     name = "cityAr0800Actor73"  # Niklos's authored backpack holds a Potion of Master Thievery.
@@ -1858,6 +2225,7 @@ CASES = (
             classes=("Wayfarer",),
             sources=SOURCES,
             duration_seconds=90,
+            isolated_gui=True,
         ),
         RouteCase(
             "baldurs-gate-history-killed",
@@ -1868,6 +2236,7 @@ CASES = (
             classes=("Inquisitor",),
             sources=SOURCES,
             duration_seconds=90,
+            isolated_gui=True,
         ),
         RouteCase(
             "baldurs-gate-ownership",
@@ -2070,8 +2439,24 @@ CASES += (
         isolated_gui=True,
     ),
 )
+CASES += (
+    RouteCase(
+        "baldurs-gate-book08-disabled-use",
+        MAP,
+        (MAP,),
+        ("baldursGate.book08.disabledUseNoMutation",),
+        book08DisabledUse,
+        classes=("Assasin",),
+        race="wandererRace",
+        sources=SOURCES,
+        duration_seconds=300,
+        isolated_gui=True,
+    ),
+)
+
 
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse": ("baldursGate.book08.disabledUseNoMutation",),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (
@@ -2126,7 +2511,8 @@ SOURCE_BRANCHES = {
             ("historyAldethKilled", "baldursGate.history.killed"),
             ("historyTenyaHelped", "baldursGate.history.helped"),
             ("historyTenyaKilled", "baldursGate.history.killed"),
-            ("returnFromInterlude", "baldursGate.interlude.earlyReturnRefused"),
+            ("canCityInterlude", "baldursGate.interlude.earlyReturnRefused"),
+            ("canReturnFromInterlude", "baldursGate.interlude.earlyReturnRefused"),
             ("unlock", "baldursGate.locks.picked"),
             ("force", "baldursGate.locks.forced"),
             ("open", "baldursGate.ownership.exactLootAndReload"),
@@ -2183,6 +2569,9 @@ SOURCE_BRANCHES.update(
         "res/maps/baldursGate/script.py:BaldursGateDialog.close": ("baldursGate.doors.openAndClose",),
         "res/maps/baldursGate/script.py:BaldursGateDialog.disarm": ("baldursGate.traps.disarmed",),
         "res/maps/baldursGate/script.py:BaldursGateDialog.cityInterlude": (
+            "baldursGate.quest.cythandriaDiary.complete",
+        ),
+        "res/maps/baldursGate/script.py:BaldursGateDialog.returnFromInterlude": (
             "baldursGate.quest.cythandriaDiary.complete",
         ),
         "res/maps/baldursGate/script.py:BaldursGateDialog.warnNarlen": ("baldursGate.quest.narlenLookout.complete",),
