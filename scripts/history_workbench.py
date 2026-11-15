@@ -1,0 +1,477 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 Andrzej Lis
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Interactive workbench for content-keyed reconstruction of BFG-damaged history.
+
+Trees are addressed by their position in the catalog's topological order (``1`` is the
+2013 root) or by any commit name. Working reconstructions live in ``WORK/recon/<blob>``,
+named by the original Git blob that BFG removed, so one reconstruction applies to every
+tree that contained that exact original file. Typical loop::
+
+    history_workbench.py prep 13          # restore with current overrides into WORK/src
+    history_workbench.py carry 13         # seed missing files from earlier reconstructions
+    history_workbench.py build 13         # compile in the pinned toolchain image
+    history_workbench.py keep 13 creatures/creature.cpp --note "adapted from ..."
+    history_workbench.py verify 13        # real build and isolated startup
+    history_workbench.py auto 13 40       # carry/build/keep until the first failure
+    history_workbench.py save && history_workbench.py export
+
+``save`` moves working reconstructions into ``recovery/payloads/reconstructions`` and
+records them in ``recovery/overrides.json``; ``export`` copies matching successful
+evidence into ``recovery/evidence/<commit>``.
+"""
+
+from __future__ import annotations
+
+import argparse
+import gzip
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "scripts"))
+import recover_history as rh  # noqa: E402
+
+WORK = Path(os.environ.get("HISTORY_WORK_DIR", REPO / ".cache/history-recovery/workbench")).resolve()
+RECON = WORK / "recon"
+NOTES = RECON / "notes.json"
+IMAGE = os.environ.get("HISTORY_TOOLCHAIN_IMAGE", "nouraajd-recovery:qt5")
+CODE = (".cpp", ".h", ".c", ".inl", ".pri", ".qrc")
+BLOB = re.compile(r"[0-9a-f]{40}\Z")
+CATALOG = json.loads((REPO / "recovery/catalog.json").read_text())
+TREE_OF = {commit: tree for tree in CATALOG["trees"] for commit in tree["commits"]}
+ORDER = [item["commit"] for item in CATALOG["commits"] if item["commit"] in TREE_OF]
+# Docker mounts this directory at the same path so recorded paths stay valid.
+SHARED = Path(os.path.commonpath([REPO, WORK]))
+
+
+def resolve(ref: str) -> str:
+    if ref.isdigit():
+        return ORDER[int(ref) - 1]
+    return subprocess.check_output(["git", "-C", str(REPO), "rev-parse", ref], text=True).strip()
+
+
+def missing(commit: str) -> list[dict]:
+    return [entry for entry in TREE_OF[commit]["entries"] if entry["status"] == "missingOriginal"]
+
+
+def workingReconstructions() -> list[Path]:
+    RECON.mkdir(parents=True, exist_ok=True)
+    return sorted(path for path in RECON.iterdir() if BLOB.fullmatch(path.name))
+
+
+def reconstructed(blob: str) -> bool:
+    """True when a content-keyed reconstruction exists, either working or committed."""
+    if (RECON / blob).exists():
+        return True
+    entries = json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+    return any(entry.get("originalBlob") == blob for entry in entries)
+
+
+def notes() -> dict:
+    return json.loads(NOTES.read_text()) if NOTES.exists() else {}
+
+
+def note(blob: str, text: str) -> None:
+    values = notes()
+    values[blob] = text
+    NOTES.write_text(json.dumps(values, indent=1, sort_keys=True) + "\n")
+
+
+def workbenchOverrides() -> Path:
+    """Committed overrides plus working reconstructions, resolvable from SHARED."""
+    committed = json.loads((REPO / "recovery/overrides.json").read_text())
+    working = {path.name: path for path in workingReconstructions()}
+    prefix = (REPO / "recovery").relative_to(SHARED).as_posix() + "/"
+    entries = []
+    for entry in committed["entries"]:
+        if entry.get("originalBlob") in working:
+            continue
+        entry = dict(entry)
+        if "source" in entry:
+            entry["source"] = prefix + entry["source"]
+        entries.append(entry)
+    for blob, path in working.items():
+        entries.append(
+            {
+                "originalBlob": blob,
+                "source": path.relative_to(SHARED).as_posix(),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "provenance": "working reconstruction",
+            }
+        )
+    path = SHARED / ".history-workbench-overrides.json"
+    path.write_text(json.dumps({"schemaVersion": 1, "entries": entries}))
+    return path
+
+
+def docker(command: str, workdir: Path, timeout: float = 3600) -> subprocess.CompletedProcess:
+    image_id = subprocess.check_output(["docker", "image", "inspect", "--format", "{{.Id}}", IMAGE], text=True).strip()
+    arguments = ["docker", "run", "--rm", "--network", "none"]
+    arguments += ["-e", "PATH=/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin"]
+    arguments += ["-e", "GAME_RECOVERY_TOOLCHAIN_ID=" + image_id, "-v", f"{SHARED}:{SHARED}", "-w", str(workdir)]
+    arguments += ["--entrypoint", "bash", IMAGE, "-c", command]
+    return subprocess.run(arguments, timeout=timeout, capture_output=True, text=True)
+
+
+def prep(ref: str, quiet: bool = False) -> Path:
+    commit = resolve(ref)
+    destination = WORK / "src" / commit[:8]
+    shutil.rmtree(destination, ignore_errors=True)
+    report = rh.restoreSnapshot(REPO, CATALOG, commit, destination, rh.loadOverrides(workbenchOverrides()))
+    if not quiet:
+        working = {path.name for path in workingReconstructions()}
+        for item in report["restored"]:
+            if item["method"] == "reconstruction" and item["path"].endswith(CODE + (".pro", ".py", ".json")):
+                marker = "WORK " if item["originalBlob"] in working else "     "
+                print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{item['provenance'][:70]}]")
+        print(destination)
+    return destination
+
+
+def carry(ref: str) -> list[tuple[str, str, str]]:
+    """Seed missing code from the reconstruction of the nearest earlier version of the same path."""
+    commit = resolve(ref)
+    source = WORK / "src" / commit[:8]
+    working = {path.name for path in workingReconstructions()}
+    committed = {
+        entry["originalBlob"]: REPO / "recovery" / entry["source"]
+        for entry in json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+        if "originalBlob" in entry and "source" in entry
+    }
+
+    def content(blob: str) -> bytes | None:
+        if blob in working:
+            return (RECON / blob).read_bytes()
+        return committed[blob].read_bytes() if blob in committed else None
+
+    carried = []
+    index = ORDER.index(commit)
+    for entry in missing(commit):
+        if not entry["path"].endswith(CODE) or content(entry["originalBlob"]) is not None:
+            continue
+        donor = next(
+            (
+                earlier["originalBlob"]
+                for previous in reversed(ORDER[:index])
+                for earlier in missing(previous)
+                if earlier["path"] == entry["path"] and content(earlier["originalBlob"]) is not None
+            ),
+            None,
+        )
+        if donor:
+            (source / entry["path"]).write_bytes(content(donor))
+            print("carried", entry["path"], "from", donor[:10])
+            carried.append((entry["path"], entry["originalBlob"], donor))
+        elif not entry["path"].startswith("json/"):
+            print("no earlier reconstruction for", entry["path"])
+    return carried
+
+
+def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
+    commit = resolve(ref)
+    source = WORK / "src" / commit[:8]
+    output = WORK / "build" / commit[:8]
+    if clean:
+        shutil.rmtree(output, ignore_errors=True)
+    output.mkdir(parents=True, exist_ok=True)
+    project = sorted(source.glob("*.pro"))[0]
+    aliases = output / "library-aliases"
+    aliases.mkdir(exist_ok=True)
+    if not (aliases / "libzdll.so").is_symlink():
+        (aliases / "libzdll.so").symlink_to("/usr/lib/x86_64-linux-gnu/libz.so")
+    result = docker(
+        f"qmake QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' "
+        f"'LIBS+=-L{aliases}' "
+        f"{project} -o Makefile > qmake.log 2>&1; "
+        f"make -k -j{os.cpu_count() or 1} > make.log 2>&1; echo rc=$?; "
+        f"grep -E 'error|undefined reference' make.log | sort | uniq | head -{lines}",
+        output,
+    )
+    print(result.stdout, end="")
+    return "rc=0" in result.stdout
+
+
+def intactProject(commit: str, name: str) -> tuple[str, str] | None:
+    """The nearest commit (by catalog order) whose qmake project survived, and its text."""
+    index = ORDER.index(commit) if commit in ORDER else 0
+    lost = lambda candidate: any(entry["path"] == name for entry in missing(candidate))  # noqa: E731
+    for distance in range(1, len(ORDER)):
+        for candidate in (index - distance, index + distance):
+            if 0 <= candidate < len(ORDER) and not lost(ORDER[candidate]):
+                text = subprocess.run(
+                    ["git", "-C", str(REPO), "show", f"{ORDER[candidate]}:{name}"], capture_output=True, text=True
+                )
+                if text.returncode == 0:
+                    return ORDER[candidate], text.stdout
+    return None
+
+
+def project(ref: str) -> str:
+    """Write a qmake project from the tree's surviving object_script listing and the nearest intact project."""
+    commit = resolve(ref)
+    source = WORK / "src" / commit[:8]
+    lost = [entry["path"] for entry in missing(commit) if entry["path"].endswith(".pro")]
+    if not lost:
+        raise SystemExit("this tree's qmake project survived")
+    name = lost[0]
+    scripts = sorted(source.glob("object_script.*.Debug")) or sorted(source.glob("object_script.*.Release"))
+    if not scripts:
+        raise SystemExit("no object_script listing survives in this tree")
+    objects = [
+        Path(line.strip().replace("\\", "/")).stem
+        for line in scripts[0].read_text(errors="replace").splitlines()
+        if line.strip().endswith(".o")
+    ]
+    files = [path.relative_to(source).as_posix() for path in source.rglob("*") if path.is_file()]
+    by_stem: dict[str, list[str]] = {}
+    for path in files:
+        if path.endswith((".cpp", ".c", ".cc")):
+            by_stem.setdefault(Path(path).stem, []).append(path)
+    sources, unknown = [], []
+    for stem in objects:
+        if stem.startswith(("moc_", "qrc_")):
+            continue
+        matches = by_stem.get(stem, [])
+        (sources.append(matches[0]) if len(matches) == 1 else unknown.append(stem))
+    headers = sorted(path for path in files if path.endswith(".h") and not path.startswith("tmp/"))
+    donor, template = intactProject(commit, name)
+    head = template.split("SOURCES", 1)[0].rstrip()
+    lines = [
+        head,
+        "",
+        "SOURCES += " + " \\\n    ".join(sources),
+        "",
+        "HEADERS  += \\\n    " + " \\\n    ".join(headers),
+        "",
+    ]
+    resources = sorted(path for path in files if path.endswith(".qrc"))
+    if resources:
+        lines += ["RESOURCES += \\\n    " + " \\\n    ".join(resources), ""]
+    (source / name).write_text("\n".join(lines))
+    summary = f"{len(sources)} sources from {scripts[0].name}; settings from intact {donor[:8]}:{name}"
+    print("wrote", name, "-", summary, "; unmatched objects:", unknown)
+    return summary
+
+
+def keep(ref: str, paths: list[str], text: str | None) -> None:
+    commit = resolve(ref)
+    blobs = {entry["path"]: entry["originalBlob"] for entry in missing(commit)}
+    for path in paths:
+        if path not in blobs:
+            raise SystemExit("not a missing file in this tree: " + path)
+        (RECON / blobs[path]).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
+        if text:
+            note(blobs[path], text)
+        print("kept", blobs[path][:10], path)
+
+
+def verify(ref: str, recipe: str | None = None) -> str:
+    commit = resolve(ref)
+    overrides = workbenchOverrides()
+    output = WORK / "verify"
+    extra = f"--recipe {recipe}" if recipe else ""
+    result = docker(
+        f"/opt/recovery/controller/bin/python3.12 {REPO}/scripts/verify_history.py --commit {commit} "
+        f"--overrides {overrides} --output-dir {output} --timeout 60 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
+        f"/opt/recovery/controller/bin/python3.12 -c 'import json,sys; "
+        f'r=json.load(open(sys.argv[1]))["results"][-1]; print(r["status"], r.get("reason",""))\' '
+        f"{output}/summary-0.json",
+        REPO,
+    )
+    print(result.stdout.strip() or result.stderr[-2000:])
+    return result.stdout.split(" ", 1)[0]
+
+
+def auto(start: int, end: int, check: bool = False) -> None:
+    for number in range(start, end + 1):
+        commit = ORDER[number - 1]
+        print(f"=== #{number} {commit[:8]}", flush=True)
+        prep(str(number), quiet=True)
+        carried = carry(str(number))
+        generated = [
+            (entry["path"], entry["originalBlob"], project(str(number)))
+            for entry in missing(commit)
+            if entry["path"].endswith(".pro") and not reconstructed(entry["originalBlob"])
+        ]
+        if not build(str(number), lines=25):
+            print(f"STOP at #{number}")
+            return
+        for path, blob, donor in carried:
+            (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
+            note(blob, f"carried forward unchanged from the reconstruction of {donor} (previous version of {path})")
+        for path, blob, summary in generated:
+            (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
+            note(blob, "qmake project regenerated with " + summary)
+        print(f"kept {len(carried) + len(generated)} files for #{number}")
+        if check and verify(str(number)) != "success":
+            print(f"STOP at #{number}: startup verification failed")
+            return
+
+
+def save() -> None:
+    path = REPO / "recovery/overrides.json"
+    overrides = json.loads(path.read_text())
+    existing = {entry["originalBlob"]: entry for entry in overrides["entries"] if "originalBlob" in entry}
+    names = {
+        entry["originalBlob"]: entry["path"]
+        for tree in CATALOG["trees"]
+        for entry in tree["entries"]
+        if entry["status"] == "missingOriginal"
+    }
+    explanations = notes()
+    count = 0
+    for working in workingReconstructions():
+        blob = working.name
+        relative = f"payloads/reconstructions/{blob[:2]}/{blob}-{Path(names[blob]).name}"
+        target = REPO / "recovery" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        data = working.read_bytes()
+        target.write_bytes(data)
+        entry = {
+            "originalBlob": blob,
+            "path": names[blob],
+            "source": relative,
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "provenance": "content reconstruction of the BFG-removed original; "
+            + explanations.get(blob, "derived from the neighbouring reconstruction"),
+        }
+        if blob in existing:
+            existing[blob].clear()
+            existing[blob].update(entry)
+        else:
+            overrides["entries"].append(entry)
+        working.unlink()
+        count += 1
+    path.write_text(json.dumps(overrides, indent=2, sort_keys=True) + "\n")
+    print("saved", count)
+
+
+def export() -> None:
+    """Copy successful evidence whose restoration matches the current overrides into recovery/evidence."""
+    overrides = rh.loadOverrides(workbenchOverrides())
+    current: dict[str, str] = {}
+    candidates = sorted((WORK / "verify/evidence").glob("*/verification.json"), key=lambda item: item.stat().st_mtime)
+    with rh.GitObjects(REPO) as objects:
+        for report_path in candidates:
+            report = json.loads(report_path.read_text())
+            commit = report["sourceCommit"]
+            if commit not in current:
+                current[commit] = rh.prepareSnapshot(objects, CATALOG, commit, overrides)[1]["restoredFilesFingerprint"]
+            if (
+                report.get("status") != "success"
+                or report["restoration"]["restoredFilesFingerprint"] != current[commit]
+            ):
+                continue
+            target = REPO / "recovery/evidence" / commit
+            target.mkdir(parents=True, exist_ok=True)
+            for name in ("verification.json", "startup.json", "startup.png", "configure.log", "startup.log"):
+                if (report_path.parent / name).exists():
+                    shutil.copyfile(report_path.parent / name, target / name)
+            with gzip.GzipFile(target / "build.log.gz", "wb", mtime=0) as stream:
+                stream.write((report_path.parent / "build.log").read_bytes())
+            print("exported", commit[:8])
+
+
+def progress() -> None:
+    """Summarize committed evidence in recovery/progress.json."""
+    path = REPO / "recovery/progress.json"
+    previous = json.loads(path.read_text()) if path.exists() else {}
+    published = {item["originalCommit"]: item for item in previous.get("snapshots", []) if item.get("published")}
+    snapshots = []
+    for report_path in sorted((REPO / "recovery/evidence").glob("*/verification.json")):
+        report = json.loads(report_path.read_text())
+        commit = report["sourceCommit"]
+        if report.get("status") != "success" or report_path.parent.name != commit:
+            continue
+        item = {
+            "originalCommit": commit,
+            "originalTree": report["sourceTree"],
+            "evidence": report_path.parent.relative_to(REPO).as_posix(),
+            "restoredFilesFingerprint": report["restoration"]["restoredFilesFingerprint"],
+            "toolchainImage": report.get("toolchainImage") or previous.get("toolchainImage"),
+            "validation": "build-and-startup-passed",
+            "published": False,
+        }
+        old = published.get(commit)
+        if old and old.get("restoredFilesFingerprint") == item["restoredFilesFingerprint"]:
+            item.update(published=True, url=old["url"])
+        snapshots.append(item)
+    order = {commit: index for index, commit in enumerate(ORDER)}
+    snapshots.sort(key=lambda item: order.get(item["originalCommit"], len(order)))
+    trees = {item["originalTree"] for item in snapshots}
+    value = {
+        **{
+            key: previous[key]
+            for key in ("ciStatus", "sourceInputsReadyTreeCount", "toolchainImage")
+            if key in previous
+        },
+        "schemaVersion": 1,
+        "status": "in-progress",
+        "targetCommitCount": len(ORDER),
+        "targetTreeCount": len(CATALOG["trees"]),
+        "validatedCommitCount": len(snapshots),
+        "validatedTreeCount": len(trees),
+        "publishedCommitCount": sum(1 for item in snapshots if item["published"]),
+        "snapshots": snapshots,
+    }
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+    print(f"{len(snapshots)} validated commits, {len(trees)} trees")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command", required=True)
+    for name in ("missing", "prep", "carry", "build", "verify", "project"):
+        command = commands.add_parser(name)
+        command.add_argument("ref")
+        if name == "verify":
+            command.add_argument("--recipe")
+        if name == "build":
+            command.add_argument("--incremental", action="store_true")
+            command.add_argument("-n", type=int, default=40)
+    command = commands.add_parser("keep")
+    command.add_argument("ref")
+    command.add_argument("paths", nargs="+")
+    command.add_argument("--note")
+    command = commands.add_parser("auto")
+    command.add_argument("start", type=int)
+    command.add_argument("end", type=int)
+    command.add_argument("--verify", action="store_true", help="also verify startup after each kept tree")
+    commands.add_parser("save")
+    commands.add_parser("export")
+    commands.add_parser("progress")
+    args = parser.parse_args()
+    if args.command == "missing":
+        for entry in missing(resolve(args.ref)):
+            print(entry["originalBlob"][:10], entry["path"])
+    elif args.command == "prep":
+        prep(args.ref)
+    elif args.command == "carry":
+        carry(args.ref)
+    elif args.command == "project":
+        project(args.ref)
+    elif args.command == "build":
+        raise SystemExit(0 if build(args.ref, not args.incremental, args.n) else 1)
+    elif args.command == "verify":
+        raise SystemExit(0 if verify(args.ref, args.recipe) == "success" else 1)
+    elif args.command == "keep":
+        keep(args.ref, args.paths, args.note)
+    elif args.command == "auto":
+        auto(args.start, args.end, args.verify)
+    elif args.command == "save":
+        save()
+    elif args.command == "progress":
+        progress()
+    else:
+        export()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "eventLoop": true,
+    "map": true,
+    "player": true,
+    "renderedFrame": true
+  },
+  "frame": {
+    "height": 718,
+    "path": "/home/user/work/verify/snapshot-_quelp39/smoke/startup.png",
+    "sha256": "c440436340321a125b324ab3011920afe94410886c469112a9ac3cb523ad8519",
+    "width": 1278
+  },
+  "reason": "",
+  "schemaVersion": 1,
+  "status": "ready"
+}

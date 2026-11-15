@@ -15,13 +15,14 @@ import shutil
 import signal
 import struct
 import subprocess
-import sys
 import tempfile
 import time
 import zlib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SMOKE_SOURCE = REPO_ROOT / "recovery/smoke/game_startup.cpp"
+# The historical game targeted Windows; startup runs with case-insensitive file lookup.
+WINDOWS_PATHS_SOURCE = REPO_ROOT / "recovery/smoke/windows_paths.cpp"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 REQUIRED_CHECKS = ("map", "player", "eventLoop", "renderedFrame")
 
@@ -278,6 +279,31 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
     }
 
 
+# Windows import libraries that BFG removed as binaries, mapped to the platform library
+# providing the same API. Only names a historical project links are resolved.
+WINDOWS_LIBRARY_ALIASES = {"zdll": "libz.so"}
+SYSTEM_LIBRARY_DIRS = ("/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib")
+
+
+def prepareLibraryAliases(source_root: Path, build_root: Path) -> dict:
+    """Provide lib<name>.so for Windows import libraries the project links but cannot ship."""
+    projects = "\n".join(path.read_text(errors="replace") for path in source_root.glob("*.pr[oi]"))
+    aliases = {}
+    directory = build_root / "library-aliases"
+    for name, target in WINDOWS_LIBRARY_ALIASES.items():
+        if not re.search(r"-l" + re.escape(name) + r"\b", projects):
+            continue
+        system = next((Path(base) / target for base in SYSTEM_LIBRARY_DIRS if (Path(base) / target).exists()), None)
+        if system is None:
+            raise VerificationError(f"Required historical tool is unavailable: {target} for -l{name}")
+        directory.mkdir(parents=True, exist_ok=True)
+        link = directory / f"lib{name}.so"
+        if not link.is_symlink():
+            link.symlink_to(system)
+        aliases[name] = str(system)
+    return {"directory": str(directory), "aliases": aliases}
+
+
 def loadRecipes(path: Path) -> list[dict]:
     value = json.loads(path.read_text(encoding="utf-8"))
     recipes = value.get("recipes", [])
@@ -409,25 +435,32 @@ def verifySnapshot(
         environment.update({key: str(value) for key, value in recipe.get("environment", {}).items()})
         toolchain = toolchainFingerprint(recipe, environment)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer")
+        libraries = prepareLibraryAliases(source_root, work_root / "observer")
         identity = {
             "sourceTree": tree["tree"],
             "recipe": recipe,
             "toolchain": toolchain,
             "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
             "adapter": hashlib.sha256(SMOKE_SOURCE.read_bytes()).hexdigest(),
+            "fileLookup": hashlib.sha256(WINDOWS_PATHS_SOURCE.read_bytes()).hexdigest(),
+            "libraryAliases": libraries["aliases"],
             "verifier": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "restorer": hashlib.sha256((REPO_ROOT / "scripts/recover_history.py").read_bytes()).hexdigest(),
             "adapterConfig": adapter["configSha256"],
-            "overrides": overrides,
-            "overrideContext": [
-                entry
-                for entry in (overrides or {}).get("entries", [])
-                if entry.get("commit", source_commit) == source_commit
-                and entry.get("tree", tree["tree"]) == tree["tree"]
-            ],
+            # The exact restored file set; unrelated override edits must not invalidate verified results.
+            "restoredFiles": result["restoration"]["restoredFilesFingerprint"],
         }
         fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
-        result.update({"fingerprint": fingerprint, "recipe": recipe, "toolchain": toolchain, "adapter": adapter})
+        result.update(
+            {
+                "libraryAliases": libraries,
+                "fingerprint": fingerprint,
+                "recipe": recipe,
+                "toolchain": toolchain,
+                "toolchainImage": identity["toolchainImage"],
+                "adapter": adapter,
+            }
+        )
         cached_path = output_root / "results" / (fingerprint + ".json")
         if cached_path.is_file():
             cached = json.loads(cached_path.read_text())
@@ -455,6 +488,8 @@ def verifySnapshot(
             "INCLUDEPATH+=" + str(source_root),
             "INCLUDEPATH+=" + str(work_root / "observer"),
         ]
+        if libraries["aliases"]:
+            configure.append("LIBS+=-L" + libraries["directory"])
         result["configure"] = runCommand(configure, build_root, environment, build_timeout, work_root / "configure.log")
         if result["configure"]["returnCode"] != 0:
             reason = "timed out" if result["configure"]["timedOut"] else "failed"
@@ -472,8 +507,35 @@ def verifySnapshot(
         executable = build_root / "RecoveryGame"
         if not executable.is_file():
             raise VerificationError("Build did not produce the actual game executable")
+        preload = work_root / "observer" / "libwindowspaths.so"
+        result["fileLookup"] = runCommand(
+            [
+                recipe.get("compilerCommand", "g++"),
+                "-shared",
+                "-fPIC",
+                "-O2",
+                "-std=c++11",
+                "-o",
+                str(preload),
+                str(WINDOWS_PATHS_SOURCE),
+                "-ldl",
+            ],
+            work_root,
+            environment,
+            build_timeout,
+            work_root / "file-lookup.log",
+        )
+        if result["fileLookup"]["returnCode"] != 0:
+            raise VerificationError("Could not build the case-insensitive file lookup shim; inspect file-lookup.log")
+        result["fileLookup"]["semantics"] = "Windows-style case-insensitive file lookup for the game process"
         artifact_dir = work_root / "smoke"
-        result["smoke"] = runSmoke(executable, source_root, artifact_dir, environment=environment, timeout=timeout)
+        result["smoke"] = runSmoke(
+            ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
+            source_root,
+            artifact_dir,
+            environment=environment,
+            timeout=timeout,
+        )
         result["smoke"]["startupReport"] = str(artifact_dir / "startup.json")
         result["artifactDir"] = str(artifact_dir)
         result["status"] = result["smoke"]["status"]

@@ -245,6 +245,44 @@ class HistoricalRecoveryTest(unittest.TestCase):
         self.assertEqual(exact, (output / "exact.cpp").read_bytes())
         self.assertEqual(b"int contextual;\n", (output / "lost.cpp").read_bytes())
 
+    def testOriginalBlobReconstructionAppliesWhereverThatContentWasRemoved(self):
+        lost = "e" * 40
+        first = self.commit({"src/a.cpp" + recovery.MARKER_SUFFIX: lost.encode() + b"\n"}, ref="refs/heads/one")
+        moved = self.commit({"lib/b.cpp" + recovery.MARKER_SUFFIX: lost.encode() + b"\n"}, ref="refs/heads/two")
+        catalog = recovery.auditHistory(self.repo)
+        donor, rebuilt, pinned = (self.blob(text) for text in (b"int donor;\n", b"int rebuilt;\n", b"int pinned;\n"))
+        tree = next(item["tree"] for item in catalog["commits"] if item["commit"] == first)
+        overrides = {
+            "entries": [
+                {"path": "src/a.cpp", "blob": donor, "tree": tree, "provenance": "unverified donor"},
+                {"originalBlob": lost, "blob": rebuilt, "provenance": "verified content reconstruction"},
+            ]
+        }
+        for commit, path in ((first, "src/a.cpp"), (moved, "lib/b.cpp")):
+            output = self.root / ("blob-" + commit[:8])
+            report = recovery.restoreSnapshot(self.repo, catalog, commit, output, overrides)
+            self.assertEqual(b"int rebuilt;\n", (output / path).read_bytes())
+            self.assertEqual("verified content reconstruction", report["restored"][0]["provenance"])
+        overrides["entries"].append({"path": "src/a.cpp", "blob": pinned, "commit": first, "provenance": "explicit"})
+        recovery.restoreSnapshot(self.repo, catalog, first, self.root / "pinned", overrides)
+        self.assertEqual(b"int pinned;\n", (self.root / "pinned" / "src/a.cpp").read_bytes())
+        survivor = self.commit({"keep.h": b"int header;\n", "other.h": b"int other;\n"}, ref="refs/heads/three")
+        catalog = recovery.auditHistory(self.repo)
+        repair = {"originalBlob": self.blob(b"int header;\n"), "blob": self.blob(b"int repaired;\n")}
+        repair.update({"replaceExisting": True, "provenance": "content-keyed compatibility repair"})
+        output = self.root / "repaired"
+        report = recovery.restoreSnapshot(self.repo, catalog, survivor, output, {"entries": [repair]})
+        self.assertEqual(b"int repaired;\n", (output / "keep.h").read_bytes())
+        self.assertEqual(b"int other;\n", (output / "other.h").read_bytes())
+        self.assertEqual(["compatibilityRepair"], [item["method"] for item in report["restored"]])
+        for invalid in ({"tree": tree}, {"add": True}, {"originalBlob": "not-a-sha"}):
+            entry = {"originalBlob": lost, "blob": rebuilt, "provenance": "invalid", **invalid}
+            with self.subTest(invalid=invalid), self.assertRaises(recovery.RecoveryError):
+                recovery.restoreSnapshot(self.repo, catalog, moved, self.root / "x", {"entries": [entry]})
+        duplicate = {"originalBlob": lost, "blob": rebuilt, "provenance": "duplicate"}
+        with self.assertRaisesRegex(recovery.RecoveryError, "Duplicate original blob"):
+            recovery.restoreSnapshot(self.repo, catalog, moved, self.root / "y", {"entries": [duplicate] * 2})
+
     def testPathTraversalAndEscapingSymlinksAreRejected(self):
         for path in ("../escape", "/absolute", ".git/config", "foo/../../escape", "foo\\escape", "foo/./bar"):
             with self.subTest(path=path), self.assertRaises(recovery.RecoveryError):
