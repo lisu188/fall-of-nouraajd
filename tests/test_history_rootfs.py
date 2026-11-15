@@ -18,6 +18,7 @@ from scripts import history_rootfs as rootfs
 from scripts import history_workbench as workbench
 from scripts import recover_history as recovery
 from tests import test_history_recovery as fixtures
+from tests.test_history_smoke import pngBytes
 
 
 def layerBytes(entries):
@@ -258,6 +259,19 @@ class HistoryWorkbenchEvidenceTest(unittest.TestCase):
             fingerprint = recovery.prepareSnapshot(objects, catalog, commit, overrides)[1]["restoredFilesFingerprint"]
         self.report = directory / "evidence" / commit / "verification.json"
         self.report.parent.mkdir(parents=True)
+        startup = {
+            "schemaVersion": 1,
+            "status": "ready",
+            "checks": {name: True for name in workbench.vh.REQUIRED_CHECKS},
+            "frame": {
+                "path": "/removed/private/artifacts/startup.png",
+                "width": 2,
+                "height": 1,
+                "sha256": hashlib.sha256(pngBytes()).hexdigest(),
+            },
+        }
+        (self.report.parent / "startup.json").write_text(json.dumps(startup))
+        (self.report.parent / "startup.png").write_bytes(pngBytes())
         self.report.write_text(
             json.dumps(
                 {
@@ -266,6 +280,7 @@ class HistoryWorkbenchEvidenceTest(unittest.TestCase):
                     "status": "success",
                     "toolchainImage": "sha256:" + "a" * 64,
                     "restoration": {"restoredFilesFingerprint": fingerprint},
+                    "smoke": {"startup": startup},
                 }
             )
         )

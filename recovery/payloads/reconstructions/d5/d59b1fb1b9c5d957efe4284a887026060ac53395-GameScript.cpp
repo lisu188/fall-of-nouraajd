@@ -104,7 +104,7 @@ class CInteractionWrapper : public CInteraction, public wrapper<CInteractionWrap
 
 template <class Result> struct PythonPotionCall {
     static Result call(override function, CCreature *creature) {
-        return extract<Result>(function(boost::ref(creature)));
+        return function(boost::ref(creature)).template as<Result>();
     }
 };
 

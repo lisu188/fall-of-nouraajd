@@ -1,0 +1,156 @@
+{
+  "accessibleRepositories": [
+    "pyxmms",
+    "jexperiments",
+    "musicweb",
+    "jdosbox",
+    "javaboy",
+    "bgscripts",
+    "sdl2-cmake",
+    "cexperiments",
+    "terminal-messenger",
+    "clash-disassembly",
+    "awtvalidator",
+    "tc-config",
+    "zhp-pg",
+    "tensorflow-experiments",
+    "tetris3d",
+    "northwind-hibernate",
+    "spring-scala",
+    "ask-mongo"
+  ],
+  "accessibleRepositoryCount": 18,
+  "cexperiments": {
+    "defaultBranch": "master",
+    "firstCommitDate": "2016-04-11T19:53:58+00:00",
+    "historyCommitCount": 6,
+    "historyPaginationComplete": true,
+    "lastCommitDate": "2019-09-07T18:38:51+00:00",
+    "rootTrees": [
+      {
+        "commit": "cd4f4556e45b1fe89feb4e3718e1eb26ab59dba1",
+        "paths": [
+          "clife",
+          "cneuro",
+          "CMakeLists.txt"
+        ],
+        "url": "https://bitbucket.org/andrzej_lis3/cexperiments/src/cd4f4556e45b1fe89feb4e3718e1eb26ab59dba1/"
+      },
+      {
+        "commit": "13ff3e099fd4e45ee1594ee56a8f7f2ee47d49f4",
+        "paths": [
+          "clife",
+          "cmake",
+          "cneuro",
+          "CMakeLists.txt"
+        ],
+        "url": "https://bitbucket.org/andrzej_lis3/cexperiments/src/13ff3e099fd4e45ee1594ee56a8f7f2ee47d49f4/"
+      },
+      {
+        "commit": "49b3f01bbd7dbeaac4b90742197250afba32d354",
+        "paths": [
+          "cevolution",
+          "clife",
+          "cmake",
+          "cneuro",
+          "CMakeLists.txt"
+        ],
+        "url": "https://bitbucket.org/andrzej_lis3/cexperiments/src/49b3f01bbd7dbeaac4b90742197250afba32d354/"
+      },
+      {
+        "commit": "67e35815c3f653ccd615ce8eb7d3f27f3705bdec",
+        "paths": [
+          "cevolution",
+          "clife",
+          "cmake",
+          "cneuro",
+          "vstd",
+          ".gitignore",
+          ".gitmodules",
+          "CMakeLists.txt"
+        ],
+        "url": "https://bitbucket.org/andrzej_lis3/cexperiments/src/67e35815c3f653ccd615ce8eb7d3f27f3705bdec/"
+      },
+      {
+        "commit": "79557b4db8f3cc79536d27d0a8ae96b9c208a845",
+        "paths": [
+          "cevolution",
+          "clife",
+          "cmake",
+          "cneuro",
+          "vstd",
+          ".gitignore",
+          ".gitmodules",
+          "CMakeLists.txt"
+        ],
+        "url": "https://bitbucket.org/andrzej_lis3/cexperiments/src/79557b4db8f3cc79536d27d0a8ae96b9c208a845/"
+      },
+      {
+        "commit": "811ad10e3fcf5ae52c1212804fffeda0288fcc7b",
+        "paths": [
+          "cevolution",
+          "cmake",
+          "cneuro",
+          "vstd",
+          ".gitignore",
+          ".gitmodules",
+          "CMakeLists.txt"
+        ],
+        "url": "https://bitbucket.org/andrzej_lis3/cexperiments/src/811ad10e3fcf5ae52c1212804fffeda0288fcc7b/"
+      }
+    ],
+    "uuid": "bc2922db-4af0-4afa-8757-3df69410e3f9"
+  },
+  "connectorWorkaround": {
+    "dotPathStatusCode": 400,
+    "omittedOrEmptyPathStatusCode": 404,
+    "operation": "getBitbucketRepoFileContent",
+    "rootPath": "/",
+    "rootSlashStatusCode": 200
+  },
+  "directGameRepositoryLookups": [
+    {
+      "classification": "Not Found under connected account; absence and inaccessible repository not distinguishable",
+      "repository": "fall-of-nouraajd",
+      "statusCode": 404
+    },
+    {
+      "classification": "Not Found under connected account; absence and inaccessible repository not distinguishable",
+      "repository": "nouraajd",
+      "statusCode": 404
+    }
+  ],
+  "exactOriginalBlobMatches": 0,
+  "filesDownloaded": 0,
+  "gitRefFallback": {
+    "command": "timeout 30 env GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git ls-remote https://bitbucket.org/andrzej_lis3/cexperiments.git",
+    "exitCode": 128,
+    "reason": "No Bitbucket Git credentials; terminal prompts disabled"
+  },
+  "limitation": "Connector supplies get-branch but no branch/tag enumeration; alternate branches and deleted/inaccessible repositories not exhausted. No raw clone access through this connector.",
+  "observedDate": "2026-11-15",
+  "otherCurrentRoots": {
+    "clash-disassembly": [
+      "clash.c"
+    ],
+    "sdl2-cmake": [
+      "FindSDL2.cmake",
+      "FindSDL2_image.cmake",
+      "FindSDL2_ttf.cmake"
+    ],
+    "tetris3d": [
+      ".gitignore",
+      "README.md",
+      "index.html",
+      "tetris3d.js",
+      "three.min.js",
+      "todo.txt"
+    ]
+  },
+  "refsModified": false,
+  "remoteMutations": false,
+  "schemaVersion": 1,
+  "source": "Read-only Atlassian Bitbucket connector; observations retained from live tool responses",
+  "workspace": "andrzej_lis3",
+  "workspaceUuid": "068cf80c-88c8-4127-aac4-a76c7851ef7c"
+}

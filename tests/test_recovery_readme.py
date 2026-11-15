@@ -5,11 +5,13 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import shlex
 import tempfile
 import unittest
 
 from scripts.recovery_readme import snapshotDocumentation
-from scripts.verify_history import REQUIRED_CHECKS, VerificationError
+from scripts import history_source_prep
+from scripts.verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError
 from tests.test_history_smoke import pngBytes
 
 
@@ -70,6 +72,85 @@ class RecoveryReadmeTest(unittest.TestCase):
         self.assertEqual("startup.png", metadata["smoke"]["startup"]["frame"]["path"])
         self.assertEqual("/original/build/startup.png", self.report["smoke"]["startup"]["frame"]["path"])
 
+    def editorReport(self):
+        self.report["startupMode"] = "editor"
+        self.report["startupSelection"] = {
+            "mode": "editor",
+            "originalInputs": [
+                {"path": name, "blob": "d" * 40, "sha256": "e" * 64} for name in ("main.cpp", "config/init.json")
+            ],
+        }
+        startup = self.report["smoke"]["startup"]
+        startup.update(mode="editor", checks={name: True for name in EDITOR_CHECKS})
+        (self.evidence / "startup.json").write_text(json.dumps(startup))
+
+    def testAuthoredEditorDocumentationStatesItsValidationBoundary(self):
+        self.editorReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        readme = files["README.md"].decode()
+        self.assertIn("# Recovered editor snapshot", readme)
+        self.assertIn("Gameplay and player behavior were not verified", readme)
+        self.assertNotIn("healthy player", readme)
+        self.assertIn("config/init.json", readme)
+
+    def testEditorDocumentationRequiresOriginalEntrypointAndConfigurationPins(self):
+        self.editorReport()
+        for change in ("mode", "missing", "hash", "duplicate"):
+            with self.subTest(change=change):
+                report = copy.deepcopy(self.report)
+                selection = report["startupSelection"]
+                if change == "mode":
+                    selection["mode"] = "game"
+                elif change == "missing":
+                    selection["originalInputs"].pop()
+                elif change == "hash":
+                    selection["originalInputs"][0]["sha256"] = "bad"
+                else:
+                    selection["originalInputs"].append(selection["originalInputs"][0])
+                with self.assertRaises(VerificationError):
+                    snapshotDocumentation(report, self.evidence)
+
+    def testEditorModeCannotReplaceGameReadinessInDocumentation(self):
+        self.editorReport()
+        self.report["startupMode"] = "game"
+        with self.assertRaises(VerificationError):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def testReviewedForcedIncludeRemainsOnePortableQmakeArgument(self):
+        flag = "QMAKE_CXXFLAGS+=-include functional"
+        self.report["recipe"]["qmakeArguments"] = ["QMAKE_CXX=g++-5", flag]
+        files = snapshotDocumentation(self.report, self.evidence)
+        line = next(line for line in files["README.md"].decode().splitlines() if line.startswith("qmake "))
+        self.assertEqual(
+            ["qmake", "Game.pro", "QMAKE_CXX=g++-5", flag, "-after", "TARGET=RecoveryGame", "DESTDIR=."],
+            shlex.split(line),
+        )
+
+    def testReviewedProviderIncludePreservesLiteralQmakeExpansion(self):
+        flag = "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"
+        self.report["recipe"]["qmakeArguments"] = [flag]
+        files = snapshotDocumentation(self.report, self.evidence)
+        line = next(line for line in files["README.md"].decode().splitlines() if line.startswith("qmake "))
+        self.assertEqual(
+            ["qmake", "Game.pro", flag, "-after", "TARGET=RecoveryGame", "DESTDIR=."],
+            shlex.split(line),
+        )
+
+    def testUnreviewedCompilerWhitespaceAndShellFragmentsAreRejected(self):
+        for flag in (
+            "QMAKE_CXXFLAGS+=-include unreviewed",
+            "QMAKE_CXXFLAGS+=-include functional;id",
+            "QMAKE_CXXFLAGS+=$(id)",
+            "QMAKE_CXXFLAGS+=`id`",
+            "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider;id",
+            "INCLUDEPATH+=$(id)/provider",
+            "QMAKE_CXXFLAGS+=-include functional\nid",
+        ):
+            with self.subTest(flag=flag):
+                self.report["recipe"]["qmakeArguments"] = [flag]
+                with self.assertRaisesRegex(VerificationError, "reviewed portable command"):
+                    snapshotDocumentation(self.report, self.evidence)
+
     def testUnverifiedOrIncompleteRecoveryCannotAttachDocumentation(self):
         for modification in ("status", "restore", "configure", "build", "smoke", "fingerprint"):
             with self.subTest(modification=modification):
@@ -106,6 +187,147 @@ class RecoveryReadmeTest(unittest.TestCase):
     def testVisibleDesktopStartupCannotBePublishedAsVerified(self):
         self.report["smoke"]["command"] = ["Game"]
         with self.assertRaisesRegex(VerificationError, "Xvfb"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def addSourcePreparation(self):
+        generated = {"path": "gen/prop.h", "before": None, "after": {"kind": "file", "sha256": "d" * 64}}
+        changed = {
+            "path": "src/Stats.h",
+            "before": {"kind": "file", "sha256": "e" * 64},
+            "after": {"kind": "file", "sha256": "f" * 64},
+        }
+        preparation = {
+            "status": "success",
+            "steps": [
+                {"name": "interpreter", "command": ["python2.7", "--version"], "returnCode": 0, "timedOut": False},
+                {
+                    "name": "generator",
+                    "command": ["python2.7", "-B", "preprocessor.py"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                },
+            ],
+            "outputs": [generated, changed],
+            "identity": {
+                "implementationSha256": "1" * 64,
+                "interpreter": "Python 2.7.18",
+                "inputs": {
+                    "preprocessor.py": {"kind": "file", "sha256": "2" * 64},
+                    "classes.json": {"kind": "file", "sha256": "3" * 64},
+                },
+                "outputs": [generated, changed],
+            },
+        }
+        self.report["sourcePreparation"] = preparation
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_bytes(b"Python 2.7.18\nOriginal generator completed\n")
+
+    def testOriginalGeneratorInstructionsAndProofAreAttachedBeforeQmake(self):
+        self.addSourcePreparation()
+        before = copy.deepcopy(self.report)
+        files = snapshotDocumentation(self.report, self.evidence)
+        readme = files["README.md"].decode()
+        self.assertIn("separate build copy", readme)
+        self.assertLess(readme.index("python2.7 -B preprocessor.py"), readme.index("qmake Game.pro"))
+        self.assertIn("before/after hashes", readme)
+        for name in ("source-preparation.json", "source-preparation.log"):
+            self.assertEqual((self.evidence / name).read_bytes(), files["recovery/" + name])
+            attached = json.loads(files["recovery/verification.json"])["attachedSourcePreparation"][name]
+            self.assertEqual(hashlib.sha256(files["recovery/" + name]).hexdigest(), attached["sha256"])
+        self.assertEqual(before, self.report)
+
+    def testSourcePreparationRequiresSuccessfulMatchingProofAndLog(self):
+        for modification in (
+            "failed",
+            "failed-command",
+            "wrong-interpreter",
+            "missing-report",
+            "different-report",
+            "missing-log",
+        ):
+            with self.subTest(modification=modification):
+                self.addSourcePreparation()
+                if modification == "failed":
+                    self.report["sourcePreparation"]["status"] = "failed"
+                elif modification == "failed-command":
+                    self.report["sourcePreparation"]["steps"][1]["returnCode"] = 1
+                elif modification == "wrong-interpreter":
+                    self.report["sourcePreparation"]["identity"]["interpreter"] = "Python 3.12.9"
+                elif modification == "missing-report":
+                    (self.evidence / "source-preparation.json").unlink()
+                elif modification == "different-report":
+                    (self.evidence / "source-preparation.json").write_text("{}")
+                else:
+                    (self.evidence / "source-preparation.log").unlink()
+                with self.assertRaises(VerificationError):
+                    snapshotDocumentation(self.report, self.evidence)
+
+    def testTreesWithoutGeneratorsKeepTheSameDocumentationBytes(self):
+        expected = snapshotDocumentation(self.report, self.evidence)
+        self.report["sourcePreparation"] = {"status": "not-required", "steps": [], "outputs": [], "identity": {}}
+        actual = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(expected["README.md"], actual["README.md"])
+        self.assertEqual(set(expected), set(actual))
+
+    def addIncludePreparation(self):
+        source = self.evidence / "build-source"
+        (source / "view").mkdir(parents=True)
+        (source / "view/gamescene.cpp").write_bytes(b'#include "view\\playerlistview.h"\n')
+        (source / "view/playerlistview.h").write_text("struct PlayerListView {};\n")
+        preparation = history_source_prep.prepareSources(source, self.evidence / "preparation", {}, {}, None)
+        self.report["sourcePreparation"] = preparation
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_bytes(Path(preparation["steps"][0]["log"]).read_bytes())
+
+    def testIncludeOnlyPreparationAttachesHashPinnedHelperWithoutGeneratorClaims(self):
+        self.addIncludePreparation()
+        files = snapshotDocumentation(self.report, self.evidence)
+        readme = files["README.md"].decode()
+        self.assertLess(readme.index("python3 recovery/prepare_build_sources.py"), readme.index("qmake Game.pro"))
+        self.assertIn("separate build copy", readme)
+        self.assertNotIn("python2.7 -B preprocessor.py", readme)
+        self.assertIn("recovery/prepare_build_sources.py", files)
+        metadata = json.loads(files["recovery/verification.json"])
+        self.assertEqual(
+            hashlib.sha256(files["recovery/prepare_build_sources.py"]).hexdigest(),
+            metadata["attachedSourcePreparation"]["prepare_build_sources.py"]["sha256"],
+        )
+
+    def testPortableHelperMustMatchTheVerifiedPreparationSemantics(self):
+        self.addIncludePreparation()
+        self.report["sourcePreparation"]["identity"]["includeReplaySha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "verified semantics"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def testRuntimeSavePrerequisiteIsRecordedAndExplainedWithoutSourceEdits(self):
+        self.report["runtimePreparation"] = {
+            "status": "ready",
+            "directories": [{"path": "save", "created": True, "preservedExisting": False}],
+            "identity": {
+                "directories": [
+                    {
+                        "path": "save",
+                        "requiredBy": [
+                            {
+                                "source": "view/gamescene.cpp",
+                                "sha256": "4" * 64,
+                                "line": 50,
+                                "operation": 'fopen("save/game.sav", "w+")',
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+        files = snapshotDocumentation(self.report, self.evidence)
+        readme = files["README.md"].decode()
+        self.assertLess(readme.index("mkdir -p save"), readme.index("./RecoveryGame"))
+        self.assertIn("without changing source files or replacing existing save data", readme)
+        self.assertEqual(
+            self.report["runtimePreparation"], json.loads(files["recovery/verification.json"])["runtimePreparation"]
+        )
+        self.report["runtimePreparation"]["identity"]["directories"][0]["path"] = "../save"
+        with self.assertRaisesRegex(VerificationError, "contained runtime"):
             snapshotDocumentation(self.report, self.evidence)
 
 

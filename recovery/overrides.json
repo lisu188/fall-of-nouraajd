@@ -2805,9 +2805,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "089c528a35d35bd8552372f851b19db02097104f"
     },
     {
@@ -2819,9 +2819,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "089c528a35d35bd8552372f851b19db02097104f"
     },
     {
@@ -6935,9 +6935,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
     },
     {
@@ -6949,9 +6949,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
     },
     {
@@ -11685,9 +11685,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
     },
     {
@@ -11699,9 +11699,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
     },
     {
@@ -13872,9 +13872,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
     },
     {
@@ -13886,9 +13886,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
     },
     {
@@ -18311,9 +18311,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
     },
     {
@@ -18325,9 +18325,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
     },
     {
@@ -21730,9 +21730,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
     },
     {
@@ -21744,9 +21744,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
     },
     {
@@ -22923,9 +22923,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
     },
     {
@@ -22937,9 +22937,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
     },
     {
@@ -26995,9 +26995,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
     },
     {
@@ -27009,9 +27009,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
     },
     {
@@ -30777,9 +30777,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
     },
     {
@@ -30791,9 +30791,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
     },
     {
@@ -31165,9 +31165,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
     },
     {
@@ -31179,9 +31179,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
     },
     {
@@ -32144,9 +32144,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
     },
     {
@@ -32158,9 +32158,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
     },
     {
@@ -38660,9 +38660,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
     },
     {
@@ -38674,9 +38674,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
     },
     {
@@ -45265,9 +45265,10 @@
       "tree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=34",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/8016ebd2e7fba6fb81c0e34d57fd729556e1ab29-images.qrc",
       "tree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29"
     },
     {
@@ -51129,9 +51130,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
     },
     {
@@ -51143,9 +51144,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
     },
     {
@@ -57046,9 +57047,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15"
     },
     {
@@ -57060,9 +57061,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15"
     },
     {
@@ -57440,9 +57441,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
     },
     {
@@ -57454,9 +57455,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
     },
     {
@@ -57853,9 +57854,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
     },
     {
@@ -57867,9 +57868,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
     },
     {
@@ -58665,9 +58666,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
     },
     {
@@ -58679,9 +58680,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
     },
     {
@@ -63437,9 +63438,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
     },
     {
@@ -63451,9 +63452,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
     },
     {
@@ -65629,9 +65630,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
     },
     {
@@ -65643,9 +65644,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
     },
     {
@@ -72367,9 +72368,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
     },
     {
@@ -72381,9 +72382,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
     },
     {
@@ -80369,9 +80370,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
     },
     {
@@ -80383,9 +80384,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
     },
     {
@@ -89779,9 +89780,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "f9b16149815272e9ec71b4a69061479d1979e398"
     },
     {
@@ -89793,9 +89794,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "f9b16149815272e9ec71b4a69061479d1979e398"
     },
     {
@@ -93705,28 +93706,28 @@
       "originalBlob": "3f316734691ebbdb56729576bf2bbb8f35b5134c",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted validated e80827d4 reconstruction to the original #40 named constructor and removed levelling member; read levelling from the consolidated template",
-      "sha256": "a4b00c6d01ed9f2ddb49c4778d0390023148918c2016dcd5eaca7c911d62a2e9",
+      "sha256": "c85ec29420e29ae0fb56e69bfae5f0201a8627c7c52b2d6ae7f9f36837aa36d0",
       "source": "payloads/reconstructions/3f/3f316734691ebbdb56729576bf2bbb8f35b5134c-creature.cpp"
     },
     {
       "originalBlob": "a65529111e0aa02ab4d1951832f5122bf15c548d",
       "path": "creatures/player.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted validated 7f754424 reconstruction with the original #40 Player(Map*,std::string) delegating constructor",
-      "sha256": "f6b46b71dca5f0267ff4db2065f15a652864bd3d440a8cf0696070c91440f1a8",
+      "sha256": "ce757605369cc503ebf31aa1581eb3d67e7ac9dd2509b5d062336f9a8a2f5957",
       "source": "payloads/reconstructions/a6/a65529111e0aa02ab4d1951832f5122bf15c548d-player.cpp"
     },
     {
       "originalBlob": "30d834915bc5709c30abbf7f1d816b859694f955",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried validated 3843e147 reconstruction; surviving #40 map.h has unchanged APIs, so no unsupported implementation changes inferred",
-      "sha256": "7a3f534eaba6c2952de46e5d435af6425c6e1fb8993e8f9b61a5861207500e00",
+      "sha256": "8e01c6c63bc3b203d9673523fc9dd179e6093a3feecab9c55c99ef3b2b194898",
       "source": "payloads/reconstructions/30/30d834915bc5709c30abbf7f1d816b859694f955-map.cpp"
     },
     {
       "originalBlob": "4aa58bb761dc05e60a9718ed1796cf871c5d993b",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted validated f1dcf296 reconstruction to Player(map,\"Warrior\") and the consolidated creature configuration; retained map initialization",
-      "sha256": "ce13bd1d85bb8dac5c0cb7b9940e2455258de103a99844c05c577145a08b6cfb",
+      "sha256": "a182254b36ea6661c1c4ac5819c9e4bc7bd19ef35b6691026955c0017e5ddce9",
       "source": "payloads/reconstructions/4a/4aa58bb761dc05e60a9718ed1796cf871c5d993b-gamescene.cpp"
     },
     {
@@ -93740,28 +93741,28 @@
       "originalBlob": "6c345d0a22a99c2e55e236cb6c612319a67ce70a",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #40 reconstruction to the original #41 Creature(name,config,map) and Creature(name,map); retain explicit name across load/save",
-      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "sha256": "280751fdbbc79765e304021f27b090e8d06f2ac8f8103509cc746a70e652fd28",
       "source": "payloads/reconstructions/6c/6c345d0a22a99c2e55e236cb6c612319a67ce70a-creature.cpp"
     },
     {
       "originalBlob": "99fd0199f17296ad33efb8289ca1e35a15d49a6e",
       "path": "creatures/player.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #40 reconstruction to both original #41 Player(name,...) constructors",
-      "sha256": "d315163b4b004e86d828eec06aacfa8f5c626c680f7e61b04ca5e266f834d9ad",
+      "sha256": "cade04bfc46c52c6a551055c99dbb11129bff05c1bc56c862f7de8254a190daf",
       "source": "payloads/reconstructions/99/99fd0199f17296ad33efb8289ca1e35a15d49a6e-player.cpp"
     },
     {
       "originalBlob": "88455c8890eb38ccfedd5662431734912f1812ff",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted prepared #40 map reconstruction to original #41 implicit Map constructor; group saved objects by className because original Cave no longer serializes its name",
-      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "sha256": "3b911f8b365125153e581c0c55bd5a3a4db4a9983ab8b566963034457b45da72",
       "source": "payloads/reconstructions/88/88455c8890eb38ccfedd5662431734912f1812ff-map.cpp"
     },
     {
       "originalBlob": "65065f71dc354ee9c7a44541f0d5a66f8b4a8b6b",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #40 scene reconstruction to the original #41 Player(name,map) constructor",
-      "sha256": "3cdc762bf925aac4535b9dcef16587a30ab5d67aa98e8d56cbe6744f82ff52c6",
+      "sha256": "b32cd384933d0e6453ea2e75ab47e299d79a4c6fed87ef8c2af1fd44d65bdc85",
       "source": "payloads/reconstructions/65/65065f71dc354ee9c7a44541f0d5a66f8b4a8b6b-gamescene.cpp"
     },
     {
@@ -93775,56 +93776,56 @@
       "originalBlob": "1b17e6c3f32ae5c5e183b78098cf3c98a5198679",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #44; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "sha256": "280751fdbbc79765e304021f27b090e8d06f2ac8f8103509cc746a70e652fd28",
       "source": "payloads/reconstructions/1b/1b17e6c3f32ae5c5e183b78098cf3c98a5198679-creature.cpp"
     },
     {
       "originalBlob": "5a0ff31ca6d70975373da32a66f6310ab2ed71c4",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #45; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "sha256": "3b911f8b365125153e581c0c55bd5a3a4db4a9983ab8b566963034457b45da72",
       "source": "payloads/reconstructions/5a/5a0ff31ca6d70975373da32a66f6310ab2ed71c4-map.cpp"
     },
     {
       "originalBlob": "c447e306339717ef0811af79a33a81617f09f229",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "sha256": "280751fdbbc79765e304021f27b090e8d06f2ac8f8103509cc746a70e652fd28",
       "source": "payloads/reconstructions/c4/c447e306339717ef0811af79a33a81617f09f229-creature.cpp"
     },
     {
       "originalBlob": "a30de926e5e0c017a7105e32bb69756696d558df",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "sha256": "3b911f8b365125153e581c0c55bd5a3a4db4a9983ab8b566963034457b45da72",
       "source": "payloads/reconstructions/a3/a30de926e5e0c017a7105e32bb69756696d558df-map.cpp"
     },
     {
       "originalBlob": "4f9ff371398e2a3671f80d9a157ba8ffa65f00cf",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "3cdc762bf925aac4535b9dcef16587a30ab5d67aa98e8d56cbe6744f82ff52c6",
+      "sha256": "b32cd384933d0e6453ea2e75ab47e299d79a4c6fed87ef8c2af1fd44d65bdc85",
       "source": "payloads/reconstructions/4f/4f9ff371398e2a3671f80d9a157ba8ffa65f00cf-gamescene.cpp"
     },
     {
       "originalBlob": "68660900e3fbcc7fa0cc93854dc17eacfc972a39",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #47; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "5431f0d43a214bca452fa0137b9ccec48b7eb3bcdee33b03f217db3108330b8a",
+      "sha256": "3b911f8b365125153e581c0c55bd5a3a4db4a9983ab8b566963034457b45da72",
       "source": "payloads/reconstructions/68/68660900e3fbcc7fa0cc93854dc17eacfc972a39-map.cpp"
     },
     {
       "originalBlob": "458afea928cabc3914ed4128f3c6ad74edc17b60",
       "path": "creatures/player.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #48; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown",
-      "sha256": "d315163b4b004e86d828eec06aacfa8f5c626c680f7e61b04ca5e266f834d9ad",
+      "sha256": "cade04bfc46c52c6a551055c99dbb11129bff05c1bc56c862f7de8254a190daf",
       "source": "payloads/reconstructions/45/458afea928cabc3914ed4128f3c6ad74edc17b60-player.cpp"
     },
     {
       "originalBlob": "7ba80885eab2c1308f92b91878bc9a4841a5806e",
       "path": "interactions/interaction.cpp",
       "provenance": "content reconstruction of the BFG-removed original; extended validated c609dca2 reconstruction with three #49 declarations, configuration entries and exact surviving Effect handlers; original durations are missing, so reconstructed durations are 4/6/3 turns for Mutilation/LethalPoison/Chloroform",
-      "sha256": "47500823e98ffd28b2e7f79d606318c3b375cf549f518fa0cd2dba53aeff9954",
+      "sha256": "775f99bab5c71b25c685b789a119f7300bb8e1fa565e3068e9af61b87dd22173",
       "source": "payloads/reconstructions/7b/7ba80885eab2c1308f92b91878bc9a4841a5806e-interaction.cpp"
     },
     {
@@ -93838,7 +93839,7 @@
       "originalBlob": "10b4ea058ec42ba8902b8ead95782573a613057f",
       "path": "interactions/interaction.cpp",
       "provenance": "content reconstruction of the BFG-removed original; extended #49 reconstruction with #50 Backstab declaration and config entry; original formula is unavailable, so reconstructed damage is twice getDmg()",
-      "sha256": "16841c4f0b15c542279f9727bdce859626554e8cec8b4f9527d23acbef5a302c",
+      "sha256": "973735cfa485ddba5a16bc40ab319b7bfa39930ae52a82e0bec04afca99e4444",
       "source": "payloads/reconstructions/10/10b4ea058ec42ba8902b8ead95782573a613057f-interaction.cpp"
     },
     {
@@ -93852,7 +93853,7 @@
       "originalBlob": "69a1ab3d511c22a99e4faa62b91ba56e5096ff69",
       "path": "interactions/interaction.cpp",
       "provenance": "content reconstruction of the BFG-removed original; extended #50 reconstruction with #51 Bloodlash declaration, config and exact surviving Effect handler; original duration is unavailable, so reconstructed duration is four turns",
-      "sha256": "6165cf17bfa3f587377050ec95582652dee26a7f5a5bb442a66f32d52ffe9e48",
+      "sha256": "1343799cc03f0457c6c711817b03f7942825b9c59e00dd96ae904870082e1c25",
       "source": "payloads/reconstructions/69/69a1ab3d511c22a99e4faa62b91ba56e5096ff69-interaction.cpp"
     },
     {
@@ -93866,7 +93867,7 @@
       "originalBlob": "a773dc67c031e66b427e85b301ae19f37c8da1b1",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried #46 creature reconstruction; #51 only changes levelUp to nonvirtual in surviving header and requires no implementation adaptation",
-      "sha256": "4ea5173bb1d5512fe7d63220e6b74546e6ec5cc824c614d0fe18dd711800b051",
+      "sha256": "280751fdbbc79765e304021f27b090e8d06f2ac8f8103509cc746a70e652fd28",
       "source": "payloads/reconstructions/a7/a773dc67c031e66b427e85b301ae19f37c8da1b1-creature.cpp"
     },
     {
@@ -93880,112 +93881,112 @@
       "originalBlob": "dc199170c7952690559bd1826b18b43eeb5cd8fa",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #51 reconstruction to surviving #52 removal of bonusLevel and addition of getLevelStats(); obtain per-level stats from the consolidated template",
-      "sha256": "e6ba3993860a25cf0c21b92c4a2ce633a6e0257d17cab216cc5ff3c40e3c74e1",
+      "sha256": "cbf7c3b0194851d76f884a6724801c72926e778abb07e4eee5fb752fa8f5eab3",
       "source": "payloads/reconstructions/dc/dc199170c7952690559bd1826b18b43eeb5cd8fa-creature.cpp"
     },
     {
       "originalBlob": "fb8ad2edcb09fc611f86ed27a375aa897cc58985",
       "path": "creatures/player.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #48 reconstruction to original #52 tile header and entered-object API consumed by surviving PlayerAnimation callback",
-      "sha256": "cd3afbceb295188856366d2d2f5dec0fecf2423785f84a1ba0c46be98efd31d8",
+      "sha256": "6c8cc26e6e1e0875fad07d96e232160ea0b7dd67ea9cb7aa5b1672f045e5087d",
       "source": "payloads/reconstructions/fb/fb8ad2edcb09fc611f86ed27a375aa897cc58985-player.cpp"
     },
     {
       "originalBlob": "ee3a67852023521062a7cbcf2c4af90554e1d192",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #47 reconstruction to surviving #52 generic Tile factory and array coordinate format; retire old map graphics without deleting Destroyer-owned objects; define declared clearRange helper",
-      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "sha256": "0da1ee2f2ff35a15d559335442db61a5475c7457ab0d15a87bee93d1a36bbc0b",
       "source": "payloads/reconstructions/ee/ee3a67852023521062a7cbcf2c4af90554e1d192-map.cpp"
     },
     {
       "originalBlob": "130f86189802458f7e774ae50c15a4b8b90b9284",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #46 scene reconstruction with changeMap() consumed by original #52 Dungeon; preserve player save state and hide retired views; reconstructed destination dungeon at (3,3), original layout unavailable; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
-      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "sha256": "c4a373f3ff1892db6d7ddfecec2b2fb47aca82367595dc59bd2ebc9bb3d39a52",
       "source": "payloads/reconstructions/13/130f86189802458f7e774ae50c15a4b8b90b9284-gamescene.cpp"
     },
     {
       "originalBlob": "41d0d35fc84030c585fffd1a869a57a16124e6ec",
       "path": "interactions/interaction.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #51 reconstruction to original #52 removal of stored action callback; register three new declared/configured skills with minimal reconstructed behavior (DeathStrike=Attack, Barrier=3-turn surviving Effect, BloodThirst=damage heal); original formulas unavailable",
-      "sha256": "52bf403c3c3b979654697a5e2930f300034c2518d08c3746b48d23b06b8841b8",
+      "sha256": "1a8f337843bc3a7d34b9b7e331558f0f19df97aa2c3d940aa635ab9b6742c292",
       "source": "payloads/reconstructions/41/41d0d35fc84030c585fffd1a869a57a16124e6ec-interaction.cpp"
     },
     {
       "originalBlob": "ab1e3fae1ac8ec6baa99f66a842a88fb4e0c369c",
       "path": "creatures/player.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #52 reconstruction to surviving #53 removal of lock field and unLock/doLock/isLock declarations",
-      "sha256": "1ddfe0dfad34124f5acae9b0945fecdb7c87dfaad627d005554ef443689b547e",
+      "sha256": "e200a89395a9a1aef66d3398fa7ecdb6b7c0db78618676a05610a61d54162e15",
       "source": "payloads/reconstructions/ab/ab1e3fae1ac8ec6baa99f66a842a88fb4e0c369c-player.cpp"
     },
     {
       "originalBlob": "7fec039b729f6c1f4b10cdae61a0702d9bcbb7e7",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried #52 reconstruction; #53 surviving changes expose only getStep() and remove Player locking, neither requires additional implementation changes",
-      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "sha256": "0da1ee2f2ff35a15d559335442db61a5475c7457ab0d15a87bee93d1a36bbc0b",
       "source": "payloads/reconstructions/7f/7fec039b729f6c1f4b10cdae61a0702d9bcbb7e7-map.cpp"
     },
     {
       "originalBlob": "8cd932e0b9cc9e637212e49700cee33dc620fc7c",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried #52 reconstruction; #53 surviving changes expose only getStep() and remove Player locking, neither requires additional implementation changes; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
-      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "sha256": "c4a373f3ff1892db6d7ddfecec2b2fb47aca82367595dc59bd2ebc9bb3d39a52",
       "source": "payloads/reconstructions/8c/8cd932e0b9cc9e637212e49700cee33dc620fc7c-gamescene.cpp"
     },
     {
       "originalBlob": "0ac286f347f8e1e97cabb659684823f6f3c40175",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried nearest #53 reconstruction through API-stable #55; surviving files provide no recoverable internal implementation delta",
-      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "sha256": "0da1ee2f2ff35a15d559335442db61a5475c7457ab0d15a87bee93d1a36bbc0b",
       "source": "payloads/reconstructions/0a/0ac286f347f8e1e97cabb659684823f6f3c40175-map.cpp"
     },
     {
       "originalBlob": "2030ab8cfa96ec5bea0602f0afcb34bc044dff94",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried nearest #53 reconstruction through API-stable #55; surviving files provide no recoverable internal implementation delta; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
-      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "sha256": "c4a373f3ff1892db6d7ddfecec2b2fb47aca82367595dc59bd2ebc9bb3d39a52",
       "source": "payloads/reconstructions/20/2030ab8cfa96ec5bea0602f0afcb34bc044dff94-gamescene.cpp"
     },
     {
       "originalBlob": "29ce186b63c5cae91dfb62e8f7972722d8d0a7b3",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried nearest #55 reconstruction through API-stable #56; surviving files provide no recoverable internal implementation delta",
-      "sha256": "aa0db666f209a95f38328d39bcd198da18f5338ed29590bc4062f57b1445c0cc",
+      "sha256": "0da1ee2f2ff35a15d559335442db61a5475c7457ab0d15a87bee93d1a36bbc0b",
       "source": "payloads/reconstructions/29/29ce186b63c5cae91dfb62e8f7972722d8d0a7b3-map.cpp"
     },
     {
       "originalBlob": "17eb1df43354259c3eb036fc6fce12c1c535f167",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #56 reconstruction with surviving #57 addDungeon declaration; original generation algorithm is unavailable, so reconstruct a rectangular ground room bounded by mountain tiles",
-      "sha256": "399f533448799528581430dc883dbf8fcd245d602db3e07e379787f35a38287a",
+      "sha256": "dea02052e3c61fce085309e442154f6bda8f52479dfa841fec647c0b780c3c3c",
       "source": "payloads/reconstructions/17/17eb1df43354259c3eb036fc6fce12c1c535f167-map.cpp"
     },
     {
       "originalBlob": "0868c4434cd14b3dfbc11ce5f8697b970f7128df",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried #55 scene reconstruction; removal of Cave::count does not affect surviving scene APIs; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
-      "sha256": "6fda7d176f309576351a039132236749d895a57486fefd5a6fb43b81364bf545",
+      "sha256": "c4a373f3ff1892db6d7ddfecec2b2fb47aca82367595dc59bd2ebc9bb3d39a52",
       "source": "payloads/reconstructions/08/0868c4434cd14b3dfbc11ce5f8697b970f7128df-gamescene.cpp"
     },
     {
       "originalBlob": "5aebd12f49fb7ea16aa1b624f4d377dbd720df66",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #57 map reconstruction to exact surviving #58 string tile storage, bounded rendered-tile cache, ensureSize(Player*) and setMap APIs; cache radius follows original cacheSize=25, delete evicted cache objects through their exact Tile type",
-      "sha256": "ceffe91c5b77315bfa0cbd20aba69702325a64e5cc42bbc64de1c22c6bd9b7cf",
+      "sha256": "1fa43f2db027b2b4ecd7819e235accf940705cf1ddf0a1525826a4922f26e83e",
       "source": "payloads/reconstructions/5a/5aebd12f49fb7ea16aa1b624f4d377dbd720df66-map.cpp"
     },
     {
       "originalBlob": "dead22d7dd63babb140aed16f390a1a6b7ce7166",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #57 scene reconstruction to original #58 Map::ensureSize(Player*) and removed scene ensureSize; retain the actual player using setMap across map changes; rectangular dungeon destination is reconstructed; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
-      "sha256": "e4ba792de6144c95efea13ae6999fd66be60b36319910b5e266cbe89eb4a5ffc",
+      "sha256": "0524333e52d499b259576f57ed54f6f6b41b53aa01bdcdf0cf1138bb22da0b64",
       "source": "payloads/reconstructions/de/dead22d7dd63babb140aed16f390a1a6b7ce7166-gamescene.cpp"
     },
     {
       "originalBlob": "395e90c23f4f3255f3dabea81e1d219f1dd949de",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed view/gamescene.cpp through API-stable #59; surviving files provide no recoverable internal implementation/data delta; defer map transition until the current Map::move callback returns to avoid retiring its active receiver",
-      "sha256": "e4ba792de6144c95efea13ae6999fd66be60b36319910b5e266cbe89eb4a5ffc",
+      "sha256": "0524333e52d499b259576f57ed54f6f6b41b53aa01bdcdf0cf1138bb22da0b64",
       "source": "payloads/reconstructions/39/395e90c23f4f3255f3dabea81e1d219f1dd949de-gamescene.cpp"
     },
     {
@@ -93999,7 +94000,7 @@
       "originalBlob": "f4c397119c04b8148144f473c61159382d521e84",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed map/map.cpp through API-stable #60; surviving files provide no recoverable internal implementation/data delta",
-      "sha256": "ceffe91c5b77315bfa0cbd20aba69702325a64e5cc42bbc64de1c22c6bd9b7cf",
+      "sha256": "1fa43f2db027b2b4ecd7819e235accf940705cf1ddf0a1525826a4922f26e83e",
       "source": "payloads/reconstructions/f4/f4c397119c04b8148144f473c61159382d521e84-map.cpp"
     },
     {
@@ -94013,7 +94014,7 @@
       "originalBlob": "bf84dcf548423144dd1328bef8ab7723fd663088",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed map/map.cpp through API-stable #61; surviving files provide no recoverable internal implementation/data delta",
-      "sha256": "ceffe91c5b77315bfa0cbd20aba69702325a64e5cc42bbc64de1c22c6bd9b7cf",
+      "sha256": "1fa43f2db027b2b4ecd7819e235accf940705cf1ddf0a1525826a4922f26e83e",
       "source": "payloads/reconstructions/bf/bf84dcf548423144dd1328bef8ab7723fd663088-map.cpp"
     },
     {
@@ -94027,141 +94028,743 @@
       "originalBlob": "da95c3f67d6972bf6691068f50df6b83b8e3da89",
       "path": "creatures/creature.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #52 reconstruction to original #63 map-independent constructors and addEffect(type,caster); Effect is now declared by interaction.h",
-      "sha256": "b6b88eed932fc1f6a02c6ca1c6969f660aea78f8040337a638606b771cd8213b",
+      "sha256": "2408404d6f7b0c26434383c31c0f30a7ad0d7e1b0a34beefaa9d03798090d284",
       "source": "payloads/reconstructions/da/da95c3f67d6972bf6691068f50df6b83b8e3da89-creature.cpp"
     },
     {
       "originalBlob": "6e58ae54a1d02acb723dec18d772b0a17339b913",
       "path": "creatures/player.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #53 reconstruction to both original #63 map-independent Player constructors; Map::addObject assigns the actual owning map",
-      "sha256": "2eaa9a92a3e36e973cf26e038438f560fe578ff276cfa34b02d1e1a3d47a4113",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
       "source": "payloads/reconstructions/6e/6e58ae54a1d02acb723dec18d772b0a17339b913-player.cpp"
     },
     {
       "originalBlob": "f62fc33eb7bd904e4d6b653769986003fb0d7888",
       "path": "interactions/interaction.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #52 interaction reconstruction to original #63 effect string field and Creature::addEffect API; moved exact surviving #62 effect implementations into interaction.cpp and use surviving #63 effects.json durations/buff targets",
-      "sha256": "b4bbbcd765e86a2f28f4bc075a744caf6c2ebbec5374ec2d705b7468c5439a3f",
+      "sha256": "a71cd31bd59d60f14b71ed81b4de9604c3087284659ef210d595d9c9d9c1360c",
       "source": "payloads/reconstructions/f6/f62fc33eb7bd904e4d6b653769986003fb0d7888-interaction.cpp"
     },
     {
       "originalBlob": "df217376c6bd70392502861c3659a1002618ac6c",
       "path": "map/map.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #61 reconstruction to original #63 map-independent MapObject constructor and Map::hide; hide clears rendered cache while preserving logical map/object state",
-      "sha256": "887ec9c33a82ef8e29573dc54786bf6da863d7d01a142022cc553b5c49c2d5e8",
+      "sha256": "9b578b375bc036237ea4c9c5958da9fb80201c800718d1dc29cd3a11170bc31d",
       "source": "payloads/reconstructions/df/df217376c6bd70392502861c3659a1002618ac6c-map.cpp"
     },
     {
       "originalBlob": "78f096417f1e96b54ab966d3817cb2e9ba88167e",
       "path": "view/gamescene.cpp",
       "provenance": "content reconstruction of the BFG-removed original; adapted #59 reconstruction to surviving #63 map-independent Player/Cave/Dungeon constructors; owning maps assigned through Map::addObject",
-      "sha256": "b9d392dca0e5419a7482535f77ffa25c5efbe6493b6693f4ff47245f854c9663",
+      "sha256": "f4e3f895494bc5a6c4617b3fbb503aeae4a625c0040b3439c4cf8e1511c7e34f",
       "source": "payloads/reconstructions/78/78f096417f1e96b54ab966d3817cb2e9ba88167e-gamescene.cpp"
     },
     {
       "originalBlob": "4ff9f45b2f23d26fc69280d6c0df542e02efa223",
       "path": "stats/stats.cpp",
       "provenance": "content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter",
-      "sha256": "658cd0089bcd7f371105eeb3261850fae34e25d69f71935fefd43e6337498e0a",
+      "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd",
       "source": "payloads/reconstructions/4f/4ff9f45b2f23d26fc69280d6c0df542e02efa223-stats.cpp"
     },
     {
       "originalBlob": "75ea3f5ea6cd94a23c5a2666cd62465a53ed7057",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "3285f16956153ca4b2e6ab949bb6d8d8f386378a97039257c8ecaa920a31a752",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "172e389df2cc25436782d807cd70e3aa102a05ff968ebbec088912f83aa7b186",
       "source": "payloads/reconstructions/75/75ea3f5ea6cd94a23c5a2666cd62465a53ed7057-game.pro"
     },
     {
       "originalBlob": "b25dfc11ef699553ff570e025cbbeabc2eaf51e8",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "931337e7a8d67255c55e51dabca0b1869cc49d6b4d9f4329a4c29d15d8ac1254",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "38a2457135baa70b5983ba5595df1bdfd6f844644f152635e8e697ab454333fe",
       "source": "payloads/reconstructions/b2/b25dfc11ef699553ff570e025cbbeabc2eaf51e8-game.pro"
     },
     {
       "originalBlob": "10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a45e7ab2301934904ef12a5bb55c5a85034ffb879ec12764c2a7ecdef5f0a98c",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "a01f95592fc1d7a7226bed7370a37c9d96c1534f69a5ff695649304542bf9ce1",
       "source": "payloads/reconstructions/10/10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d-game.pro"
     },
     {
       "originalBlob": "70d87918c1d7c24681e98a3d8e860b33f0f42451",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "2f2b5a5ed9dff037a0742944192b666d8cd4519f36cb3ef7245bd9ff5cbd21aa",
       "source": "payloads/reconstructions/70/70d87918c1d7c24681e98a3d8e860b33f0f42451-game.pro"
     },
     {
       "originalBlob": "9597e896cd261a70d461bdd451808e031e50dd8a",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "2f2b5a5ed9dff037a0742944192b666d8cd4519f36cb3ef7245bd9ff5cbd21aa",
       "source": "payloads/reconstructions/95/9597e896cd261a70d461bdd451808e031e50dd8a-game.pro"
     },
     {
       "originalBlob": "4fe204b5a652a47eee6fcb5ca0e847ef69900392",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "637acf61eee8b41467223e5ae51fb65fb006c1d2c5ffc2b480545c004d257dea",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "77910376cf7dea51ee5e0590b7bbf80703608eff16479fef09f8ee5acccd8226",
       "source": "payloads/reconstructions/4f/4fe204b5a652a47eee6fcb5ca0e847ef69900392-game.pro"
     },
     {
       "originalBlob": "ee49ba5ebb81e355b0effc08a4f07ead85652c5d",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "ac981ee53170136b8a1874cae0ee053c977016c7fc29fb0204d4470b8dc310f6",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "ae5081f3b9d9284e5992bd7f0365dfcf48bdd6be6d433ad388c56939a54d393c",
       "source": "payloads/reconstructions/ee/ee49ba5ebb81e355b0effc08a4f07ead85652c5d-game.pro"
     },
     {
       "originalBlob": "267e7b62b2e9cb6678276b8e319bba55f59403d1",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "19ce281299ebe51bf42410e268a470faf155fcbd661d12027a680ad6150de0ab",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "e9349725b9d29a7dad04ee21ef28d04b0d1dba143ae81a766b74f5bb2627ab52",
       "source": "payloads/reconstructions/26/267e7b62b2e9cb6678276b8e319bba55f59403d1-game.pro"
     },
     {
       "originalBlob": "69fd798f9c12545d2718d2787ad1ea609107a937",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
       "source": "payloads/reconstructions/69/69fd798f9c12545d2718d2787ad1ea609107a937-game.pro"
     },
     {
       "originalBlob": "91fe15120dd506b4a0cfabb13cbca41cd66bea7a",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
       "source": "payloads/reconstructions/91/91fe15120dd506b4a0cfabb13cbca41cd66bea7a-game.pro"
     },
     {
       "originalBlob": "3059c5de88b726b70736b936ebf8e360f82fec09",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
       "source": "payloads/reconstructions/30/3059c5de88b726b70736b936ebf8e360f82fec09-game.pro"
     },
     {
       "originalBlob": "7caf45e39f7a992d2d3d43870b97520462a3ea4d",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "73d9722cdf1cc97b9efee0466447fc64f65c31453a3c0e2fc158a3468849aaef",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "9279222bc102f3e3739e7b1b3c3f0c4e58858676d83d1a6b92516296635abd65",
       "source": "payloads/reconstructions/7c/7caf45e39f7a992d2d3d43870b97520462a3ea4d-game.pro"
     },
     {
       "originalBlob": "e44a0288b373871a71c3dbe0d82ec6c483c2a014",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "5911fd1c6a0a1c42f99353bc704976c70c61c3495195b492592c119a0dc1fa00",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "70b79e095c9d9a4fcd946dcdc5152d89ed727cdf358c41627a8f408c5761f5c7",
       "source": "payloads/reconstructions/e4/e44a0288b373871a71c3dbe0d82ec6c483c2a014-game.pro"
     },
     {
       "originalBlob": "d59b1fb1b9c5d957efe4284a887026060ac53395",
       "path": "src/GameScript.cpp",
-      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback.",
-      "sha256": "c44ad3ff332fb217d7362175b851d0e4e4e58c7f1f4ea0eea669838d8b35413e",
+      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "41f2f4d9ff2cde3f00799d92d6dcc49f56a46ff292c69c25302067d3e048a117",
       "source": "payloads/reconstructions/d5/d59b1fb1b9c5d957efe4284a887026060ac53395-GameScript.cpp"
+    },
+    {
+      "originalBlob": "7f69d62d4b5196e3c5f877434e5c35a846b9a6a8",
+      "path": "src/gamescript.cpp",
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #246 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "3477b36debde42595c03a955de7325ac7e295adc7320b338cc338522dd2f56b8",
+      "source": "payloads/reconstructions/7f/7f69d62d4b5196e3c5f877434e5c35a846b9a6a8-gamescript.cpp"
+    },
+    {
+      "originalBlob": "c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c",
+      "path": "src/gamescript.cpp",
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #247 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "da6f905599c1c3568507f2fb1f6c3671cbed30452b6503d96f3a4e5d39fcf73d",
+      "source": "payloads/reconstructions/c4/c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c-gamescript.cpp"
+    },
+    {
+      "originalBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #248 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "26cdfc17a783b7e2415fe69dd45e538c0b8e53eabae1c11fa0e8ce2927e1985b",
+      "source": "payloads/reconstructions/91/915429f2a1120af6bc034ec44568fd2eeb6f7965-GameScript.cpp"
+    },
+    {
+      "originalBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #253 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "source": "payloads/reconstructions/6c/6c4a05d9307920fb93dce4771e2ecd5de069e25f-GameScript.cpp"
+    },
+    {
+      "originalBlob": "b0889f1267acbdf651ee1e12b839906be46d25b9",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #256 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "source": "payloads/reconstructions/b0/b0889f1267acbdf651ee1e12b839906be46d25b9-GameScript.cpp"
+    },
+    {
+      "originalBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #258 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "source": "payloads/reconstructions/8c/8c99e7b9d7a511b8314e43202e7aa430460f1cbc-GameScript.cpp"
+    },
+    {
+      "originalBlob": "2208d3050e09e8d8e00852ea8f61c035b435cc2f",
+      "path": "src/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "a2ec06d9feebda217dd7899b45a68577a882f1a66dd751da3e24e1a1701c950f",
+      "source": "payloads/reconstructions/22/2208d3050e09e8d8e00852ea8f61c035b435cc2f-CCreature.h"
+    },
+    {
+      "originalBlob": "7cd48c708e02e43d681d2e5d8828f81c2a59216b",
+      "path": "src/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "722782b0059738cefeaab022bfb7e7cf8e9633e2007bbdc45d01cc3abbcab689",
+      "source": "payloads/reconstructions/7c/7cd48c708e02e43d681d2e5d8828f81c2a59216b-CCreature.h"
+    },
+    {
+      "originalBlob": "9025f98936023719244d4e6c0cb5211e20c9e996",
+      "path": "src/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "0d5f38815531d9a8d9d9defba65f3c1fef5231c7ee900b3c496d9bfd34cb770f",
+      "source": "payloads/reconstructions/90/9025f98936023719244d4e6c0cb5211e20c9e996-CCreature.h"
+    },
+    {
+      "originalBlob": "e394a1244576a21686835e3413157d4d4a1e679f",
+      "path": "src/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "0d5f38815531d9a8d9d9defba65f3c1fef5231c7ee900b3c496d9bfd34cb770f",
+      "source": "payloads/reconstructions/e3/e394a1244576a21686835e3413157d4d4a1e679f-CCreature.h"
+    },
+    {
+      "originalBlob": "791d3aa8fd52e427714e6eb3e8b3e01cec2877d1",
+      "path": "src/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "f9ee1eb0d93c810ac6e5b5829fd057e701eddd23e82f375bbee620bae53c4204",
+      "source": "payloads/reconstructions/79/791d3aa8fd52e427714e6eb3e8b3e01cec2877d1-CCreature.h"
+    },
+    {
+      "originalBlob": "4eafa3bb21ecb4d8713a1de689509cb7e1fb771b",
+      "path": "src/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "9adc2b919ebfbb28f27d438d69029595a749432c8d6ae6d505107860b554dacd",
+      "source": "payloads/reconstructions/4e/4eafa3bb21ecb4d8713a1de689509cb7e1fb771b-CCreature.h"
+    },
+    {
+      "originalBlob": "be1e1b544b0e27942d9391bcca8e6d36b5981fb0",
+      "path": "game/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "ae2b19afe7ad091022d1515cf07a7da6b2ea1be361b5de856e6fe79a4a6c905b",
+      "source": "payloads/reconstructions/be/be1e1b544b0e27942d9391bcca8e6d36b5981fb0-CCreature.h"
+    },
+    {
+      "originalBlob": "1a59afabf635f94728c6b8d3fe4b97cb3637bb33",
+      "path": "game/CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "81cfbb6c98257b33c002719d2ba988d8a850b8d62c6e081131ae5d0cdfbb577c",
+      "source": "payloads/reconstructions/1a/1a59afabf635f94728c6b8d3fe4b97cb3637bb33-CCreature.h"
+    },
+    {
+      "originalBlob": "f31f0f27e62808f4afd70e284d765d5a1bc18e0c",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "81cfbb6c98257b33c002719d2ba988d8a850b8d62c6e081131ae5d0cdfbb577c",
+      "source": "payloads/reconstructions/f3/f31f0f27e62808f4afd70e284d765d5a1bc18e0c-CCreature.h"
+    },
+    {
+      "originalBlob": "b01b2b509e98c766caeacb4cb1ad46529ad0944b",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "payloads/reconstructions/b0/b01b2b509e98c766caeacb4cb1ad46529ad0944b-CCreature.h"
+    },
+    {
+      "originalBlob": "8aa9effa93cb967fc3a695421025c0e5e43fd783",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "payloads/reconstructions/8a/8aa9effa93cb967fc3a695421025c0e5e43fd783-CCreature.h"
+    },
+    {
+      "originalBlob": "8d524333f93f73034534e142f3d9b1778269d518",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "payloads/reconstructions/8d/8d524333f93f73034534e142f3d9b1778269d518-CCreature.h"
+    },
+    {
+      "originalBlob": "aee8eac00794009cfea9f53df2e7ab20c862ed6c",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "payloads/reconstructions/ae/aee8eac00794009cfea9f53df2e7ab20c862ed6c-CCreature.h"
+    },
+    {
+      "originalBlob": "03eac07a28c6c54b5b776f9ef7766bca4297713d",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "source": "payloads/reconstructions/03/03eac07a28c6c54b5b776f9ef7766bca4297713d-CCreature.h"
+    },
+    {
+      "originalBlob": "25e2c224f89417c642ba1c0ee27722add4d97018",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "payloads/reconstructions/25/25e2c224f89417c642ba1c0ee27722add4d97018-CCreature.h"
+    },
+    {
+      "originalBlob": "7df65b454ee43e8b906490450927ad04d78d319b",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "de8e13ca36a6779f3ba1f1c0a73c49881833faceecf546c49db34fe6e1232b54",
+      "source": "payloads/reconstructions/7d/7df65b454ee43e8b906490450927ad04d78d319b-CCreature.h"
+    },
+    {
+      "originalBlob": "df4495b6ce640f09469c04b4286a27aa7a84c3d4",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "de8e13ca36a6779f3ba1f1c0a73c49881833faceecf546c49db34fe6e1232b54",
+      "source": "payloads/reconstructions/df/df4495b6ce640f09469c04b4286a27aa7a84c3d4-CCreature.h"
+    },
+    {
+      "originalBlob": "80933a5b4b3f9d3518a0d61b5f1962772a64949e",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "payloads/reconstructions/80/80933a5b4b3f9d3518a0d61b5f1962772a64949e-CCreature.h"
+    },
+    {
+      "originalBlob": "c11fd54964dcf987fc8de84b601353624cfdb737",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "payloads/reconstructions/c1/c11fd54964dcf987fc8de84b601353624cfdb737-CCreature.h"
+    },
+    {
+      "originalBlob": "9b86f95898c8c8d1dcfd788d180b7cbb7a17eefc",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "payloads/reconstructions/9b/9b86f95898c8c8d1dcfd788d180b7cbb7a17eefc-CCreature.h"
+    },
+    {
+      "originalBlob": "f47b6186fc4ffebbc5b54b0564b561995f745f7e",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "payloads/reconstructions/f4/f47b6186fc4ffebbc5b54b0564b561995f745f7e-CCreature.h"
+    },
+    {
+      "originalBlob": "ae348d4b20379ec078d9aeefbaafadeec22b83b9",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "source": "payloads/reconstructions/ae/ae348d4b20379ec078d9aeefbaafadeec22b83b9-CCreature.h"
+    },
+    {
+      "originalBlob": "5a21646570aa1b83490e21515d6b51889d993ff9",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "e592c0876e1d98f0b876d6518519ea6bd5cd81e03566dd22b68fbdc1ce8981de",
+      "source": "payloads/reconstructions/5a/5a21646570aa1b83490e21515d6b51889d993ff9-CCreature.h"
+    },
+    {
+      "originalBlob": "49bf8c5df78af24ab592774e04f0c36428c4c863",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "e592c0876e1d98f0b876d6518519ea6bd5cd81e03566dd22b68fbdc1ce8981de",
+      "source": "payloads/reconstructions/49/49bf8c5df78af24ab592774e04f0c36428c4c863-CCreature.h"
+    },
+    {
+      "originalBlob": "dba92cbb333824995f7bf91ad457dad5eef5a10b",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "b93cfd53305846f863590c54e3ae277297cb85dbb044e39ef0eda3836b3efb68",
+      "source": "payloads/reconstructions/db/dba92cbb333824995f7bf91ad457dad5eef5a10b-CCreature.h"
+    },
+    {
+      "originalBlob": "2b468657718b52d26660e4fd22254468842fd160",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "854a822fe0ef3788c0ce9b74ecadc3f031041c062713dfb3c2bf7844f2fa7904",
+      "source": "payloads/reconstructions/2b/2b468657718b52d26660e4fd22254468842fd160-CCreature.h"
+    },
+    {
+      "originalBlob": "ed39bc74efac2e60bcec9bb857ab74cb026436e8",
+      "path": "CCreature.h",
+      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
+      "sha256": "854a822fe0ef3788c0ce9b74ecadc3f031041c062713dfb3c2bf7844f2fa7904",
+      "source": "payloads/reconstructions/ed/ed39bc74efac2e60bcec9bb857ab74cb026436e8-CCreature.h"
+    },
+    {
+      "originalBlob": "113b26e2759a004a20050f4801e3230168443adb",
+      "path": "src/CMap.h",
+      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
+      "sha256": "7fb625c65abfc6de5f50854aac4155c5497658cea16f8354c9228dea5c16fda3",
+      "source": "payloads/reconstructions/11/113b26e2759a004a20050f4801e3230168443adb-CMap.h"
+    },
+    {
+      "originalBlob": "8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c",
+      "path": "src/CMap.h",
+      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
+      "sha256": "3092413a62ad8da53774d01d9274af0a0fdbfb6b3756dd04d56e53c5f17a7dcc",
+      "source": "payloads/reconstructions/85/8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c-CMap.h"
+    },
+    {
+      "originalBlob": "64d8991a94cb6878a704c1e574f75bffb4792270",
+      "path": "src/CMap.h",
+      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
+      "sha256": "a416c8c29b299c0d2b026dbb4a7459dd9de53d9a1e9524b2c651e25d961a50c8",
+      "source": "payloads/reconstructions/64/64d8991a94cb6878a704c1e574f75bffb4792270-CMap.h"
+    },
+    {
+      "originalBlob": "e1bea3909cf0eee7e9747634da4aeca6f130903c",
+      "path": "src/Stats.h",
+      "provenance": "Content reconstruction matching exact original #260 Stats.cpp e9d15a08d8073b9ec1462a7e542db131edd1314f: const numeric getter declarations, out-of-line setters, QString main/getMainValue. Use intact55e6516e:Stats.h property/declaration layout and zero initialized fields, retain era-correct QObject base and original257 PROPERTY_ACCESSOR semantics. Include QVariant/cmath explicitly for complete genuine APIs and Util::Coords::getDist. Metatype declarations remain owned by exact same-commit ReflectTypes.cpp; no surviving source modified.",
+      "sha256": "f0b8effb872377549c52e993c0729d9cad3afb1efdd44f3d0029c541a63eb941",
+      "source": "payloads/reconstructions/e1/e1bea3909cf0eee7e9747634da4aeca6f130903c-Stats.h"
+    },
+    {
+      "originalBlob": "04640e43eda90a2ffa0a7018009d2c02a24ab690",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted #63 reconstruction to genuine #64 Map::show() and MapObject::setVisible(bool); reattach retained map actors and rebuild the tile cache on show, retaining the established hide behavior",
+      "sha256": "1494735d3c132d2b718b23030fd092f6ed4f03a02cf01441c7ea472a21d82bda",
+      "source": "payloads/reconstructions/04/04640e43eda90a2ffa0a7018009d2c02a24ab690-map.cpp"
+    },
+    {
+      "originalBlob": "72c0030fed14daaec5a2d8713bb0bade7d6e03ba",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted #63 reconstruction to genuine #64 changeMap(x,y,z) and maps vector; retain per-depth maps and defer transitions beyond onEnter; placement follows arguments; unchanged dungeon seed carried as an explicitly inferred default",
+      "sha256": "0da3d1d9d27e2b06c716b42e4fc6c5d7198e49ac32cf08c5beec2e336627dc0f",
+      "source": "payloads/reconstructions/72/72c0030fed14daaec5a2d8713bb0bade7d6e03ba-gamescene.cpp"
+    },
+    {
+      "originalBlob": "57a616e97d5488aa659e0c64b361cedbb77fa9a9",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #64 reconstruction to genuine #66 three-dimensional Coords, tile-cache storage, map/state JSON split, getPosZ and moveTo; retain active-depth object visibility. Constructor third argument remains graphical layer, as intact Building uses layer1; logical posz starts0. JSON containers follow the prior reconstruction, since original schemas are missing",
+      "sha256": "0b6d99502a764a2311aa668daf39cd0b5874e0d0746f508259b7279c1bdd7946",
+      "source": "payloads/reconstructions/57/57a616e97d5488aa659e0c64b361cedbb77fa9a9-map.cpp"
+    },
+    {
+      "originalBlob": "04dd60f289264b4c5c53a0705ae2c71768251ee0",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #64 reconstruction to genuine #66 single3D Map, removing the deleted changeMap and maps vector; pass initial depth0 to road/river generation and player depth to tile lookup; surviving scene header/callers only",
+      "sha256": "dce86b7ab5947c956a06981817e5eef65c783ec70674e7f1a83c48b226e97267",
+      "source": "payloads/reconstructions/04/04dd60f289264b4c5c53a0705ae2c71768251ee0-gamescene.cpp"
+    },
+    {
+      "originalBlob": "b1887076550bbe1277bf49c7150dddbd5313e4d3",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried validated preceding reconstruction da95c3f67d6972bf6691068f50df6b83b8e3da89 unchanged; genuine #68 source header/API has no further required implementation change; original internal delta unavailable",
+      "sha256": "2408404d6f7b0c26434383c31c0f30a7ad0d7e1b0a34beefaa9d03798090d284",
+      "source": "payloads/reconstructions/b1/b1887076550bbe1277bf49c7150dddbd5313e4d3-creature.cpp"
+    },
+    {
+      "originalBlob": "defc5a5ae7d4df39ba319bcae3c0af405d296d3b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #66 3D map reconstruction to genuine #68 ordered tile-cache container and removal of currentMap field; active depth remains a local derived from the actual player",
+      "sha256": "4c63037f677f9aa5e0453e8dbe0f2bbca9854ecc20b15a11ef9f8c2fb1b9ff79",
+      "source": "payloads/reconstructions/de/defc5a5ae7d4df39ba319bcae3c0af405d296d3b-map.cpp"
+    },
+    {
+      "originalBlob": "60df516e7238ae7c82de2b8cd46e789c366add85",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried validated preceding reconstruction 04dd60f289264b4c5c53a0705ae2c71768251ee0 unchanged; genuine #68 source header/API has no further required implementation change; original internal delta unavailable",
+      "sha256": "dce86b7ab5947c956a06981817e5eef65c783ec70674e7f1a83c48b226e97267",
+      "source": "payloads/reconstructions/60/60df516e7238ae7c82de2b8cd46e789c366add85-gamescene.cpp"
+    },
+    {
+      "originalBlob": "8b00e9e369f1112c28ba3835704d4a8252737949",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted #71 four-argument MapObject reconstruction; corrected reconstructed Creature::saveToJson to serialize base initStats by subtracting exact config/items.json equipped bonuses. Surviving Item::loadFromJson and onEquip show those bonuses are applied during load; a real #79 save/reload regression proved prior serializer doubled them. No original historical bytes changed; exact original serializer remains unavailable.",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
+      "source": "payloads/reconstructions/8b/8b00e9e369f1112c28ba3835704d4a8252737949-creature.cpp"
+    },
+    {
+      "originalBlob": "c7f33fe213c8bbfc9aa83675708a0c2884514a5b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 reconstruction to genuine #71 four-argument MapObject constructor and addDungeon(Coords enter,Coords exit,width,height). Retained inferred rectangular generation centered on exit; reciprocal portal objects are inferred from the exact surviving Dungeon(enter,exit) teleport implementation; original layout algorithm unavailable",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "payloads/reconstructions/c7/c7f33fe213c8bbfc9aa83675708a0c2884514a5b-map.cpp"
+    },
+    {
+      "originalBlob": "11bf98aead92078dbb6f61d22c2e78c53249a186",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 scene reconstruction to genuine #71 Cave(x,y,z), preserving initial logical depth0",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/11/11bf98aead92078dbb6f61d22c2e78c53249a186-gamescene.cpp"
+    },
+    {
+      "originalBlob": "c5bdae73af402231ef03169c35131eab8974d398",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c7f33fe213c8bbfc9aa83675708a0c2884514a5b (previous version of map/map.cpp)",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "payloads/reconstructions/c5/c5bdae73af402231ef03169c35131eab8974d398-map.cpp"
+    },
+    {
+      "originalBlob": "7b24180a42173ba0cb3db3d77c27d61d8e11a1fb",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c5bdae73af402231ef03169c35131eab8974d398 (previous version of map/map.cpp)",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "payloads/reconstructions/7b/7b24180a42173ba0cb3db3d77c27d61d8e11a1fb-map.cpp"
+    },
+    {
+      "originalBlob": "1752a2bd95834d2d633da852facf3d24e72bc2d6",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 11bf98aead92078dbb6f61d22c2e78c53249a186 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/17/1752a2bd95834d2d633da852facf3d24e72bc2d6-gamescene.cpp"
+    },
+    {
+      "originalBlob": "64dbd84133b57f3ca6b087378b4b9c99b34d5196",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Implemented genuine #76 combined Map::loadFromJson/saveToJson declarations and #79 surviving scene calls; map/state nesting and default-depth/object grouping inferred from unverified #129 config/map.json donor (bf32a4c9), not original #79 bytes. Cave/Dungeon numeric arrays follow their intact serializers; Player/Monster construction uses surviving named constructors and reconstructed Creature persistence. Unknown state classes are retained opaque rather than cast into unavailable MapObject types; exact world-item behavior remains missing. Legacy split tiles/objects input remains supported. Internal metadata storage and class discrimination are inferred.",
+      "sha256": "ea423c4a0c51bd8e8ebc3b4d33ea67b45a8290262146f2d597c9bc3b0cd19bed",
+      "source": "payloads/reconstructions/64/64dbd84133b57f3ca6b087378b4b9c99b34d5196-map.cpp"
+    },
+    {
+      "originalBlob": "cd401b1eb82497358b263bfe9076f3a953ddb1b2",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1752a2bd95834d2d633da852facf3d24e72bc2d6 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/cd/cd401b1eb82497358b263bfe9076f3a953ddb1b2-gamescene.cpp"
+    },
+    {
+      "originalBlob": "decb7a1696457aa23ec7fd6b5456ee5a0a94e14a",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Implemented genuine #76 combined Map::loadFromJson/saveToJson declarations and #79 surviving scene calls; map/state nesting and default-depth/object grouping inferred from unverified #129 config/map.json donor (bf32a4c9), not original #79 bytes. Cave/Dungeon numeric arrays follow their intact serializers; Player/Monster construction uses surviving named constructors and reconstructed Creature persistence. Unknown state classes are retained opaque rather than cast into unavailable MapObject types; exact world-item behavior remains missing. Legacy split tiles/objects input remains supported. Internal metadata storage and class discrimination are inferred.",
+      "sha256": "ea423c4a0c51bd8e8ebc3b4d33ea67b45a8290262146f2d597c9bc3b0cd19bed",
+      "source": "payloads/reconstructions/de/decb7a1696457aa23ec7fd6b5456ee5a0a94e14a-map.cpp"
+    },
+    {
+      "originalBlob": "8c9e7098861c07060206c2435478ae62b19c71bc",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cd401b1eb82497358b263bfe9076f3a953ddb1b2 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/8c/8c9e7098861c07060206c2435478ae62b19c71bc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e0ba39db54d535309df94de0f933dd75a896b33f",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8b00e9e369f1112c28ba3835704d4a8252737949 (previous version of creatures/creature.cpp)",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
+      "source": "payloads/reconstructions/e0/e0ba39db54d535309df94de0f933dd75a896b33f-creature.cpp"
+    },
+    {
+      "originalBlob": "d12fe87c85dd40fe6a3f8c3614c8f58306d7174e",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f62fc33eb7bd904e4d6b653769986003fb0d7888 (previous version of interactions/interaction.cpp)",
+      "sha256": "a71cd31bd59d60f14b71ed81b4de9604c3087284659ef210d595d9c9d9c1360c",
+      "source": "payloads/reconstructions/d1/d12fe87c85dd40fe6a3f8c3614c8f58306d7174e-interaction.cpp"
+    },
+    {
+      "originalBlob": "72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e58ae54a1d02acb723dec18d772b0a17339b913 (previous version of creatures/player.cpp)",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "payloads/reconstructions/72/72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8-player.cpp"
+    },
+    {
+      "originalBlob": "8c0fa30b3d8316ef5358362c9dc69976d08e304a",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8 (previous version of creatures/player.cpp)",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "payloads/reconstructions/8c/8c0fa30b3d8316ef5358362c9dc69976d08e304a-player.cpp"
+    },
+    {
+      "originalBlob": "e727eb446fb5d57b6aaede6c43a72f882360191a",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #84 reconstruction; adapted missing Interaction::setAnimation to genuine #85 size argument, using50 from surviving same-commit Item::setAnimation for inventory icons.",
+      "sha256": "6b36a18e14f0301758667d640e95ed5674a3bd1243ba8c979af77091f0881da1",
+      "source": "payloads/reconstructions/e7/e727eb446fb5d57b6aaede6c43a72f882360191a-interaction.cpp"
+    },
+    {
+      "originalBlob": "6e67153381019a2f4a3beb48a5d6753b73c2ccb9",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #79 3D map to genuine #85 Map(scene), scene getter, tileSize, showAll and mapUp/mapDown API; surviving GameScene sets tileSize50, MapScene sets10 and shows selected-depth tiles; exact Tile::addToScene consumes map size. Reconstructed MapObject placement/animation now follows its owning scene and map scale; exact item.cpp establishes fixed50 for inventory icons. Body details and cache clearing inferred; original missing source unavailable. Prior JSON-schema inference retained.",
+      "sha256": "375116e4888f6c6291f89117c9a18679b4cfcbccd76cb6b55ffa1ea18d33e1be",
+      "source": "payloads/reconstructions/6e/6e67153381019a2f4a3beb48a5d6753b73c2ccb9-map.cpp"
+    },
+    {
+      "originalBlob": "c49ab7c82c2c2e49abf20c3c39ea11251fc14ff1",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #85 reconstruction to genuine #86 Tile deriving MapObject, removal of Tile::getRandomTile, and genuine Map::defaultTiles/getCurrentMap plus MapObject::getMap/getSize APIs. Depth-default JSON now uses the surviving defaultTiles field; unmapped-depth GrassTile fallback follows the exact preceding Tile::getRandomTile implementation. Base setMap directly places the object without invoking Tile::moveTo (which erases/reinserts model entries), so showing tiles cannot invalidate model iteration. Existing inferred JSON/body provenance retained; original implementation unavailable.",
+      "sha256": "f9001731dff252175a6036e880e6169c8fd5012c09a6212a7935985f01eece8f",
+      "source": "payloads/reconstructions/c4/c49ab7c82c2c2e49abf20c3c39ea11251fc14ff1-map.cpp"
+    },
+    {
+      "originalBlob": "b9ce532beb021100bf34d60c1cd79fae14c5628a",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding Player reconstruction unchanged; genuine #87 Player header requires no additional method. Original internal delta unavailable.",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "payloads/reconstructions/b9/b9ce532beb021100bf34d60c1cd79fae14c5628a-player.cpp"
+    },
+    {
+      "originalBlob": "7827bdb46d936ee8b3bff9cc77f393629c55093b",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #85 Interaction reconstruction to genuine #87 ListItem deriving MapObject; use one-argument MapObject::setAnimation and provide newly declared onEnter/onMove/load/save/canSave. Pickup/coordinate persistence follows analogous intact same-commit Item::onEnter/saveToJson/canSave and actual Creature::addAction API; passive movement and original pickup details inferred. Synchronize the genuine duplicate Interaction/MapObject className fields for map persistence; original implementation unavailable.",
+      "sha256": "6a64f77947027d73148c6be8215fd54775f447b03bfc479ef305dde455e72d40",
+      "source": "payloads/reconstructions/78/7827bdb46d936ee8b3bff9cc77f393629c55093b-interaction.cpp"
+    },
+    {
+      "originalBlob": "669fa586f024267c725f11e4432a1855fad509d4",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #86 Map reconstruction to genuine #87 public Item/Interaction\u2192ListItem\u2192MapObject inheritance. Previously opaque Potion/Weapon/Armor/Interaction groups now create genuine factory objects; coordinate arrays follow intact Item::saveToJson. Discriminate genuine concrete classes on save, retain other unknown state opaque; nested schema still inferred from later #129 config donor.",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "payloads/reconstructions/66/669fa586f024267c725f11e4432a1855fad509d4-map.cpp"
+    },
+    {
+      "originalBlob": "2fb6d3f750cb02eab89f696962666606246db62d",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Content reconstruction from intact #247 5fe60e7c playerlistview.cpp, playerequippedview.cpp, playerstatsview.cpp and scrollobject.cpp; merge into original #260 CPlayerView.h combined classes, apply same-commit C-prefix names and templated Comparer<CMapObject>. Replace removed Map::getTileSize with genuine same-commit 50-pixel scale from untouched CItemSlot.cpp and CTile.cpp. Preserve actual inventory/equipment/health/mana/experience rendering and scrolling behavior; no stand-in UI.",
+      "sha256": "7304c93e3318b882d512b2fce3b341d68f2974e323d941651f0d81ef547dbf4b",
+      "source": "payloads/reconstructions/2f/2fb6d3f750cb02eab89f696962666606246db62d-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "e52ab4920c06937715d534bd9ff3b963bde70879",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Generated content reconstruction from genuine260 CGamePanel.h/CGameView.h/CPlayerView.h, intact247 inventory/equipped/skills views and player fight-list callers. Implements actual character inventory/equipment and selected-enemy/skill display, real signal updates, Qt scene ownership and visibility controls. Historical container bridges follow intact247 Player::getLoot casting pattern. Panel placement/background geometry is reconstructed from declared view dimensions, not recovered original bytes. No whole-game acceptance yet.",
+      "sha256": "7c52d209378effb47b70b5972ef025d08e33111e4bac464c1d1fb7529ceb89a4",
+      "source": "payloads/reconstructions/e5/e52ab4920c06937715d534bd9ff3b963bde70879-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "5ced7ba291f7e0f7a3cea8089d242538242ed640",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 669fa586f024267c725f11e4432a1855fad509d4 (previous version of map/map.cpp)",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "payloads/reconstructions/5c/5ced7ba291f7e0f7a3cea8089d242538242ed640-map.cpp"
+    },
+    {
+      "originalBlob": "08aeed78ab6f70d9baae08051034c418f5cf24ab",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 5ced7ba291f7e0f7a3cea8089d242538242ed640 (previous version of map/map.cpp)",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "payloads/reconstructions/08/08aeed78ab6f70d9baae08051034c418f5cf24ab-map.cpp"
+    },
+    {
+      "originalBlob": "5ea3a7f4a76e7f59c250e0141efd1745b4f3fd06",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #90 Map reconstruction to genuine #91 mapObjects std::set: set iterators/copies, insertion, erase and membership. No source-derived additional behavior change identified; original internal delta unavailable. Existing inferred JSON schema, factory and showAll provenance retained.",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "payloads/reconstructions/5e/5ea3a7f4a76e7f59c250e0141efd1745b4f3fd06-map.cpp"
+    },
+    {
+      "originalBlob": "5a949ff899495dfbb4b29ce40386cb9c98e12dda",
+      "path": "src/CCreature.cpp",
+      "provenance": "Generated missing-body reconstruction: retain intact55e6516e object/CCreature.cpp arithmetic for experience, damage, health/mana, equipment and statistics, adapted to genuine #260 pointer containers/Stats pointer/no-argument callbacks. Combined CPlayer/CMonster methods from intact #247 5fe60e7c src/player.cpp (b18c9ab09ac9225e896e0b8d98a184d7104cd8c8) and monster.cpp (cf3f3ceaf75dba3b8bd9ec980aad7785071bd03c), with same-commit C-prefix names, QString and direct scene APIs. JSON loading bridges actual monsters properties/config to original declared loadFromJson API. Initial scalar state is reconstructed explicitly. Retains historical default/custom-comparator pointer container bridges as found in original247 Player::getLoot; full-game runtime and cross-tree compatibility remain unverified.",
+      "sha256": "d5d14add534094eb914231379db28f01fc970d1e28ae0de1d88457214b34a6fb",
+      "source": "payloads/reconstructions/5a/5a949ff899495dfbb4b29ce40386cb9c98e12dda-CCreature.cpp"
+    },
+    {
+      "originalBlob": "351ddf3da2977bed0a6bb2f3a67490240a5743ed",
+      "path": "src/CGameView.cpp",
+      "provenance": "Generated missing-body adaptation from intact #264 e398df1047d75ac0b2885d0dcfc03ad4c35990c2:src/CGameView.cpp blobd2a1d2c3c175406ecb9ba5ac680070e682efe2e8. Restore genuine #260 named character/fight panels in place of later panel map, use actual surviving CGameView.h callbacks and images/backpack.png. Preserve timed game creation, loading image, OpenGL viewport and resize/fullscreen behavior. Backpack placement/click rendering is an explicit reconstruction, not recovered original layout.",
+      "sha256": "3a60da7bd4b6e08b99aa49f5584eb58c2f53efb8a364249d1e85152094051115",
+      "source": "payloads/reconstructions/35/351ddf3da2977bed0a6bb2f3a67490240a5743ed-CGameView.cpp"
+    },
+    {
+      "originalBlob": "51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5",
+      "path": "src/CItem.cpp",
+      "provenance": "Generated adaptation of intact #2475fe60e7c:src/item.cpp blob6776325d5546af8c14a14c3433c5021eeac82566 and potion.cpp blob465840edb9a59f0e82e7b72fd12cd109f0da9e13. Combine genuine #260 item classes, apply C-prefix/QString/default constructor changes, retain real pickup/equip/unequip/mouse-use/health-mana potion behavior, load JSON properties from actual config/objects layout and use original getStats()->addBonus/removeBonus API. No future GUI handler or event API, no surviving source edits.",
+      "sha256": "30bd4bacb30b2cbfb4d581d1f594575ec222177b86d27bbd45d5c0cda2596d17",
+      "source": "payloads/reconstructions/51/51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5-CItem.cpp"
+    },
+    {
+      "originalBlob": "4ca68f3c92b35de3f8070d7e2493c20049508f0d",
+      "path": "src/CInteraction.cpp",
+      "provenance": "Generated missing-body reconstruction for genuine #260 CInteraction.h Effect (non-QObject constructor/callback map) ABI. Use intact #290 CInteraction.cpp blob98248e766f1e2921c117dbc064325ddb8824e70a mouse/action/effect lifecycle as adapted donor; invoke actual #260 scripts/game/interaction.py functions, not later class instances. Native Effect callbacks transcribe intact #331beef9d87 scripts/game/effect.py blob2ba257597feba52e3ba108b1056e3a5443b8ba1c arithmetic/return semantics using original Effect/Stats-pointer APIs. Barrier false and ArmorOfEndlessWinter missing restriction are genuine donor behavior/limitation. Maps original StunEffect spelling to genuine Stun config entry. saveToJson field shape is reconstructed and unverified; no whole-game or gameplay parity claim.",
+      "sha256": "f77e2c3f5628314b0ee8e73c56c7f71af3a700be79e6dee88756cd839dafb520",
+      "source": "payloads/reconstructions/4c/4ca68f3c92b35de3f8070d7e2493c20049508f0d-CInteraction.cpp"
+    },
+    {
+      "originalBlob": "f14276a39034a1f6965200d2efcba6d9d68e02c2",
+      "path": "Stats.h",
+      "provenance": "Missing Stats header reconstructed from intact Stats.cpp properties and existing donor b58516d9; metatypes declared by genuine same-commit ReflectTypes.cpp REFLECT(Stats/Damage), not twice.",
+      "sha256": "0bb69b0a393be0831a4f4e4042b4a32285a33e97a145b7b3f785f0d6508a475c",
+      "source": "payloads/reconstructions/f1/f14276a39034a1f6965200d2efcba6d9d68e02c2-Stats.h"
+    },
+    {
+      "originalBlob": "dc1cb1fd36dd93090daa5dce452dee558a70dcab",
+      "path": "GameScript.cpp",
+      "provenance": "Missing module reconstructed from intact donor 55e6516:GameScript.cpp; original #331 CMap/ObjectHandler and CGameEvent interfaces replace later factory/event APIs, and unsupported later CQuest/CTrigger registrations are removed. Genuine callback methods remain with native fallbacks; original Python3.4 loader/Boost bindings retained.",
+      "sha256": "efd80935d8f46f62e89c8322ddbab89f6ca2a312b425ef3ab0d9f790cc521da8",
+      "source": "payloads/reconstructions/dc/dc1cb1fd36dd93090daa5dce452dee558a70dcab-GameScript.cpp"
+    },
+    {
+      "originalBlob": "42f81787de92365ab5cd295cec1cdd8b504cf864",
+      "path": "CMap.cpp",
+      "provenance": "Missing map reconstructed from intact 55e6516:CMap.cpp and CMapLoader.cpp JSON parser, restored into original #331 CMap.h in-class loading API. Original CGameScene owns player; genuine factory createMapObject and event-first dispatch contracts selected. Original CMapScriptLoader registered before map-specific Python objects; no original file modified.",
+      "sha256": "bec4e352665bf32f489f5ed583de294bae6d246d7e8e63e9678c713c9ce826e5",
+      "source": "payloads/reconstructions/42/42f81787de92365ab5cd295cec1cdd8b504cf864-CMap.cpp"
+    },
+    {
+      "originalBlob": "67bb4e2fdd17b413feb555c9aca56c41af6ec3a7",
+      "path": "CPathFinder.cpp",
+      "provenance": "Reconstructed missing three pathfinders from genuine #331 CPathFinder.h methods, Cell and values storage, CMonster.cpp caller, and CMapObject.cpp relative-move contract. Cardinal passability and reverse cost propagation follow intact later ca0995d7 donor; native random and greedy variants are implemented. Original source hash unavailable; reconstruction, not exact recovery.",
+      "sha256": "c88ce51dafae21ffe1772cd1cc1a95e78cd20de0442ab3210daf76df19a620e5",
+      "source": "payloads/reconstructions/67/67bb4e2fdd17b413feb555c9aca56c41af6ec3a7-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "0fc1adae937602f1debd4a06e417481ad6d84ca3",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "Missing object handler rebuilt from intact donor property-deserialization body and genuine #331 CObjectHandler/CTypeHandler declarations and CTypeHandler.cpp create implementations. Uses original config handler field and original C/Python factories; absent field in later donor config inferred from dotted qualified Python class, preserving actual constructors and properties.",
+      "sha256": "f96f940562b62725deeb8582dced4615a880bd66ad3c36ebb85bd5d876f53eed",
+      "source": "payloads/reconstructions/0f/0fc1adae937602f1debd4a06e417481ad6d84ca3-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "d7954a7210e9568a081e0cb6cde93d596f6e4db2",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing view source reconstructed from intact 55e6516:CPlayerView.cpp bodies, genuine #331 CPlayerView.h view-owned list/equipment/item-slot classes, and original CCharPanel.cpp/CGameView ownership. Unsupported later trade view removed; inventory drop uses declared native creature inventory/equipment methods. List viewport clamped to prevent unsigned underflow.",
+      "sha256": "2ac0fb899fcf11bd99127f23a2975aaf0b72a7f0337572ef2a1be8d45a5461e6",
+      "source": "payloads/reconstructions/d7/d7954a7210e9568a081e0cb6cde93d596f6e4db2-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "e736945b32a50d9e162ef1f63290d74c8b6fe136",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "Missing fight panel reconstructed from intact donor painting/combat status bodies and genuine #331 CFightPanel.h plus CPlayerView.h view constructor; later undeclared click handlers removed, public native graphics bridge used, empty child list checked before accessing its first member.",
+      "sha256": "cf97862cd8c001bd77852a882a745ea4beccde259c696947d9bd2a9acf37d843",
+      "source": "payloads/reconstructions/e7/e736945b32a50d9e162ef1f63290d74c8b6fe136-CFightPanel.cpp"
+    },
+    {
+      "originalBlob": "0ba99be1c6b144da69abe645e40b20496bfbfc80",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing item implementation reconstructed from intact donor bodies and genuine #331 CItem.h, CGameEvent::getCause, CObjectHandler::createMapObject; later CGameEventCaused removed. Declared item-derived copy constructors delegate to their genuine item base copy constructor for Qt metatype registration; virtual destructor supplied. Native equip/use/enter effects and property methods retained. Mouse use/drag adapted from surviving f873bade:src/item.cpp and src/CAnimatedObject.cpp plus genuine #331 CObjectData and event ownership.",
+      "sha256": "6b11b29cb6d053d89d7c6201cbbe0341ac4e68d823cac79d266e664b36c2d61d",
+      "source": "payloads/reconstructions/0b/0ba99be1c6b144da69abe645e40b20496bfbfc80-CItem.cpp"
+    },
+    {
+      "originalBlob": "d012b3fe46dd6c99693ca2e8c009c059d44300bd",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing creature implementation reconstructed from intact donor bodies and existing reconstructed missing CCreature.h API corroborated by surviving #331 CPlayer.cpp/CMonster.cpp callers, genuine CEventHandler.h event-first CGameEvent(type,cause), CObjectHandler.h createMapObject, CMap.h getLootProvider. Native stat, inventory, action, fight, levelling and movement methods retained; virtual destructor supplied when absent from donor.",
+      "sha256": "d68366e94f0d56f41eba38f6b5cb91b828c71de9456e0f7e1b8147056617a13c",
+      "source": "payloads/reconstructions/d0/d012b3fe46dd6c99693ca2e8c009c059d44300bd-CCreature.cpp"
+    },
+    {
+      "originalBlob": "e586ef8f0a7e62fc4e4fefff7e9b294032cd2d04",
+      "path": "scripts/game/interaction.py",
+      "provenance": "Missing interaction script reconstructed from surviving later action bodies by removing later-only game_object registry decorators. Genuine #331 scripts/game/__init__.py imports game.interaction and genuine PyTypeHandler constructs qualified Python classes directly. Action implementations preserved; Python syntax checked. Not an exact original.",
+      "sha256": "c7fd7b035e80d27d86e8d6fb122dcbd375a3d7795d3500d6e27ed7cc01d4cb29",
+      "source": "payloads/reconstructions/e5/e586ef8f0a7e62fc4e4fefff7e9b294032cd2d04-interaction.py"
+    },
+    {
+      "originalBlob": "202d142b9e80bf811f778c3ef44b96d31b17d5ca",
+      "path": "config/interactions.json",
+      "provenance": "Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.",
+      "sha256": "b1c6981b4af44abb68d3ff52186bb71166ea716d5ffa270d2144954fb4a0b03c",
+      "source": "payloads/reconstructions/20/202d142b9e80bf811f778c3ef44b96d31b17d5ca-interactions.json"
+    },
+    {
+      "originalBlob": "280a964a7f31847bef6aa86dd60608313ab10f7e",
+      "path": "config/weapons.json",
+      "provenance": "Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.",
+      "sha256": "f92b712627946194dab152fc38fb9ed9b473b6c5ce28af934c2f8ac6cf3aa801",
+      "source": "payloads/reconstructions/28/280a964a7f31847bef6aa86dd60608313ab10f7e-weapons.json"
+    },
+    {
+      "originalBlob": "71bf6f468f812262bf46a24ca77fbdad44af400c",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing 2014 map reconstructed from surviving later map donor by removing its single market1/Market object; genuine #331 config/buildings.json and CObject.h have no Market/CMarket. First surviving CMarket.h history f25cffe508b1d872875d941854c4b6170c9cbefc is Trading works dated2015-02-08, after target2014-11-01. All other14 donor objects/coordinates, tile layers, bounds and start properties preserved. Not an exact original map.",
+      "sha256": "a2bdedfc0bad2e694b5853d54ada3fe67a0205052088aad58067c47ff0efcb17",
+      "source": "payloads/reconstructions/71/71bf6f468f812262bf46a24ca77fbdad44af400c-map.json"
     }
   ],
   "schemaVersion": 1

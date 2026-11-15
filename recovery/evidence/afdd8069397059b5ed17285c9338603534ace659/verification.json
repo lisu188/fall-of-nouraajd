@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work/verify/snapshot-hfrddc4d/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/observer/recovery_smoke_config.h",
     "configSha256": "e7fa35193e54841af7a428d081e6283b23d07aeaba55e25ef5e60230106e0c72",
     "id": "classic-2d",
     "overlays": [
@@ -11,43 +11,67 @@
         "purpose": "smoke-only map accessor"
       }
     ],
-    "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work/verify/snapshot-hfrddc4d/smoke",
+  "artifactDir": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work/verify/snapshot-hfrddc4d/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/build.log",
     "returnCode": 0,
-    "seconds": 18.215,
+    "seconds": 11.733,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work/verify/snapshot-hfrddc4d/source/Game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/source/Game.pro",
       "-o",
-      "/home/user/work/verify/snapshot-hfrddc4d/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional",
       "-after",
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work/verify/snapshot-hfrddc4d/source",
-      "INCLUDEPATH+=/home/user/work/verify/snapshot-hfrddc4d/observer"
+      "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/observer"
     ],
-    "log": "/home/user/work/verify/snapshot-hfrddc4d/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/configure.log",
     "returnCode": 0,
-    "seconds": 0.719,
+    "seconds": 0.016,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work/verify/evidence/7ef84113d44da7fe1788d85911f1b64f402b344497f006a94cbdbaeb8801b6cb",
-  "fingerprint": "7ef84113d44da7fe1788d85911f1b64f402b344497f006a94cbdbaeb8801b6cb",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/evidence/6dad06ff75a7b5514a31a48c4b51ce9440a224847d8375e8b98b7cca5d995595",
+  "fileLookup": {
+    "command": [
+      "g++-5",
+      "-shared",
+      "-fPIC",
+      "-O2",
+      "-std=c++11",
+      "-o",
+      "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
+      "-ldl"
+    ],
+    "log": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/file-lookup.log",
+    "returnCode": 0,
+    "seconds": 0.215,
+    "semantics": "Windows-style case-insensitive file lookup for the game process",
+    "timedOut": false
+  },
+  "fingerprint": "6dad06ff75a7b5514a31a48c4b51ce9440a224847d8375e8b98b7cca5d995595",
+  "libraryAliases": {
+    "aliases": {},
+    "directory": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/observer/library-aliases"
+  },
+  "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
@@ -62,10 +86,14 @@
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
-      "QMAKE_LINK=g++-5"
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional"
     ],
     "qmakeCommand": "qmake",
     "toolchainLock": {
+      "compatibility": [
+        "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+      ],
       "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
       "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
       "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
@@ -197,7 +225,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work/verify/snapshot-hfrddc4d/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -238,11 +266,10 @@
       },
       {
         "markerPath": "images/buildings/cave/0.png.REMOVED.git-id",
-        "method": "reconstruction",
+        "method": "exactOriginal",
         "originalBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
         "path": "images/buildings/cave/0.png",
-        "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159 Verified by build and startup of afdd8069 (recovery/evidence/second-original).",
-        "replacementBlob": "f890ee0f00785096c6903db731e492c512342117"
+        "replacementBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a"
       },
       {
         "markerPath": "images/items/potions/bless/0.png.REMOVED.git-id",
@@ -442,7 +469,7 @@
         "replacementBlob": "e0b441b45028d26b1905d3b3874b0e60e44fe50a"
       }
     ],
-    "restoredFilesFingerprint": "490a11b10aafff35509c3b566c689b2b283085c486ef13706033d72fe22d3bf3",
+    "restoredFilesFingerprint": "1d72fff6a015f6e52a8182bd551a925ed4da5813b5a682acdc4d2befa2863184",
     "sourceCommit": "afdd8069397059b5ed17285c9338603534ace659",
     "sourceTree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
     "status": "complete",
@@ -454,11 +481,13 @@
       "xvfb-run",
       "-a",
       "--server-args=-screen 0 1920x1080x24",
-      "/home/user/work/verify/snapshot-hfrddc4d/build/RecoveryGame"
+      "env",
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/build/RecoveryGame"
     ],
-    "log": "/home/user/work/verify/snapshot-hfrddc4d/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 5.291,
+    "seconds": 0.218,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -468,15 +497,15 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work/verify/snapshot-hfrddc4d/smoke/startup.png",
-        "sha256": "8d74620c05341231db12a1ae1953b46408403e4d1f297e8f19b03b62eab4a8ec",
+        "path": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/smoke/startup.png",
+        "sha256": "969af6e1ca9294b7f0bf4207bd83553c2409901cdd18fe968c076f076b8d126c",
         "width": 1278
       },
       "reason": "",
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work/verify/snapshot-hfrddc4d/smoke/startup.json",
+    "startupReport": "/tmp/nouraajd-bfg-recovery/native-prefix/verify/snapshot-hgx0qyqu/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
@@ -499,5 +528,6 @@
       "path": "/usr/lib/x86_64-linux-gnu/qt5/bin/qmake",
       "version": "QMake version 3.0\nUsing Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu\n"
     }
-  }
+  },
+  "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
 }

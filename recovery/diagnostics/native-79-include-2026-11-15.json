@@ -1,0 +1,108 @@
+{
+  "command": "env LIBGL_ALWAYS_SOFTWARE=1 PATH=/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin QT_OPENGL=software QT_X11_NO_MITSHM=1 make -j4 gamescene.o",
+  "log": "/tmp/nouraajd-bfg-recovery/native-includes/gamescene-object.log",
+  "logSha256": "bca598dbf6ba3b5376c7f14c5fce3d58364110499b0fb943f493f05e13651c9b",
+  "object": {
+    "bytes": 19000,
+    "path": "/tmp/nouraajd-bfg-recovery/native-includes/verify/snapshot-66cfmyt3/build/gamescene.o",
+    "sha256": "b0630930fb2398e98ef2f96ea934952e38ee231436661016bba264a9290707c8"
+  },
+  "recipe": {
+    "compilerCommand": "g++-5",
+    "environment": {
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "PATH": "/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "QT_OPENGL": "software",
+      "QT_X11_NO_MITSHM": "1"
+    },
+    "id": "qt5-no-python",
+    "makeCommand": "make",
+    "pythonAbi": "none",
+    "qmakeArguments": [
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional"
+    ],
+    "qmakeCommand": "qmake",
+    "toolchainLock": {
+      "compatibility": [
+        "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+      ],
+      "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+      "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+      "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+      "schemaVersion": 1,
+      "sourceLock": "recovery/toolchains/sources.json",
+      "sourceLockSha256": "d94f274c60a4bd52aaeedfe01bc5d3e4a116c5181443def07ce6edd59c14d10f"
+    }
+  },
+  "restoredFilesFingerprint": "c16205c3b60644d6508da703ed9d040245b5e0bd947b0ba83391be1747d2dffd",
+  "returnCode": 0,
+  "scope": "native gamescene.cpp object compilation only; whole-tree startup remains blocked by unrelated Map donor",
+  "sourceCommit": "4a877c5583d007e2a6ca5be2fc86db9cd6c3a6f8",
+  "sourcePreparation": {
+    "identity": {
+      "implementationSha256": "26d183179db3cbef5ee38e54f4718373e36d32d236b5cab28c10cbc7d2707735",
+      "includeReplaySha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7",
+      "includeSeparators": [
+        {
+          "afterSha256": "33cd79ad51a40777ff15b07cdbb1ba222ae79fdb390793c79f6178de8b35d128",
+          "beforeSha256": "7cd57c2eeafd150a6dd6a28713ae9144e632f660502f227f985d2df2e01e934f",
+          "includes": [
+            {
+              "line": 13,
+              "originalInclude": "view\\playerlistview.h",
+              "preparedInclude": "view/playerlistview.h",
+              "resolvedHeader": "view/playerlistview.h"
+            }
+          ],
+          "path": "view/gamescene.cpp"
+        }
+      ],
+      "outputs": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "33cd79ad51a40777ff15b07cdbb1ba222ae79fdb390793c79f6178de8b35d128"
+          },
+          "before": {
+            "kind": "file",
+            "sha256": "7cd57c2eeafd150a6dd6a28713ae9144e632f660502f227f985d2df2e01e934f"
+          },
+          "path": "view/gamescene.cpp",
+          "purpose": "Windows include separators on an isolated build-source copy"
+        }
+      ]
+    },
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "33cd79ad51a40777ff15b07cdbb1ba222ae79fdb390793c79f6178de8b35d128"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7cd57c2eeafd150a6dd6a28713ae9144e632f660502f227f985d2df2e01e934f"
+        },
+        "path": "view/gamescene.cpp",
+        "purpose": "Windows include separators on an isolated build-source copy"
+      }
+    ],
+    "status": "success",
+    "steps": [
+      {
+        "command": [
+          "history_source_prep.py",
+          "normalize-quoted-includes"
+        ],
+        "log": "/tmp/nouraajd-bfg-recovery/native-includes/verify/snapshot-66cfmyt3/preparation/include-separators.log",
+        "name": "windowsIncludeSeparators",
+        "returnCode": 0,
+        "timedOut": false
+      }
+    ]
+  },
+  "sourceTree": "d32509080b0ef4ddf0b6bdca084c288cdc35a2c0",
+  "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+}

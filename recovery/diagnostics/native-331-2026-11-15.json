@@ -1,0 +1,150 @@
+{
+  "entries": [
+    {
+      "originalBlob": "f14276a39034a1f6965200d2efcba6d9d68e02c2",
+      "path": "Stats.h",
+      "provenance": "Missing Stats header reconstructed from intact Stats.cpp properties and existing donor b58516d9; metatypes declared by genuine same-commit ReflectTypes.cpp REFLECT(Stats/Damage), not twice.",
+      "replacementBlob": "52155f1fb8ae81731faf6a2a7786796374a0457a",
+      "sha256": "0bb69b0a393be0831a4f4e4042b4a32285a33e97a145b7b3f785f0d6508a475c",
+      "source": "recovery/payloads/reconstructions/f1/f14276a39034a1f6965200d2efcba6d9d68e02c2-Stats.h",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "dc1cb1fd36dd93090daa5dce452dee558a70dcab",
+      "path": "GameScript.cpp",
+      "provenance": "Missing module reconstructed from intact donor 55e6516:GameScript.cpp; original #331 CMap/ObjectHandler and CGameEvent interfaces replace later factory/event APIs, and unsupported later CQuest/CTrigger registrations are removed. Genuine callback methods remain with native fallbacks; original Python3.4 loader/Boost bindings retained.",
+      "replacementBlob": "091778badeb9f3fc9703a3b0710b1ea6ab04d55e",
+      "sha256": "efd80935d8f46f62e89c8322ddbab89f6ca2a312b425ef3ab0d9f790cc521da8",
+      "source": "recovery/payloads/reconstructions/dc/dc1cb1fd36dd93090daa5dce452dee558a70dcab-GameScript.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "42f81787de92365ab5cd295cec1cdd8b504cf864",
+      "path": "CMap.cpp",
+      "provenance": "Missing map reconstructed from intact 55e6516:CMap.cpp and CMapLoader.cpp JSON parser, restored into original #331 CMap.h in-class loading API. Original CGameScene owns player; genuine factory createMapObject and event-first dispatch contracts selected. Original CMapScriptLoader registered before map-specific Python objects; no original file modified.",
+      "replacementBlob": "e0e04608c8b1ab3717c221cca959fb18e5511da2",
+      "sha256": "bec4e352665bf32f489f5ed583de294bae6d246d7e8e63e9678c713c9ce826e5",
+      "source": "recovery/payloads/reconstructions/42/42f81787de92365ab5cd295cec1cdd8b504cf864-CMap.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "67bb4e2fdd17b413feb555c9aca56c41af6ec3a7",
+      "path": "CPathFinder.cpp",
+      "provenance": "Reconstructed missing three pathfinders from genuine #331 CPathFinder.h methods, Cell and values storage, CMonster.cpp caller, and CMapObject.cpp relative-move contract. Cardinal passability and reverse cost propagation follow intact later ca0995d7 donor; native random and greedy variants are implemented. Original source hash unavailable; reconstruction, not exact recovery.",
+      "replacementBlob": "c0e0b43f779d62b0e0f7ccd04cb37117b16ebf4a",
+      "sha256": "c88ce51dafae21ffe1772cd1cc1a95e78cd20de0442ab3210daf76df19a620e5",
+      "source": "recovery/payloads/reconstructions/67/67bb4e2fdd17b413feb555c9aca56c41af6ec3a7-CPathFinder.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "0fc1adae937602f1debd4a06e417481ad6d84ca3",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "Missing object handler rebuilt from intact donor property-deserialization body and genuine #331 CObjectHandler/CTypeHandler declarations and CTypeHandler.cpp create implementations. Uses original config handler field and original C/Python factories; absent field in later donor config inferred from dotted qualified Python class, preserving actual constructors and properties.",
+      "replacementBlob": "34bc14cc1e31c9017cae273f35dd8fd6b0470968",
+      "sha256": "f96f940562b62725deeb8582dced4615a880bd66ad3c36ebb85bd5d876f53eed",
+      "source": "recovery/payloads/reconstructions/0f/0fc1adae937602f1debd4a06e417481ad6d84ca3-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "d7954a7210e9568a081e0cb6cde93d596f6e4db2",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing view source reconstructed from intact 55e6516:CPlayerView.cpp bodies, genuine #331 CPlayerView.h view-owned list/equipment/item-slot classes, and original CCharPanel.cpp/CGameView ownership. Unsupported later trade view removed; inventory drop uses declared native creature inventory/equipment methods. List viewport clamped to prevent unsigned underflow.",
+      "replacementBlob": "ad6e411d7b14b4649ef9437d563509bf6d079df4",
+      "sha256": "2ac0fb899fcf11bd99127f23a2975aaf0b72a7f0337572ef2a1be8d45a5461e6",
+      "source": "recovery/payloads/reconstructions/d7/d7954a7210e9568a081e0cb6cde93d596f6e4db2-CPlayerView.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "e736945b32a50d9e162ef1f63290d74c8b6fe136",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "Missing fight panel reconstructed from intact donor painting/combat status bodies and genuine #331 CFightPanel.h plus CPlayerView.h view constructor; later undeclared click handlers removed, public native graphics bridge used, empty child list checked before accessing its first member.",
+      "replacementBlob": "7df058936ed609274e72f75256acd21554f361a3",
+      "sha256": "cf97862cd8c001bd77852a882a745ea4beccde259c696947d9bd2a9acf37d843",
+      "source": "recovery/payloads/reconstructions/e7/e736945b32a50d9e162ef1f63290d74c8b6fe136-CFightPanel.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "0ba99be1c6b144da69abe645e40b20496bfbfc80",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing item implementation reconstructed from intact donor bodies and genuine #331 CItem.h, CGameEvent::getCause, CObjectHandler::createMapObject; later CGameEventCaused removed. Declared item-derived copy constructors delegate to their genuine item base copy constructor for Qt metatype registration; virtual destructor supplied. Native equip/use/enter effects and property methods retained. Mouse use/drag adapted from surviving f873bade:src/item.cpp and src/CAnimatedObject.cpp plus genuine #331 CObjectData and event ownership.",
+      "replacementBlob": "de101c4661ce846942e90d7371340e33d4e1a8c8",
+      "sha256": "6b11b29cb6d053d89d7c6201cbbe0341ac4e68d823cac79d266e664b36c2d61d",
+      "source": "recovery/payloads/reconstructions/0b/0ba99be1c6b144da69abe645e40b20496bfbfc80-CItem.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "d012b3fe46dd6c99693ca2e8c009c059d44300bd",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing creature implementation reconstructed from intact donor bodies and existing reconstructed missing CCreature.h API corroborated by surviving #331 CPlayer.cpp/CMonster.cpp callers, genuine CEventHandler.h event-first CGameEvent(type,cause), CObjectHandler.h createMapObject, CMap.h getLootProvider. Native stat, inventory, action, fight, levelling and movement methods retained; virtual destructor supplied when absent from donor.",
+      "replacementBlob": "f86b7477065cd4c7d53780e3ab16a5212a77a37e",
+      "sha256": "d68366e94f0d56f41eba38f6b5cb91b828c71de9456e0f7e1b8147056617a13c",
+      "source": "recovery/payloads/reconstructions/d0/d012b3fe46dd6c99693ca2e8c009c059d44300bd-CCreature.cpp",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "e586ef8f0a7e62fc4e4fefff7e9b294032cd2d04",
+      "path": "scripts/game/interaction.py",
+      "provenance": "Missing interaction script reconstructed from surviving later action bodies by removing later-only game_object registry decorators. Genuine #331 scripts/game/__init__.py imports game.interaction and genuine PyTypeHandler constructs qualified Python classes directly. Action implementations preserved; Python syntax checked. Not an exact original.",
+      "replacementBlob": "7fe5797edafbc9498c78797ec88efb7304a8685e",
+      "sha256": "c7fd7b035e80d27d86e8d6fb122dcbd375a3d7795d3500d6e27ed7cc01d4cb29",
+      "source": "recovery/payloads/reconstructions/e5/e586ef8f0a7e62fc4e4fefff7e9b294032cd2d04-interaction.py",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "202d142b9e80bf811f778c3ef44b96d31b17d5ca",
+      "path": "config/interactions.json",
+      "provenance": "Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.",
+      "replacementBlob": "1c96439799a185d95dc050d30e6ca91dc6d616d4",
+      "sha256": "b1c6981b4af44abb68d3ff52186bb71166ea716d5ffa270d2144954fb4a0b03c",
+      "source": "recovery/payloads/reconstructions/20/202d142b9e80bf811f778c3ef44b96d31b17d5ca-interactions.json",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "280a964a7f31847bef6aa86dd60608313ab10f7e",
+      "path": "config/weapons.json",
+      "provenance": "Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.",
+      "replacementBlob": "5e7717d09f072bab9c53878acd48f9c30ca12865",
+      "sha256": "f92b712627946194dab152fc38fb9ed9b473b6c5ce28af934c2f8ac6cf3aa801",
+      "source": "recovery/payloads/reconstructions/28/280a964a7f31847bef6aa86dd60608313ab10f7e-weapons.json",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    },
+    {
+      "originalBlob": "71bf6f468f812262bf46a24ca77fbdad44af400c",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing 2014 map reconstructed from surviving later map donor by removing its single market1/Market object; genuine #331 config/buildings.json and CObject.h have no Market/CMarket. First surviving CMarket.h history f25cffe508b1d872875d941854c4b6170c9cbefc is Trading works dated2015-02-08, after target2014-11-01. All other14 donor objects/coordinates, tile layers, bounds and start properties preserved. Not an exact original map.",
+      "replacementBlob": "14a71e6bab85b066c9aa88985b932f0e489b92e6",
+      "sha256": "a2bdedfc0bad2e694b5853d54ada3fe67a0205052088aad58067c47ff0efcb17",
+      "source": "recovery/payloads/reconstructions/71/71bf6f468f812262bf46a24ca77fbdad44af400c-map.json",
+      "validatedByOriginalCommit": "beef9d877e9f594fbcc0792794379070921ded15"
+    }
+  ],
+  "limitations": [
+    "Startup and rendered-frame proof only; gameplay parity is not established.",
+    "Private recipe adds reviewed provider INCLUDEPATH; integrate compatibility before publication.",
+    "Resource manifest is tree/path scoped, never a global override for its shared removed originalBlob."
+  ],
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "beef9d877e9f594fbcc0792794379070921ded15"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "resources/8016ebd2e7fba6fb81c0e34d57fd729556e1ab29.qrc",
+      "tree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29"
+    }
+  ],
+  "scopedImportRequirement": "import-handoff.py currently imports originalBlob entries only; separately import scopedEntries by tree/path, without converting pointerBlob to originalBlob.",
+  "status": "native-verified-private-inputs",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/8539fdfc571e1d31f27a9588ed4138a8d14494e026bffe971d49c496fbf2dfe2",
+    "fingerprint": "8539fdfc571e1d31f27a9588ed4138a8d14494e026bffe971d49c496fbf2dfe2",
+    "sourceCommit": "beef9d877e9f594fbcc0792794379070921ded15",
+    "sourceTree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

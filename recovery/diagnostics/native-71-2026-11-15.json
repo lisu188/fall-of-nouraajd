@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "commit": "2468b0ee1b703b24a4151eb79410165e66e3c588",
+      "firstCatalogOrder": 71,
+      "originalBlob": "8b00e9e369f1112c28ba3835704d4a8252737949",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 reconstruction to genuine #71 four-argument MapObject(position, graphical-layer) constructor and explicit logical coordinate Z save/load; surviving Building.cpp establishes logical-depth vs drawing-layer distinction",
+      "sha256": "1a09fba89d750ba80096d355c8d578914992ef47753d937035e30a299c763768",
+      "source": "recovery/payloads/reconstructions/8b/8b00e9e369f1112c28ba3835704d4a8252737949-creature.cpp"
+    },
+    {
+      "commit": "2468b0ee1b703b24a4151eb79410165e66e3c588",
+      "firstCatalogOrder": 71,
+      "originalBlob": "c7f33fe213c8bbfc9aa83675708a0c2884514a5b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 reconstruction to genuine #71 four-argument MapObject constructor and addDungeon(Coords enter,Coords exit,width,height). Retained inferred rectangular generation centered on exit; reciprocal portal objects are inferred from the exact surviving Dungeon(enter,exit) teleport implementation; original layout algorithm unavailable",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "recovery/payloads/reconstructions/c7/c7f33fe213c8bbfc9aa83675708a0c2884514a5b-map.cpp"
+    },
+    {
+      "commit": "2468b0ee1b703b24a4151eb79410165e66e3c588",
+      "firstCatalogOrder": 71,
+      "originalBlob": "11bf98aead92078dbb6f61d22c2e78c53249a186",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 scene reconstruction to genuine #71 Cave(x,y,z), preserving initial logical depth0",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "recovery/payloads/reconstructions/11/11bf98aead92078dbb6f61d22c2e78c53249a186-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay, original internal deltas and missing data schemas remain underdetermined; real compilation/startup proof only.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "930e04c90910fb129a78e889b83087c0d92446f3309666c30d507f48e09b703b",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}
