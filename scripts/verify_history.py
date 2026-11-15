@@ -418,16 +418,19 @@ def verifySnapshot(
             "verifier": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "restorer": hashlib.sha256((REPO_ROOT / "scripts/recover_history.py").read_bytes()).hexdigest(),
             "adapterConfig": adapter["configSha256"],
-            "overrides": overrides,
-            "overrideContext": [
-                entry
-                for entry in (overrides or {}).get("entries", [])
-                if entry.get("commit", source_commit) == source_commit
-                and entry.get("tree", tree["tree"]) == tree["tree"]
-            ],
+            # The exact restored file set; unrelated override edits must not invalidate verified results.
+            "restoredFiles": result["restoration"]["restoredFilesFingerprint"],
         }
         fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
-        result.update({"fingerprint": fingerprint, "recipe": recipe, "toolchain": toolchain, "adapter": adapter})
+        result.update(
+            {
+                "fingerprint": fingerprint,
+                "recipe": recipe,
+                "toolchain": toolchain,
+                "toolchainImage": identity["toolchainImage"],
+                "adapter": adapter,
+            }
+        )
         cached_path = output_root / "results" / (fingerprint + ".json")
         if cached_path.is_file():
             cached = json.loads(cached_path.read_text())

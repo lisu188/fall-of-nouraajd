@@ -1,30 +1,123 @@
 {
-  "ciStatus": "repository-wide Actions queue; no historical runner assigned",
-  "publishedCommitCount": 3,
+  "ciStatus": "Historical recovery workflow last failed before validation (missing test module, Boost.Python 3.3); both fixed on this branch",
+  "publishedCommitCount": 0,
   "schemaVersion": 1,
   "snapshots": [
     {
-      "evidence": "recovery/evidence/earliest",
+      "evidence": "recovery/evidence/b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae",
       "originalCommit": "b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae",
       "originalTree": "a52f6a83298998702d2b76e5a959df9cc2ae4906",
-      "published": true,
-      "url": "https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae",
+      "published": false,
+      "restoredFilesFingerprint": "fece07ffdf1e06988aa250957c09edfcbe43cf2bfa41b3de338adafe14645063",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
       "validation": "build-and-startup-passed"
     },
     {
-      "evidence": "recovery/evidence/2013-reconstruction",
-      "originalCommit": "108bdcbeda04cefeba5e1895f91df023cea8487f",
-      "originalTree": "54126a24ae5e9b85e05fc1f9a4a198953cc262d7",
-      "published": true,
-      "url": "https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/108bdcbeda04cefeba5e1895f91df023cea8487f",
-      "validation": "build-and-startup-passed"
-    },
-    {
-      "evidence": "recovery/evidence/second-original",
+      "evidence": "recovery/evidence/afdd8069397059b5ed17285c9338603534ace659",
       "originalCommit": "afdd8069397059b5ed17285c9338603534ace659",
       "originalTree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
-      "published": true,
-      "url": "https://github.com/lisu188/fall-of-nouraajd/tree/recovery/bfg/afdd8069397059b5ed17285c9338603534ace659",
+      "published": false,
+      "restoredFilesFingerprint": "490a11b10aafff35509c3b566c689b2b283085c486ef13706033d72fe22d3bf3",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/1db40aa015e0dfad33a46a2fc6bd8da5215544ab",
+      "originalCommit": "1db40aa015e0dfad33a46a2fc6bd8da5215544ab",
+      "originalTree": "235f504851de46f808040c14dedd9bea3271aa0d",
+      "published": false,
+      "restoredFilesFingerprint": "38496a36cb7fae7dfe34ce654518172c5073510802a16775fc45ce9d923843ec",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/937210731327bd6202a04e67dfd471508f65894a",
+      "originalCommit": "937210731327bd6202a04e67dfd471508f65894a",
+      "originalTree": "9118081935f3720147cc6191cddc7eabf8ea0ec3",
+      "published": false,
+      "restoredFilesFingerprint": "08bfa3829b60468568b64439250de7505db97143141b52f9e4067d7a2af7ebd2",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c6ac94e1ec6a81ee1f618530c95fa93fe1cebe17",
+      "originalCommit": "c6ac94e1ec6a81ee1f618530c95fa93fe1cebe17",
+      "originalTree": "8be3489c991bab764817418bc0ab74b292fcdc50",
+      "published": false,
+      "restoredFilesFingerprint": "f8e526715c40efe438c8a9d800a1339ca21aada8d1576f4c83913e9543b942ef",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/f4bf8a28af45446e2deb5a51288cf4304a776d9e",
+      "originalCommit": "f4bf8a28af45446e2deb5a51288cf4304a776d9e",
+      "originalTree": "505ae131a1c5b47397cbe0b9a44c32d089dc8e54",
+      "published": false,
+      "restoredFilesFingerprint": "f8fff57e1047036e2e3dd469334c23e51faebd2fcdc0bbe6315411363f3c4070",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6249de1f73f78e69d83773a7645f69e7e64cc5f3",
+      "originalCommit": "6249de1f73f78e69d83773a7645f69e7e64cc5f3",
+      "originalTree": "15dfb18cc1d3b83d0cd777a8683692a4e79c45db",
+      "published": false,
+      "restoredFilesFingerprint": "f442da9b784ff8149d6469298648ae33015e3e72cf0ab964c2c862632b0617f5",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/4a6a0310a4c84dbb67673f9c9ec1724da2fbf4f6",
+      "originalCommit": "4a6a0310a4c84dbb67673f9c9ec1724da2fbf4f6",
+      "originalTree": "492bd374cb3b456711d03adc525b4db6531399b4",
+      "published": false,
+      "restoredFilesFingerprint": "b356473ae1bafcd250eb92c179d619df8a59b6729e9314c4c1ffff05276b2555",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9",
+      "originalCommit": "81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9",
+      "originalTree": "363929ff3eff475998a80cfcf6409f825565c806",
+      "published": false,
+      "restoredFilesFingerprint": "629d7191bbfa9a144f4157e2c17e57bdaed68c6dbd5b506798b5e11e91843ba6",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/aae16c85d246c6031f53332fbc36cfb0586ca43f",
+      "originalCommit": "aae16c85d246c6031f53332fbc36cfb0586ca43f",
+      "originalTree": "a0aff4985ea1a0123a52a11c6a766b9e5fcdc7aa",
+      "published": false,
+      "restoredFilesFingerprint": "629d7191bbfa9a144f4157e2c17e57bdaed68c6dbd5b506798b5e11e91843ba6",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/3e4cc2a9d557307a635f980f58d11e04c61b2b8d",
+      "originalCommit": "3e4cc2a9d557307a635f980f58d11e04c61b2b8d",
+      "originalTree": "b0d80f953f9322938deb0ed5bb1b50d8b9e4f122",
+      "published": false,
+      "restoredFilesFingerprint": "3d973ced8de06504d16f9c9f189d07e13891f6282fbf1e21a04732b73d675169",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/da13b28d2062a5727d5856e3f94cf5aa2d653194",
+      "originalCommit": "da13b28d2062a5727d5856e3f94cf5aa2d653194",
+      "originalTree": "bfccfc73583df90ab1ee7b207b1ea934b6dfae26",
+      "published": false,
+      "restoredFilesFingerprint": "2888edb6c8177cc4b1fe565357c2b0229a0d596797f534a52e2e3980df154524",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/108bdcbeda04cefeba5e1895f91df023cea8487f",
+      "originalCommit": "108bdcbeda04cefeba5e1895f91df023cea8487f",
+      "originalTree": "54126a24ae5e9b85e05fc1f9a4a198953cc262d7",
+      "published": false,
+      "restoredFilesFingerprint": "4dd9688483ab8e3fc0b8890ed80178454b335e16a0520d0c4be8fac4141e53b5",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
       "validation": "build-and-startup-passed"
     }
   ],
@@ -32,5 +125,7 @@
   "status": "in-progress",
   "targetCommitCount": 367,
   "targetTreeCount": 365,
-  "validatedCommitCount": 3
+  "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
+  "validatedCommitCount": 13,
+  "validatedTreeCount": 13
 }

@@ -278,6 +278,8 @@ def selectedOverrides(overrides, commit, tree):
     priorities = {}
     seen = set()
     for entry in (overrides or {}).get("entries", []):
+        if "originalBlob" in entry:
+            continue
         path = safePath(entry["path"])
         if entry.get("commit") not in (None, commit) or entry.get("tree") not in (None, tree):
             continue
@@ -288,6 +290,23 @@ def selectedOverrides(overrides, commit, tree):
         if priority > priorities.get(path, -1):
             selected[path] = entry
             priorities[path] = priority
+    return selected
+
+
+def blobOverrides(overrides):
+    """Reconstructions keyed by the BFG pointer target apply wherever that original content was removed."""
+    selected = {}
+    for entry in (overrides or {}).get("entries", []):
+        if "originalBlob" not in entry:
+            continue
+        oid = entry["originalBlob"]
+        if not isinstance(oid, str) or not OBJECT_ID.fullmatch(oid):
+            raise RecoveryError(f"Invalid original blob reconstruction key: {oid!r}")
+        if "commit" in entry or "tree" in entry or entry.get("add"):
+            raise RecoveryError(f"Original blob reconstructions cannot be context-scoped: {oid}")
+        if oid in selected:
+            raise RecoveryError(f"Duplicate original blob reconstruction: {oid}")
+        selected[oid] = entry
     return selected
 
 
@@ -319,6 +338,7 @@ def prepareSnapshot(objects, catalog, commit, overrides=None, allow_incomplete=F
         raise RecoveryError(f"Catalog tree does not match original commit: {commit}")
     files = objects.files(tree)
     chosen = selectedOverrides(overrides, commit, tree)
+    by_blob = blobOverrides(overrides)
     restored, excluded, unresolved = [], [], []
     markers = sorted(path for path in files if path.endswith(MARKER_SUFFIX))
     for marker_path in markers:
@@ -344,8 +364,11 @@ def prepareSnapshot(objects, catalog, commit, overrides=None, allow_incomplete=F
             restored.append({**record, "method": "exactOriginal", "replacementBlob": target})
             if not chosen.get(path, {}).get("replaceExisting"):
                 chosen.pop(path, None)
-        elif path in chosen:
-            entry = chosen.pop(path)
+        elif path in chosen or target in by_blob:
+            # Precedence: commit-specific repair, then content-keyed reconstruction, then tree/global proposals.
+            entry = chosen.pop(path, None)
+            if target in by_blob and not (entry and entry.get("commit")):
+                entry = by_blob[target]
             content = overrideContent(objects, overrides, entry)
             files[path] = {"mode": entry.get("mode", marker["mode"]), "content": content}
             restored.append(
@@ -358,6 +381,23 @@ def prepareSnapshot(objects, catalog, commit, overrides=None, allow_incomplete=F
             )
         else:
             unresolved.append({**record, "reason": "original blob missing and no reconstruction supplied"})
+    # Content-keyed compatibility repairs replace every surviving copy of that exact original file.
+    for path, existing in sorted(files.items()):
+        repair = by_blob.get(existing.get("blob"))
+        if not repair or not repair.get("replaceExisting") or chosen.get(path, {}).get("commit"):
+            continue
+        chosen.pop(path, None)
+        content = overrideContent(objects, overrides, repair)
+        files[path] = {"mode": repair.get("mode", existing["mode"]), "content": content}
+        restored.append(
+            {
+                "path": path,
+                "method": "compatibilityRepair",
+                "originalBlob": existing["blob"],
+                "replacementBlob": objectHash("blob", content),
+                "provenance": repair["provenance"],
+            }
+        )
     for path, entry in sorted(chosen.items()):
         if path in files and not entry.get("replaceExisting"):
             raise RecoveryError(f"Overriding an existing file requires replaceExisting: {path}")

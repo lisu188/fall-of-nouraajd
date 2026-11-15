@@ -1,0 +1,55 @@
+{
+    "schemaVersion": 1,
+    "description": "Alternative lock for networks without python.org access: CPython sources are the official release tags exported with 'git archive --format=tar --prefix=Python-<version>/'. Boost is the identical release archive (same SHA-256 as sources.json). Every archive must be pre-staged with stage_sources.sh.",
+    "sources": [
+        {
+            "name": "python-2.7.18",
+            "archive": "Python-2.7.18.git.tar",
+            "git": {
+                "repository": "https://github.com/python/cpython",
+                "tag": "v2.7.18",
+                "commit": "8d21aa21f2cbc6d50aab3f420bb23be1d081dac4"
+            },
+            "sha256": "478c768e1959a4933f7417eb68bba6ffd563511295f7a62691dd7a8e84e815b2"
+        },
+        {
+            "name": "python-3.3.7",
+            "archive": "Python-3.3.7.git.tar",
+            "git": {
+                "repository": "https://github.com/python/cpython",
+                "tag": "v3.3.7",
+                "commit": "17bf6b4671ec02d80ad29b278639d5307baddeb5"
+            },
+            "sha256": "fbf709a54b6af88404cc18089e75a1f30f1799fff32d883b38916f073ee0544f"
+        },
+        {
+            "name": "python-3.4.10",
+            "archive": "Python-3.4.10.git.tar",
+            "git": {
+                "repository": "https://github.com/python/cpython",
+                "tag": "v3.4.10",
+                "commit": "e76cbc781044ee01b059f3702c580e66266b84c5"
+            },
+            "sha256": "f91ba373a5908d247ca2b7764e772cc94298c63e8fd4730d1139e169bf27526e"
+        },
+        {
+            "name": "python-3.12.9-controller",
+            "archive": "Python-3.12.9.git.tar",
+            "git": {
+                "repository": "https://github.com/python/cpython",
+                "tag": "v3.12.9",
+                "commit": "fdb81425a9ad683f8c24bf5cbedc9b96baf00cd2"
+            },
+            "sha256": "f7af515040956bbd25cdbfe78d77a4c24b0cb76694ab4f7560187ed7f0fc98e5"
+        },
+        {
+            "name": "boost-1.58.0",
+            "url": "https://archives.boost.io/release/1.58.0/source/boost_1_58_0.tar.bz2",
+            "sha256": "fdfc204fc33ec79c99b9a74944c3e54bd78be4f7f15e260c0e2700a36dc7d3e5",
+            "checksumSource": "https://archives.boost.io/release/1.58.0/source/boost_1_58_0.tar.bz2.json",
+            "mirrors": [
+                "https://downloads.sourceforge.net/project/boost/boost/1.58.0/boost_1_58_0.tar.bz2"
+            ]
+        }
+    ]
+}

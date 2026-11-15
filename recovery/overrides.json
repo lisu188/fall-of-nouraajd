@@ -60414,74 +60414,10 @@
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
-      "blob": "2b497beeead259c7723dc53985432cd010defbf7",
-      "mode": "100644",
-      "path": "animation/animatedobject.h",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animatedobject.h",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "a06aaa1a5c944ac62a5ae8290369299b33dcb55e",
-      "mode": "100644",
-      "path": "animation/animationprovider.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animationprovider.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
       "blob": "6042f926d4028481bc67d546e36e366483d05241",
       "mode": "100644",
       "path": "creatures/creature.cpp",
       "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp",
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "9e96869c54f7ab2ef633db529a125bf9cd52a35d",
-      "mode": "100644",
-      "path": "creatures/monsters/pritz.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritz.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "a7752d13468920e1b4f057848cda3f42cb1acf6d",
-      "mode": "100644",
-      "path": "creatures/monsters/pritzmage.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritzmage.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "a6b99945b9ca341c2b228daef54bb8b0a3761253",
-      "mode": "100644",
-      "path": "creatures/players/mage.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/mage.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "8a26e559a90ed619a4647168d483f534d3e5056f",
-      "mode": "100644",
-      "path": "creatures/players/player.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/player.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "cc6e2e5905c41ee908bbd25fb4fd819798ef5a15",
-      "mode": "100644",
-      "path": "creatures/players/rogue.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/rogue.cpp",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "e9d70eb7dfe5e82b2d87624f76ba4e369408a258",
-      "mode": "100644",
-      "path": "creatures/players/warrior.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/warrior.cpp",
-      "replaceExisting": true,
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
@@ -60528,22 +60464,6 @@
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
-      "blob": "773034569170061919e5ef830ae9d8093a13fcbd",
-      "mode": "100644",
-      "path": "map/map.h",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.h",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "80755a5313045117723f7ce5aff512319d90c7e3",
-      "mode": "100644",
-      "path": "map/tiles/tile.h",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/tiles/tile.h",
-      "replaceExisting": true,
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
       "blob": "db6f11c26618e592b2ac09f89727e1a79de27b4b",
       "mode": "100644",
       "path": "stats/stats.cpp",
@@ -60555,14 +60475,6 @@
       "mode": "100644",
       "path": "view/gamescene.cpp",
       "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp",
-      "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
-    },
-    {
-      "blob": "b4290d625db20c7d2a934c7a426f844b2f6e0cf9",
-      "mode": "100644",
-      "path": "view/gameview.cpp",
-      "provenance": "unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gameview.cpp",
-      "replaceExisting": true,
       "tree": "a52f6a83298998702d2b76e5a959df9cc2ae4906"
     },
     {
@@ -79158,157 +79070,71 @@
     },
     {
       "blob": "5660ac080c4272536e9f9b3f7d1c57fd592d0d9a",
+      "originalBlob": "a159ee450bd4b9de9720b591d28b350f5794a8d2",
       "path": "Game.pro",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "animation/animatedobject.h",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "539826837ca8f49f5f7c17acdab374c49f7db9a86214062ca1671e5d39f5cf19",
-      "source": "upstream/compatibility/earliest/animation/animatedobject.h",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "animation/animationprovider.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "68e8926f4e78e835180b0735cf9ca284bf07163d49d604ff23da11490d8535d6",
-      "source": "upstream/compatibility/earliest/animation/animationprovider.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "6042f926d4028481bc67d546e36e366483d05241",
+      "originalBlob": "ef44b5df70589d0e652b6b1c5c8456e048e668ba",
       "path": "creatures/creature.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/monsters/pritz.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "cf30b825ffcc3c25c2896ae071a6de63136899ae9d75e962f18fb2ae6bcf24fd",
-      "source": "upstream/compatibility/earliest/creatures/monsters/pritz.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/monsters/pritzmage.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "1e22eb03f1b93cb19a855f2750a3dc9d77acd73dbe045d018afc9c64021d4111",
-      "source": "upstream/compatibility/earliest/creatures/monsters/pritzmage.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/mage.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "704e5115cbf4441b35d1008ce25d262853be0260f7acb69954440eb16786fe20",
-      "source": "upstream/compatibility/earliest/creatures/players/mage.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/player.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "2b18e0d2c5398dc2a74ec5ec37ecf0c56596bb2ba80d1d04c6fb3bb620f0813f",
-      "source": "upstream/compatibility/earliest/creatures/players/player.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/rogue.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "2ca7ea019d3ca7081d760a87c801af024f6303a8e4e6c94c0f3dce4cac1dccfc",
-      "source": "upstream/compatibility/earliest/creatures/players/rogue.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "creatures/players/warrior.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "299d16910635ddf33b3eb003eeff58ea3406fcbf9a598834aef43c87bbbd6532",
-      "source": "upstream/compatibility/earliest/creatures/players/warrior.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "f890ee0f00785096c6903db731e492c512342117",
+      "originalBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
       "path": "images/buildings/cave/0.png",
-      "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "fb2a04dc08174e6e5e695f71374552a4374dfc2d",
+      "originalBlob": "6cab0a22e2f71d71b95dfefa7565593528494ab8",
       "path": "images/tiles/grass/0.png",
-      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "d48054fd873a7b31be64c8e23af1d8e93092c858",
+      "originalBlob": "c63b54e718a36c4a43474f293397c19d739f1604",
       "path": "images/tiles/ground/0.png",
-      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "85d6d5c7c94cab2a5982376341fecaabdba4f4e5",
+      "originalBlob": "203d08f3f0f153b2fffca654b4049c483906be11",
       "path": "images/tiles/mountain/0.png",
-      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "926e710abc6016a76dbfb9ccd2c9fd035a65e327",
+      "originalBlob": "6a0a6e63b9334f8bce62485daaf6b3dfa0df7a71",
       "path": "images/tiles/road/0.png",
-      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
       "blob": "bcbc39b6caa2bd2dd09bfd4b07220e2f27fe5910",
+      "originalBlob": "c8576600fa057e55c3f7c4b140fbaf8010b71a93",
       "path": "images/tiles/water/0.png",
-      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
-      "blob": "b87f78f0b3e634ad55ca98d98467a75043dff71d",
+      "originalBlob": "0f2d04cf0f5e9fdc582ff67ae67d31c6365d1d8e",
       "path": "map/map.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp; headerMatch=0; apiOverlap=9500/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "map/map.h",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "89f10e5f3746d3c1ee8b5d64871d9ec87d117632fc6a9b98762fb049a8213ade",
-      "source": "upstream/compatibility/earliest/map/map.h",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "map/tiles/tile.h",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "363142caea34dfa3d474b9cd95a24860d76d25ead6751e42cdc97cdec08fd612",
-      "source": "upstream/compatibility/earliest/map/tiles/tile.h",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); replaces the 2026 donor that required modified headers",
+      "sha256": "2224efe9614c7d3d9611fe5dc7afd17d79c1b7d850028d2eb89b7f75d2e8609c",
+      "source": "payloads/reconstructions/0f/0f2d04cf0f5e9fdc582ff67ae67d31c6365d1d8e-map.cpp"
     },
     {
       "blob": "db6f11c26618e592b2ac09f89727e1a79de27b4b",
+      "originalBlob": "afe8cf2e65426bc9e4d11d9912769b9acac6a40b",
       "path": "stats/stats.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original)."
     },
     {
-      "blob": "14ad04283dc95bceec84a5ae6125a2b34ae1d9d0",
+      "originalBlob": "5b28e8246cc5109520552d93627eb9d59ff6441b",
       "path": "view/gamescene.cpp",
-      "provenance": "unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
-    },
-    {
-      "path": "view/gameview.cpp",
-      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.",
-      "replaceExisting": true,
-      "sha256": "4d032a1e6cdf3951d0dec99366ae8be4206beb4834949a869633047361908644",
-      "source": "upstream/compatibility/earliest/view/gameview.cpp",
-      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91"
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 2026 donor (108bdcbe view/gamescene.cpp) to the original headers: tiles are created through Map::getTile and player views are positioned by GameView::resize",
+      "sha256": "78032dd8fe518dbea30360f1686a912684bb81d9369ea844bf4b7c94a0acb07b",
+      "source": "payloads/reconstructions/5b/5b28e8246cc5109520552d93627eb9d59ff6441b-gamescene.cpp"
     },
     {
       "path": "compression/minizip.h",
@@ -93328,6 +93154,125 @@
       "path": "scripts/game/interaction.py",
       "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=32",
       "tree": "ffee761da016546507d64cda072b997f0992a5d9"
+    },
+    {
+      "originalBlob": "0340e81fb1eee9c9eec04786a8bfb4e8ac3971c4",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1056f5a1bb90ad6555a946e3ee2e95334ea0cca5 (previous version of stats/stats.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/03/0340e81fb1eee9c9eec04786a8bfb4e8ac3971c4-stats.cpp"
+    },
+    {
+      "originalBlob": "056acff8a5ac07d4006cfa545a2fe842117df4af",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 65ed8ffa reconstruction: initializeFromFile, configured levelling actions (getLevelAction) and getLevelBonus declared in the same-commit creature.h",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/05/056acff8a5ac07d4006cfa545a2fe842117df4af-creature.cpp"
+    },
+    {
+      "originalBlob": "0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a2666fb41565d2dcfae1162a6a5a09ff9381d36d (previous version of interactions/interaction.cpp); compiles in 81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/0a/0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d-interaction.cpp"
+    },
+    {
+      "originalBlob": "1056f5a1bb90ad6555a946e3ee2e95334ea0cca5",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the ff3d46a0 reconstruction across the 4a6a0310 source reformat",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/10/1056f5a1bb90ad6555a946e3ee2e95334ea0cca5-stats.cpp"
+    },
+    {
+      "originalBlob": "1c25469b4d69303a822d160da47356bbf5f2f990",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 056acff8a5ac07d4006cfa545a2fe842117df4af (previous version of creatures/creature.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/1c/1c25469b4d69303a822d160da47356bbf5f2f990-creature.cpp"
+    },
+    {
+      "originalBlob": "1f4cd3f2395389fb8cecb6efb8d854a89e23e51b",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the ef44b5df reconstruction: value action list (mirrors the same-commit player.cpp change) and Creature::addEffect",
+      "sha256": "b88110750398fdcb4325a904bf7e0cb1970f7425c2ebad69f6d7e70b83a44056",
+      "source": "payloads/reconstructions/1f/1f4cd3f2395389fb8cecb6efb8d854a89e23e51b-creature.cpp"
+    },
+    {
+      "originalBlob": "27745415c1f4ae213873a14ad9b903ecbe8ae27d",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 0f2d04cf reconstruction across the 4a6a0310 source reformat",
+      "sha256": "2224efe9614c7d3d9611fe5dc7afd17d79c1b7d850028d2eb89b7f75d2e8609c",
+      "source": "payloads/reconstructions/27/27745415c1f4ae213873a14ad9b903ecbe8ae27d-map.cpp"
+    },
+    {
+      "originalBlob": "45cb7aaa94d107c4fd1cef1e605c91e1be604417",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the c11d143b reconstruction (previous version of view/gamescene.cpp)",
+      "sha256": "b11bcfa3821448e49c3e84e886e7de54ccc6c40ac4e6c01105ff4b63b72bbeee",
+      "source": "payloads/reconstructions/45/45cb7aaa94d107c4fd1cef1e605c91e1be604417-gamescene.cpp"
+    },
+    {
+      "originalBlob": "499bbd1240f6bfc05d05f50974d54f5f9f593014",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; surviving f4bf8a28 interactions/interaction.cpp plus the prototype registry (getAction, terminate, init) declared in the same-commit interaction.h",
+      "sha256": "7fec34be945974be9e540e82593671ca6a1a4eed6e218d32cbdb2b89ea26efba",
+      "source": "payloads/reconstructions/49/499bbd1240f6bfc05d05f50974d54f5f9f593014-interaction.cpp"
+    },
+    {
+      "originalBlob": "65ed8ffa036e62eabfbe3e593156e877b4c70250",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 678eb109 reconstruction: value Stats, JSON creature configuration in the style of the surviving Item::loadJsonFile, per-level stat growth",
+      "sha256": "5b9d6ff6510d28f955ca2f175390d66e68208201a39aeff943f592949cdb0f1c",
+      "source": "payloads/reconstructions/65/65ed8ffa036e62eabfbe3e593156e877b4c70250-creature.cpp"
+    },
+    {
+      "originalBlob": "678eb1091f129d68b166f003231c2b10c0eb168c",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 1f4cd3f2 reconstruction: effects replace stun (applyEffects, as used by the same-commit player.cpp and effect.cpp) and out-of-line accessors",
+      "sha256": "537a74124c0c712903e9a1dca65f750c5a6f816593002ce9f5055244b2d7554a",
+      "source": "payloads/reconstructions/67/678eb1091f129d68b166f003231c2b10c0eb168c-creature.cpp"
+    },
+    {
+      "originalBlob": "6d39ac779f573337b12845508847f280bf2cbf71",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; 2026 donor stats.cpp plus Stats::init(Json::Value) declared in the same-commit stats.h",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/6d/6d39ac779f573337b12845508847f280bf2cbf71-stats.cpp"
+    },
+    {
+      "originalBlob": "8895196e12c6d082589a4278391a97735994c633",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d (previous version of interactions/interaction.cpp); compiles in da13b28d2062a5727d5856e3f94cf5aa2d653194",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/88/8895196e12c6d082589a4278391a97735994c633-interaction.cpp"
+    },
+    {
+      "originalBlob": "a2666fb41565d2dcfae1162a6a5a09ff9381d36d",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 499bbd12 reconstruction; getAction instantiates interactions by name because the same-commit interaction.h removed the registry",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/a2/a2666fb41565d2dcfae1162a6a5a09ff9381d36d-interaction.cpp"
+    },
+    {
+      "originalBlob": "c11d143b1549352cca3fa8b22287ba41a3a0747c",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 5b28e824 reconstruction with Mage renamed to Sorcerer (same-commit mage.h)",
+      "sha256": "b11bcfa3821448e49c3e84e886e7de54ccc6c40ac4e6c01105ff4b63b72bbeee",
+      "source": "payloads/reconstructions/c1/c11d143b1549352cca3fa8b22287ba41a3a0747c-gamescene.cpp"
+    },
+    {
+      "originalBlob": "da0d2da6fc3ffa1e597f9637a73db7bc235cd6d2",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 45cb7aaa reconstruction across the 4a6a0310 source reformat",
+      "sha256": "b11bcfa3821448e49c3e84e886e7de54ccc6c40ac4e6c01105ff4b63b72bbeee",
+      "source": "payloads/reconstructions/da/da0d2da6fc3ffa1e597f9637a73db7bc235cd6d2-gamescene.cpp"
+    },
+    {
+      "originalBlob": "ff3d46a0900f209fe18a6bee08d4592037821072",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 6d39ac77 reconstruction (previous version of stats/stats.cpp)",
+      "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
+      "source": "payloads/reconstructions/ff/ff3d46a0900f209fe18a6bee08d4592037821072-stats.cpp"
     }
   ],
   "schemaVersion": 1
