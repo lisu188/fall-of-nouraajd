@@ -810,6 +810,14 @@ std::string read_object_string(const json &object, const std::string &key, const
     return object[key].get<std::string>();
 }
 
+std::string readStaticTerrainData(const json &properties) {
+    if (!properties.contains("staticTerrainData"))
+        return {};
+    if (!properties["staticTerrainData"].is_string())
+        throw std::invalid_argument("Authored static terrain must be a descriptor string");
+    return properties["staticTerrainData"].get<std::string>();
+}
+
 void apply_tile_layer_metadata(const std::shared_ptr<CMap> &map, const json &layer) {
     if (!layer.contains("properties") || !layer["properties"].is_object()) {
         vstd::logger::warning("Ignoring tile layer without object properties");
@@ -974,6 +982,16 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
             }
         }
     }
+    const auto authored = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName));
+    const json emptyProperties = json::object();
+    const auto &properties = authored && authored->contains("properties") && (*authored)["properties"].is_object()
+                                 ? (*authored)["properties"]
+                                 : emptyProperties;
+    const auto terrain = readStaticTerrainData(properties);
+    if (map->getStaticTerrainData() != terrain)
+        throw std::invalid_argument("Saved static terrain differs from its authored descriptor");
+    map->setStaticTerrainData(terrain);
+    map->validateStaticTerrainBounds();
     map->setBoolProperty("guardNativeEncounterSaves", nativeEncounterPolicy);
     map->setStringProperty("verifiedLoadResumeReceiver", verifiedLoadReceiver);
 }
@@ -1331,6 +1349,8 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
                 handleTileLayer(map, tileTypes, layer);
             }
         }
+        map->setStaticTerrainData(readStaticTerrainData(mapProperties));
+        map->validateStaticTerrainBounds();
         for (const auto &layer : mapLayers) {
             if (layer.is_object() && layer.contains("type") && layer["type"].is_string() &&
                 vstd::string_equals(layer["type"].get<std::string>(), "objectgroup")) {

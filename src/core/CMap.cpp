@@ -102,6 +102,224 @@ CMap::~CMap() {
     }
 }
 
+namespace {
+int readStaticTerrainInteger(const json &value, int minimum, int maximum) {
+    if (!value.is_number_integer())
+        throw std::invalid_argument("Static terrain requires an integer");
+    const auto number = value.get<unsigned long long>();
+    if (number < static_cast<unsigned long long>(minimum) || number > static_cast<unsigned long long>(maximum))
+        throw std::invalid_argument("Static terrain integer is out of range");
+    return static_cast<int>(number);
+}
+
+void checkStaticTerrainDepth(const std::string &data) {
+    int depth = 0;
+    bool quoted = false;
+    bool escaped = false;
+    for (const char value : data) {
+        if (quoted) {
+            if (escaped)
+                escaped = false;
+            else if (value == '\\')
+                escaped = true;
+            else if (value == '"')
+                quoted = false;
+        } else if (value == '"') {
+            quoted = true;
+        } else if (value == '[' || value == '{') {
+            if (++depth > 16)
+                throw std::invalid_argument("Static terrain descriptor nesting exceeds its limit");
+        } else if (value == ']' || value == '}') {
+            if (--depth < 0)
+                throw std::invalid_argument("Unbalanced static terrain descriptor");
+        }
+    }
+    if (depth != 0 || quoted)
+        throw std::invalid_argument("Unbalanced static terrain descriptor");
+}
+
+void checkStaticTerrainPalette(const json &configuration) {
+    if (!configuration.is_object() || configuration.size() != 2 || !configuration.contains("class") ||
+        !configuration["class"].is_string() || configuration["class"].get<std::string>() != "CTile" ||
+        !configuration.contains("properties") || !configuration["properties"].is_object())
+        throw std::invalid_argument("Static terrain requires a plain native tile configuration");
+    for (const auto &[key, value] : configuration["properties"].items()) {
+        if (key == "canStep") {
+            if (!value.is_boolean())
+                throw std::invalid_argument("Static tile passability must be boolean");
+        } else if (key == "movementCost") {
+            static_cast<void>(readStaticTerrainInteger(value, 0, std::numeric_limits<int>::max()));
+        } else if ((key == "animation" || key == "label" || key == "description" || key == "tileType") &&
+                   value.is_string()) {
+            continue;
+        } else {
+            throw std::invalid_argument("Static tile configuration has unsupported properties");
+        }
+    }
+}
+} // namespace
+
+std::string CMap::getStaticTerrainData() const {
+    std::lock_guard lock(navigationMutex);
+    return staticTerrainData;
+}
+
+void CMap::validateStaticTerrainBounds() const {
+    std::lock_guard lock(navigationMutex);
+    for (const auto &[z, raster] : staticTerrainLevels) {
+        if (!hasBounds(z) || raster.width - 1 > xBounds.at(z) || raster.height - 1 > yBounds.at(z) || wrapsX(z) ||
+            wrapsY(z))
+            throw std::logic_error("Static terrain requires enclosing nonwrapping authored bounds");
+    }
+}
+
+void CMap::validateStaticTerrainConfiguration() {
+    if (staticTerrainLevels.empty())
+        return;
+    auto game = getGame();
+    if (!game)
+        throw std::logic_error("Static terrain requires its game owner");
+    auto handler = game->getObjectHandler();
+    const auto revision = handler->getNavigationConfigRevision();
+    if (staticTerrainConfigOwner.lock() == handler && revision == staticTerrainConfigRevision)
+        return;
+    for (const auto &[type, expected] : staticTerrainConfigurations) {
+        auto actual = handler->getConfig(type);
+        if (!actual || actual->dump() != expected || !handler->getStaticTileNavigation(type))
+            throw std::logic_error("Static terrain palette configuration changed");
+    }
+    staticTerrainConfigRevision = revision;
+    staticTerrainConfigOwner = handler;
+}
+
+void CMap::setStaticTerrainData(std::string data) {
+    std::lock_guard lock(navigationMutex);
+    if (data == staticTerrainData) {
+        if (!data.empty()) {
+            validateStaticTerrainConfiguration();
+            validateStaticTerrainBounds();
+        }
+        return;
+    }
+    if (!staticTerrainData.empty())
+        throw std::logic_error("Static terrain is immutable after admission");
+    constexpr std::size_t MAX_STATIC_CELLS = 65536;
+    constexpr std::size_t MAX_STATIC_BYTES = 131072;
+    if (data.size() > MAX_STATIC_BYTES)
+        throw std::invalid_argument("Static terrain descriptor exceeds its byte limit");
+    checkStaticTerrainDepth(data);
+    auto descriptor = json::parse(data);
+    if (!descriptor.is_object() || descriptor.size() != 2 || !descriptor.contains("version") ||
+        !descriptor["version"].is_number_integer() || readStaticTerrainInteger(descriptor["version"], 1, 1) != 1 ||
+        !descriptor.contains("levels") || !descriptor["levels"].is_array() || descriptor["levels"].empty() ||
+        descriptor["levels"].size() > 8)
+        throw std::invalid_argument("Invalid static terrain descriptor");
+    auto game = getGame();
+    if (!game)
+        throw std::logic_error("Static terrain admission requires a game owner");
+    auto handler = game->getObjectHandler();
+    std::map<int, StaticTerrainLevel> levels;
+    std::map<std::string, std::string> configurations;
+    std::size_t total = 0;
+    for (const auto &level : descriptor["levels"]) {
+        if (!level.is_object() || level.size() != 6 || !level.contains("level") ||
+            !level["level"].is_number_integer() || !level.contains("width") || !level["width"].is_number_integer() ||
+            !level.contains("height") || !level["height"].is_number_integer() || !level.contains("palette") ||
+            !level["palette"].is_array() || level["palette"].empty() || level["palette"].size() > 16 ||
+            !level.contains("rows") || !level["rows"].is_array() || !level.contains("area") ||
+            !level["area"].is_string() || level["area"].get<std::string>().empty() ||
+            level["area"].get<std::string>().size() > 64)
+            throw std::invalid_argument("Invalid static terrain level");
+        const int z = readStaticTerrainInteger(level["level"], 0, std::numeric_limits<int>::max());
+        const int width = readStaticTerrainInteger(level["width"], 1, static_cast<int>(MAX_STATIC_CELLS));
+        const int height = readStaticTerrainInteger(level["height"], 1, static_cast<int>(MAX_STATIC_CELLS));
+        if (z < 0 || levels.contains(z) || width <= 0 || height <= 0 ||
+            static_cast<std::size_t>(width) > MAX_STATIC_CELLS / static_cast<std::size_t>(height) ||
+            level["rows"].size() != static_cast<std::size_t>(height))
+            throw std::invalid_argument("Invalid or duplicate static terrain extent");
+        const auto cells = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+        if (cells > MAX_STATIC_CELLS - total)
+            throw std::invalid_argument("Static terrain exceeds its cell limit");
+        total += cells;
+        StaticTerrainLevel raster{width, height, {}, {}, {}};
+        for (const auto &entry : level["palette"]) {
+            if (!entry.is_object() || entry.size() != 2 || !entry.contains("type") || !entry["type"].is_string() ||
+                !entry.contains("configuration") || !entry["configuration"].is_object())
+                throw std::invalid_argument("Invalid static terrain palette entry");
+            const auto type = entry["type"].get<std::string>();
+            if (type.empty() || type.size() > 128 || std::ranges::find(raster.palette, type) != raster.palette.end())
+                throw std::invalid_argument("Invalid or duplicate static terrain palette type");
+            auto actual = handler->getConfig(type);
+            const auto expected = entry["configuration"].dump();
+            checkStaticTerrainPalette(entry["configuration"]);
+            auto navigation = handler->getStaticTileNavigation(type);
+            if (!actual || expected.size() > 4096 || actual->dump() != expected || !navigation)
+                throw std::invalid_argument("Static terrain requires an unchanged native tile palette");
+            configurations[type] = expected;
+            raster.palette.push_back(type);
+            raster.navigation.push_back(*navigation);
+        }
+        raster.cells.reserve(cells);
+        for (const auto &row : level["rows"]) {
+            if (!row.is_string())
+                throw std::invalid_argument("Static terrain row must be a string");
+            const auto text = row.get<std::string>();
+            if (text.size() != static_cast<std::size_t>(width))
+                throw std::invalid_argument("Static terrain row width mismatch");
+            for (const unsigned char value : text) {
+                const auto digit = std::string_view("0123456789abcdef").find(value);
+                if (digit >= raster.palette.size())
+                    throw std::invalid_argument("Static terrain cell has no palette entry");
+                raster.cells.push_back(static_cast<std::uint8_t>(digit));
+            }
+        }
+        levels.emplace(z, std::move(raster));
+    }
+    // Strict save construction precedes authored bounds; the loader validates the same descriptor again afterward.
+    for (const auto &[z, raster] : levels) {
+        if (hasBounds(z) &&
+            (raster.width - 1 > xBounds.at(z) || raster.height - 1 > yBounds.at(z) || wrapsX(z) || wrapsY(z)))
+            throw std::invalid_argument("Static terrain exceeds its authored nonwrapping bounds");
+    }
+    staticTerrainLevels = std::move(levels);
+    staticTerrainConfigurations = std::move(configurations);
+    staticTerrainConfigRevision = handler->getNavigationConfigRevision();
+    staticTerrainConfigOwner = handler;
+    staticTerrainData = std::move(data);
+    routingChanged();
+    recordDirectPropertyChanged("staticTerrainData");
+}
+
+std::optional<std::pair<bool, int>> CMap::lookupStaticTerrainCell(Coords coords) {
+    if (staticTerrainLevels.empty())
+        return std::nullopt;
+    validateStaticTerrainConfiguration();
+    validateStaticTerrainBounds();
+    const auto level = staticTerrainLevels.find(coords.z);
+    if (level == staticTerrainLevels.end())
+        return std::nullopt;
+    const auto &raster = level->second;
+    if (isOutOfBounds(coords) || coords.x < 0 || coords.y < 0 || coords.x >= raster.width ||
+        coords.y >= raster.height) {
+        // Only an already validated native palette entry can replace a transient fallback tile.
+        const auto type = fallbackTileType(coords);
+        const auto found = std::ranges::find(raster.palette, type);
+        if (found == raster.palette.end())
+            return std::nullopt;
+        return raster.navigation[static_cast<std::size_t>(std::distance(raster.palette.begin(), found))];
+    }
+    return raster.navigation[raster.cells[static_cast<std::size_t>(coords.y) * raster.width + coords.x]];
+}
+
+std::optional<std::string> CMap::staticTerrainTileType(Coords coords) {
+    if (!lookupStaticTerrainCell(coords))
+        return std::nullopt;
+    const auto &raster = staticTerrainLevels.at(coords.z);
+    if (isOutOfBounds(coords) || coords.x < 0 || coords.y < 0 || coords.x >= raster.width || coords.y >= raster.height)
+        return std::nullopt;
+    return raster.palette[raster.cells[static_cast<std::size_t>(coords.y) * raster.width + coords.x]];
+}
+
 std::map<int, std::pair<int, int>> CMap::getBounds() {
     std::map<int, std::pair<int, int>> bounds;
     for (const auto &[level, x_bound] : xBounds) {
@@ -528,6 +746,8 @@ CNavigationCell CMap::lookupNavigationCell(Coords coords, std::optional<CNavigat
     auto tile = tiles.find(coords);
     if (tile != tiles.end() && tile->second) {
         result = {tile->second->canStep(), tile->second->getMovementCost()};
+    } else if (auto cell = lookupStaticTerrainCell(coords)) {
+        result = {cell->first, cell->second};
     } else if (fallback) {
         result = *fallback;
     } else {
@@ -784,6 +1004,15 @@ int CMap::getMovementCost(Coords coords) {
 }
 
 int CMap::lookupMovementCost(int x, int y, int z) {
+    {
+        std::lock_guard lock(navigationMutex);
+        const auto coords = normalizeCoords(Coords(x, y, z));
+        const auto stored = tiles.find(coords);
+        if (stored != tiles.end() && stored->second)
+            return std::max(1, stored->second->getMovementCost());
+        if (auto cell = lookupStaticTerrainCell(coords))
+            return std::max(1, cell->second);
+    }
     auto tile = resolveTileForLookup(Coords(x, y, z));
     return tile ? std::max(1, tile->getMovementCost()) : 1;
 }
@@ -1702,7 +1931,8 @@ std::shared_ptr<CTile> CMap::resolveTileForLookup(Coords coords) {
         if (found != tiles.end())
             return found->second;
         game = getGame();
-        type = fallbackTileType(coords);
+        const auto rasterType = staticTerrainTileType(coords);
+        type = rasterType ? *rasterType : fallbackTileType(coords);
     }
     if (!game)
         return nullptr;
