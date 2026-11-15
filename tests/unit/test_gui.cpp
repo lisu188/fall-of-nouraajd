@@ -2490,6 +2490,115 @@ void testTerrainObserversTrackFinalBulkMembership() {
                 "successful bulk installation must subscribe its final tile exactly once");
 }
 
+void testSharedMinimapMarkersUseFreshElevationAndDerivedBounds() {
+    for (const bool derivedBounds : {false, true}) {
+        auto first = make_minimap_harness();
+        auto second = make_minimap_harness();
+        for (const auto &map : {first.map, second.map}) {
+            map->setDefaultTiles({{0, "GroundTile"}});
+            if (!derivedBounds) {
+                map->setXBounds({{0, 3}});
+                map->setYBounds({{0, 3}});
+            } else {
+                expect_true(map->addTile(std::make_shared<CTile>(), 3, 3, 0),
+                            "derived marker fixture must retain an actual terrain extent");
+            }
+        }
+        auto marker = std::make_shared<CMapObject>();
+        marker->setName("sharedMinimapMarker");
+        marker->setPosX(2);
+        marker->setPosY(2);
+        marker->setPosZ(1);
+        marker->setCanStep(true);
+        first.map->addObject(marker);
+        second.map->addObject(marker);
+        expect_true(first.map->getObjectByName(marker->getName()) == marker &&
+                        second.map->getObjectByName(marker->getName()) == marker,
+                    "the same actual marker must be retained in both native map registries");
+        expect_true(marker->getMap() == second.map && first.map->getObjectByName(marker->getName()) == marker &&
+                        second.map->getObjectByName(marker->getName()) == marker,
+                    "the marker fixture must keep A's registry entry while B is its current owner");
+        auto firstView = std::make_shared<CMinimapGraphicsObject>();
+        auto secondView = std::make_shared<CMinimapGraphicsObject>();
+        const auto rect = CUtil::rect(0, 0, 128, 128);
+        auto markerPixels = [&](MinimapHarness &harness, const std::shared_ptr<CMinimapGraphicsObject> &view) {
+            view->renderObject(harness.gui, rect, 0);
+            std::vector<Uint32> pixels(128 * 128);
+            expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), rect.get(), SDL_PIXELFORMAT_ARGB8888,
+                                             pixels.data(), 128 * sizeof(Uint32)) == 0,
+                        "shared marker regression must read actual isolated-renderer pixels");
+            std::size_t count = 0;
+            int minX = 128;
+            for (std::size_t index = 0; index < pixels.size(); ++index) {
+                if ((pixels[index] & 0x00ffffffu) == 0x00ffaa00u) {
+                    ++count;
+                    minX = std::min(minX, static_cast<int>(index % 128));
+                }
+            }
+            return std::pair(count, minX);
+        };
+        expect_true(markerPixels(first, firstView).first == 0 && markerPixels(second, secondView).first == 0,
+                    "both warmed minimaps must initially exclude the shared marker on another elevation");
+        const auto firstRevision = first.map->getNavigationRevision();
+        const auto secondRevision = second.map->getNavigationRevision();
+        const auto firstSnapshots = firstView->getObjectSnapshotBuildCount();
+        const auto firstTerrain = firstView->getTerrainTextureBuildCount();
+        marker->setPosZ(0);
+        expect_true(first.map->getNavigationRevision() == firstRevision &&
+                        second.map->getNavigationRevision() > secondRevision,
+                    "the counterexample must mutate only B's revision while A still retains the actual marker");
+        expect_true(markerPixels(first, firstView).first > 0 && markerPixels(second, secondView).first > 0,
+                    "both minimaps must show a shared marker entering their displayed elevation");
+        expect_true(firstView->getObjectSnapshotBuildCount() == firstSnapshots &&
+                        firstView->getTerrainTextureBuildCount() == firstTerrain,
+                    "fresh elevation filtering must neither rebuild A's registry snapshot nor unchanged terrain");
+        if (derivedBounds) {
+            marker->setPosX(6);
+            const auto expanded = markerPixels(first, firstView);
+            expect_true(expanded.first > 0 && expanded.second > 110 &&
+                            firstView->getTerrainTextureBuildCount() == firstTerrain + 1,
+                        "shared coordinate changes must expand derived bounds and display the actual moved marker");
+            marker->setPosX(2);
+            const auto contracted = markerPixels(first, firstView);
+            expect_true(contracted.first > 0 && contracted.second == 78 &&
+                            firstView->getTerrainTextureBuildCount() == firstTerrain + 2,
+                        "returning a shared marker must contract derived bounds without stale coordinate extents");
+        }
+        marker->setPosZ(1);
+        expect_true(markerPixels(first, firstView).first == 0 && markerPixels(second, secondView).first == 0,
+                    "both minimaps must freshly exclude a shared marker leaving their displayed elevation");
+        expect_true(firstView->getObjectSnapshotBuildCount() == firstSnapshots &&
+                        first.map->getNavigationRevision() == firstRevision,
+                    "cross-owner position changes must not require an invented invalidation of A");
+        first.map->removeObject(marker);
+        expect_true(!first.map->getObjectByName(marker->getName()), "the old marker must leave A's real registry");
+        auto replacement = std::make_shared<CMapObject>();
+        replacement->setName(marker->getName());
+        replacement->setPosX(2);
+        replacement->setPosY(2);
+        replacement->setCanStep(true);
+        first.map->addObject(replacement);
+        expect_true(first.map->getObjectByName(replacement->getName()) == replacement &&
+                        markerPixels(first, firstView).first > 0,
+                    "a same-name replacement must enter the snapshot by actual registry identity");
+        const std::weak_ptr<CMapObject> oldLifetime = marker;
+        const std::weak_ptr<CMapObject> replacementLifetime = replacement;
+        second.map->removeObject(marker);
+        first.map->removeObject(replacement);
+        expect_true(!second.map->getObjectByName(marker->getName()) &&
+                        !first.map->getObjectByName(replacement->getName()),
+                    "both objects must leave their actual owning registries");
+        marker.reset();
+        replacement.reset();
+        expect_true(oldLifetime.expired() && replacementLifetime.expired(),
+                    "neither minimap may retain a removed original or same-name replacement actor");
+        expect_true(markerPixels(first, firstView).first == 0 && markerPixels(second, secondView).first == 0,
+                    "removed shared and replacement markers must disappear from both actual renders");
+        first.game->getContext()->shutdown();
+        second.game->getContext()->shutdown();
+    }
+}
+
 void testMinimapMarkerSnapshotTracksMembershipAndElevation() {
     auto harness = make_minimap_harness();
     auto map = harness.map;
@@ -2517,7 +2626,7 @@ void testMinimapMarkerSnapshotTracksMembershipAndElevation() {
     marker->setPosZ(0);
     render();
     expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 3,
-                "returning a marker to the current elevation must rebuild its filtered snapshot");
+                "returning a marker to the current elevation must rebuild its registry snapshot");
     const std::weak_ptr<CMapObject> removed = marker;
     map->setObjects({harness.player});
     marker.reset();
@@ -5491,6 +5600,7 @@ int main() {
     testTerrainObserversTrackDuplicateKeysAndWeakMaps();
     testTerrainObserversDoNotAcquireNavigationLocks();
     testTerrainObserversTrackFinalBulkMembership();
+    testSharedMinimapMarkersUseFreshElevationAndDerivedBounds();
     testMinimapMarkerSnapshotTracksMembershipAndElevation();
     testCollapsedMinimapPreservesOrderedRasterWinner();
     testMinimapReplacementIdentityRefreshesCollapsedRaster();

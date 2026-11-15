@@ -161,40 +161,43 @@ bool bounds_within_limits(const LevelBounds &bounds) {
     return width > 0 && height > 0 && width <= MAX_MINIMAP_LEVEL_EXTENT && height <= MAX_MINIMAP_LEVEL_EXTENT;
 }
 
-std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, int z,
-                                            std::span<const std::weak_ptr<CMapObject>> objects) {
+struct TerrainBounds {
+    std::optional<LevelBounds> bounds;
+    bool fromMetadata = false;
+};
+
+TerrainBounds get_terrain_bounds(const std::shared_ptr<CMap> &map, int z) {
     const auto xBounds = map->getXBounds();
     const auto yBounds = map->getYBounds();
     if (vstd::ctn(xBounds, z) && vstd::ctn(yBounds, z)) {
-        const LevelBounds metadataBounds{0, 0, xBounds.at(z), yBounds.at(z)};
-        if (!bounds_within_limits(metadataBounds)) {
-            return std::nullopt;
-        }
-        return metadataBounds;
+        return {LevelBounds{0, 0, xBounds.at(z), yBounds.at(z)}, true};
     }
 
     LevelBounds bounds;
     bool hasBounds = false;
-    if (auto player = map->getPlayer()) {
-        include_coords(bounds, hasBounds, player->getCoords());
-    }
     map->forTiles([&](std::shared_ptr<CTile> tile) {
         if (tile && z_matches(tile->getCoords(), z)) {
             include_coords(bounds, hasBounds, tile->getCoords());
         }
     });
-    for (const auto &entry : objects) {
-        const auto object = entry.lock();
-        if (object && z_matches(object->getCoords(), z)) {
-            include_coords(bounds, hasBounds, object->getCoords());
+    return {hasBounds ? std::optional<LevelBounds>(bounds) : std::nullopt, false};
+}
+
+std::optional<LevelBounds> get_level_bounds(const TerrainBounds &terrain, Coords player,
+                                            std::span<const std::weak_ptr<CMapObject>> objects) {
+    auto bounds = terrain.bounds.value_or(LevelBounds{});
+    bool hasBounds = terrain.bounds.has_value();
+    if (!terrain.fromMetadata) {
+        include_coords(bounds, hasBounds, player);
+        for (const auto &entry : objects) {
+            const auto object = entry.lock();
+            if (object && z_matches(object->getCoords(), player.z)) {
+                include_coords(bounds, hasBounds, object->getCoords());
+            }
         }
     }
-    if (!hasBounds) {
-        return std::nullopt;
-    }
-    // Sparse player/object/tile coordinates may span an enormous (or overflow-prone) range; fail closed
-    // rather than iterating/scaling over that empty space.
-    if (!bounds_within_limits(bounds)) {
+    // Keep metadata authoritative and reject extreme sparse terrain before scaling or rasterization.
+    if (!hasBounds || !bounds_within_limits(bounds)) {
         return std::nullopt;
     }
     return bounds;
@@ -364,8 +367,7 @@ struct CMinimapGraphicsObject::ViewCache {
     std::uint64_t objectRevision = 0;
     std::uint64_t boundsTerrainRevision = 0;
     int level = 0;
-    Coords playerCoords{};
-    std::optional<LevelBounds> bounds;
+    TerrainBounds terrainBounds;
     bool boundsInitialized = false;
 };
 
@@ -400,26 +402,26 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     auto &cache = *viewCache;
     const auto objectRevision = map->getNavigationRevision();
     const auto terrainRevision = map->getTerrainRevision(playerCoords.z);
-    if (cache.map.lock() != map || cache.level != playerCoords.z || cache.objectRevision != objectRevision) {
+    const bool levelChanged = cache.map.lock() != map || cache.level != playerCoords.z;
+    if (levelChanged || cache.objectRevision != objectRevision) {
         cache.objects.clear();
         for (const auto &object : map->getObjects()) {
-            if (object && z_matches(object->getCoords(), playerCoords.z))
+            if (object)
                 cache.objects.emplace_back(object);
         }
         ++objectSnapshotBuildCount;
         cache.map = map;
         cache.level = playerCoords.z;
         cache.objectRevision = objectRevision;
-        cache.boundsInitialized = false;
+        if (levelChanged)
+            cache.boundsInitialized = false;
     }
-    if (!cache.boundsInitialized || cache.boundsTerrainRevision != terrainRevision ||
-        cache.playerCoords != playerCoords) {
-        cache.bounds = get_level_bounds(map, playerCoords.z, cache.objects);
+    if (!cache.boundsInitialized || cache.boundsTerrainRevision != terrainRevision) {
+        cache.terrainBounds = get_terrain_bounds(map, playerCoords.z);
         cache.boundsTerrainRevision = terrainRevision;
-        cache.playerCoords = playerCoords;
         cache.boundsInitialized = true;
     }
-    const auto &maybeBounds = cache.bounds;
+    const auto maybeBounds = get_level_bounds(cache.terrainBounds, playerCoords, cache.objects);
     if (!maybeBounds) {
         fill_rect(renderer, rect, MINIMAP_BACKGROUND);
         return;

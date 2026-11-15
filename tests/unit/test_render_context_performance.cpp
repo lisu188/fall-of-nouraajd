@@ -787,13 +787,47 @@ void testMinimapTerrainRevisionAvoidsUnchangedCollectionWork() {
     expect_true(refreshed.snapshots == 1 && refreshed.snapshotReferences == tileCount &&
                     refreshed.directVisits == tileCount && minimap->getTerrainTextureBuildCount() == before_change + 1,
                 "in-place terrain mutation must derive bounds once and retain the ordered raster snapshot");
+    auto otherMap = std::make_shared<CMap>();
+    otherMap->setGame(game);
+    auto sharedMarker = std::make_shared<CMapObject>();
+    sharedMarker->setName("boundedSharedMinimapMarker");
+    sharedMarker->setPosX(2);
+    sharedMarker->setPosY(2);
+    sharedMarker->setPosZ(1);
+    sharedMarker->setCanStep(true);
+    map->addObject(sharedMarker);
+    otherMap->addObject(sharedMarker);
+    expect_true(map->getObjectByName(sharedMarker->getName()) == sharedMarker &&
+                    otherMap->getObjectByName(sharedMarker->getName()) == sharedMarker &&
+                    sharedMarker->getMap() == otherMap,
+                "the active-frame guard must retain the actual marker in A while B owns position updates");
+    minimap->renderObject(gui, rect, 0);
+    const auto sharedSnapshots = minimap->getObjectSnapshotBuildCount();
+    const auto sharedTerrainBuilds = minimap->getTerrainTextureBuildCount();
+    const auto sharedRevision = map->getNavigationRevision();
+    const auto ownerRevision = otherMap->getNavigationRevision();
+    performance_guard::resetMapTileTraversalProbe();
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        sharedMarker->setPosZ(static_cast<int>(frame % 2));
+        minimap->renderObject(gui, rect, 0);
+    }
+    const auto shared = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(shared.snapshots == 0 && shared.snapshotReferences == 0 && shared.directVisits == 0 &&
+                    minimap->getObjectSnapshotBuildCount() == sharedSnapshots &&
+                    minimap->getTerrainTextureBuildCount() == sharedTerrainBuilds,
+                "64 shared-marker level changes within cached extents must add zero tile or snapshot work");
+    expect_true(map->getNavigationRevision() == sharedRevision &&
+                    otherMap->getNavigationRevision() == ownerRevision + frames,
+                "all64 actual shared-marker moves must update B alone while A keeps its registry snapshot");
     expect_true(map->getTurn() == turn && player->getCoords() == coords && player->getHp() == hp && !map->isMoving(),
                 "minimap work measurement must preserve gameplay turns, player state and movement");
     std::cout << "[minimap terrain revision] tiles=" << tileCount << " frames=" << frames
               << " warm snapshots=" << warm.snapshots << " snapshot references=" << warm.snapshotReferences
               << " snapshot budget=0 fresh visits=" << warm.directVisits << " visit budget=0"
               << " cached copies=" << copies.successfulCopies << " builds=0 derived visits=" << derived.directVisits
-              << " changed visits=" << refreshed.directVisits << '\n';
+              << " changed visits=" << refreshed.directVisits << " shared marker frames=" << frames
+              << " shared snapshots=" << shared.snapshots << " shared visits=" << shared.directVisits << '\n';
     game->getContext()->shutdown();
 }
 
