@@ -6,6 +6,7 @@
 import argparse
 from collections import deque
 import copy
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -29,6 +30,241 @@ except ModuleNotFoundError:
     from build_baldurs_gate_city_regions import buildRegions
     from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
     from build_baldurs_gate_city_poison import preparePoisonSource
+
+# Supporting EE BASE facts: each CRE SHA256 equals the existing source fixture.
+# These are visual adaptations; original-game parity remains unestablished.
+CITY_APPEARANCE_SOURCE_SHA256 = "a20a7e9bfc63fe83654bdb8f1ec057a03498192a7b62a6be0ab9c7f2b495b2da"
+CITY_APPEARANCE_SOURCE_GROUPS = {
+    ("BASILISK_GREATER", "MALE"): "BASILNAD".split(),
+    ("BAT_INSIDE", "MALE"): "BAT_DOOR".split(),
+    ("BAT_OUTSIDE", "MALE"): "BAT_OUT".split(),
+    ("BEGGAR_MAN", "MALE"): "BEGGBA".split(),
+    ("BOY", "MALE"): "BOYBA1 BOYBA1_A BOYBA1_C BOYBA2 BOYBA3_A BOYBA3_B VARCI".split(),
+    ("CARRION_CRAWLER", "MALE"): "CARRIO".split(),
+    ("CAT", "MALE"): "CATP".split(),
+    ("CHICKEN", "MALE"): "CHICKER".split(),
+    ("CLERIC_FEMALE_ELF", "FEMALE"): "AGNASI TENYA2 VOLTIN".split(),
+    ("CLERIC_FEMALE_HUMAN", "FEMALE"): "PUMBER2 PUMBERL SHAELL TAMOKO WUDEI".split(),
+    ("CLERIC_MALE_DWARF", "MALE"): "SAILAL".split(),
+    ("CLERIC_MALE_ELF", "MALE"): "GAXIR ORDULI".split(),
+    ("CLERIC_MALE_GNOME", "MALE"): "QUAYLE TIAX".split(),
+    ("CLERIC_MALE_HUMAN", "MALE"): (
+        "BELAND BENJY BRATHL CHANTH CHIMP5 DEAD2 FERGUS FFHUNT FLAM10 FLAM11 FLAM12 FLAM13 FLAM6 FLAM7 FLAM9 "
+        "FLAME1 FLAME2 FLAME3 FLAME4 FLAMGATE KENT PGOND PRIHEL RASHAD SAILNED TREMAI WATCHM"
+    ).split(),
+    ("DOOM_GUARD", "MALE"): "HELMHO".split(),
+    ("DOOM_GUARD", "SUMMONED"): "STALKE".split(),
+    ("DOPPLEGANGER", "MALE"): "DOPPSS".split(),
+    ("ELMINSTER", "MALE"): "ELMIN5".split(),
+    ("FAT_MAN", "MALE"): (
+        "BARSLIM BART0133 BART0720 BART10 BART11 BART12 BART15 BART16 BART6 BART7 BART8 BART9 DOPMER DOPPSM "
+        "DUN INNKE3 IRONM2 IRONM3 IRONM4 IRONME MALTZ MERC0706 MERLEA SAILDAN TRIADO"
+    ).split(),
+    ("FAT_WOMAN", "FEMALE"): "EMITAR EMITAR2 EMITAR3 GLANMA".split(),
+    ("FIGHTER_FEMALE_DWARF", "FEMALE"): "PHEIRK".split(),
+    ("FIGHTER_FEMALE_ELF", "FEMALE"): "NORALE".split(),
+    ("FIGHTER_FEMALE_HALFLING", "FEMALE"): "SEWERF5".split(),
+    ("FIGHTER_MALE_DWARF", "MALE"): "FENTEN".split(),
+    ("FIGHTER_MALE_ELF", "MALE"): "ATTSLIM FARLUC VAIL".split(),
+    ("FIGHTER_MALE_HALFLING", "MALE"): "SAILFIN".split(),
+    ("FIGHTER_MALE_HUMAN", "MALE"): (
+        "AASIM ACHEN ALAI ALDETH ANGELO BANDITCY BELT BORK BRANDI CAILAN CARSTO CYDERM DELTAN DOOMGU DRATAN "
+        "ELKART ENTAR GALDOR GARDUS GORPEL HASEO HOUSG3 HOUSG4 HOUSG5 HOUSG6 IRLENT IRON12 IRON13 IRON14 "
+        "JACIL JARDAK JHASSO LOBAR LUSSEL MERCHG NANTRI PHANDA RAHVIN RANCE SAILJOS SCAR TURPIN ZHALIM"
+    ).split(),
+    ("GHAST", "MALE"): "GHAST SEWERF3".split(),
+    ("GIRL", "FEMALE"): "GIRBA1 GIRBA2 GIRBA3 GIRBA3_A GIRBA3_C LAERTA LOUISE".split(),
+    ("GRAY_OOZE", "MALE"): "JELLGR".split(),
+    ("HALF_OGRE", "MALE"): "TAZOK2".split(),
+    ("HARLOT_FIGHTER", "FEMALE"): "ITHTYL".split(),
+    ("HARLOT_WOMAN", "FEMALE"): "PROST2 PROST3 PROST4 PROST5 PROST6 PROST7 PROST8 QUENAS".split(),
+    ("HOBGOBLIN", "MALE"): "HOBELITE".split(),
+    ("KOBOLD", "MALE"): "KOBCOMM RATCHI".split(),
+    ("KOBOLD_XVART", "MALE"): "DESTUS".split(),
+    ("MAGE_FEMALE_ELF", "FEMALE"): "CYTHAN SHALDR".split(),
+    ("MAGE_FEMALE_HUMAN", "FEMALE"): "BRIELB DELORN HELSHA ITHMEE LIIA NEMPHR VAYYA".split(),
+    ("MAGE_MALE_ELF", "MALE"): "ENTILL GERVIS".split(),
+    ("MAGE_MALE_HUMAN", "MALE"): (
+        "ARKION DEGROD DIVINE FAIZAH HALBAZ NIEMAI OBERAN OULAM RAGEFA RAMAZI RESAR SEMAJ SUNIN WHEBER "
+        "WILLIAM YAGO ZORL"
+    ).split(),
+    ("NOBLE_MAN", "MALE"): (
+        "FELONI NOBL11 NOBL12 NOBL14 NOBLBA_A NOBLBA_B NOBLBA_C NOBLBA_D NOBLBA_E NOBLPA NOBLPA1 NOBLPA2 "
+        "NOBLPA3 NOBLPA4 NOBLPA5 REGINA TARTUS"
+    ).split(),
+    ("NOBLE_WOMAN", "FEMALE"): (
+        "BRILLA HANNAH NOBW5 NOBW7 NOBW8 NOBW9 NOBWBA NOBWBA_A NOBWBA_D NOBWBA_E NOWBAX_A NOWBAX_B NOWBAX_C "
+        "NOWBAX_D NOWBAX_E"
+    ).split(),
+    ("OGRE", "MALE"): "GORF LARZE SEWERF4".split(),
+    ("OGRE_MAGE", "MALE"): "OGREMA OGREMA_A OGREMA_B OGREMA_C OGREMA_D OGRMBA".split(),
+    ("OGRILLON", "MALE"): "SEWERF1".split(),
+    ("PEASANT_MAN", "MALE"): (
+        "BORIN CAUTER CONNOL DEAD DEAD1 DILLAR GARDEN KERRAC KESHEE MCOOK2 MCOOK3 MCOOK4 MCOOK5 MICK MTOB2 "
+        "MTOB3 MTOB6 MTOB7 MTOB8 MTOB9 MTOWBA MTOWBA_A MTOWBA_B MTOWBA_C MTOWBA_D MTOWBA_E MTOWWON1 MTOWWON2 "
+        "MTWSLIM MTWSLIM2 MTWSLIM3 NIKOLA NIVEK OCELLI RODNIM SAILNEW SERVA2 SERVAN SEWERC SHEP TICK WAITER"
+    ).split(),
+    ("PEASANT_WOMAN", "FEMALE"): (
+        "FCOOK3 FECOOK FRIWEN FTOWB5 FTOWB6 FTOWB7 FTOWBA FTOWBA_A FTOWBA_B FTOWBA_C FTOWBA_D FTOWBA_E LANTAN "
+        "MAPLE MTOWWON3 SANADAL VIVIEN"
+    ).split(),
+    ("RAT", "MALE"): "RAT".split(),
+    ("SAREVOK", "MALE"): "SAREVO SAREVO2".split(),
+    ("SEAGULL", "MALE"): "SEAGUL".split(),
+    ("SIRINE", "FEMALE"): "ABELA LARRIA".split(),
+    ("SKELETON", "MALE"): "SKELWA SKELWA02 SKELWA03".split(),
+    ("SLAVE", "MALE"): "SHVERT".split(),
+    ("SLEEPING_DWARF", "MALE"): "SLEEPDW".split(),
+    ("SLEEPING_FAT_MAN_HUMAN", "MALE"): "SLEEPFAT".split(),
+    ("SLEEPING_MAN_ELF", "MALE"): "SLEEPEL".split(),
+    ("SLEEPING_MAN_HALFLING", "MALE"): "SLEEPHAL".split(),
+    ("SLEEPING_MAN_HUMAN", "MALE"): "DELTAN2 GANTOL1 SLEEPMH WINSKI2".split(),
+    ("SLEEPING_WOMAN_HUMAN", "FEMALE"): "PROSLAY SLEEPFH VOLETA".split(),
+    ("SLIME_MUSTARD", "MALE"): "JELLMUL JELLYMU".split(),
+    ("SLIME_OCHRE", "MALE"): "JELLOC".split(),
+    ("SLIME_OLIVE", "MALE"): "JELLYGR JELLYGR2 SCHLUM".split(),
+    ("SPIDER_GIANT", "MALE"): "SPIDGI".split(),
+    ("SPIDER_HUGE", "MALE"): "SPIDHU".split(),
+    ("SPIDER_PHASE", "MALE"): "SPIDPH".split(),
+    ("STATIC_BEGGAR_MAN", "MALE"): "BEGBAX_A BEGBAX_B BEGBAX_C BEGBAX_D BEGGBAX".split(),
+    ("STATIC_BOY", "MALE"): "BOYBAX BOYBAX_A BOYBAX_B BOYBAX_C EURIC".split(),
+    ("STATIC_FAT_MAN", "MALE"): "FATMAN LUCKY SHOP01 SHOP03 SHOP04 SHOP05 SHOP06 SHOP07 SHOP08".split(),
+    ("STATIC_FAT_WOMAN", "FEMALE"): "FATWOM".split(),
+    ("STATIC_GIRL", "FEMALE"): "GIRBAX_A GIRBAX_B GIRBAX_C GIRBAX_D GIRBAX_E PETRIN".split(),
+    ("STATIC_HARLOT_WOMAN", "FEMALE"): "PRSBAX_A PRSBAX_B PRSBAX_C".split(),
+    ("STATIC_NOBLE_MAN", "MALE"): "NOBBAX_A NOBBAX_B NOBBAX_C NOBBAX_D NOBBAX_E".split(),
+    ("STATIC_PEASANT_MAN", "MALE"): "MTOWBAX MTWBAX_A MTWBAX_B MTWBAX_C MTWBAX_D MTWBAX_E".split(),
+    ("STATIC_PEASANT_MAN_CHAIR", "MALE"): "MTOWBASC".split(),
+    ("STATIC_PEASANT_MAN_MATTE", "MALE"): "MTOWBASN MTOWBESN".split(),
+    ("STATIC_PEASANT_MAN_STOOL", "MALE"): "MTOWBAST".split(),
+    ("STATIC_PEASANT_WOMAN", "FEMALE"): "FTOWBAX FTWBAX_A FTWBAX_B FTWBAX_C FTWBAX_D FTWBAX_E".split(),
+    ("STATIC_PEASANT_WOMAN_CHAIR", "FEMALE"): "FTOWBASC".split(),
+    ("STATIC_PEASANT_WOMAN_MATTE", "FEMALE"): "FTOWBASN".split(),
+    ("STATIC_SLAVE", "MALE"): "PRISON".split(),
+    ("THIEF_FEMALE_ELF", "FEMALE"): "ALYTH RINNIE THIEFF WIVEN".split(),
+    ("THIEF_FEMALE_HALFLING", "FEMALE"): "ALORA".split(),
+    ("THIEF_FEMALE_HALFLING_LOW", "FEMALE"): "NADINE".split(),
+    ("THIEF_FEMALE_HUMAN", "FEMALE"): "BLACKL DESRET JALANT KRYSTI NILA SILENC SKIE".split(),
+    ("THIEF_MALE_DWARF", "MALE"): "BREVLI NADARI QUINN".split(),
+    ("THIEF_MALE_ELF", "MALE"): "BHEREN CORDYR DRELIK".split(),
+    ("THIEF_MALE_GNOME", "MALE"): "NEB".split(),
+    ("THIEF_MALE_HALFLING", "MALE"): "BELLAM HARBOR NELIK".split(),
+    ("THIEF_MALE_HUMAN", "MALE"): (
+        "ALATOS DENKOD DIYAB ELDOTH FORTHE GAMES2 GAMES3 GAMES4 GAMES5 HUSAM LOTHAN MAREK MAREK1 MICHAE "
+        "MRSHADE NAAMAN NARLEN NIKLOS NORTUA REDEDG SLYTHE TAXEK THALDO THIEF THIEFG"
+    ).split(),
+    ("THIEF_MALE_HUMAN_LOW", "MALE"): "THIEFM".split(),
+    ("ZOMBIE", "MALE"): "GHORAK SEWERF2".split(),
+}
+CITY_BODY_APPEARANCES = {
+    "BAT_INSIDE": "bat",
+    "BAT_OUTSIDE": "bat",
+    "CAT": "cat",
+    "CHICKEN": "chicken",
+    "RAT": "rat",
+    "SEAGULL": "seagull",
+    "SKELETON": "skeleton",
+    "GHAST": "images/monsters/fenGhoul",
+    "ZOMBIE": "images/monsters/fenGhoul",
+    "CARRION_CRAWLER": "carrionCrawler",
+    "GRAY_OOZE": "slime",
+    "SLIME_MUSTARD": "slime",
+    "SLIME_OLIVE": "slime",
+    "SLIME_OCHRE": "slime",
+    "SPIDER_GIANT": "images/monsters/lengSpider",
+    "SPIDER_HUGE": "images/monsters/lengSpider",
+    "SPIDER_PHASE": "images/monsters/lengSpider",
+    "OGRE": "ogre",
+    "HALF_OGRE": "ogre",
+    "OGRE_MAGE": "ogreMage",
+    "OGRILLON": "ogre",
+    "HOBGOBLIN": "hobgoblin",
+    "KOBOLD": "kobold",
+    "KOBOLD_XVART": "xvart",
+    "DOPPLEGANGER": "doppelganger",
+    "DOOM_GUARD": "images/monsters/barrowKnight",
+    "SAREVOK": "images/monsters/barrowKnight",
+    "BASILISK_GREATER": "basilisk",
+    "SIRINE": "sirine",
+}
+CITY_APPEARANCE_PREFIX = "maps/baldursGate/images/npc/"
+
+
+def cityActorAppearance(properties, source, appearances):
+    code = properties["sourceCreature"]
+    creature = source["creatures"][code]
+    if code not in appearances:
+        raise ValueError("Unaudited City appearance for " + code)
+    animation, sex = appearances[code]
+    if animation in CITY_BODY_APPEARANCES:
+        asset = CITY_BODY_APPEARANCES[animation]
+        return asset if asset.startswith("images/") else CITY_APPEARANCE_PREFIX + asset
+    if animation in {"BOY", "STATIC_BOY", "GIRL", "STATIC_GIRL"}:
+        return CITY_APPEARANCE_PREFIX + ("girl" if "GIRL" in animation else "boy")
+    if sex not in {"MALE", "FEMALE"}:
+        raise ValueError("Unsupported source appearance sex for " + code)
+    suffix = "Woman" if sex == "FEMALE" else "Man"
+    class_id, race_id = creature["class"], creature["race"]
+    if class_id in {156, 211, 213} or properties.get("custodyRole") in {"patrol", "escort", "angelo"}:
+        role = "guard"
+    elif race_id in {2, 4, 5, 6}:
+        role = {2: "elf", 4: "dwarf", 5: "halfling", 6: "gnome"}[race_id]
+    elif "NOBLE" in animation:
+        role = "noble"
+    elif class_id in {3, 8, 11, 14, 15}:
+        role = "priest"
+    elif class_id in {1, 7, 13, 19}:
+        role = "mage"
+    elif class_id in {4, 9}:
+        role = "rogue"
+    elif properties.get("sourceStore", "").startswith("TEM"):
+        role = "priest"
+    elif properties.get("sourceStore") or properties.get("sourceStores"):
+        role = "merchant"
+    elif class_id in {2, 6, 12, 129} or animation.startswith("FIGHTER_"):
+        role = "fighter"
+    elif animation.startswith("THIEF_"):
+        role = "rogue"
+    elif animation.startswith("CLERIC_"):
+        role = "priest"
+    elif animation.startswith("MAGE_") or animation == "ELMINSTER":
+        role = "mage"
+    else:
+        role = "commoner"
+    return CITY_APPEARANCE_PREFIX + role + suffix
+
+
+def applyCityAppearances(source, config):
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {code: row["sha256"] for code, row in source["creatures"].items()},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    if fingerprint != CITY_APPEARANCE_SOURCE_SHA256:
+        raise ValueError("City appearance evidence no longer matches the source CRE fingerprints")
+    appearances = {}
+    for appearance, codes in CITY_APPEARANCE_SOURCE_GROUPS.items():
+        for code in codes:
+            if code in appearances:
+                raise ValueError("Duplicate source appearance " + code)
+            appearances[code] = appearance
+    assets = set()
+    for row in config.values():
+        properties = row.get("properties", {})
+        if row.get("class") not in {"CCreature", "BaldursGateContainer"} or not properties.get("sourceCreature"):
+            continue
+        animation = (
+            CITY_APPEARANCE_PREFIX + "corpse"
+            if row["class"] == "BaldursGateContainer"
+            else cityActorAppearance(properties, source, appearances)
+        )
+        properties["animation"] = animation
+        if animation.startswith(CITY_APPEARANCE_PREFIX):
+            assets.add(animation.removeprefix("maps/baldursGate/") + ".png")
+    return [{"path": path, "kind": "file"} for path in sorted(assets)]
+
 
 LANDMARKS = {
     "AR0002": "Temple of Helm",
@@ -646,7 +882,6 @@ def compileCity(source, quests=None):
             }
             props = {
                 "label": actor.get("displayName") or actor["name"] or actor["creature"],
-                "animation": "images/monsters/cultist" if hostile else "images/npc/elderMaren",
                 "npc": not hostile,
                 "canStep": True,
                 "affiliation": "cityHostile" if hostile else "cityResidents",
@@ -1162,6 +1397,7 @@ def compileCity(source, quests=None):
         json.loads(POISON_TEXT.read_text(encoding="utf-8")),
         usablePosition,
     )
+    document["assets"] = applyCityAppearances(source, config)
     protectCityDefinitions(config)
     return document, config, geometry
 
