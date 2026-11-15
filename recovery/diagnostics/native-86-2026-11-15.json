@@ -1,0 +1,55 @@
+{
+  "entries": [
+    {
+      "commit": "deef71e6d465cfb67a5c3b6d52e108bf22793f84",
+      "firstCatalogOrder": 86,
+      "originalBlob": "e0ba39db54d535309df94de0f933dd75a896b33f",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8b00e9e369f1112c28ba3835704d4a8252737949 (previous version of creatures/creature.cpp)",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
+      "source": "recovery/payloads/reconstructions/e0/e0ba39db54d535309df94de0f933dd75a896b33f-creature.cpp"
+    },
+    {
+      "commit": "deef71e6d465cfb67a5c3b6d52e108bf22793f84",
+      "firstCatalogOrder": 86,
+      "originalBlob": "8c0fa30b3d8316ef5358362c9dc69976d08e304a",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8 (previous version of creatures/player.cpp)",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "recovery/payloads/reconstructions/8c/8c0fa30b3d8316ef5358362c9dc69976d08e304a-player.cpp"
+    },
+    {
+      "commit": "deef71e6d465cfb67a5c3b6d52e108bf22793f84",
+      "firstCatalogOrder": 86,
+      "originalBlob": "e727eb446fb5d57b6aaede6c43a72f882360191a",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #84 reconstruction; adapted missing Interaction::setAnimation to genuine #85 size argument, using50 from surviving same-commit Item::setAnimation for inventory icons.",
+      "sha256": "6b36a18e14f0301758667d640e95ed5674a3bd1243ba8c979af77091f0881da1",
+      "source": "recovery/payloads/reconstructions/e7/e727eb446fb5d57b6aaede6c43a72f882360191a-interaction.cpp"
+    },
+    {
+      "commit": "deef71e6d465cfb67a5c3b6d52e108bf22793f84",
+      "firstCatalogOrder": 86,
+      "originalBlob": "c49ab7c82c2c2e49abf20c3c39ea11251fc14ff1",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #85 reconstruction to genuine #86 Tile deriving MapObject, removal of Tile::getRandomTile, and genuine Map::defaultTiles/getCurrentMap plus MapObject::getMap/getSize APIs. Depth-default JSON now uses the surviving defaultTiles field; unmapped-depth GrassTile fallback follows the exact preceding Tile::getRandomTile implementation. Base setMap directly places the object without invoking Tile::moveTo (which erases/reinserts model entries), so showing tiles cannot invalidate model iteration. Existing inferred JSON/body provenance retained; original implementation unavailable.",
+      "sha256": "f9001731dff252175a6036e880e6169c8fd5012c09a6212a7935985f01eece8f",
+      "source": "recovery/payloads/reconstructions/c4/c49ab7c82c2c2e49abf20c3c39ea11251fc14ff1-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay, original internal deltas and missing data schemas remain underdetermined; real compilation/startup proof only.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "3e7f4c9f5d2c9d03fa7e699f2b06914d5722cba2478ff26d4794ce499a02c4f7",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

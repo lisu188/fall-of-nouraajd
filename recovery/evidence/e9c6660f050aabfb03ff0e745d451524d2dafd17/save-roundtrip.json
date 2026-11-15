@@ -1,0 +1,55 @@
+{
+  "provenance": {
+    "sourceCommit": "e9c6660f050aabfb03ff0e745d451524d2dafd17",
+    "nativeVerificationFingerprint": "26f4d0727de39074ccd759693503e1a3739920bb55ac9d58cd4bbdb763d4b391",
+    "restoredFilesFingerprint": "f338c47761dc5342b36ed659259280601c749cae21c679f2de4c031555a4671e",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+    "returnCode": 0,
+    "command": [
+      "/opt/recovery/controller/bin/python3.12",
+      "/tmp/nouraajd-bfg-recovery/native-early/portable-regression/history_save_roundtrip.py",
+      "--snapshot-dir",
+      "/tmp/nouraajd-bfg-recovery/native-early/regression-87-final/runtime",
+      "--executable",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-vbz6kno2/build/RecoveryGame",
+      "--output-dir",
+      "/tmp/nouraajd-bfg-recovery/native-early/regression-87-final/evidence",
+      "--preload",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-vbz6kno2/observer/libwindowspaths.so"
+    ]
+  },
+  "regression": {
+    "schemaVersion": 1,
+    "snapshotDirectory": "/tmp/nouraajd-bfg-recovery/native-early/regression-87-final/runtime",
+    "executable": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-vbz6kno2/build/RecoveryGame",
+    "runs": [
+      {
+        "command": [
+          "xvfb-run",
+          "-a",
+          "--server-args=-screen 0 1920x1080x24",
+          "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-vbz6kno2/build/RecoveryGame"
+        ],
+        "returnCode": 0,
+        "ready": true,
+        "saveSha256": "b07f917ae55b8adb663f9c6f4d4170f020651ec64f073d97713a6c5f15308bd3"
+      },
+      {
+        "command": [
+          "xvfb-run",
+          "-a",
+          "--server-args=-screen 0 1920x1080x24",
+          "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-vbz6kno2/build/RecoveryGame"
+        ],
+        "returnCode": 0,
+        "ready": true,
+        "saveSha256": "7832e0f1c96f36411416fc3f08c5bb0792e7b1d938a324c66b9bc36bfc412947"
+      }
+    ],
+    "checks": {
+      "bothRunsReadyAndClean": true,
+      "completeSaveRoundtrip": true
+    },
+    "status": "success"
+  }
+}

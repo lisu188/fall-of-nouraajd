@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "commit": "91ab6fa2fbe54702cd2cbcdd5dfa3205924f7a6b",
+      "firstCatalogOrder": 88,
+      "originalBlob": "5ced7ba291f7e0f7a3cea8089d242538242ed640",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 669fa586f024267c725f11e4432a1855fad509d4 (previous version of map/map.cpp)",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "recovery/payloads/reconstructions/5c/5ced7ba291f7e0f7a3cea8089d242538242ed640-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Authored editor startup; gameplay and player are unverified",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "editor",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "27a02318f24c83e147e018aa49c7f9281b84ffad48115973ba537bbadea8fd10",
+    "startupMode": "editor",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

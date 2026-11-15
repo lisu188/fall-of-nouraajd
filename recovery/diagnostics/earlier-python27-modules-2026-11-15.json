@@ -1,0 +1,614 @@
+{
+  "boundary": "Static candidates only; native header/source reconstruction, pinned compilation and runtime startup are still required. All wrappers call genuine native methods or Python overrides and preserve native fallbacks. No replacement classes or no-op stubs are supplied.",
+  "checks": [
+    {
+      "activeLocalHeaders": [
+        "building.h",
+        "creature.h",
+        "event.h",
+        "gamescene.h",
+        "interaction.h",
+        "item.h",
+        "map.h",
+        "monster.h",
+        "player.h",
+        "potion.h",
+        "stats.h",
+        "tile.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "46855a8d1de201492858e67db9cb2941fb721151",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": false,
+        "GAME_RECOVERY_PREFIXED_TILE": false
+      },
+      "originalInitHeaders": [
+        "src/gamescript.h"
+      ],
+      "originalModuleBlob": "7f69d62d4b5196e3c5f877434e5c35a846b9a6a8",
+      "position": 246,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "creature.h",
+        "event.h",
+        "gamescene.h",
+        "interaction.h",
+        "item.h",
+        "map.h",
+        "monster.h",
+        "player.h",
+        "potion.h",
+        "stats.h",
+        "tile.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": false,
+        "GAME_RECOVERY_PREFIXED_TILE": false
+      },
+      "originalInitHeaders": [
+        "src/scriptmanager.h"
+      ],
+      "originalModuleBlob": "c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c",
+      "position": 247,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "gamescene.h",
+        "CInteraction.h",
+        "CMap.h",
+        "CMapObject.h",
+        "item.h",
+        "potion.h",
+        "tile.h",
+        "stats.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": false,
+        "GAME_RECOVERY_PREFIXED_TILE": false
+      },
+      "originalInitHeaders": [
+        "src/scriptmanager.h"
+      ],
+      "originalModuleBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "position": 248,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CGameScene.h",
+        "CInteraction.h",
+        "CMap.h",
+        "CMapObject.h",
+        "item.h",
+        "potion.h",
+        "tile.h",
+        "stats.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "f873badeef24b84b8940982d21a2a9b87545fb30",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": false
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "position": 249,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CGameScene.h",
+        "CInteraction.h",
+        "CMap.h",
+        "CMapObject.h",
+        "item.h",
+        "potion.h",
+        "tile.h",
+        "stats.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "eb8276b2fc795f3af5f36370c209db85c1fb818d",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": false
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "position": 250,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CGameScene.h",
+        "CInteraction.h",
+        "CMap.h",
+        "CMapObject.h",
+        "item.h",
+        "potion.h",
+        "tile.h",
+        "stats.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "7c79af080a5bd21526ff5af890cb3f9559f689ac",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": false
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "position": 251,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CGameScene.h",
+        "CInteraction.h",
+        "CMap.h",
+        "CMapObject.h",
+        "item.h",
+        "potion.h",
+        "CTile.h",
+        "stats.h",
+        "util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "44fe765077f6eb320afd672dd222d0a46c033157",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "position": 252,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
+      "position": 253,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
+      "position": 254,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
+      "position": 255,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "b0889f1267acbdf651ee1e12b839906be46d25b9",
+      "position": 256,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "b0889f1267acbdf651ee1e12b839906be46d25b9",
+      "position": 257,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
+      "position": 258,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    },
+    {
+      "activeLocalHeaders": [
+        "CBuilding.h",
+        "CCreature.h",
+        "CInteraction.h",
+        "CItem.h",
+        "CMap.h",
+        "CMapObject.h",
+        "CTile.h",
+        "Stats.h",
+        "Util.h"
+      ],
+      "afterRecipe": "qt5-python27",
+      "before": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "commit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6",
+      "moduleAdapterFlags": {
+        "GAME_RECOVERY_PREFIXED_SCENE_HEADER": true,
+        "GAME_RECOVERY_PREFIXED_TILE": true
+      },
+      "originalInitHeaders": [
+        "src/CScriptEngine.h"
+      ],
+      "originalModuleBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
+      "position": 259,
+      "selectedProject": "game.pro",
+      "status": "static-only"
+    }
+  ],
+  "entries": [
+    {
+      "commits": [
+        "46855a8d1de201492858e67db9cb2941fb721151"
+      ],
+      "originalBlob": "7f69d62d4b5196e3c5f877434e5c35a846b9a6a8",
+      "path": "src/gamescript.cpp",
+      "positions": [
+        246
+      ],
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #246 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "3477b36debde42595c03a955de7325ac7e295adc7320b338cc338522dd2f56b8",
+      "source": "recovery/payloads/reconstructions/7f/7f69d62d4b5196e3c5f877434e5c35a846b9a6a8-gamescript.cpp"
+    },
+    {
+      "commits": [
+        "5fe60e7c6947844088efc763b596a88546dcdb4f"
+      ],
+      "originalBlob": "c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c",
+      "path": "src/gamescript.cpp",
+      "positions": [
+        247
+      ],
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #247 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "da6f905599c1c3568507f2fb1f6c3671cbed30452b6503d96f3a4e5d39fcf73d",
+      "source": "recovery/payloads/reconstructions/c4/c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c-gamescript.cpp"
+    },
+    {
+      "commits": [
+        "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+        "f873badeef24b84b8940982d21a2a9b87545fb30",
+        "eb8276b2fc795f3af5f36370c209db85c1fb818d",
+        "7c79af080a5bd21526ff5af890cb3f9559f689ac",
+        "44fe765077f6eb320afd672dd222d0a46c033157"
+      ],
+      "originalBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
+      "path": "src/GameScript.cpp",
+      "positions": [
+        248,
+        249,
+        250,
+        251,
+        252
+      ],
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #248 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "26cdfc17a783b7e2415fe69dd45e538c0b8e53eabae1c11fa0e8ce2927e1985b",
+      "source": "recovery/payloads/reconstructions/91/915429f2a1120af6bc034ec44568fd2eeb6f7965-GameScript.cpp"
+    },
+    {
+      "commits": [
+        "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+        "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+        "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9"
+      ],
+      "originalBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
+      "path": "src/GameScript.cpp",
+      "positions": [
+        253,
+        254,
+        255
+      ],
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #253 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "source": "recovery/payloads/reconstructions/6c/6c4a05d9307920fb93dce4771e2ecd5de069e25f-GameScript.cpp"
+    },
+    {
+      "commits": [
+        "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+        "9fc9416b1025044633a6b789212f67c56ecaafba"
+      ],
+      "originalBlob": "b0889f1267acbdf651ee1e12b839906be46d25b9",
+      "path": "src/GameScript.cpp",
+      "positions": [
+        256,
+        257
+      ],
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #256 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "source": "recovery/payloads/reconstructions/b0/b0889f1267acbdf651ee1e12b839906be46d25b9-GameScript.cpp"
+    },
+    {
+      "commits": [
+        "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+        "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+      ],
+      "originalBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
+      "path": "src/GameScript.cpp",
+      "positions": [
+        258,
+        259
+      ],
+      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #258 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "source": "recovery/payloads/reconstructions/8c/8c99e7b9d7a511b8314e43202e7aa430460f1cbc-GameScript.cpp"
+    }
+  ],
+  "limitations": [
+    "No compilation or runtime acceptance. Missing native sources/headers remain independent blockers.",
+    "Map methods for #246-252 use nearest intact #253 CMap.h as a donor API; getPlayer bridge uses the exact original src/item.cpp getScene()->getPlayer() call. Native compile feedback must confirm earlier map ABI.",
+    "Library dependencies omitted from the nearby later project donor remain unresolved for early trees.",
+    "Mixed Tile/CTile and scene header selection requires the jointly staged missing-project adapter DEFINES; none are added to surviving projects."
+  ],
+  "nativeModuleProofs": [
+    "/tmp/nouraajd-bfg-recovery/native-later/module-proof-260.json",
+    "/tmp/nouraajd-bfg-recovery/native-later/module-proof-266.json"
+  ],
+  "schemaVersion": 1,
+  "sourceEvidence": [
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "originalBlob": "59313fea33fd5dfb1ca76dcd2cc1222ffb620008",
+      "path": "src/creature.h",
+      "position": 247,
+      "sha256": "5166884312d3eca72dd1d2b28c609d061b10eed048e28573dbebd36706156f97"
+    },
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "originalBlob": "937191f31ed36369792a5a8f7c2b1a2ef1005c42",
+      "path": "src/player.h",
+      "position": 247,
+      "sha256": "30324f71a8d8d5b2aaee30dfa57e976eaacb77b9dc591524ea66b167cb6fd6dc"
+    },
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "originalBlob": "ae2289cd0362a445c0aafdf21d1d4556fc835178",
+      "path": "src/monster.h",
+      "position": 247,
+      "sha256": "0889172f7e3ab39e62b51d0c1a1cfc9e86db30ede582849440425b48e51713a4"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "originalBlob": "9da4b3e0a4b3f43cf128c25f9a87e054e066cf92",
+      "path": "src/Stats.h",
+      "position": 257,
+      "sha256": "1c7d36421d0480273e019629aa5647eb95950d6d01ffc90d7f8327787a91534b"
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "originalBlob": "c79e702afa9ada9813f419458fd294010459423b",
+      "path": "src/Stats.cpp",
+      "position": 257,
+      "sha256": "786df0871fa1760058f39167980584c230d8caea2543e94bd7590d5b5101ad52"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "1bec2b9f6170f3b67f6b30b1119c2395c4c4c9f7",
+      "path": "src/CMap.h",
+      "position": 260,
+      "sha256": "eeec7a31222fce18ea09ed3f3bd2dfcc4c24adf762575daca327550b71eac31a"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "d7026aac05a0b61f8f942df29edf505fcd83260e",
+      "path": "src/CMapObject.h",
+      "position": 260,
+      "sha256": "8304b479e592cad1e26f101fe62ebedd14ab1f7d26020b402f0b412b1dae17c8"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "57802c26e84ddcc87c37e42c1e937f6c179d8cb6",
+      "path": "src/CBuilding.h",
+      "position": 260,
+      "sha256": "56eac83edf265df551aeab939a26ab2b505e1b93a87504e79a92285830fb9b9e"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "87dfedd65a5001cf8f410bb051f4adac9a204eec",
+      "path": "src/CItem.h",
+      "position": 260,
+      "sha256": "17d6e97f2ddbff87a0ba4d7e380c367458709ed25052616e98d69a75b5c3bb9c"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "26f202f6271ed0e1479c841ddae95e727a88b286",
+      "path": "src/CInteraction.h",
+      "position": 260,
+      "sha256": "cae2654d50db5bd66edb8afa82353a49043cbeed8faa44460cdb46f78c50062f"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "fb6fe0e3c26f37f094c02b2cfccc4f362ce1fd10",
+      "path": "src/CTile.h",
+      "position": 260,
+      "sha256": "2d5955ebe737dd59b0c3d3e28a747e9a10fa39664ea220ef3ae3179030d2fb22"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "d68afb1cb35eba0d7cb5d61ab82f309cfc41a4b3",
+      "path": "src/CScriptEngine.h",
+      "position": 260,
+      "sha256": "94379dbf888cbd787a72cc3378253a7c7ca322ac8f5dca9e63406d28df25c2fe"
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "originalBlob": "aacc716893d747d2b234b0052c7213b7fbe05539",
+      "path": "src/Util.h",
+      "position": 260,
+      "sha256": "59a65b65dab02a31214f491296cf45f6a0aef6b43ef8871d106d075466e55b8b"
+    },
+    {
+      "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+      "originalBlob": "82ccf10eb8e41b376440564d0bd287c6259f74c8",
+      "path": "src/CItem.h",
+      "position": 266,
+      "sha256": "7cd16fb12d44a76206a2aaf2071a179a1af0fd8b93a23253b9a55d639c02e3bd"
+    },
+    {
+      "commit": "55e6516eb91b739e899df1ef8d72116da44fec49",
+      "path": "GameScript.cpp",
+      "role": "Intact Boost binding donor, adapted to earlier supported APIs",
+      "sha256": "374e8e3995f6f57e5fae9cfd4d5e02b8bf1e81ffce06d8e40700559396b52fcf"
+    }
+  ]
+}

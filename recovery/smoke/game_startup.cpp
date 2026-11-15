@@ -5,7 +5,9 @@
 #include GAME_RECOVERY_SCENE_HEADER
 #include GAME_RECOVERY_VIEW_HEADER
 #include GAME_RECOVERY_MAP_HEADER
+#if !GAME_RECOVERY_EDITOR
 #include GAME_RECOVERY_PLAYER_HEADER
+#endif
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -49,11 +51,21 @@ class RecoveryStartupProbe : public QObject {
         timer.stop();
         QJsonObject checks;
         checks.insert("map", mapReady);
+#if GAME_RECOVERY_EDITOR
+        checks.insert("editor", editorReady);
+#else
         checks.insert("player", playerReady);
+#endif
         checks.insert("eventLoop", true);
         checks.insert("renderedFrame", success && painted);
         QJsonObject report;
         report.insert("schemaVersion", 1);
+#if GAME_RECOVERY_EDITOR
+        report.insert("mode", "editor");
+        report.insert("validationBoundary", "Authored editor startup; gameplay and player are unverified");
+#else
+        report.insert("mode", "game");
+#endif
         report.insert("status", success ? "ready" : "failed");
         report.insert("checks", checks);
         report.insert("reason", reason);
@@ -80,7 +92,11 @@ class RecoveryStartupProbe : public QObject {
 
     void inspect() {
         if (elapsed.elapsed() > 20000) {
+#if GAME_RECOVERY_EDITOR
+            finish(false, "Editor map and rendered frame did not become ready");
+#else
             finish(false, "Map, player and rendered game frame did not become ready");
+#endif
             return;
         }
         if (!view) {
@@ -93,6 +109,7 @@ class RecoveryStartupProbe : public QObject {
                     view->viewport()->installEventFilter(this);
                     break;
                 }
+#if !GAME_RECOVERY_EDITOR
                 if (!menuActivated && dynamic_cast<QMainWindow *>(widget)) {
                     QPushButton *button = widget->findChild<QPushButton *>("pushButton");
                     if (button) {
@@ -100,6 +117,7 @@ class RecoveryStartupProbe : public QObject {
                         button->click();
                     }
                 }
+#endif
             }
         }
         if (!view || !view->isVisible()) {
@@ -110,6 +128,10 @@ class RecoveryStartupProbe : public QObject {
             return;
         }
         auto *map = scene->GAME_RECOVERY_MAP_GETTER();
+#if GAME_RECOVERY_EDITOR
+        editorReady = map && map->getScene() == scene && map->getTileSize() > 0;
+        mapReady = editorReady && !map->empty();
+#else
 #if GAME_RECOVERY_STATIC_PLAYER
         auto *player = RecoveryScene::getPlayer();
 #else
@@ -123,6 +145,7 @@ class RecoveryStartupProbe : public QObject {
         mapReady = map->contains(player->getPosX(), player->getPosY(), player->getPosZ());
 #else
         mapReady = map->contains(player->getPosX(), player->getPosY());
+#endif
 #endif
         if (!mapReady || scene->items().isEmpty()) {
             return;
@@ -173,7 +196,11 @@ class RecoveryStartupProbe : public QObject {
     QElapsedTimer elapsed;
     bool menuActivated = false;
     bool mapReady = false;
+#if GAME_RECOVERY_EDITOR
+    bool editorReady = false;
+#else
     bool playerReady = false;
+#endif
     bool awaitingFrame = false;
     bool painted = false;
 };

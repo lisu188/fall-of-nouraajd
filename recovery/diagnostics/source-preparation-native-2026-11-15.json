@@ -1,0 +1,231 @@
+{
+  "results": [
+    {
+      "catalogIndex": 250,
+      "command": "/opt/recovery/controller/bin/python3.12 /tmp/nouraajd-bfg-recovery/source/scripts/history_source_prep.py --source-root /tmp/nouraajd-bfg-recovery/native-preparation/src/eb8276b2 --output-dir /tmp/nouraajd-bfg-recovery/native-preparation/proof/250 --recipes /tmp/nouraajd-bfg-recovery/source/recovery/toolchains/qt5.json --recipe qt5-python27",
+      "preparedSourcesManifestSha256": "185483f26628b5135378635ca842a80679c45b49465e50955284e16d5b068884",
+      "recipe": {
+        "compilerCommand": "g++-5",
+        "environment": {
+          "CPATH": "/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+          "LD_LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+          "LIBGL_ALWAYS_SOFTWARE": "1",
+          "LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+          "PATH": "/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+          "PYTHONHOME": "/opt/recovery/python/2.7.18",
+          "QT_OPENGL": "software",
+          "QT_X11_NO_MITSHM": "1"
+        },
+        "id": "qt5-python27",
+        "makeCommand": "make",
+        "pythonAbi": "2.7",
+        "qmakeArguments": [
+          "QMAKE_CC=gcc-5",
+          "QMAKE_CXX=g++-5",
+          "QMAKE_LINK=g++-5",
+          "QMAKE_CXXFLAGS+=-include functional"
+        ],
+        "qmakeCommand": "qmake",
+        "toolchainLock": {
+          "compatibility": [
+            "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+          ],
+          "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+          "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+          "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+          "schemaVersion": 1,
+          "sourceLock": "recovery/toolchains/sources.json",
+          "sourceLockSha256": "d94f274c60a4bd52aaeedfe01bc5d3e4a116c5181443def07ce6edd59c14d10f"
+        }
+      },
+      "restoredInputsManifestSha256": "32cc8076969c758e4219fa5a5b473d6caab8b712b2d46ec2ee4568a14637313e",
+      "retainedGeneratedHeader": "/tmp/nouraajd-bfg-recovery/native-preparation/proof/250/generated-prop.h",
+      "returnCode": 0,
+      "scope": "original property generator execution only; no compilation, linking or startup acceptance",
+      "sourceCommit": "eb8276b2fc795f3af5f36370c209db85c1fb818d",
+      "sourcePreparation": {
+        "identity": {
+          "implementationSha256": "e22442dbe3124764bd7a8914c224fcdc903f6d9b3545eeab0aa56f2352969610",
+          "inputs": {
+            "classes.json": {
+              "kind": "file",
+              "sha256": "aacd874352d008efe9d9a15bb26284a8eea5e2a7213a7f34d69f061a3dc8091a"
+            },
+            "preprocessor.py": {
+              "kind": "file",
+              "sha256": "4c7b0de587e73fcba55ffd96096c5f7b634b7a7cd7d8cf5c043be5144b927abb"
+            }
+          },
+          "interpreter": "Python 2.7.18",
+          "outputs": [
+            {
+              "after": {
+                "kind": "file",
+                "sha256": "690ba3b421b655cb8ba21781e12364a07e33111ddce063a99513c0de804a1c78"
+              },
+              "before": null,
+              "path": "gen/prop.h",
+              "purpose": "historical property generation"
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "after": {
+              "kind": "file",
+              "sha256": "690ba3b421b655cb8ba21781e12364a07e33111ddce063a99513c0de804a1c78"
+            },
+            "before": null,
+            "path": "gen/prop.h",
+            "purpose": "historical property generation"
+          }
+        ],
+        "status": "success",
+        "steps": [
+          {
+            "command": [
+              "/opt/recovery/python/2.7.18/bin/python2.7",
+              "--version"
+            ],
+            "log": "/tmp/nouraajd-bfg-recovery/native-preparation/proof/250/interpreter.log",
+            "name": "interpreter",
+            "returnCode": 0,
+            "seconds": 0.002,
+            "timedOut": false
+          },
+          {
+            "command": [
+              "/opt/recovery/python/2.7.18/bin/python2.7",
+              "-B",
+              "/tmp/nouraajd-bfg-recovery/native-preparation/src/eb8276b2/preprocessor.py"
+            ],
+            "log": "/tmp/nouraajd-bfg-recovery/native-preparation/proof/250/generator.log",
+            "name": "generator",
+            "returnCode": 0,
+            "seconds": 0.016,
+            "timedOut": false
+          }
+        ]
+      },
+      "stderr": "",
+      "stdout": "{\"status\": \"success\", \"outputs\": [{\"path\": \"gen/prop.h\", \"before\": null, \"after\": {\"sha256\": \"690ba3b421b655cb8ba21781e12364a07e33111ddce063a99513c0de804a1c78\", \"kind\": \"file\"}, \"purpose\": \"historical property generation\"}]}\n",
+      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+    },
+    {
+      "catalogIndex": 257,
+      "command": "/opt/recovery/controller/bin/python3.12 /tmp/nouraajd-bfg-recovery/source/scripts/history_source_prep.py --source-root /tmp/nouraajd-bfg-recovery/native-preparation/src/9fc9416b --output-dir /tmp/nouraajd-bfg-recovery/native-preparation/proof/257 --recipes /tmp/nouraajd-bfg-recovery/source/recovery/toolchains/qt5.json --recipe qt5-python27",
+      "preparedSourcesManifestSha256": "dd053f59d3a7920270566696fb9490e4f05b710b9890b8e87ae22e07c065e812",
+      "recipe": {
+        "compilerCommand": "g++-5",
+        "environment": {
+          "CPATH": "/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+          "LD_LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+          "LIBGL_ALWAYS_SOFTWARE": "1",
+          "LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+          "PATH": "/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+          "PYTHONHOME": "/opt/recovery/python/2.7.18",
+          "QT_OPENGL": "software",
+          "QT_X11_NO_MITSHM": "1"
+        },
+        "id": "qt5-python27",
+        "makeCommand": "make",
+        "pythonAbi": "2.7",
+        "qmakeArguments": [
+          "QMAKE_CC=gcc-5",
+          "QMAKE_CXX=g++-5",
+          "QMAKE_LINK=g++-5",
+          "QMAKE_CXXFLAGS+=-include functional"
+        ],
+        "qmakeCommand": "qmake",
+        "toolchainLock": {
+          "compatibility": [
+            "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+          ],
+          "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+          "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+          "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+          "schemaVersion": 1,
+          "sourceLock": "recovery/toolchains/sources.json",
+          "sourceLockSha256": "d94f274c60a4bd52aaeedfe01bc5d3e4a116c5181443def07ce6edd59c14d10f"
+        }
+      },
+      "restoredInputsManifestSha256": "dc93cc398faee06f8ee48e0184918a7958a0af791780c82bd5ca1b4444346528",
+      "retainedGeneratedHeader": "/tmp/nouraajd-bfg-recovery/native-preparation/proof/257/generated-prop.h",
+      "returnCode": 0,
+      "scope": "original property generator execution only; no compilation, linking or startup acceptance",
+      "sourceCommit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "sourcePreparation": {
+        "identity": {
+          "implementationSha256": "e22442dbe3124764bd7a8914c224fcdc903f6d9b3545eeab0aa56f2352969610",
+          "inputs": {
+            "classes.json": {
+              "kind": "file",
+              "sha256": "174a45a1ed4bc03b5359c17205da277413ab292fe52d87a9b58afbec5353d252"
+            },
+            "macro.conf": {
+              "kind": "file",
+              "sha256": "bed7706eb9398b225ab72df55537dcab98e78da80766ed884ea7d52fd4213ce3"
+            },
+            "preprocessor.py": {
+              "kind": "file",
+              "sha256": "99341552a9d300e4374ad2efe3d74127e78bb91d4ce259b6aa59ea9cc4db275f"
+            }
+          },
+          "interpreter": "Python 2.7.18",
+          "outputs": [
+            {
+              "after": {
+                "kind": "file",
+                "sha256": "348b8176f5eb2cba4b42509ec9f4fc1ad7fef10cd0d4bbd819728fc5eae44d7c"
+              },
+              "before": null,
+              "path": "gen/prop.h",
+              "purpose": "historical property generation"
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "after": {
+              "kind": "file",
+              "sha256": "348b8176f5eb2cba4b42509ec9f4fc1ad7fef10cd0d4bbd819728fc5eae44d7c"
+            },
+            "before": null,
+            "path": "gen/prop.h",
+            "purpose": "historical property generation"
+          }
+        ],
+        "status": "success",
+        "steps": [
+          {
+            "command": [
+              "/opt/recovery/python/2.7.18/bin/python2.7",
+              "--version"
+            ],
+            "log": "/tmp/nouraajd-bfg-recovery/native-preparation/proof/257/interpreter.log",
+            "name": "interpreter",
+            "returnCode": 0,
+            "seconds": 0.001,
+            "timedOut": false
+          },
+          {
+            "command": [
+              "/opt/recovery/python/2.7.18/bin/python2.7",
+              "-B",
+              "/tmp/nouraajd-bfg-recovery/native-preparation/src/9fc9416b/preprocessor.py"
+            ],
+            "log": "/tmp/nouraajd-bfg-recovery/native-preparation/proof/257/generator.log",
+            "name": "generator",
+            "returnCode": 0,
+            "seconds": 0.016,
+            "timedOut": false
+          }
+        ]
+      },
+      "stderr": "",
+      "stdout": "{\"status\": \"success\", \"outputs\": [{\"path\": \"gen/prop.h\", \"before\": null, \"after\": {\"sha256\": \"348b8176f5eb2cba4b42509ec9f4fc1ad7fef10cd0d4bbd819728fc5eae44d7c\", \"kind\": \"file\"}, \"purpose\": \"historical property generation\"}]}\n",
+      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+    }
+  ],
+  "scope": "Original surviving generators only; game compile/link/startup unverified"
+}

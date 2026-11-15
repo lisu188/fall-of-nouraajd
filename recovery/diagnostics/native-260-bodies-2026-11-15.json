@@ -1,0 +1,65 @@
+{
+  "entries": [
+    {
+      "nativeValidation": {
+        "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/CCreature.o+CGameView.o+CItem.o+CInteraction.o.json",
+        "proofSha256": "d870480a3d9dcc97a13f3069e47468fe32f881626e28c5770f1d7dcff48f350f",
+        "scope": "Four formatted object implementations compiled together under sealed toolchain; no link/startup or cross-tree acceptance",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "5a949ff899495dfbb4b29ce40386cb9c98e12dda",
+      "path": "src/CCreature.cpp",
+      "provenance": "Generated missing-body reconstruction: retain intact55e6516e object/CCreature.cpp arithmetic for experience, damage, health/mana, equipment and statistics, adapted to genuine #260 pointer containers/Stats pointer/no-argument callbacks. Combined CPlayer/CMonster methods from intact #247 5fe60e7c src/player.cpp (b18c9ab09ac9225e896e0b8d98a184d7104cd8c8) and monster.cpp (cf3f3ceaf75dba3b8bd9ec980aad7785071bd03c), with same-commit C-prefix names, QString and direct scene APIs. JSON loading bridges actual monsters properties/config to original declared loadFromJson API. Initial scalar state is reconstructed explicitly. Retains historical default/custom-comparator pointer container bridges as found in original247 Player::getLoot; full-game runtime and cross-tree compatibility remain unverified.",
+      "sha256": "d5d14add534094eb914231379db28f01fc970d1e28ae0de1d88457214b34a6fb",
+      "source": "recovery/payloads/reconstructions/5a/5a949ff899495dfbb4b29ce40386cb9c98e12dda-CCreature.cpp"
+    },
+    {
+      "nativeValidation": {
+        "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/CCreature.o+CGameView.o+CItem.o+CInteraction.o.json",
+        "proofSha256": "d870480a3d9dcc97a13f3069e47468fe32f881626e28c5770f1d7dcff48f350f",
+        "scope": "Four formatted object implementations compiled together under sealed toolchain; no link/startup or cross-tree acceptance",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "351ddf3da2977bed0a6bb2f3a67490240a5743ed",
+      "path": "src/CGameView.cpp",
+      "provenance": "Generated missing-body adaptation from intact #264 e398df1047d75ac0b2885d0dcfc03ad4c35990c2:src/CGameView.cpp blobd2a1d2c3c175406ecb9ba5ac680070e682efe2e8. Restore genuine #260 named character/fight panels in place of later panel map, use actual surviving CGameView.h callbacks and images/backpack.png. Preserve timed game creation, loading image, OpenGL viewport and resize/fullscreen behavior. Backpack placement/click rendering is an explicit reconstruction, not recovered original layout.",
+      "sha256": "3a60da7bd4b6e08b99aa49f5584eb58c2f53efb8a364249d1e85152094051115",
+      "source": "recovery/payloads/reconstructions/35/351ddf3da2977bed0a6bb2f3a67490240a5743ed-CGameView.cpp"
+    },
+    {
+      "nativeValidation": {
+        "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/CCreature.o+CGameView.o+CItem.o+CInteraction.o.json",
+        "proofSha256": "d870480a3d9dcc97a13f3069e47468fe32f881626e28c5770f1d7dcff48f350f",
+        "scope": "Four formatted object implementations compiled together under sealed toolchain; no link/startup or cross-tree acceptance",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5",
+      "path": "src/CItem.cpp",
+      "provenance": "Generated adaptation of intact #2475fe60e7c:src/item.cpp blob6776325d5546af8c14a14c3433c5021eeac82566 and potion.cpp blob465840edb9a59f0e82e7b72fd12cd109f0da9e13. Combine genuine #260 item classes, apply C-prefix/QString/default constructor changes, retain real pickup/equip/unequip/mouse-use/health-mana potion behavior, load JSON properties from actual config/objects layout and use original getStats()->addBonus/removeBonus API. No future GUI handler or event API, no surviving source edits.",
+      "sha256": "30bd4bacb30b2cbfb4d581d1f594575ec222177b86d27bbd45d5c0cda2596d17",
+      "source": "recovery/payloads/reconstructions/51/51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5-CItem.cpp"
+    },
+    {
+      "nativeValidation": {
+        "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/CCreature.o+CGameView.o+CItem.o+CInteraction.o.json",
+        "proofSha256": "d870480a3d9dcc97a13f3069e47468fe32f881626e28c5770f1d7dcff48f350f",
+        "scope": "Four formatted object implementations compiled together under sealed toolchain; no link/startup or cross-tree acceptance",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "4ca68f3c92b35de3f8070d7e2493c20049508f0d",
+      "path": "src/CInteraction.cpp",
+      "provenance": "Generated missing-body reconstruction for genuine #260 CInteraction.h Effect (non-QObject constructor/callback map) ABI. Use intact #290 CInteraction.cpp blob98248e766f1e2921c117dbc064325ddb8824e70a mouse/action/effect lifecycle as adapted donor; invoke actual #260 scripts/game/interaction.py functions, not later class instances. Native Effect callbacks transcribe intact #331beef9d87 scripts/game/effect.py blob2ba257597feba52e3ba108b1056e3a5443b8ba1c arithmetic/return semantics using original Effect/Stats-pointer APIs. Barrier false and ArmorOfEndlessWinter missing restriction are genuine donor behavior/limitation. Maps original StunEffect spelling to genuine Stun config entry. saveToJson field shape is reconstructed and unverified; no whole-game or gameplay parity claim.",
+      "sha256": "f77e2c3f5628314b0ee8e73c56c7f71af3a700be79e6dee88756cd839dafb520",
+      "source": "recovery/payloads/reconstructions/4c/4ca68f3c92b35de3f8070d7e2493c20049508f0d-CInteraction.cpp"
+    }
+  ],
+  "limitations": [
+    "Whole #260 still blocked by additional missing Map/MapObject/PathFinder/ObjectHandler implementations and malformed donor config/weapons.json.",
+    "Later authentic effect mechanics are donor adaptations, not exact original #260 bodies.",
+    "Do not mark a tree verified based on object compilation."
+  ]
+}

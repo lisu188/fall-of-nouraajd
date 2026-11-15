@@ -19,12 +19,20 @@ import tempfile
 import time
 import zlib
 
+try:
+    from scripts import history_source_prep as source_prep
+    from scripts.history_qmake_compatibility import recipeForSource
+except ModuleNotFoundError:
+    import history_source_prep as source_prep
+    from history_qmake_compatibility import recipeForSource
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SMOKE_SOURCE = REPO_ROOT / "recovery/smoke/game_startup.cpp"
 # The historical game targeted Windows; startup runs with case-insensitive file lookup.
 WINDOWS_PATHS_SOURCE = REPO_ROOT / "recovery/smoke/windows_paths.cpp"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 REQUIRED_CHECKS = ("map", "player", "eventLoop", "renderedFrame")
+EDITOR_CHECKS = ("map", "editor", "eventLoop", "renderedFrame")
 
 
 class VerificationError(ValueError):
@@ -129,7 +137,33 @@ def validatePng(path: Path) -> tuple[int, int]:
     return width, height
 
 
-def validateSmokeReport(report_path: Path, artifact_root: Path) -> dict:
+def verifiedStartupMode(report: dict) -> str:
+    """Keep editor evidence distinct and require its original entrypoint identities."""
+    mode = report.get("startupMode", "game")
+    if mode not in ("game", "editor") or report.get("smoke", {}).get("startup", {}).get("mode", "game") != mode:
+        raise VerificationError("Startup report mode differs from the verified historical entrypoint")
+    if mode == "editor":
+        selection = report.get("startupSelection", {})
+        inputs = selection.get("originalInputs", [])
+        if (
+            selection.get("mode") != mode
+            or not isinstance(inputs, list)
+            or len(inputs) != 2
+            or any(not isinstance(item, dict) for item in inputs)
+            or {item.get("path") for item in inputs} != {"main.cpp", "config/init.json"}
+            or any(
+                not re.fullmatch(r"[0-9a-f]{40}", str(item.get("blob", "")))
+                or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                for item in inputs
+            )
+        ):
+            raise VerificationError("Editor evidence requires original main.cpp and config/init.json identities")
+    return mode
+
+
+def validateSmokeReport(
+    report_path: Path, artifact_root: Path, startup_mode: str = "game", *, portable: bool = False
+) -> dict:
     if not report_path.is_file():
         raise VerificationError("Game exited without a startup-readiness report")
     try:
@@ -138,13 +172,22 @@ def validateSmokeReport(report_path: Path, artifact_root: Path) -> dict:
         raise VerificationError(f"Invalid startup report: {error}") from error
     if not isinstance(report, dict) or report.get("schemaVersion") != 1 or report.get("status") != "ready":
         raise VerificationError("Game did not report successful startup")
+    if startup_mode not in ("game", "editor") or report.get("mode", "game") != startup_mode:
+        raise VerificationError("Startup report mode differs from the verified historical entrypoint")
     checks = report.get("checks", {})
-    if not isinstance(checks, dict) or any(checks.get(name) is not True for name in REQUIRED_CHECKS):
-        raise VerificationError("Startup requires map, player, event-loop and rendered-frame evidence")
+    required = EDITOR_CHECKS if startup_mode == "editor" else REQUIRED_CHECKS
+    if not isinstance(checks, dict) or any(checks.get(name) is not True for name in required):
+        raise VerificationError(f"Startup requires {', '.join(required)} evidence")
+    if startup_mode == "editor" and "player" in checks:
+        raise VerificationError("Editor startup cannot claim player evidence")
     frame = report.get("frame", {})
     if not isinstance(frame, dict) or not isinstance(frame.get("path"), str):
         raise VerificationError("Startup report has no frame path")
     frame_path = Path(frame["path"])
+    if portable:
+        if frame_path.name != "startup.png":
+            raise VerificationError("Portable startup evidence requires its attached startup.png")
+        frame_path = artifact_root / "startup.png"
     if not frame_path.is_absolute():
         frame_path = artifact_root / frame_path
     frame_path = frame_path.resolve()
@@ -166,6 +209,7 @@ def runSmoke(
     environment: dict[str, str] | None = None,
     timeout: float = 30,
     isolate: bool = True,
+    startup_mode: str = "game",
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir.resolve() / "startup.json"
@@ -197,7 +241,7 @@ def runSmoke(
         result["reason"] = f"Game did not shut down cleanly (exit {result['returnCode']})"
     else:
         try:
-            result["startup"] = validateSmokeReport(report_path, output_dir)
+            result["startup"] = validateSmokeReport(report_path, output_dir, startup_mode)
             frame_path = Path(result["startup"]["frame"]["path"])
             if not frame_path.is_absolute():
                 frame_path = output_dir / frame_path
@@ -230,12 +274,75 @@ def findClassHeader(source_root: Path, names: tuple[str, ...], filenames: tuple[
     return candidates[0]
 
 
-def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
-    """Add a startup observer to the real target, retaining its original main function."""
-    scene_name, scene_header = findClassHeader(
-        source_root, ("CGameScene", "GameScene"), ("cgamescene.h", "gamescene.h")
+def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) -> dict:
+    """Recognize the original early editor branch without trusting reconstructed flags."""
+    config_path = source_root / "config/init.json"
+    if not config_path.is_file():
+        return {"mode": "game"}
+    try:
+        config = json.loads(config_path.read_text())
+    except (OSError, ValueError) as error:
+        raise VerificationError(f"Cannot inspect historical startup configuration: {error}") from error
+    compact = re.sub(r"\s+", "", (source_root / "main.cpp").read_text()) if (source_root / "main.cpp").is_file() else ""
+    start = compact.find("intmain(")
+    expected = (
+        "intmain(intargc,char*argv[]){QApplicationa(argc,argv);QGraphicsView*view;"
+        'booleditor=(*ConfigurationProvider::getConfig("config/init.json")).get("editor",false).asBool();'
+        "if(editor){view=newMapView();}else{view=newGameView();}"
+        "intret=a.exec();deleteview;returnret;}"
     )
-    view_name, view_header = findClassHeader(source_root, ("CGameView", "GameView"), ("cgameview.h", "gameview.h"))
+    reviewed = start >= 0 and compact[start:] == expected
+    editor = isinstance(config, dict) and config.get("editor") is True
+    if not editor and not reviewed:
+        return {"mode": "game"}
+    if not isinstance(config, dict) or type(config.get("editor", False)) is not bool:
+        raise VerificationError("Reviewed historical editor configuration requires a boolean mode")
+    try:
+        from scripts.recover_history import GitObjects, RecoveryError, objectHash
+    except ModuleNotFoundError:
+        from recover_history import GitObjects, RecoveryError, objectHash
+    verified = []
+    try:
+        with GitObjects(repo_root) as objects:
+            tree = objects.read(source_commit, "commit").split(b"\n", 1)[0].decode().removeprefix("tree ")
+            files = objects.files(tree)
+            for name in ("main.cpp", "config/init.json"):
+                original = files.get(name, {})
+                path = source_root / name
+                if original.get("mode") not in ("100644", "100755") or not path.is_file() or path.is_symlink():
+                    raise VerificationError(f"Editor startup requires surviving original {name}")
+                data = path.read_bytes()
+                if objectHash("blob", data) != original["blob"] or objects.read(original["blob"], "blob") != data:
+                    raise VerificationError(f"Editor startup differs from surviving original {name}")
+                verified.append({"path": name, "blob": original["blob"], "sha256": hashlib.sha256(data).hexdigest()})
+    except RecoveryError as error:
+        raise VerificationError(f"Cannot verify original editor entrypoint: {error}") from error
+    if not reviewed:
+        raise VerificationError("Original editor main needs an explicitly reviewed startup route")
+    return {
+        "mode": "editor" if editor else "game",
+        "originalInputs": verified,
+        "boundary": (
+            "Authored editor startup; gameplay and player are unverified" if editor else "Authored game startup"
+        ),
+    }
+
+
+def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str = "game") -> dict:
+    """Add a startup observer to the real target, retaining its original main function."""
+    editor = startup_mode == "editor"
+    if startup_mode not in ("game", "editor"):
+        raise VerificationError("Unknown startup observer mode")
+    scene_name, scene_header = findClassHeader(
+        source_root,
+        ("MapScene",) if editor else ("CGameScene", "GameScene"),
+        ("mapscene.h",) if editor else ("cgamescene.h", "gamescene.h"),
+    )
+    view_name, view_header = findClassHeader(
+        source_root,
+        ("MapView",) if editor else ("CGameView", "GameView"),
+        ("mapview.h",) if editor else ("cgameview.h", "gameview.h"),
+    )
     map_name, map_header = findClassHeader(source_root, ("CMap", "Map"), ("cmap.h", "map.h"))
     prefixed = scene_name.startswith("C")
     scene_text = scene_header.read_text(encoding="utf-8")
@@ -265,9 +372,16 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
     player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player else map_text)
     player_name = player_getter.group(1) if player_getter else ("CPlayer" if prefixed else "Player")
     # Several Qt trees define CPlayer alongside CCreature in the same header.
-    _, player_header = findClassHeader(
-        source_root, (player_name,), ("cplayer.h", "player.h", "ccreature.h", "creature.h")
-    )
+    if editor:
+        if not re.search(r"class\s+Map\s*:\s*public\s+std::unordered_map", map_text) or any(
+            not re.search(r"\b" + method + r"\s*\(", map_text) for method in ("getScene", "getTileSize")
+        ):
+            raise VerificationError("Editor needs a reviewed map-model and scene-ownership observer")
+        player_header = None
+    else:
+        _, player_header = findClassHeader(
+            source_root, (player_name,), ("cplayer.h", "player.h", "ccreature.h", "creature.h")
+        )
     opengl = any(
         re.search(r'^\s*#include\s*[<"](?:QtOpenGL/)?QGLWidget[>"]', path.read_text(errors="replace"), re.MULTILINE)
         for path in source_root.rglob("*.cpp")
@@ -277,7 +391,7 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
         f'#define GAME_RECOVERY_SCENE_HEADER "{scene_header.relative_to(source_root).as_posix()}"',
         f'#define GAME_RECOVERY_VIEW_HEADER "{view_header.relative_to(source_root).as_posix()}"',
         f'#define GAME_RECOVERY_MAP_HEADER "{map_header.relative_to(source_root).as_posix()}"',
-        f'#define GAME_RECOVERY_PLAYER_HEADER "{player_header.relative_to(source_root).as_posix()}"',
+        f"#define GAME_RECOVERY_EDITOR {int(editor)}",
         f"#define GAME_RECOVERY_SCENE_TYPE {scene_name}",
         f"#define GAME_RECOVERY_VIEW_TYPE {view_name}",
         f"#define GAME_RECOVERY_MAP_GETTER {'getMap' if has_map_getter else 'recoveryGetMap'}",
@@ -285,11 +399,14 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
         f"#define GAME_RECOVERY_COORDS3 {int(coords3)}",
         f"#define GAME_RECOVERY_OPENGL {int(opengl)}",
     ]
+    if player_header is not None:
+        config.append(f'#define GAME_RECOVERY_PLAYER_HEADER "{player_header.relative_to(source_root).as_posix()}"')
     build_root.mkdir(parents=True, exist_ok=True)
     config_path = build_root / "recovery_smoke_config.h"
     config_path.write_text("\n".join(config) + "\n", encoding="utf-8")
     return {
-        "id": ("prefixed" if prefixed else "classic") + ("-3d" if coords3 else "-2d"),
+        "id": "classic-editor" if editor else ("prefixed" if prefixed else "classic") + ("-3d" if coords3 else "-2d"),
+        "mode": startup_mode,
         "source": str(SMOKE_SOURCE),
         "config": str(config_path),
         "overlays": overlays,
@@ -544,7 +661,7 @@ def selectRecipe(recipes: list[dict], source_root: Path, selected: str | None) -
         matching = [recipe for recipe in recipes if str(recipe.get("pythonAbi", "none")) == abi]
     if len(matching) != 1:
         raise VerificationError(f"Expected one build recipe; found {len(matching)}")
-    return matching[0]
+    return recipeForSource(matching[0], source_root)
 
 
 def toolchainFingerprint(recipe: dict, environment: dict[str, str]) -> dict:
@@ -570,7 +687,9 @@ def exportEvidence(result: dict, output_root: Path) -> None:
     if result.get("status") != "success":
         return
     artifact_root = Path(result["artifactDir"])
-    startup = validateSmokeReport(Path(result["smoke"]["startupReport"]), artifact_root)
+    startup = validateSmokeReport(
+        Path(result["smoke"]["startupReport"]), artifact_root, result.get("startupMode", "game")
+    )
     evidence_dir = output_root / "evidence" / result["fingerprint"]
     evidence_dir.mkdir(parents=True, exist_ok=True)
     frame_path = Path(startup["frame"]["path"])
@@ -587,6 +706,13 @@ def exportEvidence(result: dict, output_root: Path) -> None:
                     output.write(("\n=== " + dependency["project"] + " ===\n").encode())
                     output.write(Path(dependency[key]["log"]).read_bytes())
                 output.write(log_path.read_bytes())
+    preparation = result.get("sourcePreparation", {})
+    if preparation.get("steps"):
+        with (evidence_dir / "source-preparation.log").open("wb") as output:
+            for step in preparation["steps"]:
+                output.write(("\n=== " + step["name"] + " ===\n").encode())
+                output.write(Path(step["log"]).read_bytes())
+        writeJson(evidence_dir / "source-preparation.json", preparation)
     result["evidenceDir"] = str(evidence_dir.resolve())
     writeJson(evidence_dir / "verification.json", result)
 
@@ -624,10 +750,22 @@ def verifySnapshot(
         environment = dict(os.environ)
         environment.update({key: str(value) for key, value in recipe.get("environment", {}).items()})
         toolchain = toolchainFingerprint(recipe, environment)
-        adapter = prepareSmokeAdapter(source_root, work_root / "observer")
+        startup = selectStartupMode(repo_root, source_commit, source_root)
+        result.update(startupMode=startup["mode"], startupSelection=startup)
+        preparation = source_prep.prepareSources(
+            source_root, work_root / "preparation", recipe, environment, runCommand, min(build_timeout, 120)
+        )
+        result["sourcePreparation"] = preparation
+        if preparation["status"] == "failed":
+            raise VerificationError(preparation["reason"])
+        runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
+        adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
         identity = {
             "sourceTree": tree["tree"],
+            "startupSelection": startup,
+            "sourcePreparation": preparation["identity"],
+            "runtimePreparation": {"directories": runtime_directories},
             "recipe": recipe,
             "toolchain": toolchain,
             "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
@@ -656,7 +794,9 @@ def verifySnapshot(
         if cached_path.is_file():
             cached = json.loads(cached_path.read_text())
             if cached.get("status") == "success":
-                validateSmokeReport(Path(cached["smoke"]["startupReport"]), Path(cached["artifactDir"]))
+                validateSmokeReport(
+                    Path(cached["smoke"]["startupReport"]), Path(cached["artifactDir"]), startup["mode"]
+                )
                 cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
                 exportEvidence(cached, output_root)
                 return cached
@@ -759,12 +899,17 @@ def verifySnapshot(
             smoke_environment["LD_LIBRARY_PATH"] = ":".join(
                 [*library_dirs, environment.get("LD_LIBRARY_PATH", "")]
             ).rstrip(":")
+        if runtime_directories:
+            result["runtimePreparation"] = source_prep.prepareRuntimeDirectories(
+                projects["application"].parent, runtime_directories
+            )
         result["smoke"] = runSmoke(
             ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
             projects["application"].parent,
             artifact_dir,
             environment=smoke_environment,
             timeout=timeout,
+            startup_mode=startup["mode"],
         )
         result["smoke"]["startupReport"] = str(artifact_dir / "startup.json")
         result["artifactDir"] = str(artifact_dir)

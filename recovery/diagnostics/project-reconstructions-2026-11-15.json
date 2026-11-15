@@ -1,4 +1,8 @@
 {
+  "adapterDefines": [
+    "GAME_RECOVERY_PREFIXED_TILE",
+    "GAME_RECOVERY_PREFIXED_SCENE_HEADER"
+  ],
   "boundary": "Static project/source selection only. No compilation or runtime verification. Missing source bodies and library dependencies remain independent blockers. All surviving .pro files are unchanged.",
   "checks": [
     {
@@ -221,8 +225,8 @@
       "positions": [
         246
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "3285f16956153ca4b2e6ab949bb6d8d8f386378a97039257c8ecaa920a31a752",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "172e389df2cc25436782d807cd70e3aa102a05ff968ebbec088912f83aa7b186",
       "source": "recovery/payloads/reconstructions/75/75ea3f5ea6cd94a23c5a2666cd62465a53ed7057-game.pro"
     },
     {
@@ -236,8 +240,8 @@
       "positions": [
         247
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "931337e7a8d67255c55e51dabca0b1869cc49d6b4d9f4329a4c29d15d8ac1254",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "38a2457135baa70b5983ba5595df1bdfd6f844644f152635e8e697ab454333fe",
       "source": "recovery/payloads/reconstructions/b2/b25dfc11ef699553ff570e025cbbeabc2eaf51e8-game.pro"
     },
     {
@@ -251,8 +255,8 @@
       "positions": [
         248
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a45e7ab2301934904ef12a5bb55c5a85034ffb879ec12764c2a7ecdef5f0a98c",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "a01f95592fc1d7a7226bed7370a37c9d96c1534f69a5ff695649304542bf9ce1",
       "source": "recovery/payloads/reconstructions/10/10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d-game.pro"
     },
     {
@@ -268,8 +272,8 @@
         249,
         250
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "2f2b5a5ed9dff037a0742944192b666d8cd4519f36cb3ef7245bd9ff5cbd21aa",
       "source": "recovery/payloads/reconstructions/70/70d87918c1d7c24681e98a3d8e860b33f0f42451-game.pro"
     },
     {
@@ -283,8 +287,8 @@
       "positions": [
         251
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "2f2b5a5ed9dff037a0742944192b666d8cd4519f36cb3ef7245bd9ff5cbd21aa",
       "source": "recovery/payloads/reconstructions/95/9597e896cd261a70d461bdd451808e031e50dd8a-game.pro"
     },
     {
@@ -314,8 +318,8 @@
       "positions": [
         252
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "637acf61eee8b41467223e5ae51fb65fb006c1d2c5ffc2b480545c004d257dea",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "77910376cf7dea51ee5e0590b7bbf80703608eff16479fef09f8ee5acccd8226",
       "source": "recovery/payloads/reconstructions/4f/4fe204b5a652a47eee6fcb5ca0e847ef69900392-game.pro"
     },
     {
@@ -345,8 +349,8 @@
       "positions": [
         253
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "ac981ee53170136b8a1874cae0ee053c977016c7fc29fb0204d4470b8dc310f6",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "ae5081f3b9d9284e5992bd7f0365dfcf48bdd6be6d433ad388c56939a54d393c",
       "source": "recovery/payloads/reconstructions/ee/ee49ba5ebb81e355b0effc08a4f07ead85652c5d-game.pro"
     },
     {
@@ -360,8 +364,8 @@
       "positions": [
         254
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "19ce281299ebe51bf42410e268a470faf155fcbd661d12027a680ad6150de0ab",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "e9349725b9d29a7dad04ee21ef28d04b0d1dba143ae81a766b74f5bb2627ab52",
       "source": "recovery/payloads/reconstructions/26/267e7b62b2e9cb6678276b8e319bba55f59403d1-game.pro"
     },
     {
@@ -377,8 +381,8 @@
         255,
         256
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
       "source": "recovery/payloads/reconstructions/69/69fd798f9c12545d2718d2787ad1ea609107a937-game.pro"
     },
     {
@@ -392,8 +396,8 @@
       "positions": [
         257
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
       "source": "recovery/payloads/reconstructions/91/91fe15120dd506b4a0cfabb13cbca41cd66bea7a-game.pro"
     },
     {
@@ -413,8 +417,8 @@
         260,
         261
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
       "source": "recovery/payloads/reconstructions/30/3059c5de88b726b70736b936ebf8e360f82fec09-game.pro"
     },
     {
@@ -428,8 +432,8 @@
       "positions": [
         262
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "73d9722cdf1cc97b9efee0466447fc64f65c31453a3c0e2fc158a3468849aaef",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "9279222bc102f3e3739e7b1b3c3f0c4e58858676d83d1a6b92516296635abd65",
       "source": "recovery/payloads/reconstructions/7c/7caf45e39f7a992d2d3d43870b97520462a3ea4d-game.pro"
     },
     {
@@ -463,8 +467,8 @@
         264,
         265
       ],
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
-      "sha256": "5911fd1c6a0a1c42f99353bc704976c70c61c3495195b492592c119a0dc1fa00",
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
+      "sha256": "70b79e095c9d9a4fcd946dcdc5152d89ed727cdf358c41627a8f408c5761f5c7",
       "source": "recovery/payloads/reconstructions/e4/e44a0288b373871a71c3dbe0d82ec6c483c2a014-game.pro"
     }
   ],
