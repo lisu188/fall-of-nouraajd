@@ -184,6 +184,96 @@
       "validation": "build-and-startup-passed"
     },
     {
+      "evidence": "recovery/evidence/3338d79823e8d37ed1d42d5843ca9b214bfe9967",
+      "originalCommit": "3338d79823e8d37ed1d42d5843ca9b214bfe9967",
+      "originalTree": "aca07a69d637606295c32d205f521d4a51195850",
+      "published": false,
+      "restoredFilesFingerprint": "549ec256498a58cd5681d1b35f8372202f2919ea0f7a53500cdba128d7a33e00",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b7f23b6f889dc583e963167964a9a5df19d594a8",
+      "originalCommit": "b7f23b6f889dc583e963167964a9a5df19d594a8",
+      "originalTree": "b34e2ff0d606e42accb0edd35feb6c9631fe4710",
+      "published": false,
+      "restoredFilesFingerprint": "8616917fd4ff5f6281614fb4574cef395ab2cac2baf605831e27d450fd966c0f",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/feb27f5300dab7878fbdbc40df2126b0d1e8e4ff",
+      "originalCommit": "feb27f5300dab7878fbdbc40df2126b0d1e8e4ff",
+      "originalTree": "d59f9f9105d89590a7b27ffc74f7a749f3f18dd1",
+      "published": false,
+      "restoredFilesFingerprint": "8616917fd4ff5f6281614fb4574cef395ab2cac2baf605831e27d450fd966c0f",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/3cc699ff0c3ee07dfbca1793828cbe2ee4298932",
+      "originalCommit": "3cc699ff0c3ee07dfbca1793828cbe2ee4298932",
+      "originalTree": "7feb3bc67f589976d94fb9ddc23cec95a085d078",
+      "published": false,
+      "restoredFilesFingerprint": "6376b73b2925a7926e1fa6856b4da30481204c37dc29e04184df861c6cbbee03",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/47b73fdfc256aa3499b452af2246450bbfc8da27",
+      "originalCommit": "47b73fdfc256aa3499b452af2246450bbfc8da27",
+      "originalTree": "fca38798abb6bbfbac25aea901e5679026b8100c",
+      "published": false,
+      "restoredFilesFingerprint": "f4e61a4fa2d94be1e470f565c160fbad983a3440f40d514fb203643616547c49",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/d23993e897e48d26de66ca6fc0f10226be4ef187",
+      "originalCommit": "d23993e897e48d26de66ca6fc0f10226be4ef187",
+      "originalTree": "da57f1c235b2cb151c20dc504313013ada830f8d",
+      "published": false,
+      "restoredFilesFingerprint": "fd9df3d1f09aeadee4df5584877fc4527a6d9b5209c08e947855e0d329e4f832",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/adeb6cc5fe0091ac2c3de13b923464396bbc6b3c",
+      "originalCommit": "adeb6cc5fe0091ac2c3de13b923464396bbc6b3c",
+      "originalTree": "e053ae64c8a2c9aad4a16a486bbcfebffdad196f",
+      "published": false,
+      "restoredFilesFingerprint": "84797d8ba510b641a6e2e0746d21b2e7daaf8df503cd87758c474220f0933ab8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6fade625f65ffb1b52a73605014175780e5f50bb",
+      "originalCommit": "6fade625f65ffb1b52a73605014175780e5f50bb",
+      "originalTree": "a7acfbeb34266c80c57ac23334f8c7a814c9411b",
+      "published": false,
+      "restoredFilesFingerprint": "a891fbf0f0e03c683ad9fc05c90bd64f195a3f9b4e91001b79f7ab8b577abc3e",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1",
+      "originalCommit": "59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1",
+      "originalTree": "56527f9b926bec939909be4b21c54616f4035896",
+      "published": false,
+      "restoredFilesFingerprint": "03d34353bb1ea33204a0acc5a824d75a7b007e247c82eba81734dce7c7843091",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7e36b9a19871bbfd4f14d42c6bf42bdd7aa16502",
+      "originalCommit": "7e36b9a19871bbfd4f14d42c6bf42bdd7aa16502",
+      "originalTree": "c6389c1c3fff5ddf29ed27909ea50695673c70c6",
+      "published": false,
+      "restoredFilesFingerprint": "7f3ca64acc23b02d650f6c1581afe6a6ccc8f8741b7e09b0200d019b35295b83",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
       "evidence": "recovery/evidence/108bdcbeda04cefeba5e1895f91df023cea8487f",
       "originalCommit": "108bdcbeda04cefeba5e1895f91df023cea8487f",
       "originalTree": "54126a24ae5e9b85e05fc1f9a4a198953cc262d7",
@@ -198,6 +288,6 @@
   "targetCommitCount": 367,
   "targetTreeCount": 365,
   "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d (local build of recovery/toolchains/Dockerfile with RECOVERY_SOURCE_LOCK=sources-git.json)",
-  "validatedCommitCount": 21,
-  "validatedTreeCount": 21
+  "validatedCommitCount": 31,
+  "validatedTreeCount": 31
 }

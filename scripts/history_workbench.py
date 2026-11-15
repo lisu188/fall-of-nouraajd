@@ -183,7 +183,8 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     output.mkdir(parents=True, exist_ok=True)
     project = sorted(source.glob("*.pro"))[0]
     result = docker(
-        f"qmake QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 {project} -o Makefile > qmake.log 2>&1; "
+        f"qmake QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' "
+        f"{project} -o Makefile > qmake.log 2>&1; "
         f"make -k -j{os.cpu_count() or 1} > make.log 2>&1; echo rc=$?; "
         f"grep -E 'error|undefined reference' make.log | sort | uniq | head -{lines}",
         output,
@@ -283,7 +284,7 @@ def verify(ref: str, recipe: str | None = None) -> str:
     return result.stdout.split(" ", 1)[0]
 
 
-def auto(start: int, end: int) -> None:
+def auto(start: int, end: int, check: bool = False) -> None:
     for number in range(start, end + 1):
         commit = ORDER[number - 1]
         print(f"=== #{number} {commit[:8]}", flush=True)
@@ -304,6 +305,9 @@ def auto(start: int, end: int) -> None:
             (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
             note(blob, "qmake project regenerated with " + summary)
         print(f"kept {len(carried) + len(generated)} files for #{number}")
+        if check and verify(str(number)) != "success":
+            print(f"STOP at #{number}: startup verification failed")
+            return
 
 
 def save() -> None:
@@ -434,6 +438,7 @@ def main() -> None:
     command = commands.add_parser("auto")
     command.add_argument("start", type=int)
     command.add_argument("end", type=int)
+    command.add_argument("--verify", action="store_true", help="also verify startup after each kept tree")
     commands.add_parser("save")
     commands.add_parser("export")
     commands.add_parser("progress")
@@ -454,7 +459,7 @@ def main() -> None:
     elif args.command == "keep":
         keep(args.ref, args.paths, args.note)
     elif args.command == "auto":
-        auto(args.start, args.end)
+        auto(args.start, args.end, args.verify)
     elif args.command == "save":
         save()
     elif args.command == "progress":

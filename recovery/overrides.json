@@ -93441,6 +93441,111 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e5718200d (previous version of view/gamescene.cpp)",
       "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
       "source": "payloads/reconstructions/f2/f27c3b303de001c2569726588986622b6437584d-gamescene.cpp"
+    },
+    {
+      "originalBlob": "008bb3e7ce718a77102574fdd0a5d84628a2084d",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 63 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "95c5cab544709105623ab07252aa6353c34f3ccd0d0ed21a3db927168d9fb265",
+      "source": "payloads/reconstructions/00/008bb3e7ce718a77102574fdd0a5d84628a2084d-Game.pro"
+    },
+    {
+      "originalBlob": "1ecc50a84f5ec5fd3a873c17e0cae13b1eab2cbb",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; rebuilt for the same-commit interaction.h: one data-driven Interaction (config/interactions.json for mana cost and animation) bound to free action functions whose bodies are the surviving 47b73fdf interaction subclasses' action methods; structure and mousePressEvent from the surviving 47b73fdf interaction.cpp",
+      "sha256": "ec411d5d5f96e0959ebe1e8f30af9a5b9b44c339ee1f87b790c6d66ca539b52f",
+      "source": "payloads/reconstructions/1e/1ecc50a84f5ec5fd3a873c17e0cae13b1eab2cbb-interaction.cpp"
+    },
+    {
+      "originalBlob": "28e4223623f2f283d339e317108733786b1f3447",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 61 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "af10e08eb48c19b6cb07bc11fe59cfaa38e5af3927e6de9f8a2545aba5269f26",
+      "source": "payloads/reconstructions/28/28e4223623f2f283d339e317108733786b1f3447-Game.pro"
+    },
+    {
+      "originalBlob": "3ffa66f17ff21045f38b75f1c3eb75c6c628e7d6",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the fc0655d1 reconstruction: interactions run through Interaction::onAction",
+      "sha256": "69e691c03890f39058fe3ede77bec8a1c587ae57361fed12d228b3382cb67759",
+      "source": "payloads/reconstructions/3f/3ffa66f17ff21045f38b75f1c3eb75c6c628e7d6-player.cpp"
+    },
+    {
+      "originalBlob": "97e50043c3ba95714010d0cb6932a62d32b62569",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 33a4078c8428a57a35c744b645c707cbf40d9a64 (previous version of creatures/creature.cpp)",
+      "sha256": "52a34b15dde74c261dd570c739613044230861c1d1174bbbc0307355f3584b98",
+      "source": "payloads/reconstructions/97/97e50043c3ba95714010d0cb6932a62d32b62569-creature.cpp"
+    },
+    {
+      "originalBlob": "9ee96a8e2bf78f077cdfbfd98442a2512e79febc",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the a1107283 reconstruction: effects are data-driven Effect(type, caster, duration) objects (same-commit effect.h, surviving effect.cpp)",
+      "sha256": "a23ac59f2a891d16f5d60553ed948f068575912768808206d50ba3f0872a1a3c",
+      "source": "payloads/reconstructions/9e/9ee96a8e2bf78f077cdfbfd98442a2512e79febc-interaction.cpp"
+    },
+    {
+      "originalBlob": "a1107283af09017e43a9e9415b5ac2f80bb77397",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 1ecc50a8 reconstruction: the name-to-action table is the static Interaction::actions member declared in the same-commit interaction.h",
+      "sha256": "d386966146795016686cc82da8078a21d79faea699e4d578721075da91c5c9b6",
+      "source": "payloads/reconstructions/a1/a1107283af09017e43a9e9415b5ac2f80bb77397-interaction.cpp"
+    },
+    {
+      "originalBlob": "a37a1e236ff96ed943885a3536bfb8c706b3a7ca",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 64 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "a3765e86966c3305a25a52f1c9b047ab52cf945003a079b5bb65f15bc365a6fe",
+      "source": "payloads/reconstructions/a3/a37a1e236ff96ed943885a3536bfb8c706b3a7ca-Game.pro"
+    },
+    {
+      "originalBlob": "b1f98e58603669363da199f0d31d7cdb5292aced",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cc72feb06247816b7fc4c6468403d3f195fd69de (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/b1/b1f98e58603669363da199f0d31d7cdb5292aced-gamescene.cpp"
+    },
+    {
+      "originalBlob": "c6b91fa5d69ef82b2cb0b236c24dbc7641473d8b",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 63 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "95c5cab544709105623ab07252aa6353c34f3ccd0d0ed21a3db927168d9fb265",
+      "source": "payloads/reconstructions/c6/c6b91fa5d69ef82b2cb0b236c24dbc7641473d8b-Game.pro"
+    },
+    {
+      "originalBlob": "cc72feb06247816b7fc4c6468403d3f195fd69de",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f27c3b303d (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/cc/cc72feb06247816b7fc4c6468403d3f195fd69de-gamescene.cpp"
+    },
+    {
+      "originalBlob": "cf8025b14dd608170ab57397e6df00f3cb0db224",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the d635f66f reconstruction: finished effects are detected with Effect::getTimeLeft",
+      "sha256": "a59acb290d3447276f5835a20e18d12804dde662a85fbb0097a963080db9dbd7",
+      "source": "payloads/reconstructions/cf/cf8025b14dd608170ab57397e6df00f3cb0db224-creature.cpp"
+    },
+    {
+      "originalBlob": "d635f66fb08e6f2ba8c484b6cf18f27aa416d6b0",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 97e50043 reconstruction: interactions are created with Interaction::getInteraction and run with onAction, the level bonus is a value (same-commit creature.h), and getCoordsString is defined",
+      "sha256": "494955d1380610ea96f005206a694e5a939edd4a21b3c7f712b14c35ed6ab18c",
+      "source": "payloads/reconstructions/d6/d635f66fb08e6f2ba8c484b6cf18f27aa416d6b0-creature.cpp"
+    },
+    {
+      "originalBlob": "fc0655d192349029f22bc5164bd055a032afdfe8",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e550689d8e13c4bd58c34c9007da23103bde25bd (previous version of creatures/player.cpp)",
+      "sha256": "30fa34748298c14fae75eb5d54982b8c9cadadd3c378b3552129478e0b8506a2",
+      "source": "payloads/reconstructions/fc/fc0655d192349029f22bc5164bd055a032afdfe8-player.cpp"
+    },
+    {
+      "originalBlob": "fe3928a0ea5a4797adac383747b1d278f0c7b012",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 0340e81f reconstruction: addBonus and removeBonus take Stats by value (same-commit stats.h)",
+      "sha256": "1477ca1f6deb13877151c3d873dba47e0e689c30d2d03a5c0fcc686e5ebdc109",
+      "source": "payloads/reconstructions/fe/fe3928a0ea5a4797adac383747b1d278f0c7b012-stats.cpp"
     }
   ],
   "schemaVersion": 1

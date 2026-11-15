@@ -11,7 +11,12 @@
             "qmakeCommand": "qmake",
             "makeCommand": "make",
             "compilerCommand": "g++-5",
-            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "qmakeArguments": [
+                "QMAKE_CC=gcc-5",
+                "QMAKE_CXX=g++-5",
+                "QMAKE_LINK=g++-5",
+                "QMAKE_CXXFLAGS+=-include functional"
+            ],
             "environment": {
                 "PATH": "/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
                 "LIBGL_ALWAYS_SOFTWARE": "1",
@@ -25,7 +30,12 @@
             "qmakeCommand": "qmake",
             "makeCommand": "make",
             "compilerCommand": "g++-5",
-            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "qmakeArguments": [
+                "QMAKE_CC=gcc-5",
+                "QMAKE_CXX=g++-5",
+                "QMAKE_LINK=g++-5",
+                "QMAKE_CXXFLAGS+=-include functional"
+            ],
             "environment": {
                 "PATH": "/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
                 "PYTHONHOME": "/opt/recovery/python/2.7.18",
@@ -43,7 +53,12 @@
             "qmakeCommand": "qmake",
             "makeCommand": "make",
             "compilerCommand": "g++-5",
-            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "qmakeArguments": [
+                "QMAKE_CC=gcc-5",
+                "QMAKE_CXX=g++-5",
+                "QMAKE_LINK=g++-5",
+                "QMAKE_CXXFLAGS+=-include functional"
+            ],
             "environment": {
                 "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
                 "PYTHONHOME": "/opt/recovery/python/3.3.7",
@@ -61,7 +76,12 @@
             "qmakeCommand": "qmake",
             "makeCommand": "make",
             "compilerCommand": "g++-5",
-            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "qmakeArguments": [
+                "QMAKE_CC=gcc-5",
+                "QMAKE_CXX=g++-5",
+                "QMAKE_LINK=g++-5",
+                "QMAKE_CXXFLAGS+=-include functional"
+            ],
             "environment": {
                 "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
                 "PYTHONHOME": "/opt/recovery/python/3.4.10",
@@ -73,5 +93,8 @@
                 "QT_X11_NO_MITSHM": "1"
             }
         }
+    ],
+    "compatibility": [
+        "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
     ]
 }
