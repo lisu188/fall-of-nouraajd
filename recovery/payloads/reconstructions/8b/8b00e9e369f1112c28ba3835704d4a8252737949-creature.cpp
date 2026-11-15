@@ -287,7 +287,14 @@ Json::Value Creature::saveToJson() {
     config["exp"] = exp;
     config["hp"] = hp;
     config["mana"] = mana;
-    config["initStats"] = stats.saveToJson();
+    Stats initialStats;
+    initialStats.loadFromJson(stats.saveToJson());
+    for (std::list<Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
+        Stats bonus;
+        bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[(*it)->className]["bonus"]);
+        initialStats.removeBonus(bonus);
+    }
+    config["initStats"] = initialStats.saveToJson();
     config["coords"]["X"] = getPosX();
     config["coords"]["Y"] = getPosY();
     config["coords"]["Z"] = getPosZ();

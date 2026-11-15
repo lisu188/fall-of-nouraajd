@@ -22,15 +22,15 @@ vendored jsoncpp/zlib/tmxparser/Boost.Python sources, images, and often `Game.pr
 
 ## Current state
 
-The continuation imports **53 additional exact original source/image payloads**
-(1,375,733 bytes): fifty from the preserved pre-BFG object archive and three
+The continuation imports **55 additional exact original source/image payloads**
+(1,387,269 bytes): fifty-two from the preserved pre-BFG object archive and three
 CRLF variants derived from verified originals. Their Git blob hashes
 match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
 The pinned local toolchain has now revalidated the earlier checkpoint and accepted
-**74 commits / 74 trees** against the current restored inputs (catalog #1–#73 and
+**81 commits / 81 trees** against the current restored inputs (catalog #1–#80 and
 #367). Each accepted tree compiled and started its real game under isolated Xvfb,
 with map/player, rendered frame and clean shutdown. Matching hashes, compiler logs,
 startup records and screenshots are retained in `recovery/evidence/<commit>/`.
@@ -53,8 +53,8 @@ explicitly approved PR #1655 branch; it has not been merged.
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
 Most later replacements remain unverified donor proposals. The chronological walk
-has reached #79, where a surviving Windows include path requires a recorded Linux
-build-copy translation. Reconstructions are derived from same-version headers,
+has passed #79 using a recorded Linux build-copy translation of the surviving
+Windows include path and an empty save-directory prerequisite. Reconstructions are derived from same-version headers,
 callers and configuration; underdetermined formulas, map transitions and layouts
 are labeled as inference. Compilation/startup do not prove historical gameplay parity.
 
@@ -76,6 +76,12 @@ Where surviving `preprocessor.py` generates property headers, verification runs
 that exact generator under pinned Python 2.7.18 in the private build-source copy.
 Inputs, outputs and hashes are recorded separately from the restored snapshot.
 The real generators at #250 and #257 succeeded; this proves preparation only.
+
+A real two-process save/reload regression exposed equipment bonuses being saved
+as base stats in the missing Creature implementation (#71–#79). The corrected
+reconstruction passes complete map/creature state comparison; it fails before the
+fix. Both versions start and exit cleanly. The portable regression and compact
+before/after proof are in `recovery/regressions/save-roundtrip/`.
 
 GitHub has no forks. Three sampled missing-blob API probes returned HTTP 404;
 this does not prove all originals unavailable. Fetching exact catalog commit SHAs
@@ -132,7 +138,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 74 367 --verify  # stop at the first failure
+python3 scripts/history_workbench.py auto 81 367 --verify  # stop at the first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -153,7 +159,7 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  Finish the #79 Windows include compatibility and version-specific map serialization.
+  Continue from #80 using the recorded #79 include and save-directory prerequisites.
 - Replace later donor implementations that conflict with surviving APIs, including
   the whole-game blockers at #260/#266. Object compilation and generator preparation
   are supporting evidence only.

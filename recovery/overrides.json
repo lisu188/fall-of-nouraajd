@@ -2805,9 +2805,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "089c528a35d35bd8552372f851b19db02097104f"
     },
     {
@@ -2819,9 +2819,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "089c528a35d35bd8552372f851b19db02097104f"
     },
     {
@@ -6935,9 +6935,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
     },
     {
@@ -6949,9 +6949,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
     },
     {
@@ -11685,9 +11685,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
     },
     {
@@ -11699,9 +11699,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
     },
     {
@@ -13872,9 +13872,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
     },
     {
@@ -13886,9 +13886,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
     },
     {
@@ -18311,9 +18311,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
     },
     {
@@ -18325,9 +18325,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
     },
     {
@@ -21730,9 +21730,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
     },
     {
@@ -21744,9 +21744,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
     },
     {
@@ -22923,9 +22923,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
     },
     {
@@ -22937,9 +22937,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
     },
     {
@@ -26995,9 +26995,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
     },
     {
@@ -27009,9 +27009,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
     },
     {
@@ -30777,9 +30777,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
     },
     {
@@ -30791,9 +30791,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
     },
     {
@@ -31165,9 +31165,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
     },
     {
@@ -31179,9 +31179,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
     },
     {
@@ -32144,9 +32144,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
     },
     {
@@ -32158,9 +32158,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
     },
     {
@@ -38660,9 +38660,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
     },
     {
@@ -38674,9 +38674,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
     },
     {
@@ -51129,9 +51129,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
     },
     {
@@ -51143,9 +51143,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
     },
     {
@@ -57046,9 +57046,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15"
     },
     {
@@ -57060,9 +57060,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15"
     },
     {
@@ -57440,9 +57440,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
     },
     {
@@ -57454,9 +57454,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
     },
     {
@@ -57853,9 +57853,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
     },
     {
@@ -57867,9 +57867,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
     },
     {
@@ -58665,9 +58665,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
     },
     {
@@ -58679,9 +58679,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
     },
     {
@@ -63437,9 +63437,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
     },
     {
@@ -63451,9 +63451,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
     },
     {
@@ -65629,9 +65629,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
     },
     {
@@ -65643,9 +65643,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
     },
     {
@@ -72367,9 +72367,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
     },
     {
@@ -72381,9 +72381,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
     },
     {
@@ -80369,9 +80369,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
     },
     {
@@ -80383,9 +80383,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
     },
     {
@@ -89779,9 +89779,9 @@
     },
     {
       "path": "tmx/TmxLayer.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "09b2a4a40dc21e6f70630e0c606a899bcef0e631ec10cf06647e4ada2167e342",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxLayer.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "upstream/software-heritage/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
       "tree": "f9b16149815272e9ec71b4a69061479d1979e398"
     },
     {
@@ -89793,9 +89793,9 @@
     },
     {
       "path": "tmx/TmxMap.h",
-      "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-      "sha256": "198e2e73515c93f5d2e0fc0273e90819d56c2185d0ff85f4c6dfd4e42482af24",
-      "source": "upstream/libraries/tmxparser-2014/tmx__TmxMap.h",
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "upstream/software-heritage/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
       "tree": "f9b16149815272e9ec71b4a69061479d1979e398"
     },
     {
@@ -94474,8 +94474,8 @@
     {
       "originalBlob": "8b00e9e369f1112c28ba3835704d4a8252737949",
       "path": "creatures/creature.cpp",
-      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 reconstruction to genuine #71 four-argument MapObject(position, graphical-layer) constructor and explicit logical coordinate Z save/load; surviving Building.cpp establishes logical-depth vs drawing-layer distinction",
-      "sha256": "1a09fba89d750ba80096d355c8d578914992ef47753d937035e30a299c763768",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted #71 four-argument MapObject reconstruction; corrected reconstructed Creature::saveToJson to serialize base initStats by subtracting exact config/items.json equipped bonuses. Surviving Item::loadFromJson and onEquip show those bonuses are applied during load; a real #79 save/reload regression proved prior serializer doubled them. No original historical bytes changed; exact original serializer remains unavailable.",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
       "source": "payloads/reconstructions/8b/8b00e9e369f1112c28ba3835704d4a8252737949-creature.cpp"
     },
     {
@@ -94491,6 +94491,55 @@
       "provenance": "Content reconstruction of the BFG-removed original; adapted validated #68 scene reconstruction to genuine #71 Cave(x,y,z), preserving initial logical depth0",
       "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
       "source": "payloads/reconstructions/11/11bf98aead92078dbb6f61d22c2e78c53249a186-gamescene.cpp"
+    },
+    {
+      "originalBlob": "c5bdae73af402231ef03169c35131eab8974d398",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c7f33fe213c8bbfc9aa83675708a0c2884514a5b (previous version of map/map.cpp)",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "payloads/reconstructions/c5/c5bdae73af402231ef03169c35131eab8974d398-map.cpp"
+    },
+    {
+      "originalBlob": "7b24180a42173ba0cb3db3d77c27d61d8e11a1fb",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c5bdae73af402231ef03169c35131eab8974d398 (previous version of map/map.cpp)",
+      "sha256": "d1a8991841066b56b4a7fbae5224b1bfa889c05cdbfdc1e45d0d82406dbea9a3",
+      "source": "payloads/reconstructions/7b/7b24180a42173ba0cb3db3d77c27d61d8e11a1fb-map.cpp"
+    },
+    {
+      "originalBlob": "1752a2bd95834d2d633da852facf3d24e72bc2d6",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 11bf98aead92078dbb6f61d22c2e78c53249a186 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/17/1752a2bd95834d2d633da852facf3d24e72bc2d6-gamescene.cpp"
+    },
+    {
+      "originalBlob": "64dbd84133b57f3ca6b087378b4b9c99b34d5196",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Implemented genuine #76 combined Map::loadFromJson/saveToJson declarations and #79 surviving scene calls; map/state nesting and default-depth/object grouping inferred from unverified #129 config/map.json donor (bf32a4c9), not original #79 bytes. Cave/Dungeon numeric arrays follow their intact serializers; Player/Monster construction uses surviving named constructors and reconstructed Creature persistence. Unknown state classes are retained opaque rather than cast into unavailable MapObject types; exact world-item behavior remains missing. Legacy split tiles/objects input remains supported. Internal metadata storage and class discrimination are inferred.",
+      "sha256": "ea423c4a0c51bd8e8ebc3b4d33ea67b45a8290262146f2d597c9bc3b0cd19bed",
+      "source": "payloads/reconstructions/64/64dbd84133b57f3ca6b087378b4b9c99b34d5196-map.cpp"
+    },
+    {
+      "originalBlob": "cd401b1eb82497358b263bfe9076f3a953ddb1b2",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1752a2bd95834d2d633da852facf3d24e72bc2d6 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/cd/cd401b1eb82497358b263bfe9076f3a953ddb1b2-gamescene.cpp"
+    },
+    {
+      "originalBlob": "decb7a1696457aa23ec7fd6b5456ee5a0a94e14a",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Implemented genuine #76 combined Map::loadFromJson/saveToJson declarations and #79 surviving scene calls; map/state nesting and default-depth/object grouping inferred from unverified #129 config/map.json donor (bf32a4c9), not original #79 bytes. Cave/Dungeon numeric arrays follow their intact serializers; Player/Monster construction uses surviving named constructors and reconstructed Creature persistence. Unknown state classes are retained opaque rather than cast into unavailable MapObject types; exact world-item behavior remains missing. Legacy split tiles/objects input remains supported. Internal metadata storage and class discrimination are inferred.",
+      "sha256": "ea423c4a0c51bd8e8ebc3b4d33ea67b45a8290262146f2d597c9bc3b0cd19bed",
+      "source": "payloads/reconstructions/de/decb7a1696457aa23ec7fd6b5456ee5a0a94e14a-map.cpp"
+    },
+    {
+      "originalBlob": "8c9e7098861c07060206c2435478ae62b19c71bc",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cd401b1eb82497358b263bfe9076f3a953ddb1b2 (previous version of view/gamescene.cpp)",
+      "sha256": "876a68c6daf9ed155d05cd9024f006bd758761b66a78977303ab5b3a5a1fd0b2",
+      "source": "payloads/reconstructions/8c/8c9e7098861c07060206c2435478ae62b19c71bc-gamescene.cpp"
     }
   ],
   "schemaVersion": 1
