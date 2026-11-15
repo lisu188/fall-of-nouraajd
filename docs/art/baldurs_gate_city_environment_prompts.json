@@ -1,0 +1,1399 @@
+{
+  "schemaVersion": 1,
+  "generatedDate": "2026-11-15",
+  "generatedWith": "built-in image_gen.imagegen, one call per distinct asset; imagegen framing corrections only",
+  "artDirection": "Original bold outlined, angular painted medieval fantasy artwork following BG city roles and the Fall of Nouraajd NPC token style.",
+  "nativePixelLimit": 4000000,
+  "sourceImagesCopiedUnchanged": true,
+  "scope": "City-local building icons and opaque material textures. No original BG artwork, binaries or dialogue dumps are included.",
+  "limitations": [
+    "Buildings are single-cell landmark icons; geometry and collision are unchanged.",
+    "Generated buildings have sparse alpha=1 specks outside their visible silhouettes; strict completely clear ten-percent margins are not achieved.",
+    "Terrain textures are intended for repetition, but perfect seamless joins have not been certified.",
+    "Native rendering, original-game parity and owner visual acceptance are separate validation requirements."
+  ],
+  "assets": [
+    {
+      "id": "cityGate",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/cityGate.png",
+      "animation": "maps/baldursGate/images/buildings/cityGate",
+      "sha256": "481c5a396d43675535d28d1741fbb34254c2957cacb3219bd6acde706bcafe0d",
+      "bytes": 543641,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one compact fortified medieval city gate building: two paired sturdy gray stone guard towers linked by a thick central archway, closed dark iron portcullis inside the arch. Low crenellated tower tops and small slit windows, a little weathered muted red heraldic cloth with no emblems or writing. Front arch and right tower wall visible. Towers and arch form ONE complete freestanding gatehouse, no connecting city walls stretching away, no road, no bridge, no ground.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nPreserve this one complete original painted-ink medieval building sprite with EXACTLY the same architecture, colors, brushwork and elevated front-and-right view. Correct FRAMING ONLY. Render the same building SMALLER, centered on an EXACTLY SQUARE canvas: width equals height, approximately 1024 by 1024 pixels. The complete building must fit ONLY in the MIDDLE 55 PERCENT of the square canvas, in BOTH width and height. Leave huge equal transparent margins above, below, left and right, at least 20 percent canvas on every side. Entire roof, finials, banners, doorsteps and all architecture fully visible. Do not make a close-up or fill the image. Empty margins must have precisely alpha zero, no partial-opacity specks, marks, shadows or noise. Genuine transparent RGBA background, no checkerboard painted in image. No scenery, ground, pedestal, framing, text, people, or extra details. Preserve all existing building details and original appearance; scale down the subject and add empty transparent space around it."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        346,
+        387,
+        899,
+        862
+      ],
+      "visiblePaddingFraction": [
+        0.2759,
+        0.3086,
+        0.2831,
+        0.3126
+      ],
+      "alphaOnePixelCount": 2255,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "dockWarehouse",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/dockWarehouse.png",
+      "animation": "maps/baldursGate/images/buildings/dockWarehouse",
+      "sha256": "be5b98dbbd9d9599f8464e2026936bfb1e30b2da10f1dce7fbe6a5f327d5936d",
+      "bytes": 716338,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one broad utilitarian dock warehouse building, squat weathered gray stone walls with dark timber reinforcing beams, a wide low muted slate-gray gabled roof, very large closed wooden double loading doors on the front, an upper wood loft hatch and a simple integrated hoist beam under the eaves. A few small high windows and iron hinges. Clear heavy industrial medieval harbor storage character. No dock, water, boat, wharf, pier, crates outside, loading platform, surrounding ground or people.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nPreserve this one complete original painted-ink medieval stone warehouse sprite with EXACTLY the same architecture, colors, brushwork and elevated front-and-right view. Correct CANVAS AND FRAMING ONLY. Render the same building SMALLER, centered on an EXACTLY SQUARE canvas: width equals height, approximately 1024 by 1024 pixels. The complete building must fit ONLY in the MIDDLE 60 PERCENT of the square canvas, in BOTH width and height. Leave huge equal transparent margins above, below, left and right, at least 20 percent canvas on every side. Entire roof, hoist beam and all architecture fully visible. Do not make a close-up or fill the image. Empty margins must have precisely alpha zero, no partial-opacity specks, marks, shadows or noise. Genuine transparent RGBA background, no checkerboard painted in image. No scenery, dock, water, ground, pedestal, framing, text, people, or extra details. Preserve all existing building details and original appearance; scale down the subject and add empty transparent space around it."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        259,
+        383,
+        981,
+        879
+      ],
+      "visiblePaddingFraction": [
+        0.2065,
+        0.3054,
+        0.2177,
+        0.299
+      ],
+      "alphaOnePixelCount": 2569,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "ducalPalace",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/ducalPalace.png",
+      "animation": "maps/baldursGate/images/buildings/ducalPalace",
+      "sha256": "a3dc99df8d9467b7d80a72b8af4104fb04bf4f40d3db2aa4f29f621879f7d592",
+      "bytes": 1378504,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one larger ornate fortified ducal palace hall: a wide noble gray-beige stone central hall with dark slate-blue roof, tall elaborate arched main doorway and windows, flanked by exactly two connected elegant corner towers capped with steep dark blue roofs. Restrained bronze trim and muted red architectural banners, regal but defensible. Readable singular broad silhouette. The palace and towers are ONE complete connected building; no compound walls or courtyard, no grounds, no scenery.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        155,
+        240,
+        1128,
+        1097
+      ],
+      "visiblePaddingFraction": [
+        0.1236,
+        0.1914,
+        0.1005,
+        0.1252
+      ],
+      "alphaOnePixelCount": 6418,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "guardBarracks",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/guardBarracks.png",
+      "animation": "maps/baldursGate/images/buildings/guardBarracks",
+      "sha256": "557d4228a6659b1ca850fcecc00019d5c03f56df78a9bd95464f76fd316d5070",
+      "bytes": 1278452,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one fortified stone guard barracks: broad stout gray stone two-storey military hall, low crenellated parapet, restrained muted red tiled roof behind it, arched iron-bound wooden entry, narrow windows, and two plain muted red banners firmly attached to front walls. Simple stern military silhouette with a squat corner watch turret. No guards, no weapons laid outside, no shield emblems or text, no courtyard.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        208,
+        277,
+        1047,
+        1060
+      ],
+      "visiblePaddingFraction": [
+        0.1659,
+        0.2209,
+        0.1651,
+        0.1547
+      ],
+      "alphaOnePixelCount": 4991,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "guildhall",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/guildhall.png",
+      "animation": "maps/baldursGate/images/buildings/guildhall",
+      "sha256": "c0ede73b1d5154bb62d2eac50d39ccd9c103c4386a546bab422af5650208c242",
+      "bytes": 626016,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one imposing medieval guildhall, a broad dark Tudor half-timbered hall with warm pale plaster panels, substantial dark timber braces, stone lower walls and a LOW deep moss-green tiled hipped roof. Wide double front doors and a few grouped rectangular leaded windows. Sober prosperous civic craft hall, clearly low and broad instead of tall and peaked. No lettering, crests, shield designs, signboards or freestanding props.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nPreserve this one complete original painted-ink medieval building sprite with EXACTLY the same architecture, colors, brushwork and elevated front-and-right view. Correct FRAMING ONLY. Render the same building SMALLER, centered on an EXACTLY SQUARE canvas: width equals height, approximately 1024 by 1024 pixels. The complete building must fit ONLY in the MIDDLE 55 PERCENT of the square canvas, in BOTH width and height. Leave huge equal transparent margins above, below, left and right, at least 20 percent canvas on every side. Entire roof, finials, banners, doorsteps and all architecture fully visible. Do not make a close-up or fill the image. Empty margins must have precisely alpha zero, no partial-opacity specks, marks, shadows or noise. Genuine transparent RGBA background, no checkerboard painted in image. No scenery, ground, pedestal, framing, text, people, or extra details. Preserve all existing building details and original appearance; scale down the subject and add empty transparent space around it."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        262,
+        406,
+        994,
+        824
+      ],
+      "visiblePaddingFraction": [
+        0.2089,
+        0.3238,
+        0.2073,
+        0.3429
+      ],
+      "alphaOnePixelCount": 2024,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "innTavern",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/innTavern.png",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "sha256": "9f28133386e4e4bb610f6cb19fd316e2f8671f5a4696727a0f54535feb670662",
+      "bytes": 1195531,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one large welcoming medieval inn and tavern building, broad two-storey stone ground floor with dark timber and ochre plaster upper storey, multiple steep brick-red gables, two short chimneys, an arched front door and large windows filled with warm amber glass. Amber remains confined inside windows, no glow outside. A substantial picturesque inn silhouette, distinct from a modest residence. No signboard or hanging sign.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        162,
+        288,
+        1096,
+        1060
+      ],
+      "visiblePaddingFraction": [
+        0.1292,
+        0.2297,
+        0.126,
+        0.1547
+      ],
+      "alphaOnePixelCount": 3863,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "magicShop",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/magicShop.png",
+      "animation": "maps/baldursGate/images/buildings/magicShop",
+      "sha256": "64c198759ac53f3e9987ca5592cb31e1c1c2ae864b104622088563724aa67210",
+      "bytes": 392194,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one compact arcane magic shop built as a slender stone tower with a small attached entry volume. Deep muted blue and purple architectural accents, aged copper conical roof with oxidized teal edges, one crescent-shaped roof finial, narrow violet glass windows and round wood front door. Restrained geometric occult ornament as shapes only, absolutely no letters or symbols resembling text. No particles, floating objects, energy, beams or glow; no glowing backdrop. Distinct tall tapering silhouette.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nPreserve this one complete original painted-ink medieval building sprite with EXACTLY the same architecture, colors, brushwork and elevated front-and-right view. Correct FRAMING ONLY. Render the same building SMALLER, centered on an EXACTLY SQUARE canvas: width equals height, approximately 1024 by 1024 pixels. The complete building must fit ONLY in the MIDDLE 55 PERCENT of the square canvas, in BOTH width and height. Leave huge equal transparent margins above, below, left and right, at least 20 percent canvas on every side. Entire roof, finials, banners, doorsteps and all architecture fully visible. Do not make a close-up or fill the image. Empty margins must have precisely alpha zero, no partial-opacity specks, marks, shadows or noise. Genuine transparent RGBA background, no checkerboard painted in image. No scenery, ground, pedestal, framing, text, people, or extra details. Preserve all existing building details and original appearance; scale down the subject and add empty transparent space around it."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        450,
+        272,
+        788,
+        966
+      ],
+      "visiblePaddingFraction": [
+        0.3589,
+        0.2169,
+        0.3716,
+        0.2297
+      ],
+      "alphaOnePixelCount": 1974,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "merchantShop",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/merchantShop.png",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "sha256": "960d7d29e4dcb55e5db2ddb4038a159c695d3ffa3bf540719200a9f253502604",
+      "bytes": 796580,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 10 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies about 75 to 80 percent of canvas. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: a compact two-storey medieval merchant shop with pale plaster and dark timber upper storey, muted red tiled roof and a broad striped ochre-and-muted-green fabric awning over the ground-floor shop opening. A few large recognizable baskets and crates of goods integrated tightly under the awning, no people, no freestanding scenery, no signboard. Read as one complete shop building.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nThis is the building sprite to preserve. Correct FRAMING ONLY: recreate exactly this same complete building and same style, shapes, colors, view and details at a noticeably SMALLER SCALE in a square transparent canvas. Center the building in the middle 60 percent of the total image width and height. Leave a very large border of fully transparent empty pixels: at least 18 to 20 percent canvas on EVERY side, especially above the chimney and below the doorstep. Do not fill the frame. The building must be entirely visible. No marks or speckles anywhere in this clear empty margin. Background genuine transparent alpha. No background, floor, ground, shadow, pedestal, frame, text or extra objects. Output approximately 1024 square; no edge larger than 1536. Preserve the original painted-ink medieval building illustration with elevated front-and-right view."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        314,
+        257,
+        930,
+        948
+      ],
+      "visiblePaddingFraction": [
+        0.2504,
+        0.2049,
+        0.2584,
+        0.244
+      ],
+      "alphaOnePixelCount": 3059,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "ruinedTemple",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/ruinedTemple.png",
+      "animation": "maps/baldursGate/images/buildings/ruinedTemple",
+      "sha256": "c090e7a843ad0909c910e660ace213a1b7a1bc7d14a9eaa21410a8a923e9a8bd",
+      "bytes": 1014942,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one coherent ruined temple building footprint, roof entirely missing, dark weathered charcoal-gray stone, a front arch partly intact and several thick BROKEN columns connected to surviving low sanctuary walls. Broken angular masonry, clear recognizable ruined shrine silhouette, no loose rubble spilling outward. Show elevated front and right so open roofless interior is visible. Only the surviving connected ruined architecture, no roof, dome, floor slab, ground patch, landscape, vegetation, pedestal, fire, magic or glow. No statue, people, skeletons or gravestones.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        182,
+        302,
+        1068,
+        1053
+      ],
+      "visiblePaddingFraction": [
+        0.1451,
+        0.2408,
+        0.1483,
+        0.1603
+      ],
+      "alphaOnePixelCount": 6847,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "stoneTownhouse",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/stoneTownhouse.png",
+      "animation": "maps/baldursGate/images/buildings/stoneTownhouse",
+      "sha256": "d282ff7a203ac0102e90d89dfcddcb3dff45d3a4bbf1c265bc1fa6337e840230",
+      "bytes": 737167,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 10 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies about 75 to 80 percent of canvas. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: a narrow dignified three-storey stone townhouse, cool weathered gray masonry with strong corner blocks, steep slate-gray gable roof, one dormer, restrained tall arched windows and recessed dark wooden front door. Urban residential character, clearly distinct from a timber house.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nThis is the building sprite to preserve. Correct FRAMING ONLY: recreate exactly this same complete building and same style, shapes, colors, view and details at a noticeably SMALLER SCALE in a square transparent canvas. Center the building in the middle 60 percent of the total image width and height. Leave a very large border of fully transparent empty pixels: at least 18 to 20 percent canvas on EVERY side, especially above the chimney and below the doorstep. Do not fill the frame. The building must be entirely visible. No marks or speckles anywhere in this clear empty margin. Background genuine transparent alpha. No background, floor, ground, shadow, pedestal, frame, text or extra objects. Output approximately 1024 square; no edge larger than 1536. Preserve the original painted-ink medieval building illustration with elevated front-and-right view."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        392,
+        254,
+        859,
+        999
+      ],
+      "visiblePaddingFraction": [
+        0.3126,
+        0.2026,
+        0.315,
+        0.2033
+      ],
+      "alphaOnePixelCount": 2130,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "temple",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/temple.png",
+      "animation": "maps/baldursGate/images/buildings/temple",
+      "sha256": "5b72e767c5f43543c6d79969bab47a706381fc63ea5ca343025118b084ec2647",
+      "bytes": 921830,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 20 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies ONLY the central 55 to 60 percent of total canvas width and height. Deliberately small centered building with a WIDE EMPTY border, not a large full-frame close-up. Keep all nonzero alpha strictly inside the central 60 percent; no edge specks. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: one pale gray stone pillared shrine temple with a substantial aged bronze-gold dome and small dome finial, compact rectangular sanctuary, four thick front columns supporting a triangular pediment and an integral short entrance stair. Sparse angular ornamental carving, cool shadowed right wall, dark recessed entrance. Dignified compact religious civic building, full dome and all steps visible. No religious text, no characters, no plinth extending outside architecture.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        259,
+        196,
+        992,
+        1044
+      ],
+      "visiblePaddingFraction": [
+        0.2065,
+        0.1563,
+        0.2089,
+        0.1675
+      ],
+      "alphaOnePixelCount": 5711,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "timberHouse",
+      "kind": "buildings",
+      "path": "res/maps/baldursGate/images/buildings/timberHouse.png",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "sha256": "b170e9a0f9808033a666ccaa98f1161661a8c7cb01843ca72ca052adad203a44",
+      "bytes": 784247,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerRgba": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "transparentBackgroundRequested": true,
+      "creationPrompt": "Use case: stylized-concept\nAsset type: one individual production building sprite for a 2D medieval dark-fantasy RPG city.\nOriginal architectural adaptation for Fall of Nouraajd. Style specification shared by the entire set: bold near-black ink contours, angular painted brushwork and faceted shadows, hand-painted restrained texture, strong large shapes with selective small details, like a serious illustrated medieval RPG character portrait translated into architecture. Warm desaturated ochre plaster, weathered pale/charcoal masonry, dark umber timber; controlled brick red, moss green, slate blue and aged bronze accents. Crisp silhouette, substantial dark structural outlines. Stylized illustration, not photorealistic, not a 3D render, not a vector diagram or cute cartoon. Strong readable form when displayed at 50 to 100 pixels.\nComposition: a single complete freestanding building icon, consistent elevated three-quarter view looking down at the FRONT and RIGHT walls, roof clearly visible; vertical walls upright. Building centered in a square approximately 1024 by 1024 canvas with at least 10 percent fully transparent padding on ALL sides; the entire architecture including roof, eaves, steps and attachments inside frame. Occupies about 75 to 80 percent of canvas. Subtle directional light from upper left, painted shadows only within the architecture.\nBackground must be genuine fully transparent alpha, including all empty areas and open gaps. The only pixels are the building itself and integral architectural attachments. No ground plane, ground patch, pavement, tile, terrain, foundation plinth, pedestal, cast shadow outside building, backdrop, vignette, halo, glow or scenery. No people, characters, animals, labels, letters, signs, sign text, numbers, watermark or frame. No collage, lineup, sheet or multiple views. Do not copy Baldur's Gate art; make an original building that belongs to this shared art style.\nSUBJECT: a modest compact two-storey timber-framed house with warm ivory plaster panels, massive dark timber beams, steep muted brick-red tiled gable roof, small squat chimney, a solid wood front door and a few small dark leaded windows. Clear cozy residential silhouette, not an inn.",
+      "followupPrompts": [
+        "Use case: precise-object-edit.\nThis is the building sprite to preserve. Correct FRAMING ONLY: recreate exactly this same complete building and same style, shapes, colors, view and details at a noticeably SMALLER SCALE in a square transparent canvas. Center the building in the middle 60 percent of the total image width and height. Leave a very large border of fully transparent empty pixels: at least 18 to 20 percent canvas on EVERY side, especially above the chimney and below the doorstep. Do not fill the frame. The building must be entirely visible. No marks or speckles anywhere in this clear empty margin. Background genuine transparent alpha. No background, floor, ground, shadow, pedestal, frame, text or extra objects. Output approximately 1024 square; no edge larger than 1536. Preserve the original painted-ink medieval building illustration with elevated front-and-right view."
+      ],
+      "pixelEditsAfterGeneration": false,
+      "visibleAlphaAtLeast2Bounds": [
+        311,
+        262,
+        949,
+        983
+      ],
+      "visiblePaddingFraction": [
+        0.248,
+        0.2089,
+        0.2432,
+        0.2161
+      ],
+      "alphaOnePixelCount": 2015,
+      "strictFullyClearTenPercentMargin": false
+    },
+    {
+      "id": "dungeonFlagstone",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/dungeonFlagstone.png",
+      "animation": "maps/baldursGate/images/tiles/dungeonFlagstone",
+      "sha256": "bab05b1e030904a75f0ee7c7a180dcc382774d6be66b11e7b5952779f80adf7c",
+      "bytes": 2328596,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          71,
+          67,
+          62,
+          255
+        ],
+        [
+          83,
+          76,
+          63,
+          255
+        ],
+        [
+          83,
+          72,
+          63,
+          255
+        ],
+        [
+          86,
+          76,
+          67,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Dark gray dungeon floor flagstone material: closely fitted uneven flat stones with irregular angular outlines and restrained fine cracks, dark cool gray with a little muted brown wear, narrow charcoal mortar. Medium-to-small planar stone shapes, clearly a floor material, uniformly flat with no depth, lifted slabs, pits, debris, stones on top, foliage or objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 6.7778,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 5.6361,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "flagstonePaving",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/flagstonePaving.png",
+      "animation": "maps/baldursGate/images/tiles/flagstonePaving",
+      "sha256": "55405778863e4fe7033ded7b48d065b65b654ab75520469d2a8046f149496f4c",
+      "bytes": 2595970,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          103,
+          95,
+          84,
+          255
+        ],
+        [
+          104,
+          98,
+          88,
+          255
+        ],
+        [
+          112,
+          102,
+          95,
+          255
+        ],
+        [
+          117,
+          107,
+          101,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Pale gray square worn flagstone paving material: a quiet close-packed arrangement of medium-to-small square and slightly rectangular stones with restrained dark seams, subtle chipped corners and scattered faint hairline wear. Consistent low-contrast pale gray surfaces, cool stone with a little warm gray. No curb or framed pattern.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 6.3676,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 15.5667,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "grassCourtyard",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/grassCourtyard.png",
+      "animation": "maps/baldursGate/images/tiles/grassCourtyard",
+      "sha256": "5d2ad3a4dab19fbb8e1571f6a1a513a7ce056265ce68261c6456008c188c5684",
+      "bytes": 2034404,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          66,
+          69,
+          32,
+          255
+        ],
+        [
+          61,
+          66,
+          27,
+          255
+        ],
+        [
+          69,
+          68,
+          32,
+          255
+        ],
+        [
+          63,
+          65,
+          29,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Dark muted olive courtyard short-grass material: dense fine small blade marks and angular painterly short tufts making an even, flat grassy surface, with a few subtle earthy olive-brown thin patches. Very low-contrast temperate olive greens, subdued dark outlines. No flowers, tall grass, isolated tufts, stones, weeds, leaves, paths or objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 4.6425,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 4.4532,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "marbleFloor",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/marbleFloor.png",
+      "animation": "maps/baldursGate/images/tiles/marbleFloor",
+      "sha256": "ec48e23dfa2da423ce11ac4f4f00f5674c5c26951fbba04032c1ac2ce5969966",
+      "bytes": 1777057,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          135,
+          129,
+          117,
+          255
+        ],
+        [
+          140,
+          132,
+          117,
+          255
+        ],
+        [
+          141,
+          131,
+          121,
+          255
+        ],
+        [
+          133,
+          124,
+          115,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Cream-gray marble temple floor paver material: simple regularly laid flat square pavers, very narrow muted gray seams, subtle sparse gray veins integrated into pale warm-gray cream stone. Soft low contrast matte polish without reflections or glare, delicate angular painted facets. No mosaic, ornamental motif, border, trim, symbols, architecture or objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 6.345,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 16.6972,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "packedEarth",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/packedEarth.png",
+      "animation": "maps/baldursGate/images/tiles/packedEarth",
+      "sha256": "4276be777ee012d97052e41a63ff945d36360d200be4d21d1c74dc247f75460a",
+      "bytes": 2057735,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          112,
+          88,
+          56,
+          255
+        ],
+        [
+          120,
+          94,
+          57,
+          255
+        ],
+        [
+          108,
+          80,
+          51,
+          255
+        ],
+        [
+          111,
+          82,
+          48,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Muted tan and dark brown packed earth material: compacted fine dirt, very subtle angular dry patches and shallow fine irregular scratches, even quiet coverage. Low contrast muted ochre-tan brown, no distinct stones, rocks, pebbles, plants, footsteps, wheel tracks, debris or other objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 3.4197,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 3.1797,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "riverWater",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/riverWater.png",
+      "animation": "maps/baldursGate/images/tiles/riverWater",
+      "sha256": "b09f4ecad33c4c781457c0da90d0cdc39ba9d7d3eaec254c978834c9fc68e367",
+      "bytes": 1553702,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          51,
+          63,
+          67,
+          255
+        ],
+        [
+          42,
+          53,
+          57,
+          255
+        ],
+        [
+          45,
+          54,
+          62,
+          255
+        ],
+        [
+          46,
+          56,
+          63,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Deep blue-gray river water material filling the entire square: small restrained flowing ripples in quiet blue-gray charcoal colors, a few fine dark curving angular lines and subdued painted facets like illustrated water. Very low contrast, no white foam, bright reflections, shore, shoreline, wake, current arrows, boats, plants, structures, bubbles or other objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 2.1818,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 3.1257,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "rockWall",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/rockWall.png",
+      "animation": "maps/baldursGate/images/tiles/rockWall",
+      "sha256": "4101ae8a0d9086dd13d39950626f26ed660fe0d8793eee7e3cb4781e922eda02",
+      "bytes": 2377165,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          63,
+          58,
+          50,
+          255
+        ],
+        [
+          57,
+          51,
+          41,
+          255
+        ],
+        [
+          60,
+          54,
+          48,
+          255
+        ],
+        [
+          59,
+          52,
+          47,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Dark gray natural rock material only: continuous fine rocky grain with shallow thin irregular fissures and medium-to-small subdued angular dark stone facets, uniform charcoal and gray-brown palette. Flat orthographic swatch of rock material for engine blocking cells, NOT a pictured cliff or boulder. No cliff lip, top cap, side face, horizon, slope, perspective, height, depth, caves, rock objects, debris, vegetation or cast shadows.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 4.8296,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 5.264,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "sewerWalkway",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/sewerWalkway.png",
+      "animation": "maps/baldursGate/images/tiles/sewerWalkway",
+      "sha256": "fb00b3066988aef7ec9cececdc73a85a4b56b19dd71171153910e924a6c49f62",
+      "bytes": 2612592,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          74,
+          71,
+          55,
+          255
+        ],
+        [
+          76,
+          71,
+          52,
+          255
+        ],
+        [
+          78,
+          71,
+          59,
+          255
+        ],
+        [
+          63,
+          59,
+          44,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Green-gray damp sewer walkway masonry floor material: closely laid flat worn stone pavers in irregular medium-to-small rectangular and angular shapes, subtle moss-green staining blended into the narrow dark mortar and stone surface. Muted desaturated green-gray, damp matte surface without glossy highlights, puddles, water channels, edges, gratings, structures or objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 6.1978,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 6.5364,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "sewerWater",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/sewerWater.png",
+      "animation": "maps/baldursGate/images/tiles/sewerWater",
+      "sha256": "165a413d29f6eb7bc2107863801c1a8363daf97d77fc4ad8d5a29005dd727d15",
+      "bytes": 1386413,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          59,
+          60,
+          24,
+          255
+        ],
+        [
+          53,
+          54,
+          18,
+          255
+        ],
+        [
+          52,
+          51,
+          21,
+          255
+        ],
+        [
+          53,
+          54,
+          21,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Dark olive-green stagnant sewer water material: deep desaturated olive water filling the whole square, small quiet shallow ripples painted as restrained fine curving angular dark lines and softly mottled olive-green brush facets. Very low contrast, no foam, scum, bubbles, floating material, reflections of objects, shore, pipes, structures, bright highlights, wakes or objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 1.4381,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 2.0011,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "stoneWall",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/stoneWall.png",
+      "animation": "maps/baldursGate/images/tiles/stoneWall",
+      "sha256": "41ff47ae38c0ba7843d5d1d51fec03192754a7a0b4e6526c8c227918d861f269",
+      "bytes": 2892840,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          69,
+          65,
+          53,
+          255
+        ],
+        [
+          75,
+          69,
+          56,
+          255
+        ],
+        [
+          87,
+          81,
+          70,
+          255
+        ],
+        [
+          98,
+          88,
+          79,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Uniform flat building wall stone material only: dense closely laid small gray masonry stones with narrow muted gray mortar, slightly irregular roughly rectangular and angular stones, quiet cool gray and warm-gray wear. Orthographic flat swatch of masonry material for engine wall cells, NOT a pictured wall structure. No top cap, side face, thickness, perspective, wall edge, corners, parapet, merlons, brick border, height, architecture or cast shadow.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 11.0933,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 13.781,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "streetCobble",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/streetCobble.png",
+      "animation": "maps/baldursGate/images/tiles/streetCobble",
+      "sha256": "009b559594d7230dc42f6a98b515f8b4b4507b0113f9ef54865eef20f6c72ce7",
+      "bytes": 2702764,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          89,
+          83,
+          75,
+          255
+        ],
+        [
+          88,
+          80,
+          73,
+          255
+        ],
+        [
+          86,
+          78,
+          77,
+          255
+        ],
+        [
+          86,
+          80,
+          75,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Weathered street cobblestone material: medium irregular cool gray cobbles packed closely in muted dark-gray narrow mortar, slightly worn angular corners, understated painted chips and warm-gray wear. Relatively small cobbles repeated across the whole canvas; no street edge, curbs, weeds or added objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 7.9593,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 7.5513,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    },
+    {
+      "id": "woodenFloor",
+      "kind": "tiles",
+      "path": "res/maps/baldursGate/images/tiles/woodenFloor.png",
+      "animation": "maps/baldursGate/images/tiles/woodenFloor",
+      "sha256": "be24aa3a2623a80bf4529e7d9ca4f9c8b2ab4233d40da3cdd2cbe5e498cc7705",
+      "bytes": 1967776,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "alphaExtrema": [
+        255,
+        255
+      ],
+      "cornerRgba": [
+        [
+          52,
+          44,
+          34,
+          255
+        ],
+        [
+          44,
+          36,
+          25,
+          255
+        ],
+        [
+          40,
+          34,
+          25,
+          255
+        ],
+        [
+          42,
+          36,
+          28,
+          255
+        ]
+      ],
+      "transparentBackgroundRequested": false,
+      "creationPrompt": "Use case: stylized-concept.\nAsset type: one square seamless-intended 2D game terrain material, approximately 1024 by 1024 pixels, for the Baldur's Gate temperate fantasy city in Fall of Nouraajd.\nStyle/medium: hand-painted RPG material matching bold dark ink contours and angular painted facets seen in this game's art. Subtle fine dark material outlines, restrained brush texture, simplified irregular shapes. Medieval fantasy, classic Baldur's Gate gray-brown and olive environment palette that allows warm red/brown character sprites to read clearly.\nComposition: strictly orthographic top-down flat material; entire square canvas filled edge to edge. A full material swatch, not an illustrated scene or an object. Design opposing edges for repeating tiling. Keep medium-to-small details distributed evenly, low contrast, uniform flat diffuse ambient color with no spotlight, vignette, directional cast shadow, perspective, horizon, 3D bevel, thickness, or vertical surface.\nConstraints: opaque background, every pixel alpha 255, no transparent margin. No diamond/isometric island, no grid overlay, frame, border, characters, props, objects, architecture silhouettes, writing, letters, logos, watermark, flowers, or focal decoration. One single material only, no atlas or contact sheet.\nSubject/material: Worn brown wooden floor material: broad straight parallel boards running from top edge to bottom edge, staggered fine cross joints, subdued irregular wood grain with small restrained darker grain marks, moderate wear. Quiet medium desaturated brown and gray-brown tones. Keep the flat planks flush, with fine dark seams and no raised edges, border, framing, nails, fittings or objects.",
+      "followupPrompts": [],
+      "pixelEditsAfterGeneration": false,
+      "edgeDiagnostics": {
+        "edge_left_right_mean_absolute_rgb_delta_0_to_255": 2.5755,
+        "edge_top_bottom_mean_absolute_rgb_delta_0_to_255": 3.6007,
+        "opposite_edges_pixel_identical": false,
+        "edge_metric_note": "Read-only diagnostic; not a seamlessness guarantee."
+      }
+    }
+  ]
+}
