@@ -67,7 +67,6 @@ class HistoryPayloadPinsTest(unittest.TestCase):
                 self.skipTest("Git attributes are unavailable outside a Git checkout")
             self.assertTrue(result.stdout.strip().endswith(": text: unset"), result.stdout)
 
-
     def testCompressedEvidenceLogsAreIntact(self):
         for log in sorted((RECOVERY_ROOT / "evidence").glob("*/build.log.gz")):
             with self.subTest(log=log.parent.name):

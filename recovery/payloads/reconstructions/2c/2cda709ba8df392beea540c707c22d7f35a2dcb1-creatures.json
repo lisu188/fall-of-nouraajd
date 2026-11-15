@@ -1,0 +1,192 @@
+{
+    "Assasin": {
+        "actions": [
+            "Attack"
+        ],
+        "initStats": {
+            "agility": 5,
+            "crit": 10,
+            "dmgMax": 12,
+            "dmgMin": 10,
+            "hit": 75,
+            "intelligence": 5,
+            "main": "A",
+            "stamina": 5,
+            "strength": 5
+        },
+        "inventory": {
+            "armor": "LeatherArmor",
+            "weapon": "Dagger"
+        },
+        "items": [
+            "LifePotion",
+            "ManaPotion"
+        ],
+        "levelStats": {
+            "agility": 3,
+            "crit": 2,
+            "dmgMax": 2,
+            "dmgMin": 1,
+            "hit": 3,
+            "intelligence": 2,
+            "stamina": 1,
+            "strength": 1
+        },
+        "levelling": {
+            "1": "SneakAttack",
+            "5 ": "Stunner"
+        },
+        "name": "Assasin",
+        "path": "images/players/assasin/"
+    },
+    "Pritz": {
+        "actions": [
+            "Attack"
+        ],
+        "initStats": {
+            "agility": 5,
+            "crit": 10,
+            "dmgMax": 12,
+            "dmgMin": 10,
+            "hit": 75,
+            "intelligence": 5,
+            "main": "S",
+            "stamina": 5,
+            "strength": 5
+        },
+        "levelStats": {
+            "agility": 2,
+            "crit": 1,
+            "dmgMax": 3,
+            "dmgMin": 2,
+            "hit": 3,
+            "intelligence": 1,
+            "normalResist": 5,
+            "stamina": 2,
+            "strength": 3
+        },
+        "levelling": {},
+        "name": "Pritz",
+        "path": "images/monsters/pritz/",
+        "sw": 1
+    },
+    "PritzMage": {
+        "actions": [
+            "Attack"
+        ],
+        "initStats": {
+            "agility": 5,
+            "crit": 10,
+            "dmgMax": 12,
+            "dmgMin": 10,
+            "hit": 75,
+            "intelligence": 5,
+            "main": "I",
+            "stamina": 5,
+            "strength": 5
+        },
+        "levelStats": {
+            "agility": 2,
+            "crit": 1,
+            "dmgMax": 3,
+            "dmgMin": 2,
+            "hit": 3,
+            "intelligence": 3,
+            "normalResist": 5,
+            "stamina": 2,
+            "strength": 3
+        },
+        "levelling": {
+            "2": "MagicMissile"
+        },
+        "name": "PritzMage",
+        "path": "images/monsters/pritzmage/",
+        "sw": 2
+    },
+    "Sorcerer": {
+        "actions": [
+            "Attack"
+        ],
+        "initStats": {
+            "agility": 5,
+            "crit": 10,
+            "dmgMax": 12,
+            "dmgMin": 10,
+            "hit": 75,
+            "intelligence": 5,
+            "main": "I",
+            "stamina": 5,
+            "strength": 5
+        },
+        "inventory": {
+            "armor": "Robe",
+            "weapon": "Staff"
+        },
+        "items": [
+            "LifePotion",
+            "ManaPotion"
+        ],
+        "levelStats": {
+            "agility": 2,
+            "crit": 1,
+            "dmgMax": 1,
+            "dmgMin": 1,
+            "hit": 1,
+            "intelligence": 3,
+            "stamina": 1,
+            "strength": 1
+        },
+        "levelling": {
+            "1": "MagicMissile",
+            "10": "ChaosBlast",
+            "2": "AbyssalShadows",
+            "3": "FrostBolt",
+            "4": "EndlessPain",
+            "5": "ArmorOfEndlessWinter",
+            "7": "ShadowBolt",
+            "8": "Devour"
+        },
+        "name": "Sorcerer",
+        "path": "images/players/sorcerer/"
+    },
+    "Warrior": {
+        "actions": [
+            "Attack"
+        ],
+        "initStats": {
+            "agility": 5,
+            "crit": 10,
+            "dmgMax": 12,
+            "dmgMin": 10,
+            "hit": 75,
+            "intelligence": 5,
+            "main": "S",
+            "stamina": 5,
+            "strength": 5
+        },
+        "inventory": {
+            "armor": "PlateArmor",
+            "weapon": "Sword"
+        },
+        "items": [
+            "LifePotion",
+            "ManaPotion"
+        ],
+        "levelStats": {
+            "agility": 2,
+            "crit": 1,
+            "dmgMax": 3,
+            "dmgMin": 2,
+            "hit": 3,
+            "intelligence": 1,
+            "stamina": 2,
+            "strength": 3
+        },
+        "levelling": {
+            "1": "Strike",
+            "5": "DoubleAttack"
+        },
+        "name": "Warrior",
+        "path": "images/players/warrior/"
+    }
+}
