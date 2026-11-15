@@ -1,0 +1,469 @@
+{
+  "schemaVersion": 1,
+  "generatedWith": "built-in image_gen tool",
+  "transparentBackground": true,
+  "artDirection": "Original bold outlined, angular painted fantasy cutouts inspired by Baldurs Gate character roles and the existing Fall of Nouraajd token style.",
+  "scope": "City-local visual adaptations. No BG game binaries, extracted artwork or full dialogue are included. The supporting EE appearance audit does not establish original BG1 parity.",
+  "nativePixelLimit": 4000000,
+  "assets": [
+    {
+      "id": "basilisk",
+      "path": "res/maps/baldursGate/images/npc/basilisk.png",
+      "sha256": "20f0a170c2789bfbc63c456935dfaef6ec9b48c2dae29c84abb6d3d132704947",
+      "bytes": 1045834,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Keep every visible extremity and every contour comfortably inside the canvas, with generous clear transparent padding. Subject: one Dungeons-and-Dragons-family basilisk: a squat thick-bodied reptilian monster with EIGHT short clawed legs arranged in four pairs, a heavy low crocodile-like head, blunt dorsal spines, long thick tapering tail, dark olive-gray stone-like scales and small piercing pale-green eyes. Make all four leg pairs anatomically coherent and countable, with near and far legs separated in a compact three-quarter side view. No wings, no humanoid body, no rooster parts, no magical rays or scene."
+    },
+    {
+      "id": "bat",
+      "path": "res/maps/baldursGate/images/npc/bat.png",
+      "sha256": "97cdf288c02e5980743072bd78b0bdde02c767d8aed05368bccf3b3b96bfb725",
+      "bytes": 808950,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Subject: one anatomically natural small brown-gray bat flying with both membranous wings spread, visible finger bones and rounded ears, a compact furry body and tiny rear feet. It is an actual animal, not a humanoid monster; no clothing, hands, weapons or accessories."
+    },
+    {
+      "id": "boy",
+      "path": "res/maps/baldursGate/images/npc/boy.png",
+      "sha256": "a7f7950eb5507be8fddbdf2c83bfb2af594f7a785fdf5456e000ba2fc5b04f69",
+      "bytes": 481498,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original full-body medieval fantasy NPC cutout for the Baldur's Gate city scenario in Fall of Nouraajd. Same art direction as the generated guard and townspeople: bold dark ink outlines, angular painted cel shading, strong simple silhouette, restrained worn color palette, visible face. Single subject centered alone on a square actual transparent-alpha canvas, three-quarter front pose slightly left, complete head/hands/feet and equipment in bounds. Upper-left light. No environment, floor, cast ground shadow, base, vignette, words, logo, watermark, border, grid, photographic realism, anime or pixel grid. Clear at a50pixel cell size. A fully clothed human town boy about9years old, tousled brown hair, ochre knee-length tunic over dark trousers, simple brown shoes and small cloth satchel. Friendly natural standing pose with hands relaxed. Clearly CHILD proportions: larger head and short limbs. No weapon. Make this small child occupy about68percent of canvas height, centered horizontally with feet at85percentcanvasheight, extra transparent space above, so he is visibly shorter than the adults in the map."
+    },
+    {
+      "id": "carrionCrawler",
+      "path": "res/maps/baldursGate/images/npc/carrionCrawler.png",
+      "sha256": "6d8a8e89c15c45772124f8f8fb882af5095b0d903685a2c31ea7e9d8d8bc140f",
+      "bytes": 1021188,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Keep every visible extremity and every contour comfortably inside the canvas, with generous clear transparent padding. Subject: one Dungeons-and-Dragons-family carrion crawler: a low, curved, many-legged segmented caterpillar-centipede monster with a thick sickly olive-green body, muted brown chitin ridges, a large insectoid head and EIGHT long flexible facial tentacles around a small mandible mouth. Show numerous short jointed legs underneath, keep the tentacles distinct and the head recognizable. Compact entire creature in three-quarter side view. No human anatomy, no wings, no victim, no gore or scene."
+    },
+    {
+      "id": "cat",
+      "path": "res/maps/baldursGate/images/npc/cat.png",
+      "sha256": "1b1543d47571174371e8a87623c38002ef101e330551b55342744c0c995939f6",
+      "bytes": 1181050,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Subject: one ordinary adult short-haired brown-and-charcoal tabby house cat standing naturally on four paws, tail gently curled upward, triangular ears, pale whiskers and green eyes. Keep feline proportions and a strong recognizable cat silhouette. It is an actual animal; no clothing, human posture, weapon or accessories."
+    },
+    {
+      "id": "chicken",
+      "path": "res/maps/baldursGate/images/npc/chicken.png",
+      "sha256": "9650dca4acbf77a8d235626ad9b1458c3deb437833ab6312e17bac81470ae2b7",
+      "bytes": 1171080,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Subject: one ordinary adult domestic chicken standing naturally on two bird legs, mottled cream and muted reddish-brown feathers, a modest red comb and wattle, short beak, folded wings and fanned tail. It is an actual farm bird; no human posture, clothing, weapon or accessories."
+    },
+    {
+      "id": "commonerMan",
+      "path": "res/maps/baldursGate/images/npc/commonerMan.png",
+      "sha256": "6f3164248cef3968041a88a3b7ce51ffc9cf4aea6d250e1a1a64273194e45dd3",
+      "bytes": 952094,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Make ONE new original production-ready NPC token for Baldur's Gate in Fall of Nouraajd. Single full-body character including feet, centered alone on a square transparent canvas. 3/4-front standing pose facing slightly left. Adult proportions slightly caricatured, bold near-black ink outlines, angular hand-painted cel shading, worn medieval fantasy materials, restrained earthy colors with a clear distinctive clothing accent. Match illustrated dark fantasy game cutouts: readable face, strong simple silhouette and large shapes legible when reduced to a 50-pixel game cell. Upper-left lighting. Character fills 85 percent canvas height, equipment inside bounds, transparent padding. Actual alpha transparency. No scenery, ground, floor shadow, pedestal, border, labels, text, logos, watermark, grid, portrait crop or additional people. No hood hiding the face. No photorealism or pixel grid. A middle-aged human townsman, clean-shaven with short dark hair, faded ochre tunic and blue-gray sleeveless vest, simple belt, sturdy brown trousers and boots; carries a small wicker basket at his side. Modest practical working clothes, approachable tired expression, empty other hand."
+    },
+    {
+      "id": "commonerWoman",
+      "path": "res/maps/baldursGate/images/npc/commonerWoman.png",
+      "sha256": "a00b0b86f3a57587f4855ccaf86b751a83f4e8cc0a6986ff614ecc963ac83113",
+      "bytes": 1128775,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Make ONE new original production-ready NPC token for Baldur's Gate in Fall of Nouraajd. Single full-body character including feet, centered alone on a square transparent canvas. 3/4-front standing pose facing slightly left. Adult proportions slightly caricatured, bold near-black ink outlines, angular hand-painted cel shading, worn medieval fantasy materials, restrained earthy colors with a clear distinctive clothing accent. Match illustrated dark fantasy game cutouts: readable face, strong simple silhouette and large shapes legible when reduced to a 50-pixel game cell. Upper-left lighting. Character fills 85 percent canvas height, equipment inside bounds, transparent padding. Actual alpha transparency. No scenery, ground, floor shadow, pedestal, border, labels, text, logos, watermark, grid, portrait crop or additional people. No hood hiding the face. No photorealism or pixel grid. A middle-aged human townswoman with auburn hair tied back, moss-green wool dress with rolled cream sleeves and a plain off-white apron, leather belt pouch and practical brown shoes. Holds a folded linen cloth. Confident grounded everyday civilian, distinct visible face."
+    },
+    {
+      "id": "corpse",
+      "path": "res/maps/baldursGate/images/npc/corpse.png",
+      "sha256": "e0b87182c58c631efaff1abdad12ddf820e92bc6f63855fe3c02bfeae42e5019",
+      "bytes": 1747471,
+      "dimensions": [
+        2172,
+        724
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Keep every visible extremity and every contour comfortably inside the canvas, with generous clear transparent padding. Subject: one neutral adult-sized prone corpse completely and modestly wrapped in an old off-white linen burial shroud, full body horizontal and slightly curled, tied at shoulder and ankle with plain cord. The face and body are fully covered; no gender is inferred or visible. Simple low, elongated wrapped-body silhouette, dark angular cloth folds and dull tan-gray wear. No blood, wounds, exposed flesh, bones, horror effects, mourning people, bier, floor or extra props.\nTargeted alpha correction: Use case: background-extraction. Edit this exact linen-shrouded prone adult corpse cutout. Preserve the complete neutral fully covered body, rope ties, original outline, cloth folds, painted colors and proportions. Remove ALL surrounding brown haze, aura, soft glow, blurred floor, drop shadow and cast shadow so every pixel outside the crisp subject silhouette is genuinely transparent alpha. Do not add anything, repaint the subject, add gore, infer gender or crop the full shroud. Leave clean transparent padding on all sides. One original PNG, fewer than four million pixels.",
+      "editPrompt": "Use case: background-extraction. Edit this exact linen-shrouded prone adult corpse cutout. Preserve the complete neutral fully covered body, rope ties, original outline, cloth folds, painted colors and proportions. Remove ALL surrounding brown haze, aura, soft glow, blurred floor, drop shadow and cast shadow so every pixel outside the crisp subject silhouette is genuinely transparent alpha. Do not add anything, repaint the subject, add gore, infer gender or crop the full shroud. Leave clean transparent padding on all sides. One original PNG, fewer than four million pixels.",
+      "additionalEditPrompts": [
+        "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Keep every visible extremity and every contour comfortably inside the canvas, with generous clear transparent padding. Subject: one neutral adult-sized prone corpse completely and modestly wrapped in an old off-white linen burial shroud, full body horizontal and slightly curled, tied at shoulder and ankle with plain cord. The face and body are fully covered; no gender is inferred or visible. Simple low, elongated wrapped-body silhouette, dark angular cloth folds and dull tan-gray wear. No blood, wounds, exposed flesh, bones, horror effects, mourning people, bier, floor or extra props."
+      ]
+    },
+    {
+      "id": "doppelganger",
+      "path": "res/maps/baldursGate/images/npc/doppelganger.png",
+      "sha256": "0d584343c778d42f730792da4f0cdeb679d1ac453abacc407b7dcc53ae53beed",
+      "bytes": 740699,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the entire visible subject well inside the canvas, with clear transparent padding. Subject: one Dungeons-and-Dragons-family doppelganger in its natural form: a full-grown gaunt gray-skinned humanoid shapechanger with a smooth elongated nearly featureless head, large pale blank eyes, subtle flattened nose and mouth, long arms and fingers, and a wary slightly hunched pose. Neutral adult body fully covered by a plain ragged charcoal tunic and dark cloth leggings, bare long gray hands and simple feet visible. The pale smooth head and elongated proportions must distinguish it from an ordinary person. No nudity, gore, extra limbs, aura, floor or shadow."
+    },
+    {
+      "id": "dwarfMan",
+      "path": "res/maps/baldursGate/images/npc/dwarfMan.png",
+      "sha256": "ff3e48705f4acc10f6b52a1eb1482096977751ada5be90823d24b8dbd54bc344",
+      "bytes": 1525652,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original complete fantasy NPC token for Baldur's Gate in Fall of Nouraajd. Match the generated illustrated tokens: bold near-black outlines, angular hand-painted cel shading, muted rich medieval colors, worn believable materials, expressive visible face and clear silhouette at50pixels. Isolated on a square genuinely transparent-alpha canvas, 3/4-front standing slightly left, entire body/feet/equipment visible, upper-left light, transparent padding. No scenery, ground shadow, pedestal, vignette, words, logos, watermark, border, grid, face-hiding hood, photorealism or anime. A mature male fantasy dwarf: broad compact torso, short sturdy legs, thick auburn braided beard and bushy eyebrows. Worn ochre tunic under dark leather-and-mail vest, stout belt, heavy boots; a simple short-handled iron hammer held low. Clearly short stocky dwarf proportions, head larger than human adult, compact figure occupying about70percent of canvasheight with feet at85percentheight.",
+      "editPrompt": "Edit only the transparent background of this original dwarf token. Preserve the dwarf's entire illustration, pose, clothes, beard, hammer, colors, outline, proportions, framing and padding. All empty background pixels must be fully transparent alpha0, especially all four canvas corners; remove any tiny residual backdrop or nearly-transparent black corner pixel. Preserve antialiased character edges. No new background, shadow, text, crop, additional figure or other visual change. Keep the full character and weapon inside the same square canvas.",
+      "additionalEditPrompts": [
+        "Edit only transparent background; fully transparent alpha0 corners; preserve entire dwarf illustration, composition and character edges."
+      ]
+    },
+    {
+      "id": "dwarfWoman",
+      "path": "res/maps/baldursGate/images/npc/dwarfWoman.png",
+      "sha256": "3740ebbb494e1d1053a82e9e82aec2c23f06f3d55c2a2a43e04e9698677b238b",
+      "bytes": 1327796,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original complete fantasy NPC token for Baldur's Gate in Fall of Nouraajd. Match the generated illustrated tokens: bold near-black outlines, angular hand-painted cel shading, muted rich medieval colors, worn believable materials, expressive visible face and clear silhouette at50pixels. Isolated on a square genuinely transparent-alpha canvas, 3/4-front standing slightly left, entire body/feet/equipment visible, upper-left light, transparent padding. No scenery, ground shadow, pedestal, vignette, words, logos, watermark, border, grid, face-hiding hood, photorealism or anime. An adult female fantasy dwarf with short sturdy proportions, broad shoulders, warm weathered visible face and thick dark auburn braided hair. Green wool tunic under practical brown leather-and-mail vest, heavy belt, trousers and stout boots, small iron hammer at belt. Fully clothed, clearly compact and stocky rather than a short human. Occupy about70percent canvasheight with feet at85percentheight."
+    },
+    {
+      "id": "elfMan",
+      "path": "res/maps/baldursGate/images/npc/elfMan.png",
+      "sha256": "f3dd4d78b992a6fbbf378b6e1cf347b5aec6bc4e88f0be02bd359e45fc72381e",
+      "bytes": 852411,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original complete fantasy NPC token for Baldur's Gate in Fall of Nouraajd. Match the generated illustrated tokens: bold near-black outlines, angular hand-painted cel shading, muted rich medieval colors, worn believable materials, expressive visible face and clear silhouette at50pixels. Isolated on a square genuinely transparent-alpha canvas, 3/4-front standing slightly left, entire body/feet/equipment visible, upper-left light, transparent padding. No scenery, ground shadow, pedestal, vignette, words, logos, watermark, border, grid, face-hiding hood, photorealism or anime. An adult male elf with clearly pointed ears, fine angular face, long dark chestnut hair tied back and no beard. Layered moss-green and muted gray leather traveling clothes, cream shirt, slender leather belt pouches, practical tall boots and short unhooded cloak. Plain wooden walking staff held low, no magic effect. Graceful lean build, dignified neutral stance, fill85percentheight."
+    },
+    {
+      "id": "elfWoman",
+      "path": "res/maps/baldursGate/images/npc/elfWoman.png",
+      "sha256": "3a8242ad6a15ea624586fa0b505b639018173d2bcde99e300bcc0cd69b4043dc",
+      "bytes": 747431,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original complete fantasy NPC token for Baldur's Gate in Fall of Nouraajd. Match the generated illustrated tokens: bold near-black outlines, angular hand-painted cel shading, muted rich medieval colors, worn believable materials, expressive visible face and clear silhouette at50pixels. Isolated on a square genuinely transparent-alpha canvas, 3/4-front standing slightly left, entire body/feet/equipment visible, upper-left light, transparent padding. No scenery, ground shadow, pedestal, vignette, words, logos, watermark, border, grid, face-hiding hood, photorealism or anime. An adult female elf with clearly pointed ears, fine angular visible face and tied-back dark brown hair. Forest-green leather vest over ivory sleeves, muted blue-gray trousers, simple belt pouch, light leather boots and short unhooded green cloak. Graceful lean build, a small sheathed dagger at belt, relaxed empty hands. Fill85percentcanvasheight."
+    },
+    {
+      "id": "fighterMan",
+      "path": "res/maps/baldursGate/images/npc/fighterMan.png",
+      "sha256": "113c1d84372ea8e588c9e4db57b80e0c63282fcaae0a0fb6fe4d6ce048476cbc",
+      "bytes": 1029808,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original full-body medieval fantasy NPC cutout for the Baldur's Gate city scenario in Fall of Nouraajd. Same art direction as the generated guard and townspeople: bold dark ink outlines, angular painted cel shading, strong simple silhouette, restrained worn color palette, visible face. Single subject centered alone on a square actual transparent-alpha canvas, three-quarter front pose slightly left, complete head/hands/feet and equipment in bounds. Upper-left light. No environment, floor, cast ground shadow, base, vignette, words, logo, watermark, border, grid, photographic realism, anime or pixel grid. Clear at a50pixel cell size. An adult human male adventurer with short sandy hair, weathered visible face and short beard, steel chain shirt under a brown leather brigandine, muted olive shoulder cape without hood, sturdy trousers and boots. Plain round wooden shield in left hand, sheathed sword at hip, relaxed neutral posture. No city-watch uniform or heraldry. Fill85percentheight."
+    },
+    {
+      "id": "fighterWoman",
+      "path": "res/maps/baldursGate/images/npc/fighterWoman.png",
+      "sha256": "b18a246e2aa8d614b3ceb9463870cbb7bb1093e3cd7d800133d815570e08709d",
+      "bytes": 966492,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original full-body medieval fantasy NPC cutout for the Baldur's Gate city scenario in Fall of Nouraajd. Same art direction as the generated guard and townspeople: bold dark ink outlines, angular painted cel shading, strong simple silhouette, restrained worn color palette, visible face. Single subject centered alone on a square actual transparent-alpha canvas, three-quarter front pose slightly left, complete head/hands/feet and equipment in bounds. Upper-left light. No environment, floor, cast ground shadow, base, vignette, words, logo, watermark, border, grid, photographic realism, anime or pixel grid. Clear at a50pixel cell size. An adult human woman adventurer with tied-back dark hair and visible calm stern face. Practical steel scale cuirass over slate-blue tunic, brown leather belt and bracers, charcoal trousers and boots, small round wooden shield and a sheathed short sword. Fully clothed sensible armor, no city uniform or hood. Fill85percentheight."
+    },
+    {
+      "id": "girl",
+      "path": "res/maps/baldursGate/images/npc/girl.png",
+      "sha256": "851d69da2533ec417777809f0a1e612cb35abdde33a3f00ce22829974e01d3f6",
+      "bytes": 545532,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. ONE original full-body medieval fantasy NPC cutout for the Baldur's Gate city scenario in Fall of Nouraajd. Same art direction as the generated guard and townspeople: bold dark ink outlines, angular painted cel shading, strong simple silhouette, restrained worn color palette, visible face. Single subject centered alone on a square actual transparent-alpha canvas, three-quarter front pose slightly left, complete head/hands/feet and equipment in bounds. Upper-left light. No environment, floor, cast ground shadow, base, vignette, words, logo, watermark, border, grid, photographic realism, anime or pixel grid. Clear at a50pixel cell size. A fully clothed human town girl about9years old, dark braided hair, faded cornflower-blue dress over cream blouse, wool leggings and practical brown shoes, small cloth pouch. Natural quiet standing pose, no weapon. Clearly CHILD proportions: larger head and short limbs. Occupy about68percent of canvasheight, centered horizontally with feet at85percentcanvasheight and extra transparent space above, visibly shorter than adult tokens."
+    },
+    {
+      "id": "gnomeMan",
+      "path": "res/maps/baldursGate/images/npc/gnomeMan.png",
+      "sha256": "c6d1f07946f2c71b9e015312e26921d9fae471ada9d1771852b1a1cfb3b6bada",
+      "bytes": 1306481,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body small-folk NPC cutout for Baldur's Gate in Fall of Nouraajd. Same illustrated art direction as generated merchants and dwarves: bold near-black contours, angular painted cel shading, warm worn medieval fabrics, expressive face, strong readable silhouette at50pixels. Single adult figure alone on a square genuine transparent-alpha canvas,3/4-front standing slightly left, full head/hands/feet in bounds. Clearly short ADULT fantasy small-folk body, large adult head, short legs and compact torso, not a human child. Transparent padding with figure occupying about70percent canvasheight, feet at85percentcanvasheight. Upper-left light. No setting, floor shadow, pedestal, vignette, words, logo, watermark, border, grid, photorealism, face-hiding hood or anime. An elderly male fantasy gnome with a prominent long nose, bushy white eyebrows, short white beard and unruly gray hair, lively visible adult face. Muted indigo coat over ochre waistcoat, russet cap that does not hide his face, several small belt pouches, dark trousers and stout shoes. Holds a small closed book at his side; clearly gnome proportions with a larger head and shorter limbs than halfling."
+    },
+    {
+      "id": "guardMan",
+      "path": "res/maps/baldursGate/images/npc/guardMan.png",
+      "sha256": "b83f1a491379d8c8a58f54331b2fdd53049b4e86f01482ffa6f6e0f6d931e63d",
+      "bytes": 843712,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Create ONE production-ready 2D RPG NPC cutout, a Baldur's Gate inspired human city watch soldier, for the dark fantasy game Fall of Nouraajd. SINGLE character, full body including boots and helmet, centered on a square transparent canvas, upright relaxed 3/4-front pose facing slightly left. Match the existing game's illustrated tokens: very bold near-black ink outlines, angular hand-painted cel-shaded planes, simple strong silhouette, slightly caricatured adult proportions, worn medieval materials and readable shapes when downscaled to a 50-pixel map cell. Open-faced steel helmet, visible weathered adult male face, steel mail and plate, faded crimson tabard, practical brown belt, short sword at belt and a plain spear held upright. Restrained steel gray, crimson, warm leather palette, modest light from upper left. Keep the entire spear and all equipment inside the image. Character should fill about 85 percent of canvas height with consistent transparent padding around it. Actual transparent alpha background; no landscape, ground slab, vignette, cast shadow, text, watermark, border, sheet or extra characters. This is a new original guard design, not a hooded cultist, not a portrait or cropped torso, not photorealistic and not pixel-grid art."
+    },
+    {
+      "id": "halflingMan",
+      "path": "res/maps/baldursGate/images/npc/halflingMan.png",
+      "sha256": "78c5a329b17e8681b8c21188846fdbdd0b8f72385fffc8e7c2615a8c8978a704",
+      "bytes": 955260,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body small-folk NPC cutout for Baldur's Gate in Fall of Nouraajd. Same illustrated art direction as generated merchants and dwarves: bold near-black contours, angular painted cel shading, warm worn medieval fabrics, expressive face, strong readable silhouette at50pixels. Single adult figure alone on a square genuine transparent-alpha canvas,3/4-front standing slightly left, full head/hands/feet in bounds. Clearly short ADULT fantasy small-folk body, large adult head, short legs and compact torso, not a human child. Transparent padding with figure occupying about70percent canvasheight, feet at85percentcanvasheight. Upper-left light. No setting, floor shadow, pedestal, vignette, words, logo, watermark, border, grid, photorealism, face-hiding hood or anime. A cheerful adult male halfling with curly dark brown hair, round visible face and small sideburns. Faded burgundy waistcoat over cream shirt, olive knee-breeches, simple belt pouch and soft brown shoes. A small rolled cloth bundle held under one arm, relaxed everyday city resident, no weapon or magic."
+    },
+    {
+      "id": "halflingWoman",
+      "path": "res/maps/baldursGate/images/npc/halflingWoman.png",
+      "sha256": "d8703fce76bcce7fd39242b305896f396f15a9b42c89b63c5dd3df0649f070d1",
+      "bytes": 912266,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body small-folk NPC cutout for Baldur's Gate in Fall of Nouraajd. Same illustrated art direction as generated merchants and dwarves: bold near-black contours, angular painted cel shading, warm worn medieval fabrics, expressive face, strong readable silhouette at50pixels. Single adult figure alone on a square genuine transparent-alpha canvas,3/4-front standing slightly left, full head/hands/feet in bounds. Clearly short ADULT fantasy small-folk body, large adult head, short legs and compact torso, not a human child. Transparent padding with figure occupying about70percent canvasheight, feet at85percentcanvasheight. Upper-left light. No setting, floor shadow, pedestal, vignette, words, logo, watermark, border, grid, photorealism, face-hiding hood or anime. An adult female halfling with thick curly chestnut hair tied back, round adult face and bright observant eyes. Practical blue-green vest over cream blouse, rust-brown knee-length skirt with wool leggings, belt pouch and soft leather shoes. Relaxed everyday city pose, hands loosely clasped, no weapon."
+    },
+    {
+      "id": "hobgoblin",
+      "path": "res/maps/baldursGate/images/npc/hobgoblin.png",
+      "sha256": "0f04f937df217558bd0f5c4957dc73d6cffecca801bba79cf1d8d8e210dd3d0c",
+      "bytes": 956557,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the complete head, feet, tail if present and held object inside generous transparent padding.Subject: one full adult hobgoblin soldier, tall broad-shouldered goblinoid with angular brick-red/brown skin, a broad flat nose, pointed ears, heavy brow and small lower tusks. Wear worn dark iron lamellar plates over a dull burgundy tunic, leather belt and boots, carrying one short curved sword held low. Disciplined military stance. Distinctly a goblinoid rather than a human guard or green orc. No background, heraldry, glowing effects, floor or shadow."
+    },
+    {
+      "id": "kobold",
+      "path": "res/maps/baldursGate/images/npc/kobold.png",
+      "sha256": "3143e06ce0f04f1de8d5fa3166dd05d2cd400683af69d62282736fdf36625226",
+      "bytes": 852569,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the complete head, feet, tail if present and held object inside generous transparent padding.Subject: one small lean classic fantasy kobold: a reddish-brown scaled reptilian biped with a long doglike tapered muzzle, small backward horns, large pointed ears, yellow eyes, two thin arms, two digitigrade legs and a long narrow reptilian tail. Fully clothed in a worn sleeveless brown tunic and short trousers/leg wraps, holding a simple little spear down at the side. Sly crouched pose, clearly a kobold rather than a dog, dragon, goblin or child. No wings, extra limbs, aura, floor or shadow."
+    },
+    {
+      "id": "mageMan",
+      "path": "res/maps/baldursGate/images/npc/mageMan.png",
+      "sha256": "d9f6ed71757b61028dfc5baad5c28bb2adbbee01c6f8e64299e737c2d8faf6ff",
+      "bytes": 1144590,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Create ONE original full-body fantasy NPC cutout for Baldur's Gate in Fall of Nouraajd. Match the illustrated game tokens already shown: bold near-black outlines, angular hand-painted cel shading, readable visible face, subtly caricatured adult proportions and a strong silhouette legible at 50 pixels. Single figure centered on a square transparent alpha canvas, 3/4-front standing pose turned slightly left; whole head, hands, equipment and boots visible. Worn medieval materials, upper-left warm lighting, character fills 85 percent height with transparent padding. No scene, ground, cast shadow, pedestal, vignette, words, logo, watermark, border, grid or extra characters. No face-hiding hood. No photorealism, anime or pixel grid. An elderly human male wizard with long silver beard and visible thoughtful face. Weathered deep violet robe with muted indigo trim and simple leather belt, soft scholar's cap, tall plain wooden staff with a small pale amber crystal. One closed spellbook at belt. Natural dignified stance; purple silhouette distinct from a priest."
+    },
+    {
+      "id": "mageWoman",
+      "path": "res/maps/baldursGate/images/npc/mageWoman.png",
+      "sha256": "61480f5e126486091e8564e3d53a2f51c51d26d154f4fc309fe18b002c40dbe8",
+      "bytes": 1054814,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Create ONE original full-body fantasy NPC cutout for Baldur's Gate in Fall of Nouraajd. Match the illustrated game tokens already shown: bold near-black outlines, angular hand-painted cel shading, readable visible face, subtly caricatured adult proportions and a strong silhouette legible at 50 pixels. Single figure centered on a square transparent alpha canvas, 3/4-front standing pose turned slightly left; whole head, hands, equipment and boots visible. Worn medieval materials, upper-left warm lighting, character fills 85 percent height with transparent padding. No scene, ground, cast shadow, pedestal, vignette, words, logo, watermark, border, grid or extra characters. No face-hiding hood. No photorealism, anime or pixel grid. An adult human woman mage with dark copper hair, visible focused face, layered muted teal and indigo wizard robes with a violet sash, leather scroll case at belt, holding a slender wooden staff with a small blue crystal. Practical boots under hem; no hat or hood, no floating magic effects."
+    },
+    {
+      "id": "merchantMan",
+      "path": "res/maps/baldursGate/images/npc/merchantMan.png",
+      "sha256": "91e7bd1ed3255e07efc94ebf12cd5cc28952e98ceec82bb8bb09954fe151e52c",
+      "bytes": 1022227,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Make ONE new original production-ready NPC token for Baldur's Gate in Fall of Nouraajd. Single full-body character including feet, centered alone on a square transparent canvas. 3/4-front standing pose facing slightly left. Adult proportions slightly caricatured, bold near-black ink outlines, angular hand-painted cel shading, worn medieval fantasy materials, restrained earthy colors with a clear distinctive clothing accent. Match illustrated dark fantasy game cutouts: readable face, strong simple silhouette and large shapes legible when reduced to a 50-pixel game cell. Upper-left lighting. Character fills 85 percent canvas height, equipment inside bounds, transparent padding. Actual alpha transparency. No scenery, ground, floor shadow, pedestal, border, labels, text, logos, watermark, grid, portrait crop or additional people. No hood hiding the face. No photorealism or pixel grid. A prosperous human male merchant with graying beard, rust-red quilted doublet, muted teal short coat, broad leather belt and ledger tucked under one arm; a small coin purse in the other hand. Visible hair and face, no hood, readable trade silhouette, practical boots."
+    },
+    {
+      "id": "merchantWoman",
+      "path": "res/maps/baldursGate/images/npc/merchantWoman.png",
+      "sha256": "f87fce2d903906eab5f18d293df63c2be6c02cfe35de74ddbf43226c6544f92d",
+      "bytes": 985769,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Make ONE new original production-ready NPC token for Baldur's Gate in Fall of Nouraajd. Single full-body character including feet, centered alone on a square transparent canvas. 3/4-front standing pose facing slightly left. Adult proportions slightly caricatured, bold near-black ink outlines, angular hand-painted cel shading, worn medieval fantasy materials, restrained earthy colors with a clear distinctive clothing accent. Match illustrated dark fantasy game cutouts: readable face, strong simple silhouette and large shapes legible when reduced to a 50-pixel game cell. Upper-left lighting. Character fills 85 percent canvas height, equipment inside bounds, transparent padding. Actual alpha transparency. No scenery, ground, floor shadow, pedestal, border, labels, text, logos, watermark, grid, portrait crop or additional people. No hood hiding the face. No photorealism or pixel grid. A human female shopkeeper with dark curly hair partly tied back, deep blue overdress over ivory blouse, burgundy waist sash, leather coin pouch and a small weighing scale held low. Alert practical expression, full-body adult, simple well-made shoes."
+    },
+    {
+      "id": "nobleMan",
+      "path": "res/maps/baldursGate/images/npc/nobleMan.png",
+      "sha256": "da69f6209d7749fc44a0d5375dcfd783c33fbd76e2616f0d8e779b8a9f324fc7",
+      "bytes": 934545,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body NPC token for the Baldur's Gate city scenario in Fall of Nouraajd. Consistent with the guard, merchant and mage cutouts already shown: heavy near-black ink contours, angular painted cel-shaded color planes, worn medieval-fantasy clothing, visible expressive face, slightly caricatured adult proportions. Clear clothing silhouette readable at50pixels. Single centered figure, square genuine transparent-alpha canvas, 3/4-front standing slightly left, full head/hands/feet visible, upper-left light,85percentheight and padded bounds. No scenery, floor, shadows on ground, platform, vignette, text, watermark, heraldic logo, border, grid, other figures, face-covering hood, photorealism, anime or pixel grid. An older human city noble with swept-back gray hair and neat mustache, dignified visible face. Tailored dark blue velvet doublet with modest gold embroidery, wine-red shoulder mantle, brass brooch, cream shirt cuffs, dark trousers and polished boots. A plain walking cane held low. Rich urban clothing, no crown or armor."
+    },
+    {
+      "id": "nobleWoman",
+      "path": "res/maps/baldursGate/images/npc/nobleWoman.png",
+      "sha256": "3768592552417f7bbcb750bf8f459dd0890e6156f436f8117856a3d9dc0ffa1c",
+      "bytes": 1029533,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body NPC token for the Baldur's Gate city scenario in Fall of Nouraajd. Consistent with the guard, merchant and mage cutouts already shown: heavy near-black ink contours, angular painted cel-shaded color planes, worn medieval-fantasy clothing, visible expressive face, slightly caricatured adult proportions. Clear clothing silhouette readable at50pixels. Single centered figure, square genuine transparent-alpha canvas, 3/4-front standing slightly left, full head/hands/feet visible, upper-left light,85percentheight and padded bounds. No scenery, floor, shadows on ground, platform, vignette, text, watermark, heraldic logo, border, grid, other figures, face-covering hood, photorealism, anime or pixel grid. An adult human noblewoman with elaborately braided dark hair and visible intelligent face. Elegant plum-purple full-length medieval gown with muted gold trim and small pearl jewelry, dark red fitted overcoat, closed folding fan in one hand. Dignified practical standing pose, fully clothed, no crown or hood."
+    },
+    {
+      "id": "ogre",
+      "path": "res/maps/baldursGate/images/npc/ogre.png",
+      "sha256": "8b5fdea1e7d37cfbbc2497336ff8b345108d670f1f8c22b382659efa6a7f2a79",
+      "bytes": 1691038,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the complete head, feet, tail if present and held object inside generous transparent padding.Subject: one full adult ogre, a huge heavy broad-bodied fantasy brute with massive long arms, a thick neck, dull gray-tan skin, heavy brow, broad nose, pronounced underbite and two short lower tusks. Wear a rough dark-brown sleeveless hide tunic covering the torso, a heavy belt and ragged charcoal trousers; large bare feet. Hold one thick battered wooden club down by its side. Bulky intimidating silhouette, not a giant human soldier, goblin or troll. No gore, glow, floor or shadow."
+    },
+    {
+      "id": "ogreMage",
+      "path": "res/maps/baldursGate/images/npc/ogreMage.png",
+      "sha256": "9d24a3e34b02b2dc5d94d0890206a38b061c651f90d9aa1ead9be1051cdb48b1",
+      "bytes": 1452617,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the complete head, feet, tail if present and held object inside generous transparent padding.Subject: one full adult ogre mage of the classic horned oni family: a huge broad-shouldered blue-gray humanoid monster with a heavy angular face, small ivory tusks, two short forehead horns and long untidy black hair. Wear worn dark indigo and desaturated teal layered wizard robes with a plain leather belt and wrapped boots, sleeves covering most arms. Carry a simple dark wooden staff, no floating spell or glowing aura. Visibly massive ogre proportions, distinct from an ordinary human mage. Full figure, no floor, pedestal, shadow or scene."
+    },
+    {
+      "id": "priestMan",
+      "path": "res/maps/baldursGate/images/npc/priestMan.png",
+      "sha256": "05ab232f2a95ef0a140f9612a9d961e43388451332ff9e1eb880be1c56bd199d",
+      "bytes": 1203651,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Create ONE original full-body fantasy NPC cutout for Baldur's Gate in Fall of Nouraajd. Match the illustrated game tokens already shown: bold near-black outlines, angular hand-painted cel shading, readable visible face, subtly caricatured adult proportions and a strong silhouette legible at 50 pixels. Single figure centered on a square transparent alpha canvas, 3/4-front standing pose turned slightly left; whole head, hands, equipment and boots visible. Worn medieval materials, upper-left warm lighting, character fills 85 percent height with transparent padding. No scene, ground, cast shadow, pedestal, vignette, words, logo, watermark, border, grid or extra characters. No face-hiding hood. No photorealism, anime or pixel grid. A middle-aged human male priest, bald head and short gray beard, calm visible face. Ivory wool clerical robe with ochre-gold shoulder stole and muted brown belt, plain bronze medallion, a small iron mace at belt, holds a closed leather-bound prayer book. Broad ivory/gold silhouette, no hood, no real-world religious cross, no halo."
+    },
+    {
+      "id": "priestWoman",
+      "path": "res/maps/baldursGate/images/npc/priestWoman.png",
+      "sha256": "2cb6ee29efc45ac61f0e0c6a568677b90e755a0d15b4b8c2839d7d137c842b19",
+      "bytes": 836151,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Create ONE original full-body fantasy NPC cutout for Baldur's Gate in Fall of Nouraajd. Match the illustrated game tokens already shown: bold near-black outlines, angular hand-painted cel shading, readable visible face, subtly caricatured adult proportions and a strong silhouette legible at 50 pixels. Single figure centered on a square transparent alpha canvas, 3/4-front standing pose turned slightly left; whole head, hands, equipment and boots visible. Worn medieval materials, upper-left warm lighting, character fills 85 percent height with transparent padding. No scene, ground, cast shadow, pedestal, vignette, words, logo, watermark, border, grid or extra characters. No face-hiding hood. No photorealism, anime or pixel grid. An adult human female temple priestess, black hair braided back and visible composed face. Ivory robe with slate-blue outer stole and modest gold edging, plain round silver pendant, leather belt and sensible shoes; holds a small closed prayer book in both hands. Clear white-and-blue silhouette, no hood, halo or real-world religious symbols."
+    },
+    {
+      "id": "rat",
+      "path": "res/maps/baldursGate/images/npc/rat.png",
+      "sha256": "5ea9a45a0741f3f5d0b65a18076f5dc5ed9764762680fe2db391b6615a76864f",
+      "bytes": 1007196,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Subject: one ordinary adult gray-brown rat crouched naturally on four little paws, rounded ears, pointed whiskered snout and a long thin hairless curling tail. Anatomically recognizable rodent, not a person or armored fantasy creature. No clothing, weapon, prop or accessories."
+    },
+    {
+      "id": "rogueMan",
+      "path": "res/maps/baldursGate/images/npc/rogueMan.png",
+      "sha256": "de26a8f8c2b9fc8481d593cf0f807ae57fe199fafd35ee81a1fd40cafd4d4ef0",
+      "bytes": 752556,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body NPC token for the Baldur's Gate city scenario in Fall of Nouraajd. Consistent with the guard, merchant and mage cutouts already shown: heavy near-black ink contours, angular painted cel-shaded color planes, worn medieval-fantasy clothing, visible expressive face, slightly caricatured adult proportions. Clear clothing silhouette readable at50pixels. Single centered figure, square genuine transparent-alpha canvas, 3/4-front standing slightly left, full head/hands/feet visible, upper-left light,85percentheight and padded bounds. No scenery, floor, shadows on ground, platform, vignette, text, watermark, heraldic logo, border, grid, other figures, face-covering hood, photorealism, anime or pixel grid. A lean human man in practical dark chestnut leather jerkin, charcoal trousers, faded forest-green neck scarf and short unhooded navy shoulder cloak. Visible short black hair, stubble and alert face. Several belt pouches, a small sheathed dagger and worn boots. Agile but relaxed stance, hands empty, face uncovered."
+    },
+    {
+      "id": "rogueWoman",
+      "path": "res/maps/baldursGate/images/npc/rogueWoman.png",
+      "sha256": "66b9689832c1e64c6dc58487b3447c08c5a03b70b43eb895d47ecb2d2b3093e7",
+      "bytes": 698410,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. One original full-body NPC token for the Baldur's Gate city scenario in Fall of Nouraajd. Consistent with the guard, merchant and mage cutouts already shown: heavy near-black ink contours, angular painted cel-shaded color planes, worn medieval-fantasy clothing, visible expressive face, slightly caricatured adult proportions. Clear clothing silhouette readable at50pixels. Single centered figure, square genuine transparent-alpha canvas, 3/4-front standing slightly left, full head/hands/feet visible, upper-left light,85percentheight and padded bounds. No scenery, floor, shadows on ground, platform, vignette, text, watermark, heraldic logo, border, grid, other figures, face-covering hood, photorealism, anime or pixel grid. A lean adult human woman with short dark hair and an alert visible face. Burgundy leather vest over cream sleeves, dark brown fitted trousers, moss-green short shoulder cloak without hood, two belt pouches and a small sheathed short blade. Practical boots, grounded ready stance, hands relaxed and face uncovered."
+    },
+    {
+      "id": "seagull",
+      "path": "res/maps/baldursGate/images/npc/seagull.png",
+      "sha256": "6d0b807f1a252f6cbea124add0d957490d2d095808ee6968a8f12c60a3d26f37",
+      "bytes": 842674,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels. Keep every visible extremity and every contour comfortably inside the canvas, with generous clear transparent padding. Subject: one ordinary adult seagull standing naturally in profile-three-quarter view, white and pale-gray feathers, charcoal wing tips, a muted yellow beak, small dark eyes and two natural webbed bird feet. Wings folded. Recognizably a coastal gull, not a person or fantasy hybrid. No clothing, weapon, props or accessories."
+    },
+    {
+      "id": "sirine",
+      "path": "res/maps/baldursGate/images/npc/sirine.png",
+      "sha256": "06df844fc0a5ea47ae49820352bc9a551e5bb52ffb79ac2bcf5dc808de72c37d",
+      "bytes": 944209,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  All four image corners must be entirely transparent, alpha zero. Keep every extremity inside generous padding. Subject: one fully clothed adult sirine, a graceful magical sea-fey woman with pale blue-green skin, long flowing deep-teal hair and subtly pointed ears. Full adult body in a modest ankle-length sea-green and desaturated teal dress with long sleeves, closed bodice, simple woven belt and bare feet just visible below the hem. Calm poised expression and one open expressive hand, clearly an adult mystical coastal being. Simple readable silhouette, bold angular ink-and-painted design. No revealing clothing, nudity, cleavage, aura, bubbles, water, waves, floating props, floor, shadow or background."
+    },
+    {
+      "id": "skeleton",
+      "path": "res/maps/baldursGate/images/npc/skeleton.png",
+      "sha256": "c7a5a84c650f7e43903efc7a75e25413a964b86503ef01916066f10f76ecbcd2",
+      "bytes": 802246,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the entire visible subject well inside the canvas, with clear transparent padding. Subject: one full adult human-shaped animated skeleton with a recognizable skull, ribcage, pelvis and exactly two arms and two legs, weathered ivory bones, sparse ragged dark cloth wraps and a simple rusted short sword held down at one side. Stooped wary stance, both feet visible, complete head-to-toe silhouette. Dry clean bones only: no blood, viscera, exposed organs or dismemberment. No magical aura, props beyond the held sword, floor or shadow."
+    },
+    {
+      "id": "slime",
+      "path": "res/maps/baldursGate/images/npc/slime.png",
+      "sha256": "239e87ee28a9f367ea52a9367bc90f6e016fba868de870567b08d5c3fdbf95ba",
+      "bytes": 619757,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  Keep the entire visible subject well inside the canvas, with clear transparent padding. Subject: one low amorphous fantasy ooze/slime creature, an irregular rounded mound of dark mossy green jelly with two or three thick flowing lobes, a few angular wet pale-green highlights and a distinct near-black outer silhouette. Make it look like a dangerous mindless slime mass, with NO eyes, face, mouth, limbs, humanoid form or cute expression. No bones or objects inside it, no dripping puddle beyond the main creature, no floor, cast shadow, aura or glow."
+    },
+    {
+      "id": "xvart",
+      "path": "res/maps/baldursGate/images/npc/xvart.png",
+      "sha256": "4b715d7ef2f5217bf16a5c2dec84e416866a50452ffcc8d984cab972af61a7f0",
+      "bytes": 924934,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: one original transparent PNG world-map creature sprite for a dark-fantasy 2D game, readable when displayed at about 50 pixels. Style: bold near-black ink contour, angular painted cel shading, worn muted medieval palette, hand-painted graphic illustration matching a gritty illustrated guard/commoner/mage sprite set. One complete subject, centered and fully in frame with 10 percent transparent padding around all extremities. Three-quarter readable view, clear outer silhouette, limited tiny details. True transparent alpha background, not a checkerboard or painted backdrop. No text, symbols, watermark, framing, floor, ground patch, cast shadow, glow backdrop, pedestal, or other subjects. Please produce a square PNG around 1024x1024, always fewer than four million pixels.  All four image corners must be entirely transparent, alpha zero. Keep every extremity inside generous padding. Subject: one adult xvart, a small wiry blue-skinned goblinoid with an oversized angular bald head, very large pointed ears, orange eyes, sharp nose and a wary mischievous face. Not a child. Worn dark-brown leather tunic covers the torso, dull charcoal trousers and foot wraps; hold one simple short knife lowered at the side. Hunched but complete full-body pose with both hands and feet visible. Distinctly a blue fantasy goblinoid rather than a human, gnome, kobold or orc. No spell effect, aura, floor, cast shadow or backdrop."
+    }
+  ]
+}

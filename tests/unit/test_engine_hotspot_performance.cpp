@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CNativeCombatFacts.h"
+#include "seven_suns_warning_fixture.h"
+#include "seven_suns_merchant_fixture.h"
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
@@ -2311,6 +2314,226 @@ void testEquipmentTailChecksKeepFixedWork() {
               << " factories=" << factories << "\n";
     context->shutdown();
 }
+void testMapTileTraversalProbeCountsActualSnapshotsAndVisits() {
+    constexpr int WIDTH = 4;
+    constexpr int HEIGHT = 3;
+    constexpr std::size_t TILES = WIDTH * HEIGHT;
+    auto fixture = make_open_map(WIDTH, HEIGHT);
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    performance_guard::resetMapTileTraversalProbe();
+    performance_guard::disableMapTileTraversalProbe();
+    const auto disabled_snapshot = fixture.map->getTiles();
+    std::set<std::shared_ptr<CTile>> disabled_visits;
+    fixture.map->forTiles([&](auto tile) { disabled_visits.insert(tile); });
+    const auto disabled = performance_guard::mapTileTraversalWork();
+    expect_true(disabled_snapshot.size() == TILES && disabled_visits == disabled_snapshot && disabled.snapshots == 0 &&
+                    disabled.snapshotReferences == 0 && disabled.directVisits == 0,
+                "disabled tile probes preserve the real snapshot and traversal without recording work");
+
+    performance_guard::resetMapTileTraversalProbe();
+    const auto snapshot = fixture.map->getTiles();
+    const auto repeated = fixture.map->getTiles();
+    std::set<std::shared_ptr<CTile>> visits;
+    fixture.map->forTiles([&](auto tile) { visits.insert(tile); });
+    int filtered_visits = 0;
+    fixture.map->forTiles([&](auto) { ++filtered_visits; }, [](auto tile) { return tile->getCoords().x == 0; });
+    const auto enabled = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(snapshot == disabled_snapshot && repeated == snapshot && visits == snapshot &&
+                    filtered_visits == HEIGHT && enabled.snapshots == 2 && enabled.snapshotReferences == TILES * 2 &&
+                    enabled.directVisits == TILES + HEIGHT,
+                "enabled probes count actual snapshot references and accepted direct callback visits exactly");
+
+    fixture.map->getTiles();
+    fixture.map->forTiles([](auto) {});
+    const auto stopped = performance_guard::mapTileTraversalWork();
+    expect_true(stopped.snapshots == enabled.snapshots && stopped.snapshotReferences == enabled.snapshotReferences &&
+                    stopped.directVisits == enabled.directVisits,
+                "disabled probes stop recording subsequent real tile work");
+    performance_guard::resetMapTileTraversalProbe();
+    const auto reset = performance_guard::mapTileTraversalWork();
+    auto empty_map = std::make_shared<CMap>();
+    const auto empty_snapshot = empty_map->getTiles();
+    empty_map->forTiles([](auto) {});
+    const auto empty = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(reset.snapshots == 0 && reset.snapshotReferences == 0 && reset.directVisits == 0 &&
+                    empty_snapshot.empty() && empty.snapshots == 1 && empty.snapshotReferences == 0 &&
+                    empty.directVisits == 0,
+                "reset clears previous work and even an empty snapshot counts as a real request");
+    expect_true(fixture.map->getNavigationRevision() == revision && fixture.map->getTurn() == turn &&
+                    fixture.game->getMapBindingEpoch() == epoch,
+                "tile instrumentation adds no navigation, turn or map-binding publication");
+    std::cout << "tile traversal probe guard: tiles=" << TILES << " snapshots=" << enabled.snapshots
+              << " references=" << enabled.snapshotReferences << " directVisits=" << enabled.directVisits << "\n";
+    fixture.game->getContext()->shutdown();
+}
+
+void testNativeCombatFactWorkRemainsIndexedAndBounded() {
+    auto fixture = make_open_map(8, 8);
+    auto attacker = make_actor(fixture, "unitFactAttacker", Coords(0, 0, 0), "");
+    auto victim = make_actor(fixture, "unitFactVictim", Coords(1, 0, 0), "");
+    add_object(fixture, attacker);
+    add_object(fixture, victim);
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(fixture.game);
+    constexpr int PASSES = 128;
+    constexpr int LISTENERS = 8;
+    int matching = 0;
+    int unrelated = 0;
+    for (int i = 0; i < LISTENERS; ++i) {
+        for (const auto &kind : {"onCombatAttempt", "onCombatRoll", "onCombatPacket"}) {
+            auto trigger = std::make_shared<CCustomTrigger>(victim->getName(), kind, [&](auto, auto) { ++matching; });
+            trigger->setName(std::string("nativeFactGuard_") + kind + "_" + std::to_string(i));
+            fixture.map->getEventHandler()->registerTrigger(trigger);
+        }
+    }
+    // Unrelated listeners cannot turn the producer into a whole-map broadcast.
+    for (int i = 0; i < 1024; ++i) {
+        fixture.map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+            "otherActor" + std::to_string(i), "onCombatPacket", [&](auto, auto) { ++unrelated; }));
+    }
+    int registered = 0;
+    for (const auto &trigger : fixture.map->getEventHandler()->getTriggers()) {
+        if (trigger->getObject() == victim->getName() &&
+            (trigger->getEvent() == "onCombatAttempt" || trigger->getEvent() == "onCombatRoll" ||
+             trigger->getEvent() == "onCombatPacket")) {
+            ++registered;
+        }
+    }
+    expect_true(registered == LISTENERS * 3, "all 24 differently named native listeners must really be registered");
+    const auto generation = fixture.game->getContext()->captureTransitionGeneration();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto registry = fixture.map->getObjects();
+    DamageValue damage;
+    damage.normal = 7;
+    const auto run = [&] {
+        for (int i = 0; i < PASSES; ++i) {
+            CNativeCombatScope operation(fixture.game);
+            CNativeCombatFacts facts(attacker, victim);
+            facts.attempt(action);
+            facts.roll(i % 2 == 0, 0);
+            facts.packet(damage, 10, 10);
+            operation.finish();
+        }
+    };
+    run();
+    expect_true(matching == 0 && unrelated == 0, "disabled maps have a zero combat callback budget");
+    fixture.map->setBoolProperty("nativeCombatFacts", true);
+    performance_guard::resetMapTileTraversalProbe();
+    performance_guard::resetMapCoordinateLookupProbe();
+    run();
+    const auto tile_work = performance_guard::mapTileTraversalWork();
+    const auto coordinate_work = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapTileTraversalProbe();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(matching == PASSES * LISTENERS * 3 && unrelated == 0,
+                "three facts per producer invoke only the eight indexed listeners for this victim");
+    expect_true(tile_work.snapshots == 0 && tile_work.snapshotReferences == 0 && tile_work.directVisits == 0 &&
+                    coordinate_work == 0,
+                "fact publication performs no tile traversal or spatial scan");
+    expect_true(fixture.map->getObjects() == registry && fixture.map->getNavigationRevision() == revision &&
+                    fixture.map->getTurn() == turn && fixture.game->getMapBindingEpoch() == epoch &&
+                    fixture.game->getContext()->isTransitionGenerationCurrent(generation),
+                "observation cannot advance the map, alter ownership or invalidate navigation");
+    std::cout << "native combat facts guard: passes=" << PASSES << " listeners=" << LISTENERS
+              << " callbacks=" << matching << " unrelated=" << unrelated << " tiles=" << tile_work.directVisits
+              << " coordinateProbes=" << coordinate_work << "\n";
+    fixture.game->getContext()->shutdown();
+}
+
+// Copyright (C) 2026 Andrzej Lis
+// SPDX-License-Identifier: GPL-3.0-or-later
+void testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded() {
+    SevenSunsWarningFixture fixture;
+    const auto objectCount = fixture.map->getObjects().size();
+    const auto triggerCount = fixture.map->getTriggers().size();
+    const auto effectOwners = fixture.game->getContext()->getEffectOwnerCount();
+    const auto experience = fixture.player->getExp();
+    const auto gold = fixture.player->getGold();
+    std::size_t callerChecks = 0;
+    auto session = fixture.begin([&] { ++callerChecks; });
+    expect_true(session != nullptr, "fixed warning workload must admit its exact native actor");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::finish(*session);
+    session->close();
+    session.reset();
+    const auto receipt = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    const auto journal = fixture.journal();
+    for (int pass = 0; pass < 128; ++pass) {
+        auto replay = fixture.begin([&] { ++callerChecks; });
+        expect_true(replay && replay->view().at("status").get<std::string>() == "retired",
+                    "settled replay is a bounded acknowledgement, never another source action");
+        if (replay)
+            replay->close();
+    }
+    constexpr std::size_t CallerCheckBudget = 16384;
+    expect_true(fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1 &&
+                    fixture.destroyCalls == 0 && fixture.map->getObjects().size() + 1 == objectCount &&
+                    fixture.map->getTriggers().size() == triggerCount &&
+                    fixture.game->getContext()->getEffectOwnerCount() == effectOwners &&
+                    fixture.player->getExp() == experience && fixture.player->getGold() == gold &&
+                    fixture.journal() == journal && fixture.player->getQuests().size() == 1 && !receipt.empty() &&
+                    receipt.size() <= 4096 &&
+                    fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == receipt && callerChecks > 0 &&
+                    callerChecks <= CallerCheckBudget && fixture.stockAndEffectIntact() &&
+                    fixture.protectedActorsIntact() && fixture.map->tryBeginSaveSnapshot().has_value(),
+                "three source edges plus128 replays preserve bounded registry/trigger/receipt/owner/quest work");
+    std::cout << "Seven Suns warning guard: edges=3 replays=128 actorFactories=" << fixture.actorFactories
+              << " itemFactories=" << fixture.itemFactories << " questFactories=" << fixture.questFactories
+              << " triggerGrowth=0 receiptBytes=" << receipt.size()
+              << " receiptBudget=4096 callerChecks=" << callerChecks << " callerCheckBudget=" << CallerCheckBudget
+              << '\n';
+}
+
+void testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded() {
+    SevenSunsMerchantFixture f;
+    std::size_t checks = 0;
+    auto flow = f.beginMerchant(0, [&] { ++checks; });
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
+    const auto xp = f.player->getExp(), gold = f.player->getGold();
+    auto first = f.settle();
+    f.focus(2);
+    auto second = f.settle();
+    std::array<std::shared_ptr<CCreature>, 4> replacements;
+    for (std::size_t i = 0; i < 4; ++i)
+        replacements[i] = f.replacement(i);
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    const auto effectOwners = f.game->getContext()->getEffectOwnerCount();
+    std::size_t scans = first.at("checked").get<int>() + second.at("checked").get<int>();
+    for (int n = 0; n < 128; ++n) {
+        auto result = CSevenSunsMerchantDialogue::settle(f.game, f.clock, [&] { ++checks; });
+        scans += result.at("checked").get<int>();
+        expect_true(result.at("checked").get<int>() == 4 && result.at("replaced").get<int>() == 0,
+                    "every coordinator replay has exactly four bounded candidates and zero additional replacements");
+    }
+    bool owners = true;
+    for (std::size_t i = 0; i < 4; ++i)
+        owners = owners && replacements[i] && f.replacement(i) == replacements[i] && f.oldOwnershipIntact(i);
+    constexpr std::size_t CheckBudget = 65536, ReceiptBudget = 65536, ScanBudget = 4 * (128 + 2);
+    expect_true(
+        first.at("replaced").get<int>() == 2 && second.at("replaced").get<int>() == 2 && owners &&
+            scans == ScanBudget && f.map->getObjects().size() == objects &&
+            f.map->getEventHandler()->getTriggers().size() == triggers &&
+            f.game->getContext()->getEffectOwnerCount() == effectOwners && f.merchantDestroyed == 0 &&
+            f.newDestroyed == 0 && f.player->getExp() == xp && f.player->getGold() == gold &&
+            f.player->getQuests().empty() &&
+            f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+            receipt.size() <= ReceiptBudget && checks > 0 && checks <= CheckBudget &&
+            f.map->tryBeginSaveSnapshot().has_value(),
+        "four once-owned replacements plus128 replays cannot grow registry/triggers/effects/receipt or grant rewards");
+    std::cout << "Seven Suns merchant guard: lineages=4 replacements=4 replays=128 eligibilityChecks=" << scans
+              << " eligibilityBudget=" << ScanBudget << " callerChecks=" << checks << " callerBudget=" << CheckBudget
+              << " receiptBytes=" << receipt.size() << " receiptBudget=" << ReceiptBudget << '\n';
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -2348,6 +2571,10 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testMapTileTraversalProbeCountsActualSnapshotsAndVisits();
+    testNativeCombatFactWorkRemainsIndexedAndBounded();
+    testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();
+    testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded();
     testEmptyTextMetricsKeepZeroTextureWork();
     testEqualPowerHealingTieSelectionKeepsFixedWork();
 }

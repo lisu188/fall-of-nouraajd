@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
 #include "handler/CRngHandler.h"
+#include "handler/CSevenSunsMerchantDialogue.h"
 
 struct CCombatOwnership {
     CCombatOwnership() = default;
@@ -126,6 +127,10 @@ class CCombatParticipantGuard {
     bool admitted = false;
 };
 
+bool CFightHandler::hasActiveCombatClaim(const std::shared_ptr<CCreature> &actor) {
+    return CCombatParticipantGuard::isOwned(actor);
+}
+
 template <typename Callback> class DefeatScopeExit {
   public:
     explicit DefeatScopeExit(Callback callback) : callback(std::move(callback)) {}
@@ -172,6 +177,7 @@ using creature_state_type = std::tuple<std::string, int, int, std::vector<effect
 
 struct effect_application_result {
     bool died = false;
+    bool interrupted = false;
     std::shared_ptr<CCreature> caster;
 };
 
@@ -586,8 +592,32 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
         return result;
     }
 
+    const auto receiverGame = cr->getGame();
+    const auto receiverMap = cr->getMap();
+    const bool guardReceiver = receiverMap && receiverMap->getBoolProperty("nativeCombatFacts");
+    const auto receiverContext = guardReceiver && receiverGame ? receiverGame->getContext() : nullptr;
+    const auto receiverGeneration = receiverContext ? receiverContext->captureTransitionGeneration() : 0;
+    const auto receiverInvalid = [&] {
+        if (!guardReceiver) {
+            return false;
+        }
+        const bool current = receiverGame && receiverContext && receiverContext->isActive() &&
+                             receiverContext->isTransitionGenerationCurrent(receiverGeneration) &&
+                             receiverGame->getContext() == receiverContext && receiverGame->getMap() == receiverMap &&
+                             cr->getGame() == receiverGame && cr->getMap() == receiverMap &&
+                             receiverMap->getBoolProperty("nativeCombatFacts") &&
+                             receiverMap->getObjectByName(cr->getName()) == cr;
+        result.interrupted = !current;
+        return !current;
+    };
+    if (receiverInvalid()) {
+        return result;
+    }
     auto effects = cr->getEffects();
     for (const auto &effect : effects) {
+        if (receiverInvalid()) {
+            return result;
+        }
         if (canApply && !canApply()) {
             return result;
         }
@@ -601,6 +631,9 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
                 return result;
             }
             cr->removeEffect(effect);
+            if (receiverInvalid()) {
+                return result;
+            }
         }
     }
 
@@ -623,6 +656,9 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
     std::sort(orderedEffects.begin(), orderedEffects.end(),
               [](const auto &left, const auto &right) { return left.first < right.first; });
     for (const auto &entry : orderedEffects) {
+        if (receiverInvalid()) {
+            return result;
+        }
         if (canApply && !canApply()) {
             return result;
         }
@@ -632,7 +668,13 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
         if (canApply && !canApply()) {
             break;
         }
+        if (receiverInvalid()) {
+            return result;
+        }
         effect->apply(cr);
+        if (receiverInvalid()) {
+            return result;
+        }
         if (was_alive && !cr->isAlive()) {
             result.died = true;
             result.caster = effect->getCaster();
@@ -734,6 +776,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     }
     CFightHandler::resetCombatHistory(encounterMap);
     const bool alliedEncounter = !allies.empty();
+    const bool factEncounter = encounterMap && encounterMap->getBoolProperty("nativeCombatFacts");
     std::weak_ptr<CGame> encounterGame = attacker->getGame();
     auto game = encounterGame.lock();
     std::weak_ptr<CGameContext> encounterContext = game ? game->getContext() : nullptr;
@@ -743,15 +786,26 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         if (nativeAdmission && !nativeAdmission->isCurrent()) {
             return false;
         }
-        if (!alliedEncounter) {
+        if (!alliedEncounter && !factEncounter) {
             return true;
         }
         auto owner = encounterGame.lock();
         auto context = encounterContext.lock();
-        return owner && context && context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
+        return owner && context &&
+               (!factEncounter || (context->isActive() && owner->getContext() == context &&
+                                   encounterMap->getBoolProperty("nativeCombatFacts"))) &&
+               context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
+    };
+    const auto factParticipantsRegistered = [&](const std::shared_ptr<CCreature> &actor,
+                                                const std::shared_ptr<CCreature> &target) {
+        auto owner = encounterGame.lock();
+        const auto registered = [&](const std::shared_ptr<CCreature> &participant) {
+            return participant && participant->getGame() == owner && is_registered_on_map(encounterMap, participant);
+        };
+        return owner && contextIsCurrent() && registered(attacker) && registered(actor) && registered(target);
     };
     std::function<bool()> effectContext;
-    if (nativeAdmission) {
+    if (nativeAdmission || factEncounter) {
         effectContext = contextIsCurrent;
     }
     const auto status = [&](const std::string &message, bool initiative = true) {
@@ -892,6 +946,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 auto effect_result = apply_effects_with_result(attacker, effectContext);
+                if (effect_result.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                if (factEncounter && (!contextIsCurrent() || !is_active_participant(encounterMap, current))) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -911,6 +973,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                         co_return finish_result();
                     }
                     co_await attackerController->controlAsync(attacker, current);
+                    if (factEncounter && !factParticipantsRegistered(attacker, current)) {
+                        cancel_fight(result, attacker, current);
+                        co_return finish_result();
+                    }
                     if (!contextIsCurrent() || attackerController->isCancelled(attacker, current)) {
                         cancel_fight(result, attacker, current);
                         co_return finish_result();
@@ -959,6 +1025,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 const auto effects = apply_effects_with_result(actor, effectContext);
+                if (effects.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                if (factEncounter && !factParticipantsRegistered(actor, actor)) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -981,6 +1055,11 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 if (!controller || dynamic_cast<CPlayerFightController *>(controller.get()) || !target) {
                     continue;
                 }
+                if (factEncounter &&
+                    (!factParticipantsRegistered(actor, target) || !is_active_participant(encounterMap, attacker))) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 if (!is_active_participant(encounterMap, actor) || !is_active_participant(encounterMap, target)) {
                     continue;
                 }
@@ -990,6 +1069,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 co_await controller->controlAsync(actor, target);
+                if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                     cancel_fight(result, attacker, target);
                     co_return finish_result();
@@ -1050,6 +1133,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 co_return finish_result();
             }
             auto effect_result = apply_effects_with_result(actor, effectContext);
+            if (effect_result.interrupted) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
+            if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
             if (nativeAdmission && !contextIsCurrent()) {
                 cancel_fight(result, attacker, actor);
                 co_return finish_result();
@@ -1070,11 +1161,20 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
             }
             if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
                 if (auto controller = actor->getFightController()) {
+                    if (factEncounter && (!is_active_participant(encounterMap, attacker) ||
+                                          !is_active_participant(encounterMap, target))) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     if (nativeAdmission && !contextIsCurrent()) {
                         cancel_fight(result, attacker, target);
                         co_return finish_result();
                     }
                     co_await controller->controlAsync(actor, target);
+                    if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                         cancel_fight(result, attacker, actor);
                         co_return finish_result();
@@ -1432,18 +1532,25 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     requireDefeatCurrent();
     vstd::logger::debug(winnerDescription, a->getName(), "defeated", loserDescription);
     requireDefeatCurrent();
-    const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp");
+    const bool sevenSunsReplacement =
+        CSevenSunsMerchantDialogue::isSettledReplacement(expectedGame.lock(), encounterMap, b, requireDefeatCurrent);
     requireDefeatCurrent();
-    const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp");
-    requireDefeatCurrent();
-    const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1;
-    requireDefeatCurrent();
-    if (sourceKillXp >= 0) {
-        a->addExp(sourceKillXp);
+    if (sevenSunsReplacement) {
+        a->addExp(420);
     } else {
-        const auto rewardScale = b->getScale();
+        const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp");
         requireDefeatCurrent();
-        a->addExpScaled(rewardScale);
+        const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp");
+        requireDefeatCurrent();
+        const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1;
+        requireDefeatCurrent();
+        if (sourceKillXp >= 0) {
+            a->addExp(sourceKillXp);
+        } else {
+            const auto rewardScale = b->getScale();
+            requireDefeatCurrent();
+            a->addExpScaled(rewardScale);
+        }
     }
     requireDefeatCurrent();
     const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");

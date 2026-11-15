@@ -718,6 +718,11 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             creatures[f"victorCultist{index}"] = SimpleNamespace(
                 isAlive=lambda actor_state=actor_state: actor_state["hp"] > 0,
                 hurt=lambda damage, actor_state=actor_state: actor_state.update(hp=actor_state["hp"] - damage),
+                hurtFrom=Mock(
+                    side_effect=lambda cause, damage, actor_state=actor_state: actor_state.update(
+                        hp=actor_state["hp"] - damage
+                    )
+                ),
             )
         action = SimpleNamespace(
             getNumericProperty=lambda name: action_config[name],
@@ -731,6 +736,7 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             getMana=lambda: state["mana"],
             getManaMax=lambda: 100,
             getDmg=lambda: 20,
+            getDmgFor=Mock(return_value=20),
             heal=lambda amount: state.update(hp=state["hp"] + amount),
             addMana=lambda amount: state.update(mana=state["mana"] + amount),
             getBoolProperty=lambda name: state["claimed"],
@@ -1116,6 +1122,26 @@ class GameplayNouraajdServiceRoutesTest(unittest.TestCase):
             ["nouraajd.aid.outlanderRace." + outcome for outcome in ("unfunded", "unneeded", "claimed", "persisted")],
             state["branches"],
         )
+
+    def testAidMutilationFixtureRetainsVictimRollCauseAndExactResourceChanges(self):
+        driver, state, creatures = self.highlanderMutilationFixture()
+        player = driver.player
+        victim = creatures["victorCultist1"]
+        player.getDmg = Mock(side_effect=AssertionError("Mutilation must roll for the actual victim"))
+        victim.hurt = Mock(side_effect=AssertionError("Mutilation must retain the actual cause"))
+        action = player.getEffectiveInteractions()[0]
+
+        player.useAction(action, victim)
+
+        player.getDmgFor.assert_called_once_with(victim)
+        victim.hurtFrom.assert_called_once_with(player, 30)
+        player.getDmg.assert_not_called()
+        victim.hurt.assert_not_called()
+        self.assertFalse(victim.isAlive())
+        self.assertTrue(all(creatures[f"victorCultist{index}"].isAlive() for index in range(2, 5)))
+        self.assertEqual(100 - action.getNumericProperty("manaCost"), state["mana"])
+        self.assertEqual((0, 100, False), (state["gold"], state["hp"], state["claimed"]))
+        self.assertEqual(("starter", "original-portal", "quest-item"), state["inventory"])
 
     def testOutlanderApplicableAidStillRestoresRecoveryStateAfterOwnedActionFailure(self):
         driver, state, _creatures = self.outlanderApplicableAidFixture()

@@ -155,9 +155,19 @@ FAST_TEST_PREFIXES = (
     "BuiltinGameplayRegistrationTest.",
     "SavedWaitSourceTest.",
     "BaldursGateCityContentTest.",
+    "SevenSunsWarningSourceTest.",
+    "SevenSunsWarningPresentationTest.",
+    "SevenSunsWarningRoutesTest.",
+    "SevenSunsMerchantSourceTest.",
+    "SevenSunsMerchantPresentationTest.",
+    "SevenSunsMerchantRoutesTest.",
+    "BaldursGateMerchantStockTest.",
+    "SevenSunsMerchantNativeSourceTest.",
     "BaldursGateCityRoutesTest.",
     "BaldursGateCityLedgerUnitTest.",
     "BaldursGateCityLedgerFixtureTest.",
+    "BaldursGatePoisonFollowupTest.",
+    "BaldursGatePoisonSourceTest.",
     "BaldursGateCityRegionTest.",
     "BaldursGateCityGeometryTest.",
     "MultilevelRuinsContentTest.",
@@ -28405,11 +28415,29 @@ if SOURCE_UI_TESTS_AVAILABLE:
     )
     from tests.test_saved_wait_source import SavedWaitSourceTest as _SavedWaitSourceTest
     from tests.test_baldurs_gate_city_content import BaldursGateCityContentTest as _BaldursGateCityContentTest
+    from tests.test_baldurs_gate_seven_suns_warning import (
+        SevenSunsWarningSourceTest as _SevenSunsWarningSourceTest,
+        SevenSunsWarningPresentationTest as _SevenSunsWarningPresentationTest,
+    )
+    from tests.test_baldurs_gate_seven_suns_routes import SevenSunsWarningRoutesTest as _SevenSunsWarningRoutesTest
+    from tests.test_baldurs_gate_seven_suns_merchants import (
+        SevenSunsMerchantSourceTest as _SevenSunsMerchantSourceTest,
+        SevenSunsMerchantPresentationTest as _SevenSunsMerchantPresentationTest,
+    )
+    from tests.test_baldurs_gate_seven_suns_merchant_routes import (
+        SevenSunsMerchantRoutesTest as _SevenSunsMerchantRoutesTest,
+    )
+    from tests.test_baldurs_gate_merchant_stock import BaldursGateMerchantStockTest as _BaldursGateMerchantStockTest
+    from tests.test_seven_suns_merchant_native import (
+        SevenSunsMerchantNativeSourceTest as _SevenSunsMerchantNativeSourceTest,
+    )
     from tests.test_baldurs_gate_city_routes import BaldursGateCityRoutesTest as _BaldursGateCityRoutesTest
     from tests.test_baldurs_gate_city_ledger import BaldursGateCityLedgerUnitTest as _BaldursGateCityLedgerUnitTest
     from tests.test_baldurs_gate_city_ledger import (
         BaldursGateCityLedgerFixtureTest as _BaldursGateCityLedgerFixtureTest,
     )
+    from tests.test_baldurs_gate_poison_followup import BaldursGatePoisonFollowupTest as _BaldursGatePoisonFollowupTest
+    from tests.test_baldurs_gate_poison_source import BaldursGatePoisonSourceTest as _BaldursGatePoisonSourceTest
     from tests.test_baldurs_gate_city_regions import BaldursGateCityRegionTest as _BaldursGateCityRegionTest
     from tests.test_baldurs_gate_city_geometry import BaldursGateCityGeometryTest as _BaldursGateCityGeometryTest
     from tests.test_candlekeep_content import CandlekeepContentTest as _CandlekeepContentTest
@@ -28551,6 +28579,30 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class BaldursGateCityContentTest(_BaldursGateCityContentTest):
         pass
 
+    class SevenSunsWarningSourceTest(_SevenSunsWarningSourceTest):
+        pass
+
+    class SevenSunsWarningPresentationTest(_SevenSunsWarningPresentationTest):
+        pass
+
+    class SevenSunsWarningRoutesTest(_SevenSunsWarningRoutesTest):
+        pass
+
+    class SevenSunsMerchantSourceTest(_SevenSunsMerchantSourceTest):
+        pass
+
+    class SevenSunsMerchantPresentationTest(_SevenSunsMerchantPresentationTest):
+        pass
+
+    class SevenSunsMerchantRoutesTest(_SevenSunsMerchantRoutesTest):
+        pass
+
+    class BaldursGateMerchantStockTest(_BaldursGateMerchantStockTest):
+        pass
+
+    class SevenSunsMerchantNativeSourceTest(_SevenSunsMerchantNativeSourceTest):
+        pass
+
     class BaldursGateCityRoutesTest(_BaldursGateCityRoutesTest):
         pass
 
@@ -28558,6 +28610,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class BaldursGateCityLedgerFixtureTest(_BaldursGateCityLedgerFixtureTest):
+        pass
+
+    class BaldursGatePoisonFollowupTest(_BaldursGatePoisonFollowupTest):
+        pass
+
+    class BaldursGatePoisonSourceTest(_BaldursGatePoisonSourceTest):
         pass
 
     class BaldursGateCityRegionTest(_BaldursGateCityRegionTest):
@@ -28941,8 +28999,14 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _BaldursGateCustodyPatrolSourceTest
     del _BaldursGateCustodyRoleSourceTest
     del _BaldursGateCityRoutesTest
+    del _SevenSunsWarningSourceTest, _SevenSunsWarningPresentationTest, _SevenSunsWarningRoutesTest
+    del _SevenSunsMerchantSourceTest, _SevenSunsMerchantPresentationTest, _SevenSunsMerchantRoutesTest
+    del _BaldursGateMerchantStockTest
+    del _SevenSunsMerchantNativeSourceTest
     del _BaldursGateCityLedgerUnitTest
     del _BaldursGateCityLedgerFixtureTest
+    del _BaldursGatePoisonFollowupTest
+    del _BaldursGatePoisonSourceTest
     del _BaldursGateCityRegionTest
     del _BaldursGateCityGeometryTest
     del _CandlekeepContentTest, _CandlekeepModelTest, _CandlekeepSourceParserTest, _CandlekeepSourceAuditTest
@@ -30442,7 +30506,7 @@ class McpServerTest(unittest.TestCase):
 
         slot = unique_save_name("cpp26-mcp-session")
         self.addCleanup(cleanup_save_slot, slot)
-        proc = self._start_stdio_mcp_process()
+        proc = self._start_stdio_mcp_process(save_stage_diagnostics=True)
         try:
             self._initialize_stdio_mcp(proc)
             session = {"proc": proc, "next_request_id": 3}
@@ -30599,7 +30663,7 @@ class McpServerTest(unittest.TestCase):
         success = False
         log = {}
         try:
-            options = {}
+            options = {"save_stage_diagnostics": True} if map_name == "baldursGate" else {}
             if map_name in CITY_WALKTHROUGH_CASES:
                 import uuid
                 from tests.gameplay_branch_driver import caseSeed
@@ -30638,7 +30702,14 @@ class McpServerTest(unittest.TestCase):
         return success, log
 
     def _start_stdio_mcp_process(
-        self, map_name=None, *, trace_name=None, native_log_file=None, fixture_seed=None, test_seed=None
+        self,
+        map_name=None,
+        *,
+        trace_name=None,
+        native_log_file=None,
+        fixture_seed=None,
+        test_seed=None,
+        save_stage_diagnostics=False,
     ):
         if fixture_seed is not None and test_seed is not None:
             raise ValueError("Choose fixture_seed or test_seed, not both")
@@ -30655,6 +30726,9 @@ class McpServerTest(unittest.TestCase):
             env["GAME_PLAYTEST_TRACE_FILE"] = str(trace_path)
             if map_name in CITY_WALKTHROUGH_CASES:
                 env["GAME_PLAYTEST_TRACE_RETAIN_RECENT"] = "1"
+        if save_stage_diagnostics:
+            env = os.environ.copy() if env is None else env
+            env["GAME_SAVE_STAGE_DIAGNOSTICS"] = "1"
         command = [
             sys.executable,
             str(script),

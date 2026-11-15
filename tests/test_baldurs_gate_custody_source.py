@@ -140,6 +140,11 @@ class NativeObject:
                 self.completed.append(quest)
 
 
+class NativeScroll(NativeObject):
+    def isDisposable(self):
+        return False
+
+
 class Creature(NativeObject):
     pass
 
@@ -250,6 +255,7 @@ class Fixture:
         selectedSupport(support / "quest_state.py", {"mapQuest"}, quest_generic)
         exports = {
             "CBuilding": NativeObject,
+            "CScrollBase": NativeScroll,
             "CCreature": Creature,
             "CGameObject": NativeObject,
             "CGame": CompactGame,
@@ -463,11 +469,36 @@ class BaldursGateCustodySourceTest(unittest.TestCase):
         owner = m.object(NativeObject, "cityCustody")
         owner.updatePatrols = lambda: events.append("custody")
         m.clock.advanceTicks = lambda _count: events.append("ticks")
+        m.clock.settleSevenSunsMerchantsFlow = lambda: iter(events.append("merchants") or ())
         m.clock.observeRegionsFlow = lambda: iter([{"operation": "observed"}])
         m.world.setBoolProperty("plugin_cityInitialized", True)
         flow = m.clock.onTurnFlow(None)
         self.assertEqual({"operation": "observed"}, next(flow))
+        self.assertEqual(["ticks", "custody", "merchants"], events)
+        flow.close()
+
+    def testObservationWaitsForMerchantSettlementAfterCustody(self):
+        m, events = self.model, []
+        owner = m.object(NativeObject, "cityCustody")
+        owner.updatePatrols = lambda: events.append("custody")
+        m.clock.advanceTicks = lambda _count: events.append("ticks")
+
+        def settleMerchants():
+            yield {"operation": "merchantSettlement"}
+            events.append("settled")
+
+        def observeRegions():
+            events.append("observation")
+            yield {"operation": "observed"}
+
+        m.clock.settleSevenSunsMerchantsFlow = settleMerchants
+        m.clock.observeRegionsFlow = observeRegions
+        m.world.setBoolProperty("plugin_cityInitialized", True)
+        flow = m.clock.onTurnFlow(None)
+        self.assertEqual({"operation": "merchantSettlement"}, next(flow))
         self.assertEqual(["ticks", "custody"], events)
+        self.assertEqual({"operation": "observed"}, flow.send(None))
+        self.assertEqual(["ticks", "custody", "settled", "observation"], events)
         flow.close()
 
     def testFullRestrictedPluginLoadUsesConstructibleBaseAndActualDecorators(self):
@@ -1840,7 +1871,9 @@ class BaldursGateCustodySourceTest(unittest.TestCase):
             getStringProperty=lambda key: "cityParty",
         )
         game = SimpleNamespace(createObject=lambda key: key)
-        clock_object = SimpleNamespace(initializeActors=lambda: None, applySchedules=lambda: None)
+        clock_object = NativeObject()
+        clock_object.initializeActors = lambda: None
+        clock_object.applySchedules = lambda: None
         namespace.update(
             game_map=game_map,
             player=player,
