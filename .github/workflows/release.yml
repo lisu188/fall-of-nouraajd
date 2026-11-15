@@ -54,14 +54,14 @@ jobs:
           echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
           echo "prefix=${{ runner.os }}-ccache-cxx26-release-package-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
       - name: Cache Python test timings
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-release-${{ github.run_id }}
@@ -79,7 +79,7 @@ jobs:
       - name: package
         run: cmake --build cmake-build-gcc15-release --target package -j"$(nproc)"
       - name: Upload release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           files: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
         env:
@@ -87,7 +87,7 @@ jobs:
       - name: Save ccache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -108,7 +108,7 @@ jobs:
           java-version: "17"
 
       - name: Set up Gradle 9.5.0
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
         with:
           gradle-version: "9.5.0"
 
@@ -151,14 +151,14 @@ jobs:
           echo "ANDROID_RELEASE_APK=${release_apk}" >> "${GITHUB_ENV}"
 
       - name: Upload Android APK artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fall-of-nouraajd-android-arm64-debug
           path: ${{ env.ANDROID_RELEASE_APK }}
           if-no-files-found: error
 
       - name: Attach Android APK to release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           files: ${{ env.ANDROID_RELEASE_APK }}
         env:
