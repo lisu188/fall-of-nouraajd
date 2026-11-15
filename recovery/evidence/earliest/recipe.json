@@ -1,0 +1,16 @@
+{
+  "recipes": [
+    {
+      "id": "local-qt5-gcc15-diagnostic",
+      "pythonAbi": "none",
+      "qmakeCommand": "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin/qmake",
+      "makeCommand": "make",
+      "compilerCommand": "g++",
+      "environment": {
+        "LD_LIBRARY_PATH": "/tmp/nouraajd-recovery-qt/root/usr/lib/x86_64-linux-gnu",
+        "PATH": "/tmp/nouraajd-recovery-qt/root/usr/lib/qt5/bin:/home/alis3/.codex/packages/app-server-daemon/releases/0.169.0-x86_64-unknown-linux-musl/codex-path:/home/alis3/.codex/tmp/arg0-linux/codex-arg0H0o6zt:/home/alis3/.codex/packages/app-server-daemon/releases/0.169.0-x86_64-unknown-linux-musl/codex-path:/home/alis3/.codex/tmp/arg0-linux/codex-arg0s91OM6:/home/alis3/.nvm/versions/node/v24.21.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/alis3/.nvm/versions/node/v24.21.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/MicrosoftCorporationII.WindowsSubsystemForLinux_3.0.5.0_x64__8wekyb3d8bbwe:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0/:/mnt/c/windows/System32/OpenSSH/:/mnt/c/Program Files/KeePassXC/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/WSL/:/mnt/c/Users/alis3/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/alis3/AppData/Local/Python/bin:/snap/bin",
+        "QT_PLUGIN_PATH": "/tmp/nouraajd-recovery-qt/root/usr/lib/x86_64-linux-gnu/qt5/plugins"
+      }
+    }
+  ]
+}

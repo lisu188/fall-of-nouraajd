@@ -1,0 +1,77 @@
+{
+    "schemaVersion": 1,
+    "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+    "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+    "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+    "sourceLock": "recovery/toolchains/sources.json",
+    "recipes": [
+        {
+            "id": "qt5-no-python",
+            "pythonAbi": "none",
+            "qmakeCommand": "qmake",
+            "makeCommand": "make",
+            "compilerCommand": "g++-5",
+            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "environment": {
+                "PATH": "/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+                "QT_OPENGL": "software",
+                "QT_X11_NO_MITSHM": "1"
+            }
+        },
+        {
+            "id": "qt5-python27",
+            "pythonAbi": "2.7",
+            "qmakeCommand": "qmake",
+            "makeCommand": "make",
+            "compilerCommand": "g++-5",
+            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "environment": {
+                "PATH": "/opt/recovery/python/2.7.18/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+                "PYTHONHOME": "/opt/recovery/python/2.7.18",
+                "CPATH": "/opt/recovery/boost/py27/include:/opt/recovery/python/2.7.18/include/python2.7",
+                "LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+                "LD_LIBRARY_PATH": "/opt/recovery/boost/py27/lib:/opt/recovery/python/2.7.18/lib",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+                "QT_OPENGL": "software",
+                "QT_X11_NO_MITSHM": "1"
+            }
+        },
+        {
+            "id": "qt5-python33",
+            "pythonAbi": "3.3",
+            "qmakeCommand": "qmake",
+            "makeCommand": "make",
+            "compilerCommand": "g++-5",
+            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "environment": {
+                "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+                "PYTHONHOME": "/opt/recovery/python/3.3.7",
+                "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
+                "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+                "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+                "QT_OPENGL": "software",
+                "QT_X11_NO_MITSHM": "1"
+            }
+        },
+        {
+            "id": "qt5-python34",
+            "pythonAbi": "3.4",
+            "qmakeCommand": "qmake",
+            "makeCommand": "make",
+            "compilerCommand": "g++-5",
+            "qmakeArguments": ["QMAKE_CC=gcc-5", "QMAKE_CXX=g++-5", "QMAKE_LINK=g++-5"],
+            "environment": {
+                "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+                "PYTHONHOME": "/opt/recovery/python/3.4.10",
+                "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+                "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+                "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+                "QT_OPENGL": "software",
+                "QT_X11_NO_MITSHM": "1"
+            }
+        }
+    ]
+}

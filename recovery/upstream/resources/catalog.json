@@ -1,0 +1,1224 @@
+{
+  "entries": [
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "0176fdfd407c6f7afd38f01bccdea9c2edc3ae87"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "0176fdfd407c6f7afd38f01bccdea9c2edc3ae87"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "01d9145c5d6863a582d645b874cde73b5d9f21db"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "01d9145c5d6863a582d645b874cde73b5d9f21db"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "01fbe8535f86a527e73d20a5d348ce91b2469b52"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "01fbe8535f86a527e73d20a5d348ce91b2469b52"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "051d91e7ffb68561e15d446cd526f05a8cef0216"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "051d91e7ffb68561e15d446cd526f05a8cef0216"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "07db997d47b27ffafa47a068acfaf2bfa31a997c"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "07db997d47b27ffafa47a068acfaf2bfa31a997c"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "089c528a35d35bd8552372f851b19db02097104f"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "08b67cf8633e706371bbfd9f6fdfc735c63f5757"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "0c51b84604a9f09dbc38adf85332eaa126754403"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "0c51b84604a9f09dbc38adf85332eaa126754403"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "10bca83d0f0cc98e901f206b7a7d1fa5c35a7399"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "10bca83d0f0cc98e901f206b7a7d1fa5c35a7399"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "15a718e0daa9f441fc4a76e523e4793e87bc40b6"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "15a718e0daa9f441fc4a76e523e4793e87bc40b6"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "1d89e164676c1c2608303d2a89c082c038d08952"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "1d89e164676c1c2608303d2a89c082c038d08952"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "1e5673b7f5083ab0286c0b402ca0d5716c798468"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "1e94579ef43b2fe582056dad915f88e06c05ee27"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "1e94579ef43b2fe582056dad915f88e06c05ee27"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "244953898c6db9e61e71702cec0d7ce8da1cd6b7"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "244953898c6db9e61e71702cec0d7ce8da1cd6b7"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2484bd2bc42338d995b06301f834ca2641fe5d5a"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2b219a3e180b7e37daf103cb8c01167f7b31fcbd"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "f2d3309ec0b603ca795e7d18077cc2bdd466e61c5c26748f9b8b275bd5e93d02",
+      "source": "f2d3309ec0b603ca795e7d18077cc2bdd466e61c5c26748f9b8b275bd5e93d02.json",
+      "tree": "2b37bcbd7448ac5bd11d93e0216b3213ece40330"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2b37bcbd7448ac5bd11d93e0216b3213ece40330"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "2e426b860681f7eb2c9051fd68433f7e0279948f"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2e426b860681f7eb2c9051fd68433f7e0279948f"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "2f029787846c2b52e14af89cfa57cf5b0ddaf48f"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "2f029787846c2b52e14af89cfa57cf5b0ddaf48f"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "32368c76d49dce6cedaa5102a7b3b1738cb6d6e4"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "32368c76d49dce6cedaa5102a7b3b1738cb6d6e4"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "33e0d5ad348cef78e90cf06d0da4c49fec2cb825"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "33e0d5ad348cef78e90cf06d0da4c49fec2cb825"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "3469da8cf33982cef7b981c69098aad13167b2b9"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "39d9fad6d7a02d16497f9beba0b3ad0222dd63c3"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "39d9fad6d7a02d16497f9beba0b3ad0222dd63c3"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "3a3959894ad4327a3cf53ae6a7cf3fbc23427748"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "3a4dfd70ac2ef1df5d52366fc5247f7e58dc7ea9"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "3a4dfd70ac2ef1df5d52366fc5247f7e58dc7ea9"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "3d8f3ee723e9148f3769c38c9bc6d76790d4be49"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "3d8f3ee723e9148f3769c38c9bc6d76790d4be49"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "3e9513ae5d2f7b62e85fc13336f1dcc666ef9565"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "3e9513ae5d2f7b62e85fc13336f1dcc666ef9565"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "4aa59cb0b7ebe91241838d17fa361dadd33400be"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "4aa59cb0b7ebe91241838d17fa361dadd33400be"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "55859406b98cadc948b1428fce63d8eb0975ecbf"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "57633b78ddf8623c6bf470a00d849ed1bed6b787"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "5a80092cf3a658ee46dfc084abb097a81256ae2a"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "5a80092cf3a658ee46dfc084abb097a81256ae2a"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "5b795b78ce60e271d1c28ce9a8a8747667784167"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "5b795b78ce60e271d1c28ce9a8a8747667784167"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "5da7e7f49bfd2642b0ded1f08208ebd5388c79dc"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "5da7e7f49bfd2642b0ded1f08208ebd5388c79dc"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "c88913ba320a157a6fe7fa36b6a3a9a69d2545594d556939f8efe8474b0b7096",
+      "source": "c88913ba320a157a6fe7fa36b6a3a9a69d2545594d556939f8efe8474b0b7096.json",
+      "tree": "6472dafcfb7af4573ee1ed408d0bdea80a47c705"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "6472dafcfb7af4573ee1ed408d0bdea80a47c705"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "65355be56cf913888c639b7ed0a894d2d4519d62"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "6bc35e6867fa87a0f6e339688127e21e9f887664"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "6bc35e6867fa87a0f6e339688127e21e9f887664"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "6cda675213055a181f26aadeff457b40493b0b33"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "6cda675213055a181f26aadeff457b40493b0b33"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "6d517da53cc090e578fee25ae7103b9f703c003d"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "6d517da53cc090e578fee25ae7103b9f703c003d"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "70cf9e3f6be89e501a0a74f6c5ec6a742d08c028"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "70cf9e3f6be89e501a0a74f6c5ec6a742d08c028"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "7692be9ed922eb74b1616b09eaf54d0a56718c63"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "76c26c9ad2597c7e859be2956f9395c07f75fe75"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "76c26c9ad2597c7e859be2956f9395c07f75fe75"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "76c32234a6944d6c2edf810df8c1db13de10c43c"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "76c32234a6944d6c2edf810df8c1db13de10c43c"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "7cdcb76c6252a06c5ed25898a082079011d01593"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "7cdcb76c6252a06c5ed25898a082079011d01593"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "7db1a3f10ff2e6bb5c24f0219cde54e3ed76c133"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "7e0bd39b64f3c7650a63a5ff0ac760ee4cb0c85c"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "826b43370be082607e4019f85f92f6e600de7119"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "826b43370be082607e4019f85f92f6e600de7119"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "87ea8580651c311e0a64397425faa080539fb701"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "897f788bab4f5a138b293bbc8b7d0ec82ed25899"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "897f788bab4f5a138b293bbc8b7d0ec82ed25899"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "8d5e571ff54c8bce2a5588efe01b59647e790e55"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "8d5e571ff54c8bce2a5588efe01b59647e790e55"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "8f178c00e7d328195d6b84c5755f4ad521dadb7c"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "8fbe1c6af577c7bdf85df3bc420721459a7e9a73"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "8fbe1c6af577c7bdf85df3bc420721459a7e9a73"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "9141eb889fab0c0e2b062799f66facac274c39ed"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "9141eb889fab0c0e2b062799f66facac274c39ed"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "92321afe30c2b347da3b02d4456b0f153a7f0460"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "92321afe30c2b347da3b02d4456b0f153a7f0460"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "970d79e1a0a337e627ab651f8f16e162e366f0b5"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "970d79e1a0a337e627ab651f8f16e162e366f0b5"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "982f28924a8fb6aceacc9d39525a7e64bd5b4331"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "982f28924a8fb6aceacc9d39525a7e64bd5b4331"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "999b7cb06c777c95b7ae73efe6aca7baf731ae8d"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "999b7cb06c777c95b7ae73efe6aca7baf731ae8d"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "9e1ddf7620be9a1027c5027389309f54b9bf5679"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "9e1ddf7620be9a1027c5027389309f54b9bf5679"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "a81291cfb57cbd6779f7dce349f4a792d431bc1d"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "a81291cfb57cbd6779f7dce349f4a792d431bc1d"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "a9d54b7182ba8f32a34de4760d53601cd25f8b30"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "a9f6f99b6673e05c472f29ce72026ac08e985002"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "a9f6f99b6673e05c472f29ce72026ac08e985002"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "ac9371c8f3adc161deb123b95bd58928645c3aa8"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "b3d39756210c65ee5cfada2f6a4d361f772ff23a"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "b7b7093e61404d5bc716707d7b1d0723a2eb259e"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "b7b7093e61404d5bc716707d7b1d0723a2eb259e"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "c22fb7b5605b63fa8069d67c9f21de8f2c5e83e6"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "c22fb7b5605b63fa8069d67c9f21de8f2c5e83e6"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "c2d25aea2e47f049d61f8fd55df0d09ad8299225"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "c2d25aea2e47f049d61f8fd55df0d09ad8299225"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "c65f66a9510d49049e1ffc6e40d569c95e013ed6"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "c6b7e935bed34fa316636826d7e283521aa5b1df"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "c6b7e935bed34fa316636826d7e283521aa5b1df"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "d0f62efbb7e00916d3de43f78ff56f9722394488"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "d0f62efbb7e00916d3de43f78ff56f9722394488"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "c88913ba320a157a6fe7fa36b6a3a9a69d2545594d556939f8efe8474b0b7096",
+      "source": "c88913ba320a157a6fe7fa36b6a3a9a69d2545594d556939f8efe8474b0b7096.json",
+      "tree": "d46010557a52f0891c2d2b87c78ea18166e67a71"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "d46010557a52f0891c2d2b87c78ea18166e67a71"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "d8c9a4a2849807d85e2b71a5e09fa350faee3073"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "d8c9a4a2849807d85e2b71a5e09fa350faee3073"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "def284b69a4aacee2efb0be1ac2a5d8b11d19407"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "def284b69a4aacee2efb0be1ac2a5d8b11d19407"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "e2e5b8fe893865e14a6034c2d58a17f9210a64df"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "e2e5b8fe893865e14a6034c2d58a17f9210a64df"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "e32fb6d1f416bc264911c953505ace448054db47"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "e32fb6d1f416bc264911c953505ace448054db47"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "e66dd5c26c055f78ad0f29d2254b2bf6b5202612"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "e66dd5c26c055f78ad0f29d2254b2bf6b5202612"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "e7ba7d0616017f0411fc573dd57ea42ec47faf22"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "e7ba7d0616017f0411fc573dd57ea42ec47faf22"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "eae1fe5dfbfd25187a96bf7c957d358d5db121ee"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "eee661f5ea4a459713601a367830ed4cc9c6e3ba"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "eee661f5ea4a459713601a367830ed4cc9c6e3ba"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "eef536d975e242f821ea3d1c250bf0dd15679e80"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "f5e5d612f795ff2794cd4bc10a08bf27ba3e1240"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "f5e5d612f795ff2794cd4bc10a08bf27ba3e1240"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "f6b583fcab8d7da3b4fa077d1401da8eafeacbde"
+    },
+    {
+      "path": "config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "fa43f0fed2916f0f7d21a50ec61f1cd20111875c"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "fa43f0fed2916f0f7d21a50ec61f1cd20111875c"
+    },
+    {
+      "path": "res/config/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "fd2b561df769eb7cd05a5b24810dc5354c9778ea"
+    },
+    {
+      "path": "res/config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "fd2b561df769eb7cd05a5b24810dc5354c9778ea"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914",
+      "source": "8698af12ffa0148ade0618e6f8acfc54eee09cebbbc354aa846881fd84d4b914.json",
+      "tree": "ff80ab3b246021220066449d326d8691046baf80"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "ff80ab3b246021220066449d326d8691046baf80"
+    },
+    {
+      "path": "config/object.json",
+      "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
+      "sha256": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c",
+      "source": "3bba9ca0381d5f94f4cdfe7b76f4757c97384ef3f9a406bcaafc65dfa40edb4c.json",
+      "tree": "ffc3a72ea3091dfd3d9853f1d606c9d4f2d278a8"
+    },
+    {
+      "path": "maps/map.tmx",
+      "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a.tmx",
+      "tree": "ffc3a72ea3091dfd3d9853f1d606c9d4f2d278a8"
+    }
+  ],
+  "schemaVersion": 1,
+  "verified": false
+}
