@@ -70,6 +70,7 @@ class CMap : public CGameObject {
 
     friend class CMapLoader;
     friend class CGameContext;
+    friend class CGameObject;
     friend class CFightHandler;
     friend class CCombatParticipantGuard;
     friend class CSceneManager;
@@ -85,9 +86,15 @@ class CMap : public CGameObject {
            V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
+           V_PROPERTY(CMap, std::string, staticTerrainData, getStaticTerrainData, setStaticTerrainData),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
   public:
     CMap();
+
+    // Opt-in immutable native raster. Actual materialized tiles remain the mutable, serialized overlay.
+    std::string getStaticTerrainData() const;
+    void setStaticTerrainData(std::string data);
+    void validateStaticTerrainBounds() const;
 
     // Native opt-in capability; intentionally absent from reflection and Python bindings.
     std::optional<CGameContext::UnsafeOperationLease> tryBeginUnsafeOperation();
@@ -323,11 +330,39 @@ class CMap : public CGameObject {
                                            CMovementPresentation presentation = {});
 
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+    struct ObjectSnapshot;
+    struct SimulationSnapshot;
+    class SimulationCursor;
+    std::shared_ptr<const ObjectSnapshot> objectSnapshot;
+    std::shared_ptr<const SimulationSnapshot> simulationSnapshot;
+    std::uint64_t simulationSelectionRevision = 0;
+    std::shared_ptr<const ObjectSnapshot> getObjectSnapshot();
+    std::shared_ptr<const SimulationSnapshot> getSimulationSnapshot();
+    SimulationCursor simulationObjects();
+    void invalidateObjectSnapshot();
+    void invalidateSimulationSelection();
+
     // TODO: cleanup and after load initialization
     std::unordered_multimap<Coords, std::string> mapObjectsCache;
 
     std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
     std::vector<CNavigationEdge> navigationEdges;
+
+    struct StaticTerrainLevel {
+        int width;
+        int height;
+        std::vector<std::string> palette;
+        std::vector<std::pair<bool, int>> navigation;
+        std::vector<std::uint8_t> cells;
+    };
+    std::string staticTerrainData;
+    std::map<int, StaticTerrainLevel> staticTerrainLevels;
+    std::map<std::string, std::string> staticTerrainConfigurations;
+    std::uint64_t staticTerrainConfigRevision = 0;
+    std::weak_ptr<CObjectHandler> staticTerrainConfigOwner;
+    void validateStaticTerrainConfiguration();
+    std::optional<std::pair<bool, int>> lookupStaticTerrainCell(Coords coords);
+    std::optional<std::string> staticTerrainTileType(Coords coords);
 
     std::shared_ptr<CPlayer> player;
     StringMap defaultTiles;
@@ -407,6 +442,19 @@ class CMap : public CGameObject {
 };
 
 namespace performance_guard {
+struct MapTurnSelectionWork {
+    std::size_t objectSnapshotBuilds = 0;
+    std::size_t objectSnapshotEntries = 0;
+    std::size_t selectionBuilds = 0;
+    std::size_t candidateVisits = 0;
+    std::size_t fallbackVisits = 0;
+    std::size_t simulationChecks = 0;
+};
+
+void resetMapTurnSelectionProbe();
+MapTurnSelectionWork mapTurnSelectionProbeStats();
+void disableMapTurnSelectionProbe();
+
 void resetMapCoordinateLookupProbe();
 std::size_t mapCoordinateLookupProbeCount();
 void disableMapCoordinateLookupProbe();

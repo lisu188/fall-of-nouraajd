@@ -91,10 +91,12 @@ def _sameRepository(actual: str, expected: str) -> bool:
     return actual.casefold() == expected.casefold()
 
 
-def _associationNumber(payload: Mapping[str, Any], name: str) -> int:
+def _associationNumber(payload: Mapping[str, Any], name: str) -> int | None:
     associations = payload.get("pull_requests")
     if not isinstance(associations, list):
         raise EvidenceError("malformed_evidence", f"{name}.pull_requests must be an array")
+    if not associations:
+        return None
     if len(associations) != 1:
         raise EvidenceError(
             "pr_association_count_not_one",
@@ -196,34 +198,38 @@ def evaluatePolicy(event: Mapping[str, Any], repository: str, getJson: JsonGette
 
     eventRun = _object(event.get("workflow_run"), "event.workflow_run")
     runId = _positiveInteger(eventRun.get("id"), "event.workflow_run.id")
-    eventPrNumber = _associationNumber(eventRun, "event.workflow_run")
     eventHeadSha = _nonEmptyString(eventRun.get("head_sha"), "event.workflow_run.head_sha")
     if not _sameRepository(_repositoryName(eventRun, "event.workflow_run"), repository):
-        return _deny("event_repository_mismatch", eventPrNumber)
+        return _deny("event_repository_mismatch")
 
     run = _object(getJson(f"repos/{repository}/actions/runs/{runId}"), "workflow run")
     if _positiveInteger(run.get("id"), "workflow_run.id") != runId:
         raise EvidenceError("workflow_identity_unverifiable", "refetched workflow run ID differs")
-    if _associationNumber(run, "workflow_run") != eventPrNumber:
-        raise EvidenceError("workflow_identity_unverifiable", "refetched pull request association differs")
     runHeadSha = _nonEmptyString(run.get("head_sha"), "workflow_run.head_sha")
     if runHeadSha != eventHeadSha:
         raise EvidenceError("workflow_identity_unverifiable", "refetched workflow head SHA differs")
     if not _sameRepository(_repositoryName(run, "workflow_run"), repository):
-        return _deny("workflow_repository_mismatch", eventPrNumber)
+        return _deny("workflow_repository_mismatch")
     runName = _nonEmptyString(run.get("name"), "workflow_run.name")
     runPath = _nonEmptyString(run.get("path"), "workflow_run.path")
     if runName != "build" or runPath != ".github/workflows/build.yml":
-        return _deny("workflow_identity_mismatch", eventPrNumber)
+        return _deny("workflow_identity_mismatch")
     runStatus = _nonEmptyString(run.get("status"), "workflow_run.status")
     if runStatus != "completed":
-        return _deny("workflow_not_completed", eventPrNumber)
+        return _deny("workflow_not_completed")
     runConclusion = _nonEmptyString(run.get("conclusion"), "workflow_run.conclusion")
     if runConclusion != "success":
-        return _deny("workflow_not_successful", eventPrNumber)
+        return _deny("workflow_not_successful")
     runEvent = _nonEmptyString(run.get("event"), "workflow_run.event")
     if runEvent != "pull_request":
-        return _deny("workflow_event_not_pull_request", eventPrNumber)
+        return _deny("workflow_event_not_pull_request")
+
+    eventPrNumber = _associationNumber(eventRun, "event.workflow_run")
+    runPrNumber = _associationNumber(run, "workflow_run")
+    if eventPrNumber is None or runPrNumber is None:
+        return _deny("pr_association_missing")
+    if runPrNumber != eventPrNumber:
+        raise EvidenceError("workflow_identity_unverifiable", "refetched pull request association differs")
 
     pr = _object(getJson(f"repos/{repository}/pulls/{eventPrNumber}"), "pull request")
     if _positiveInteger(pr.get("number"), "pull_request.number") != eventPrNumber:
