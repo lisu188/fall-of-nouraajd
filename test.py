@@ -27935,9 +27935,21 @@ class TestRunnerSuiteTest(unittest.TestCase):
         restore = workflowStep(job, "Restore Python test timings")
         save = workflowStep(job, "Save Python test timings after coverage")
         coverage = workflowStep(job, "coverage")
-        revision = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
-        self.assertEqual("actions/cache/restore@" + revision, workflowScalar(restore, "uses", 8))
-        self.assertEqual("actions/cache/save@" + revision, workflowScalar(save, "uses", 8))
+        reviewed_pairs = (
+            (
+                "actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae",
+                "actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae",
+            ),
+            (
+                "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+                "actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae",
+            ),
+            (
+                "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+                "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+            ),
+        )
+        self.assertIn((workflowScalar(restore, "uses", 8), workflowScalar(save, "uses", 8)), reviewed_pairs)
         self.assertTrue(evaluateCondition(workflowScalar(save, "if", 8), {}, prior_success=False))
         self.assertEqual("always()", workflowScalar(save, "if", 8))
         self.assertEqual("$" + "{{ env.GAME_TEST_TIMINGS_FILE }}", workflowScalar(restore, "path", 10))
@@ -27953,6 +27965,191 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertLess(job.index(coverage), job.index(save))
         self.assertEqual("./scripts/run_coverage.sh", workflowScalar(coverage, "run", 8))
         self.assertEqual("60", workflowScalar(coverage, "timeout-minutes", 8))
+
+    def testCoverageTimingCachePinsStayReviewedAndPaired(self):
+        from tests import test_mcp_branch_workflow as workflow
+        from unittest import mock
+
+        job = workflow.workflowJob("linux-coverage")
+        restore = workflow.workflowStep(job, "Restore Python test timings")
+        save = workflow.workflowStep(job, "Save Python test timings after coverage")
+
+        def checkPair(restore_use, save_use, accepted):
+            modified = job
+            for step, use in ((restore, restore_use), (save, save_use)):
+                previous = "uses: " + workflow.workflowScalar(step, "uses", 8)
+                self.assertEqual(1, step.count(previous))
+                self.assertEqual(1, modified.count(step))
+                modified = modified.replace(step, step.replace(previous, "uses: " + use, 1), 1)
+            with mock.patch.object(workflow, "workflowJob", return_value=modified):
+                if accepted:
+                    self.testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails()
+                else:
+                    with self.assertRaises(AssertionError):
+                        self.testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails()
+
+        old_revision = "27d5ce7f107fe9357f9df03efb73ab90386fccae"
+        new_restore_revision = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
+        for restore_revision in (old_revision, new_restore_revision):
+            with self.subTest(accepted=restore_revision):
+                checkPair("actions/cache/restore@" + restore_revision, "actions/cache/save@" + old_revision, True)
+        with self.subTest(accepted=(new_restore_revision, new_restore_revision)):
+            checkPair(
+                "actions/cache/restore@" + new_restore_revision, "actions/cache/save@" + new_restore_revision, True
+            )
+        for restore_revision, save_revision in (
+            ("f" * 40, old_revision),
+            (old_revision, "f" * 40),
+            ("v4", old_revision),
+            (old_revision, "v4"),
+            ("main", old_revision),
+            (old_revision[:12], old_revision),
+            (old_revision, new_restore_revision),
+        ):
+            with self.subTest(rejected=(restore_revision, save_revision)):
+                checkPair("actions/cache/restore@" + restore_revision, "actions/cache/save@" + save_revision, False)
+
+    def cmakeNativeRuntimeEnvironment(self, *, windows, declared_runtime):
+        cmake_executable = shutil.which("cmake")
+        if cmake_executable is None:
+            self.skipTest("CMake is unavailable for the native-test runtime environment check")
+        ninja_executable = shutil.which("ninja")
+        if ninja_executable is None:
+            self.skipTest("Ninja is unavailable for the compile-free CMake runtime environment check")
+        ctest_executable = Path(cmake_executable).with_name("ctest" + Path(cmake_executable).suffix)
+        if not ctest_executable.is_file():
+            self.skipTest("Matching CTest is unavailable for the native-test runtime environment check")
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        setup_start = cmake.index("set(GAME_UNIT_TEST_TARGETS)\n")
+        function_start = cmake.index("function(add_game_unit_test target_name)", setup_start)
+        setup = cmake[setup_start:function_start]
+        function_end = cmake.index("endfunction()", function_start)
+        function_body = cmake[function_start:function_end]
+        environment_start = function_body.index("    if (WIN32)\n        if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)")
+        environment_end = function_body.index("    set(GAME_UNIT_TEST_TARGETS", environment_start)
+        unit_environment = function_body[environment_start:environment_end]
+        performance_start = cmake.index('add_test(NAME "performance.performance_guard_tests"')
+        performance_start = cmake.index("if (WIN32)", performance_start)
+        performance_end = cmake.index("add_game_unit_test(vstd_unit_tests", performance_start)
+        performance_environment = cmake[performance_start:performance_end]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-python-runtime-") as temporary:
+            root = Path(temporary).resolve()
+            self.assertEqual(root.parent, Path(tempfile.gettempdir()).resolve())
+            self.assertTrue(root.name.startswith("nouraajd-python-runtime-"))
+            interpreter_directory = root / "configured interpreter"
+            runtime_directory = root / "selected runtime"
+            dependency_root = root / "dependency provider"
+            dependency_directory = dependency_root / "x64-windows" / "bin"
+            inherited_directory = root / "inherited tools"
+            for directory in (
+                interpreter_directory,
+                runtime_directory,
+                dependency_directory,
+                inherited_directory,
+            ):
+                directory.mkdir(parents=True)
+            runtime_directories = [root / "missing runtime", runtime_directory] if declared_runtime else []
+            quote = lambda value: "[==[" + str(value).replace("\\", "/") + "]==]"
+            environment_reference = lambda name: "$" + "ENV{" + name + "}"
+            command_reference = "$" + "{CMAKE_COMMAND}"
+            output_paths = {name: root / (name + ".txt") for name in ("unit", "performance")}
+            for name, result_path in output_paths.items():
+                (root / (name + ".cmake")).write_text(
+                    "file(WRITE "
+                    + quote(result_path)
+                    + ' "'
+                    + environment_reference("PATH")
+                    + "\\n"
+                    + environment_reference("PYTHONHOME")
+                    + '\\n")\n',
+                    encoding="utf-8",
+                )
+            project = "\n".join(
+                (
+                    "cmake_minimum_required(VERSION 3.22)",
+                    "project(native_runtime_environment LANGUAGES NONE)",
+                    "enable_testing()",
+                    "set(WIN32 " + ("TRUE" if windows else "FALSE") + ")",
+                    "set(Python3_EXECUTABLE " + quote(interpreter_directory / "python.exe") + ")",
+                    "set(Python3_RUNTIME_LIBRARY_DIRS "
+                    + quote(";".join(str(path).replace("\\", "/") for path in runtime_directories))
+                    + ")",
+                    "set(_VCPKG_INSTALLED_DIR " + quote(dependency_root) + ")",
+                    "set(VCPKG_TARGET_TRIPLET x64-windows)",
+                    setup,
+                    'add_test(NAME native_runtime_probe COMMAND "'
+                    + command_reference
+                    + '" -P '
+                    + quote(root / "unit.cmake")
+                    + ")",
+                    "set(test_name native_runtime_probe)",
+                    unit_environment,
+                    'add_test(NAME performance.performance_guard_tests COMMAND "'
+                    + command_reference
+                    + '" -P '
+                    + quote(root / "performance.cmake")
+                    + ")",
+                    performance_environment,
+                )
+            )
+            (root / "CMakeLists.txt").write_text(project + "\n", encoding="utf-8")
+            environment = os.environ.copy()
+            environment.update(PATH=str(inherited_directory), PYTHONHOME=sys.base_prefix)
+            build = root / "build"
+            for command in (
+                [
+                    cmake_executable,
+                    "-S",
+                    str(root),
+                    "-B",
+                    str(build),
+                    "-G",
+                    "Ninja",
+                    "-DCMAKE_MAKE_PROGRAM=" + ninja_executable,
+                ],
+                [str(ctest_executable), "--test-dir", str(build), "--output-on-failure"],
+            ):
+                completed = subprocess.run(
+                    command,
+                    cwd=root,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            results = {}
+            for name, path in output_paths.items():
+                actual_path, actual_home = path.read_text(encoding="utf-8").splitlines()
+                results[name] = ([Path(entry) for entry in actual_path.split(os.pathsep)], actual_home)
+            expected_runtime = runtime_directory if declared_runtime else interpreter_directory
+            return results, expected_runtime, dependency_directory, inherited_directory, interpreter_directory
+
+    def testCmakeNativeTestsPreferDiscoveredPythonRuntimeOverDependencyProvider(self):
+        results, runtime, dependency, inherited, interpreter = self.cmakeNativeRuntimeEnvironment(
+            windows=True, declared_runtime=True
+        )
+        for target, (actual_path, actual_home) in results.items():
+            with self.subTest(target=target):
+                self.assertEqual([runtime, dependency, inherited], actual_path)
+                self.assertEqual(interpreter, Path(actual_home))
+
+    def testCmakeNativeTestsUseInterpreterDirectoryWhenRuntimeDirsAreUnavailable(self):
+        results, runtime, dependency, inherited, interpreter = self.cmakeNativeRuntimeEnvironment(
+            windows=True, declared_runtime=False
+        )
+        for target, (actual_path, actual_home) in results.items():
+            with self.subTest(target=target):
+                self.assertEqual([runtime, dependency, inherited], actual_path)
+                self.assertEqual(interpreter, Path(actual_home))
+
+    def testCmakeNativeRuntimePolicyLeavesLinuxEnvironmentUnchanged(self):
+        results, _, _, inherited, _ = self.cmakeNativeRuntimeEnvironment(windows=False, declared_runtime=True)
+        for target, (actual_path, actual_home) in results.items():
+            with self.subTest(target=target):
+                self.assertEqual([inherited], actual_path)
+                self.assertEqual(sys.base_prefix, actual_home)
 
     def testCmakeCopiesCanonicalRunnerWithoutInterpretingWorkflowExpressions(self):
         cmake_executable = shutil.which("cmake")
