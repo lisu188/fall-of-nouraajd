@@ -287,7 +287,7 @@ jobs:
       - name: Save ccache
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -366,7 +366,7 @@ jobs:
       - name: Save Python test timings after coverage
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
@@ -389,7 +389,7 @@ jobs:
       - name: Save ccache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -649,7 +649,7 @@ jobs:
             "--x-install-root=$env:VCPKG_INSTALLED_DIR"
       - name: Save vcpkg installed tree
         if: steps.validate-vcpkg-installed.outputs.valid != 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -781,14 +781,14 @@ jobs:
       - name: Save missing vcpkg installed tree
         if: steps.install-missing-vcpkg-installed.outputs.installed == 'true'
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
       - name: Save repaired vcpkg installed tree
         if: steps.repair-vcpkg-installed.outputs.repaired == 'true'
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}-windows
@@ -970,7 +970,7 @@ jobs:
       - name: Save sccache
         if: always() && steps.windows-sccache.outputs.prefix != ''
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}

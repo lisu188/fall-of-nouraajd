@@ -103,7 +103,7 @@ jobs:
       - name: Save bounded diagnostic compiler cache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.ccache.outputs.prefix }}${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}

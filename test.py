@@ -27932,7 +27932,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         restore = workflowStep(job, "Restore Python test timings")
         save = workflowStep(job, "Save Python test timings after coverage")
         coverage = workflowStep(job, "coverage")
-        revision = "27d5ce7f107fe9357f9df03efb73ab90386fccae"
+        revision = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
         self.assertEqual("actions/cache/restore@" + revision, workflowScalar(restore, "uses", 8))
         self.assertEqual("actions/cache/save@" + revision, workflowScalar(save, "uses", 8))
         self.assertTrue(evaluateCondition(workflowScalar(save, "if", 8), {}, prior_success=False))
