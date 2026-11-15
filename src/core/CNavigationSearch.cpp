@@ -304,7 +304,7 @@ template <SearchRecords Records, SearchGraph Graph>
 void search(Records &records, std::pmr::vector<Index> &entries, const Graph &graph, Coords start, Coords goal,
             bool fullPath, CNavigationSearchLimits limits, CNavigationSearchResult &result) {
     result.firstStep = start;
-    if (!graph.current())
+    if (limits.stopToken.stop_requested() || !graph.current())
         throw SearchFailure{CNavigationSearchStatus::Cancelled};
     if (start == goal) {
         if (fullPath)
@@ -332,7 +332,7 @@ void search(Records &records, std::pmr::vector<Index> &entries, const Graph &gra
     IndexedHeap heap(records, entries, result.statistics);
     heap.update(startIndex);
     while (!heap.empty()) {
-        if (!graph.current())
+        if (limits.stopToken.stop_requested() || !graph.current())
             throw SearchFailure{CNavigationSearchStatus::Cancelled};
         const auto currentIndex = heap.pop();
         // Copy before sparse storage grows during neighbor discovery.
@@ -352,7 +352,7 @@ void search(Records &records, std::pmr::vector<Index> &entries, const Graph &gra
                 }
                 std::reverse(result.path.begin(), result.path.end());
             }
-            if (!graph.current())
+            if (limits.stopToken.stop_requested() || !graph.current())
                 throw SearchFailure{CNavigationSearchStatus::Cancelled};
             result.status = CNavigationSearchStatus::Found;
             return;
@@ -384,7 +384,7 @@ void search(Records &records, std::pmr::vector<Index> &entries, const Graph &gra
             heap.update(nextIndex);
         });
     }
-    if (!graph.current())
+    if (limits.stopToken.stop_requested() || !graph.current())
         throw SearchFailure{CNavigationSearchStatus::Cancelled};
 }
 
