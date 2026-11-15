@@ -63,7 +63,7 @@ jobs:
           python3 scripts/mcp_branch_shards.py matrix --github-output "${GITHUB_OUTPUT}"
           --catalog-output test/mcp-branch-catalog.json
       - name: Upload authored branch obligations and pending blockers
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-catalog-${{ github.sha }}
           path: test/mcp-branch-catalog.json
@@ -154,7 +154,7 @@ jobs:
           echo "prefix=${{ runner.os }}-ccache-cxx26-release-scoped-v1-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
         if: needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -162,7 +162,7 @@ jobs:
             ${{ steps.ccache.outputs.prefix }}
       - name: Cache Python test timings
         if: needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-${{ github.run_id }}
@@ -275,7 +275,7 @@ jobs:
         run: cmake --build cmake-build-gcc15-release --target package -j"$(nproc)"
       - name: publish
         if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fall-of-nouraajd-linux
           path: cmake-build-gcc15-release/fall-of-nouraajd-*.tar.gz
@@ -287,13 +287,13 @@ jobs:
       - name: Save ccache
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload compile diagnostics
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: build-metrics-linux
           path: test/build-metrics/
@@ -348,14 +348,14 @@ jobs:
           echo "dir=${CCACHE_DIR}" >> "${GITHUB_OUTPUT}"
           echo "prefix=${{ runner.os }}-ccache-cxx26-coverage-scoped-v1-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.ccache.outputs.prefix }}
       - name: Restore Python test timings
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
@@ -366,13 +366,13 @@ jobs:
       - name: Save Python test timings after coverage
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: linux-coverage-report
           path: |
@@ -389,7 +389,7 @@ jobs:
       - name: Save ccache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -559,7 +559,7 @@ jobs:
           & $sccacheExe --version
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v3-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat') }}
@@ -649,7 +649,7 @@ jobs:
             "--x-install-root=$env:VCPKG_INSTALLED_DIR"
       - name: Save vcpkg installed tree
         if: steps.validate-vcpkg-installed.outputs.valid != 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -749,7 +749,7 @@ jobs:
       - *setup-windows-fast-tools
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
@@ -781,14 +781,14 @@ jobs:
       - name: Save missing vcpkg installed tree
         if: steps.install-missing-vcpkg-installed.outputs.installed == 'true'
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
       - name: Save repaired vcpkg installed tree
         if: steps.repair-vcpkg-installed.outputs.repaired == 'true'
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}-windows
@@ -851,14 +851,14 @@ jobs:
           $sccacheVersion = $env:SCCACHE_VERSION -replace "[^A-Za-z0-9_.-]", "-"
           "prefix=${{ runner.os }}-sccache-$sccacheVersion-clangcl-${{ env.LLVM_VERSION }}-cxx26-$toolset-" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
       - name: Restore sccache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ steps.windows-sccache.outputs.prefix }}
       - name: Cache Python test timings
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-${{ github.run_id }}
@@ -963,20 +963,20 @@ jobs:
           if not errorlevel 1 sccache --show-stats
       - name: publish
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fall-of-nouraajd-windows
           path: cmake-build-clangcl20-release/fall-of-nouraajd-*.zip
       - name: Save sccache
         if: always() && steps.windows-sccache.outputs.prefix != ''
         continue-on-error: true
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload compile diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: build-metrics-windows
           path: test/build-metrics/
@@ -1034,7 +1034,7 @@ jobs:
           --shard-index ${{ matrix.shard }} --shard-count ${{ matrix.count }}
       - name: Upload branch traces and timings
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branches-linux-${{ matrix.shard }}-${{ github.sha }}
           path: test/mcp-branches-linux-${{ matrix.shard }}
@@ -1090,7 +1090,7 @@ jobs:
           if errorlevel 1 exit /b 1
       - name: Upload branch traces and timings
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branches-windows-${{ matrix.shard }}-${{ github.sha }}
           path: test/mcp-branches-windows-${{ matrix.shard }}
@@ -1143,7 +1143,7 @@ jobs:
           --output test/mcp-branch-timings-windows.json
       - name: Publish measured branch timings for review
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mcp-branch-measured-timings-${{ github.sha }}
           path: test/mcp-branch-timings-*.json

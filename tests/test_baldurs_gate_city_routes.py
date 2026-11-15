@@ -204,6 +204,68 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     self.assertEqual([name], driver.contacts)
                     self.assertGreater(driver.turns, 14)
 
+    def eldothSnapshotDriver(self, present=True, wrong_owner=False):
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        driver = GameplayBranchDriver.__new__(GameplayBranchDriver)
+        driver.test = self
+        driver.game_map, driver.player = object(), object()
+        clock, actor = object(), object()
+        history = {"eldoth": "joined" if present else "absent"}
+
+        def call(owner, method, *args):
+            if owner is driver.game_map:
+                if method == "getObjectByName":
+                    return clock if args[0] == "cityClock" else actor if present else None
+                if method == "getBoolProperty":
+                    return present and args[0] == "plugin_cityFlag_eldothJoined"
+                if method == "getStringProperty":
+                    return (
+                        "city-json:" + json.dumps(history)
+                        if args[0] == "plugin_cityHistory"
+                        else "cityCampaignNpc16" if present else ""
+                    )
+            if owner is clock:
+                if method == "getObjectProperty":
+                    return object() if wrong_owner else actor if present else None
+                if method == "getStringProperty":
+                    return "city-json:" + json.dumps(["cityCampaignNpc16"] if present else [])
+            if owner is driver.player:
+                if method == "getItems":
+                    return []
+                if method == "getGold":
+                    return 1000
+                if method == "getNumericProperty":
+                    return 1000 if args[0] == "gold" else 10000
+            if owner is actor:
+                values = {
+                    "getHp": 14,
+                    "getItems": [],
+                    "getEquipped": {},
+                    "getStringProperty": "cityParty",
+                    "isPlayer": False,
+                }
+                if method in values:
+                    return values[method]
+            raise AssertionError(("Unexpected driver API call", method, args))
+
+        driver.call = call
+        return driver
+
+    def testEldothSnapshotUsesActualDriverMapForPresentAndAbsentActors(self):
+        for present in (False, True):
+            with self.subTest(present=present):
+                driver = self.eldothSnapshotDriver(present)
+                snapshot = routes.eldothHistorySnapshot(driver)
+                self.assertEqual("joined" if present else "absent", snapshot["history"]["eldoth"])
+                self.assertEqual(present, snapshot["joined"])
+                self.assertEqual(1000, snapshot["resources"][0])
+                self.assertEqual(present, snapshot["actor"] is not None)
+
+    def testEldothSnapshotRejectsAnUnownedRegisteredCompanion(self):
+        with self.assertRaises(AssertionError):
+            routes.eldothHistorySnapshot(self.eldothSnapshotDriver(wrong_owner=True))
+
     def testNortheastArrivalCannotReachItsWestExitEvenWithOtherPortalCellsAllowed(self):
         walkable, portals = routes.cityMovementCells()
         bounds = routes.documents()["geometry"]["atlas"]["AR0300"]["bounds"]
@@ -1338,6 +1400,279 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertEqual(2, len(driver.travel_calls))
         self.assertTrue(driver.contact_acknowledged)
         self.assertEqual((26, 151, 0), driver.position)
+
+    def alatosBetrayalRouteModel(self, mutation=None):
+        from contextlib import ExitStack
+        from unittest.mock import patch
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        case = self
+        codes = ("WAND04", "STAF01", "CLCK14", "SCRL1W")
+
+        class Driver:
+            test = case
+            _combat_trace_seq = 41
+            combats = 0
+            trace_path = "source-only-api-trace"
+            playerVictoryAgainst = GameplayBranchDriver.playerVictoryAgainst
+
+            def __init__(self):
+                self.events, self.checks = [], []
+                self.registry, self.transfers = {}, []
+                self.player = {"__handle__": "hero"}
+                self.alatos = {"__handle__": "alatos"}
+                self.resar = {"__handle__": "resar"}
+                self.stage, self.exp, self.coins = "active", 10000, 1614
+                self.alive, self.present, self.npc = True, True, True
+                self.hero_items = [self.item(code, "quest-" + code) for code in ("MISC69", "MISC70", "MISC71")]
+                self.resar_items = [self.item(code, "resar-" + code) for code in codes]
+                self.captured_handles = {item["__handle__"] for item in self.resar_items}
+                self.victory = None
+                self._player_victory_history = []
+
+            def item(self, code, name, suffix=""):
+                handle = {"__handle__": name + suffix}
+                self.registry[handle["__handle__"]] = {"name": name, "code": code, "quantity": 1}
+                return handle
+
+            def startMap(self, name):
+                case.assertEqual("baldursGate", name)
+                self.events.append("start")
+
+            def flag(self, key):
+                return key == "plugin_cityInitialized"
+
+            def number(self, key):
+                return {
+                    "plugin_cityStartingGoldGrant": 1000,
+                    "plugin_cityStartingExpGrant": 10000,
+                    "plugin_cityPhase": 5,
+                    "plugin_cityStanding": 0,
+                    "plugin_cityReputation": 10,
+                }.get(key, 0)
+
+            def string(self, key):
+                return self.stage if key == "plugin_cityQuest_alatosTheft" else ""
+
+            def gold(self):
+                return self.coins
+
+            def questNames(self, completed=False):
+                return ["cityAlatosTheftQuest"] if completed and self.stage == "completed" else []
+
+            def object(self, name, required=True):
+                value = self.resar if name == "resar" and self.present else self.alatos if name == "alatos" else None
+                if required:
+                    case.assertIsNotNone(value, name)
+                return value
+
+            def call(self, owner, method, *args):
+                if owner["__handle__"] in self.registry:
+                    item = self.registry[owner["__handle__"]]
+                    if method == "getName":
+                        return item["name"]
+                    if method == "getStringProperty":
+                        return item["code"] if args[0] == "plugin_citySourceItem" else ""
+                    if method == "getNumericProperty":
+                        return item["quantity"] if args[0] == "plugin_cityQuantity" else 0
+                    if method == "getBoolProperty":
+                        return False
+                if owner == self.player:
+                    if method == "getName":
+                        return "player"
+                    if method == "getItems":
+                        return list(self.hero_items)
+                    if method == "getEquipped":
+                        return {}
+                    if method == "getNumericProperty":
+                        return self.exp if args[0] == "exp" else 1
+                    if method == "getStats":
+                        return {"__handle__": "stats"}
+                if owner["__handle__"] == "stats" and method == "getNumericProperty":
+                    return 6
+                if owner == self.resar or owner == self.alatos:
+                    if method == "getItems":
+                        return list(self.resar_items[:2]) if owner == self.resar else []
+                    if method == "getEquipped":
+                        return (
+                            {str(index): item for index, item in enumerate(self.resar_items[2:])}
+                            if owner == self.resar
+                            else {}
+                        )
+                    if method == "isAlive":
+                        return self.alive if owner == self.resar else True
+                    if method == "isNpc":
+                        return self.npc if owner == self.resar else True
+                    if method == "getBoolProperty":
+                        return False
+                    if method == "getStringProperty":
+                        if args[0] == "sourceInventory":
+                            return "city-json:" + json.dumps([{"item": code, "charges": [0, 0, 0]} for code in codes])
+                        return {
+                            "sourceArea": "AR0153",
+                            "sourceCreature": "RESAR" if owner == self.resar else "ALATOS",
+                            "label": "Resar" if owner == self.resar else "Alatos",
+                        }[args[0]]
+                case.fail(("Unexpected actual-route API call", owner, method, args))
+
+            def resolve(self):
+                if not self.present:
+                    return
+                self.events.append("native-death")
+                self.alive = mutation == "removedAlive"
+                self.present = False
+                for item in self.resar_items:
+                    self.transfers.append(item["__handle__"])
+                    transferred = item
+                    if mutation == "clonedLoot":
+                        row = self.registry[item["__handle__"]]
+                        transferred = self.item(row["code"], row["name"], "-clone")
+                    self.hero_items.append(transferred)
+                self.resar_items.clear()
+                if mutation == "changedQuantity":
+                    self.registry[self.hero_items[0]["__handle__"]]["quantity"] += 1
+                self.victory = {
+                    "seq": 41 if mutation == "staleReceipt" else 42,
+                    "map": "baldursGate",
+                    "survivor": {"name": "player"},
+                    "attacker": {"isPlayer": False, "name": "anotherActor" if mutation == "wrongOpponent" else "resar"},
+                }
+                self._player_victory_history = [] if mutation == "missingReceipt" else [self.victory]
+
+            def choose(self, dialog, action):
+                case.assertEqual("alatosDialog", dialog)
+                self.events.append(action)
+                if action == "questAlatosTheftComplete":
+                    self.stage, self.exp, self.npc = "completed", 14000, False
+                    self.hero_items.clear()
+                    if mutation in {
+                        "alreadyWon",
+                        "missingReceipt",
+                        "staleReceipt",
+                        "wrongOpponent",
+                        "removedAlive",
+                        "earlyXp",
+                    }:
+                        self.resolve()
+                        if mutation == "earlyXp":
+                            self.exp += 73
+                elif action == "talk":
+                    if mutation == "repeatReward":
+                        self.coins += 1
+                else:
+                    case.fail(action)
+
+            def contact(self, name):
+                case.assertEqual("alatos", name)
+                self.events.append("contact")
+                # Reproduce the hosted race: the first post-reload approach finishes pending betrayal.
+                if self.stage == "completed" and "save-reload" in self.events:
+                    self.resolve()
+
+            def condition(self, *args):
+                return False
+
+            def navigateTo(self, name):
+                case.assertEqual("resar", name)
+                self.events.append("native-approach")
+                self.resolve()
+
+            def revisit(self, name):
+                self.navigateTo(name)
+
+            def coords(self, owner=None):
+                return (2, 1, 0) if owner == self.resar else (1, 1, 0)
+
+            def assertNativeCombatOutcomes(self):
+                if self.victory:
+                    self._combat_trace_seq = self.victory["seq"]
+
+            def saveAndReload(self, label):
+                case.assertEqual("city-quest-alatosTheft-complete", label)
+                self.events.append("save-reload")
+                # A real reload changes protocol handles; only persisted names/properties can be compared afterward.
+                self.player = {"__handle__": "restoredHero"}
+                rebound = []
+                for item in self.hero_items:
+                    row = self.registry[item["__handle__"]]
+                    fresh = self.item(row["code"], row["name"], "-restored")
+                    self.registry[fresh["__handle__"]]["quantity"] = row["quantity"]
+                    rebound.append(fresh)
+                self.hero_items = rebound
+
+            def check(self, key, condition, **evidence):
+                case.assertTrue(condition)
+                self.checks.append((key, evidence))
+
+        data = {
+            "config": {
+                "alatos": {"class": "CCreature", "properties": {"label": "Alatos", "sourceArea": "AR0153"}},
+                "resar": {"class": "CCreature", "properties": {"label": "Resar", "sourceArea": "AR0153"}},
+            },
+            "source": {"items": {code: {"stack_size": 1} for code in codes}},
+            "quests": [
+                {
+                    "id": "alatosTheft",
+                    "givers": [{"label": "Alatos"}],
+                    "outcomes": [
+                        {
+                            "id": "complete",
+                            "conditions": {
+                                "items": [{"anyOf": [code], "count": 1} for code in ("MISC69", "MISC70", "MISC71")]
+                            },
+                            "effects": {"xp": 4000, "hostile": [{"label": "Resar"}]},
+                            "terminal": True,
+                        }
+                    ],
+                }
+            ],
+        }
+        driver = Driver()
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(routes, "documents", return_value=data))
+            stack.enter_context(patch.object(routes, "currentArea", return_value="AR0153"))
+            stack.enter_context(patch.object(routes, "travel", side_effect=lambda *_args: None))
+            stack.enter_context(
+                patch.object(routes, "contactCityObject", side_effect=lambda _driver, name: driver.contact(name))
+            )
+            routes.questRoute(driver, "alatosTheft", "complete")
+        return driver
+
+    def testAlatosCompletesTheDelayedNativeBetrayalBeforeTheUnchangedRepeatBaseline(self):
+        driver = self.alatosBetrayalRouteModel()
+        self.assertLess(driver.events.index("native-death"), driver.events.index("save-reload"))
+        self.assertEqual(driver.captured_handles, set(driver.transfers))
+        self.assertEqual(4, len(driver.transfers))
+        self.assertEqual(1, driver.combats)
+        self.assertEqual((1614, 14000), (driver.coins, driver.exp))
+        self.assertEqual(42, driver.checks[0][1]["resarNativeVictorySeq"])
+        self.assertEqual(4, len(driver.checks[0][1]["resarSourcePossessions"]))
+
+    def testAlatosCreditsAnEarlierNativeVictoryOnlyWithActualDeathAndFreshReceipt(self):
+        driver = self.alatosBetrayalRouteModel("alreadyWon")
+        self.assertNotIn("native-approach", driver.events)
+        self.assertEqual(1, driver.combats)
+        for mutation, message in [
+            ("missingReceipt", "Missing fresh native Resar victory"),
+            ("staleReceipt", "Missing fresh native Resar victory"),
+            ("wrongOpponent", "Missing fresh native Resar victory"),
+            ("removedAlive", "removed living actor"),
+        ]:
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(AssertionError, message):
+                self.alatosBetrayalRouteModel(mutation)
+
+    def testAlatosRejectsClonedLootAndChangedSourceQuantities(self):
+        for mutation, message in [("clonedLoot", "new item replaced owned Resar loot"), ("changedQuantity", "1 != 2")]:
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(AssertionError, message):
+                self.alatosBetrayalRouteModel(mutation)
+
+    def testAlatosDoesNotHideAnEarlyCombatXpDeltaOrASecondQuestReward(self):
+        for mutation, message in [
+            ("earlyXp", "14000 != 14073"),
+            ("repeatReward", "Returning after a quest reward paid twice"),
+        ]:
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(AssertionError, message):
+                self.alatosBetrayalRouteModel(mutation)
 
 
 if __name__ == "__main__":
