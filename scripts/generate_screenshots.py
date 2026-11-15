@@ -270,6 +270,8 @@ def captureSdl():
     build_dir = _selected_build_dir()
     config = os.environ.get("GAME_BUILD_CONFIG", "Release")
     candidates = [build_dir / config / "SDL2.dll", build_dir / "SDL2.dll"]
+    if os.name == "nt":
+        candidates.append("SDL2.dll")
     candidates += [ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"]
     sdl = None
     for candidate in candidates:
@@ -601,11 +603,10 @@ def _captureNativePanel(game, sim, panel_name, path):
 
 
 def _prepare_player_for_panels(sim):
-    """Give the player items and (if possible) an active quest for the panels.
+    """Seed representative live state without entering the map's story events.
 
-    The inventory / character / quest panels render live player state, so seed a
-    little inventory and trigger the map's StartEvent to activate a quest. Both
-    are best effort -- a bare player still renders a valid panel.
+    These posed panel previews use explicit inventory and quest fixtures. Entering
+    a StartEvent can await a native reader before the first capture is scheduled.
     """
     player = sim.player
     for item_id in ("Sword", "Scroll", "LeatherArmor"):
@@ -613,18 +614,6 @@ def _prepare_player_for_panels(sim):
             player.addItem(sim.gameInstance.createObject(item_id))
         except Exception:  # noqa: BLE001 - seeding inventory is best effort
             pass
-    try:
-        start_events = [
-            obj for obj in sim.gameMap.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
-        ]
-        if start_events:
-            coords = start_events[0].getCoords()
-            player.moveTo(coords.x, coords.y, coords.z)
-            sim.pumpEvents(5)
-            player.checkQuests()
-            sim.pumpEvents(3)
-    except Exception:  # noqa: BLE001 - activating a quest is best effort
-        pass
     player.addQuest("mainQuest")
 
 
@@ -675,27 +664,27 @@ def capture_panels(game, output_dir, player_class, panels):
 
 
 def capture_map(game, output_dir, player_class, map_name, random_map=False):
-    """Start a fresh GUI session for ``map_name`` and capture the map view."""
+    """Initialize a posed map preview before loading its isolated GUI."""
     import game_simulation
 
     label = "random" if random_map else map_name
     path = output_dir / f"map-{label}.png"
-    if random_map:
-        game_instance = game.CGameLoader.loadGame()
-        game.CGameLoader.loadGui(game_instance)
-        game.CGameLoader.startRandomGameWithPlayer(game_instance, player_class)
-        sim = game_simulation.GameSimulation(game, game_instance, "random", player_class)
-        sim.pumpEvents(5)
-    else:
-        sim = game_simulation.GameSimulation.startGame(game, map_name, player_class, load_gui=True)
-    # Pump a few frames so the map view is fully composited before readback.
-    sim.pumpEvents(5)
+    game_instance = game.CGameLoader.loadGame()
     try:
+        if random_map:
+            game.CGameLoader.startRandomGameWithPlayer(game_instance, player_class)
+        else:
+            game.CGameLoader.startGameWithPlayer(game_instance, map_name, player_class)
+        game.CGameLoader.loadGui(game_instance)
+        sim = game_simulation.GameSimulation(game, game_instance, label, player_class)
+        sim.pumpEvents(5)
+        # Retain the final compositing pumps before readback.
+        sim.pumpEvents(5)
         info = sim.captureGuiScreenshot(path=path)
         print(f"  [ok]   map {label}: {path.name} ({info.get('bytes', 0)} bytes)", flush=True)
         return path
     finally:
-        sim.gameInstance.getContext().shutdown()
+        game_instance.getContext().shutdown()
 
 
 def capture_management(game, output_dir, player_class):
@@ -1481,14 +1470,17 @@ def captureAcceptanceStates(game, output_dir, player_class):
 
         runtime = artifact_sets.get_runtime()
         definition = runtime.set_for_combined("ArmorOfTheDamned")
-        for slot_id in list(player.getEquipped()):
-            player.equipItem(slot_id, None)
-        for piece_id in definition["pieces"]:
-            piece = sim.gameInstance.createObject(piece_id)
-            player.addItem(piece)
-            slot_id = next(iter(sim.gameInstance.getSlotConfiguration().getFittingSlots(piece)))
-            player.equipItem(slot_id, piece)
-        sim.pumpEvents(3)  # Drain the ordinary on-equip offers through the global cancel adapter.
+        # Native deferred offers bypass the synchronous popup adapter. Seed only this posed set
+        # without posting offers; restore posting before pumps and the deliberate native previews.
+        with patch.object(game.CGame, "runUiFlowLater", return_value=None):
+            for slot_id in list(player.getEquipped()):
+                player.equipItem(slot_id, None)
+            for piece_id in definition["pieces"]:
+                piece = sim.gameInstance.createObject(piece_id)
+                player.addItem(piece)
+                slot_id = next(iter(sim.gameInstance.getSlotConfiguration().getFittingSlots(piece)))
+                player.equipItem(slot_id, piece)
+        sim.pumpEvents(3)
         before = state()
         flowCaptures(lambda: artifact_sets.maybe_offer_assembly(player), ["management-artifact-assembly"])
         flowCaptures(
