@@ -85,6 +85,8 @@ class Actor(Properties):
         self.effects = []
         self.checkQuests = Mock()
         self.damage_rolls = 0
+        self.damage_targets = []
+        self.damage_sources = []
         self.stats = Properties()
         self.stats.properties.update(normalResist=10, shadowResist=0)
 
@@ -142,6 +144,14 @@ class Actor(Properties):
     def getDmg(self):
         self.damage_rolls += 1
         return self.getNumericProperty("damageRoll")
+
+    def getDmgFor(self, victim, allowCrit=True):
+        self.damage_targets.append((victim, allowCrit))
+        return self.getDmg()
+
+    def hurtFrom(self, cause, packet):
+        self.damage_sources.append((cause, packet))
+        self.hurt(packet)
 
     def hurt(self, packet):
         damage = (
@@ -2360,6 +2370,23 @@ class OctobogzHuntTest(unittest.TestCase):
         attack.getTypeId = lambda: "Attack"
         actor.addAction(attack)
         return actor, attack
+
+    def testAttackDoubleTracksOneNativeVictimAndExplicitDamageCauseWithoutExtraRolls(self):
+        actor, attack = self.phaseActor()
+        self.assertTrue(hasattr(actor, "getDmgFor"), "The double must expose the current victim-aware native API")
+        target = Actor("victim")
+        attack.performAction(actor, target)
+        self.assertEqual([(target, True)], actor.damage_targets)
+        self.assertEqual([(actor, 11)], target.damage_sources)
+        self.assertEqual(1, actor.damage_rolls)
+        self.assertEqual(38, target.getHp())
+        missed, missed_attack = self.phaseActor(0)
+        untouched = Actor("missed-victim")
+        missed_attack.performAction(missed, untouched)
+        self.assertEqual([(untouched, True)], missed.damage_targets)
+        self.assertEqual([], untouched.damage_sources)
+        self.assertEqual(1, missed.damage_rolls)
+        self.assertEqual(49, untouched.getHp())
 
     def testChargeAndPulseRetainOneConfiguredAttackEachAndCannotRepeatAfterSave(self):
         actor, _ = self.phaseActor()

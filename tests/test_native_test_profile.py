@@ -91,6 +91,18 @@ ADDITIONAL_CASES = {
         "testScriptWaitSurvivesFailedSaveResourceBindingWithoutDispatchingMapChanges",
         "testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
         "testSyncScriptWaitReleasesTheFinalGameOwner",
+        "testCommittedOffensiveInteractionRetainsActualAggressor",
+        "testNativeCombatRollDistinguishesZeroHitFromMissAndPreservesDice",
+        "testNativeDamagePacketAndEffectCasterDoNotInferHitsFromHp",
+        "testNativeUseActionRetainsMissAndReversedArmorCause",
+        "testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation",
+        "testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies",
+        "testCombatBatchNestingAbandonmentAndFactCapacity",
+        "testNativeEffectRunnerStopsAfterFirstPulseObserverInvalidatesReceiver",
+        "testNativeEffectRunnerOptOutRetainsBothTicks",
+        "testNativeEffectRunnerCancelsOpponentAndAllyActionTails",
+        "testNativePublishingNestedActionsAreNonrecursiveBoundedAndRecoverable",
+        "testNativeCombatScopeDepthLimitAndThrowingObserverRecovery",
         "testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives",
         "testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles",
         "testSevenSunsWarningOldMapCleanupPreservesActorAdoptedByAnotherLiveMap",
@@ -823,6 +835,191 @@ class NativeTestProfileSourceTest(unittest.TestCase):
             with mock.patch.dict(os.environ, {"GAME_NATIVE_TEST_PROFILE_FIXTURE": str(missing)}):
                 with self.assertRaisesRegex(AssertionError, "Configured native profiling fixture is unavailable"):
                     MissingFixture.setUpClass()
+
+    def testNativeMapImplementsTheCombatFactTileWorkProbe(self):
+        header = (ROOT / "src/core/CMap.h").read_text(encoding="utf-8")
+        source = (ROOT / "src/core/CMap.cpp").read_text(encoding="utf-8")
+        for field in ("snapshots", "snapshotReferences", "directVisits"):
+            self.assertRegex(header, rf"std::size_t {field} = 0;")
+        for declaration in (
+            "void resetMapTileTraversalProbe();",
+            "MapTileTraversalWork mapTileTraversalWork();",
+            "void disableMapTileTraversalProbe();",
+        ):
+            self.assertEqual(1, header.count(declaration))
+        for definition in (
+            "void performance_guard::resetMapTileTraversalProbe()",
+            "performance_guard::MapTileTraversalWork performance_guard::mapTileTraversalWork()",
+            "void performance_guard::disableMapTileTraversalProbe()",
+        ):
+            self.assertEqual(1, source.count(definition))
+        self.assertIn("std::atomic_bool mapTileTraversalProbeEnabled{false};", source)
+        snapshot = source.split("std::set<std::shared_ptr<CTile>> CMap::getTiles() {", 1)[1].split("\n}\n", 1)[0]
+        direct = source.split("void CMap::forTiles(", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("mapTileTraversalProbeEnabled.load(std::memory_order_relaxed)", snapshot)
+        self.assertIn("mapTileSnapshotCounter.fetch_add(1, std::memory_order_relaxed);", snapshot)
+        self.assertIn("mapTileSnapshotReferenceCounter.fetch_add(result.size(), std::memory_order_relaxed);", snapshot)
+        self.assertIn("mapTileTraversalProbeEnabled.load(std::memory_order_relaxed)", direct)
+        self.assertIn("mapDirectTileVisitCounter.fetch_add(1, std::memory_order_relaxed);", direct)
+        self.assertLess(direct.index("mapDirectTileVisitCounter.fetch_add"), direct.index("func(tile);"))
+
+    def testTileWorkPositiveControlPreservesTheNativeCombatFactBudget(self):
+        source = (ROOT / "tests/unit/test_engine_hotspot_performance.cpp").read_text(encoding="utf-8")
+        name = "testMapTileTraversalProbeCountsActualSnapshotsAndVisits"
+        self.assertIn(f"void {name}() {{", source)
+        self.assertEqual(1, source.count(f"    {name}();"))
+        positive = source.split(f"void {name}() {{", 1)[1].split("\n}\n", 1)[0]
+        positive = " ".join(positive.split())
+        for assertion in (
+            "disabled.snapshots == 0 && disabled.snapshotReferences == 0 && disabled.directVisits == 0",
+            "enabled.snapshots == 2 && enabled.snapshotReferences == TILES * 2",
+            "enabled.directVisits == TILES + HEIGHT",
+            "stopped.directVisits == enabled.directVisits",
+            "empty.snapshots == 1 && empty.snapshotReferences == 0",
+            "fixture.map->getNavigationRevision() == revision",
+        ):
+            self.assertIn(assertion, positive)
+        signature = "void testNativeCombatFactWorkRemainsIndexedAndBounded() {"
+        combat = signature + source.split(signature, 1)[1].split("\n}\n", 1)[0] + "\n}"
+        self.assertEqual(
+            "517772def2561d4eb8c796b391fffe4a9d74bcbdbad38382a77dcfb3457e73ed",
+            hashlib.sha256(combat.encode()).hexdigest(),
+        )
+        self.assertIn("constexpr int PASSES = 128;", combat)
+        self.assertIn("constexpr int LISTENERS = 8;", combat)
+        self.assertIn("matching == PASSES * LISTENERS * 3 && unrelated == 0", combat)
+        self.assertIn(
+            "tile_work.snapshots == 0 && tile_work.snapshotReferences == 0 && tile_work.directVisits == 0", combat
+        )
+        self.assertEqual(1, source.count("    testNativeCombatFactWorkRemainsIndexedAndBounded();"))
+
+    def testNativeParticipantInvalidationDetachesAssignedPlayersWithoutRespawn(self):
+        source = (ROOT / "tests/unit/native_combat_boundary_regression.h").read_text(encoding="utf-8")
+        helper = source.split("void invalidateNativeContinuationParticipant(", 1)[1].split(
+            "\nvoid runReversedEffectParticipantContinuationRegression()", 1
+        )[0]
+        for token in (
+            "std::dynamic_pointer_cast<CPlayer>(participant)",
+            "const auto assigned = map->getAssignedPlayer();",
+            "const auto detached = map->detachPlayer();",
+            "assigned == player && detached == player",
+            "map->getAssignedPlayer() == nullptr",
+            "map->getObjectByName(name) == nullptr",
+            "participant->getHp() == hp",
+            "participant->getMana() == mana",
+        ):
+            self.assertIn(token, helper)
+        self.assertIn("} else {\n        map->removeObject(participant);\n    }", helper)
+        self.assertNotIn("setPermanentPlayerDeath", helper)
+        self.assertNotIn("advanceTransitionGeneration", helper)
+        self.assertNotIn("setHp", helper)
+
+    def testNativeParticipantFixtureVerifiesRealForeignAndReplacementOwnership(self):
+        source = (ROOT / "tests/unit/native_combat_boundary_regression.h").read_text(encoding="utf-8")
+        helper = source.split("void invalidateNativeContinuationParticipant(", 1)[1].split(
+            "\nvoid runReversedEffectParticipantContinuationRegression()", 1
+        )[0]
+        for token in (
+            "foreign->getMap()->attachPlayer(player, coords);",
+            "foreign->getMap()->getAssignedPlayer() == player",
+            "foreign->getMap()->getObjectByName(name) == participant",
+            "std::static_pointer_cast<CCreature>(add_test_player(game))",
+            "replacement != participant",
+            "map->getObjectByName(name) == replacement",
+            "map->getAssignedPlayer() == replacement",
+            "map->getObjectByName(name) != participant",
+        ):
+            self.assertIn(token, helper)
+        self.assertEqual(1, source.count("void runReversedEffectParticipantContinuationRegression()"))
+        self.assertEqual(1, source.count("void runActionObserverParticipantRegistrationRegression()"))
+        self.assertEqual(1, source.count("void runRegisteredLethalActionStillSettlesRegression()"))
+
+    def testNativeCombatCasesUseTheNormalMetadataFirstProfileRegistry(self):
+        expected = (
+            "testCommittedOffensiveInteractionRetainsActualAggressor",
+            "testNativeCombatRollDistinguishesZeroHitFromMissAndPreservesDice",
+            "testNativeDamagePacketAndEffectCasterDoNotInferHitsFromHp",
+            "testNativeUseActionRetainsMissAndReversedArmorCause",
+            "testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation",
+            "testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies",
+            "testCombatBatchNestingAbandonmentAndFactCapacity",
+            "testNativeEffectRunnerStopsAfterFirstPulseObserverInvalidatesReceiver",
+            "testNativeEffectRunnerOptOutRetainsBothTicks",
+            "testNativeEffectRunnerCancelsOpponentAndAllyActionTails",
+            "testNativePublishingNestedActionsAreNonrecursiveBoundedAndRecoverable",
+            "testNativeCombatScopeDepthLimitAndThrowingObserverRecovery",
+        )
+        headers = (
+            "native_combat_attempt_regression.h",
+            "native_combat_facts_regression.h",
+            "native_combat_boundary_regression.h",
+            "native_combat_effect_runner_regression.h",
+        )
+        definitions = []
+        for header in headers:
+            source = (ROOT / ("tests/unit/" + header)).read_text(encoding="utf-8")
+            definitions.extend(re.findall(r"^void (test\w+)\(\) \{", source, re.MULTILINE))
+        self.assertEqual(12, len(definitions))
+        self.assertEqual(12, len(set(definitions)))
+        self.assertEqual(set(expected), set(definitions))
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        main = handler[handler.rindex("int main() {") :]
+        registrations = re.findall(r'nativeTestProfile\(\)\.run\("(test\w+)",\s*(test\w+)\);', main)
+        registered = tuple(name for name, callback in registrations if name in definitions and name == callback)
+        self.assertEqual(expected, registered)
+        self.assertEqual("testGameplayMetadataIsAvailableBeforePluginLoading", registrations[0][0])
+        tail = main.split("testSyncScriptWaitReleasesTheFinalGameOwner);", 1)[1]
+        additions = ADDITIONAL_CASES["handler"]
+        additional_tail = additions[additions.index("testSyncScriptWaitReleasesTheFinalGameOwner") + 1 :]
+        expected_tail = "".join(f'nativeTestProfile().run("{name}", {name});' for name in additional_tail)
+        expected_tail += "return finish_tests();}"
+        self.assertEqual(re.sub(r"\s+", "", expected_tail), re.sub(r"\s+", "", tail))
+
+    def testNativeCombatSourceChecksConserveIndependentProfileAdditions(self):
+        performance_path = ROOT / "tests/unit/test_engine_hotspot_performance.cpp"
+        handler_path = ROOT / "tests/unit/test_handler.cpp"
+        performance = performance_path.read_text(encoding="utf-8")
+        handler = handler_path.read_text(encoding="utf-8")
+        extra_case = "testIndependentNativeProfileCase"
+        self.assertNotIn(extra_case, handler)
+        self.assertEqual(1, performance.count("\n} // namespace"))
+        self.assertEqual(1, handler.count("    return finish_tests();"))
+        prepared = {
+            performance_path: performance.replace(
+                "\n} // namespace", "\nvoid independentNativeProfileProbe() {}\n\n} // namespace", 1
+            ),
+            handler_path: handler.replace(
+                "    return finish_tests();",
+                f'    nativeTestProfile().run("{extra_case}", {extra_case});\n    return finish_tests();',
+                1,
+            ),
+        }
+        actual_read = Path.read_text
+
+        def readPrepared(path, *args, **kwargs):
+            if path in prepared:
+                return prepared[path]
+            return actual_read(path, *args, **kwargs)
+
+        additional = (*ADDITIONAL_CASES["handler"], extra_case)
+        with mock.patch.dict(ADDITIONAL_CASES, {"handler": additional}):
+            with self.assertRaises(AssertionError):
+                self.testNativeCombatCasesUseTheNormalMetadataFirstProfileRegistry()
+            with mock.patch.object(Path, "read_text", readPrepared):
+                self.testTileWorkPositiveControlPreservesTheNativeCombatFactBudget()
+                self.testNativeCombatCasesUseTheNormalMetadataFirstProfileRegistry()
+                signature = "void testNativeCombatFactWorkRemainsIndexedAndBounded() {"
+                start = prepared[performance_path].index(signature)
+                end = prepared[performance_path].index("\n}\n", start) + len("\n}\n")
+                combat = prepared[performance_path][start:end]
+                self.assertEqual(1, combat.count("constexpr int PASSES = 128;"))
+                prepared[performance_path] = (
+                    prepared[performance_path][:start]
+                    + combat.replace("constexpr int PASSES = 128;", "constexpr int PASSES = 129;", 1)
+                    + prepared[performance_path][end:]
+                )
+                with self.assertRaises(AssertionError):
+                    self.testTileWorkPositiveControlPreservesTheNativeCombatFactBudget()
 
     def testEveryExistingCaseKeepsItsOrderAndMetadataComesFirst(self):
         for suite, (count, digest) in BASELINE_CASES.items():
