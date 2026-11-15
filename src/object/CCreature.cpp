@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CCreature.h"
 #include "core/CNativeCombatFacts.h"
 #include <algorithm>
+#include <optional>
 #include <tuple>
 #include <vector>
 
@@ -38,6 +39,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 namespace {
+thread_local std::optional<std::size_t> statCompositionReads;
+
 void initializeComposedStats(CStats &stats, const StatsModifier &value) {
     stats.setStrength(value.strength);
     stats.setAgility(value.agility);
@@ -1314,6 +1317,9 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) { removeItem(item, true); }
 
 std::shared_ptr<CStats> CCreature::getStats() {
+    if (statCompositionReads) {
+        ++*statCompositionReads;
+    }
     // Branch on archetype presence so legacy creatures (race == null and
     // creatureClass == null, i.e. every creature pre-migration) keep the exact
     // legacy stat block, while archetype creatures get the composed aggregate.
@@ -1634,3 +1640,11 @@ std::vector<std::shared_ptr<CCreatureTemplate>> CCreature::getOrderedTemplates()
 bool CCreature::usesArchetypeComposition() {
     return race != nullptr || creatureClass != nullptr || !classTracks.empty() || !templates.empty();
 }
+
+namespace performance_guard {
+void resetStatCompositionProbe() { statCompositionReads = 0; }
+
+std::size_t statCompositionProbeCount() { return statCompositionReads.value_or(0); }
+
+void disableStatCompositionProbe() { statCompositionReads.reset(); }
+} // namespace performance_guard

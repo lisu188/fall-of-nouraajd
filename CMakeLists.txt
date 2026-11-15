@@ -774,6 +774,13 @@ set(GAME_UNIT_TEST_TARGETS)
 
 if (WIN32)
     get_filename_component(TEST_PYTHONHOME "${Python3_EXECUTABLE}" DIRECTORY)
+    set(TEST_PYTHON_RUNTIME_PATH "${TEST_PYTHONHOME}")
+    foreach (python_runtime_directory IN LISTS Python3_RUNTIME_LIBRARY_DIRS)
+        if (IS_DIRECTORY "${python_runtime_directory}")
+            set(TEST_PYTHON_RUNTIME_PATH "${python_runtime_directory}")
+            break()
+        endif ()
+    endforeach ()
     if (DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
         set(TEST_RUNTIME_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
     endif ()
@@ -816,6 +823,8 @@ function(add_game_unit_test target_name)
                     ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
                     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
                 )
+                set_property(TEST "${test_name}" APPEND PROPERTY ENVIRONMENT_MODIFICATION
+                    "PATH=path_list_prepend:${TEST_PYTHON_RUNTIME_PATH}")
             else ()
                 set_tests_properties("${test_name}" PROPERTIES
                     ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
@@ -847,7 +856,7 @@ add_game_unit_test(simulation_region_unit_tests
 add_game_unit_test(monster_balance_unit_tests
     tests/unit/test_monster_balance.cpp
 )
-foreach (target_name allied_combat_unit_tests monster_balance_unit_tests)
+foreach (target_name allied_combat_unit_tests monster_balance_unit_tests controller_unit_tests)
     target_sources(${target_name} PRIVATE
         src/core/CModuleEntry.cpp
         src/core/CModuleRuntime.cpp
@@ -857,6 +866,9 @@ foreach (target_name allied_combat_unit_tests monster_balance_unit_tests)
         target_compile_definitions(${target_name} PRIVATE GAME_CORE_BUILD)
     endif ()
 endforeach ()
+target_compile_definitions(controller_unit_tests PRIVATE
+    GAME_CONTROLLER_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
+)
 target_compile_definitions(allied_combat_unit_tests PRIVATE
     GAME_ALLIED_COMBAT_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )
@@ -962,6 +974,8 @@ if (WIN32)
                 ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
             )
+            set_property(TEST "performance.performance_guard_tests" APPEND PROPERTY ENVIRONMENT_MODIFICATION
+                "PATH=path_list_prepend:${TEST_PYTHON_RUNTIME_PATH}")
         else ()
             set_tests_properties("performance.performance_guard_tests" PROPERTIES
                 ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"

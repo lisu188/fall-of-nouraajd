@@ -3,10 +3,13 @@
 #include "core/CJsonParseDiagnostics.h"
 
 #include <atomic>
+#include <charconv>
+#include <cstdint>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <new>
 #include <stdexcept>
 #include <string>
@@ -207,6 +210,55 @@ void regressionTests() {
     compareInput("{\"afterLarge\":true}");
 }
 
+void integerDumpTests() {
+    const auto fitsNativeInt = [](const json &value) {
+        if (!value.is_number_integer())
+            return false;
+        const auto encoded = value.dump();
+        int native = 0;
+        const auto parsed = std::from_chars(encoded.data(), encoded.data() + encoded.size(), native);
+        return parsed.ec == std::errc{} && parsed.ptr == encoded.data() + encoded.size();
+    };
+    for (const auto *text : {"9223372036854775808", "18446744073709551615"}) {
+        const auto value = json::parse(text);
+        require(value.is_number_integer() && value.is_number_unsigned(), "wide positive integer lost unsigned storage");
+        require(value.dump() == text, "wide unsigned integer changed sign during dump");
+        require(json::parse(value.dump()).get<unsigned long long>() == value.get<unsigned long long>(),
+                "wide unsigned integer changed value during round trip");
+        const json nested = {{"authority", value}, {"values", json::array({value})}};
+        const auto restored = json::parse(nested.dump(2));
+        require(restored.at("authority").dump() == text && restored.at("values").at(0).dump() == text,
+                "nested unsigned integer lost its spelling");
+        require(!fitsNativeInt(value), "wide unsigned integer aliased a signed native authority value");
+    }
+    const auto maximum = std::numeric_limits<std::uint64_t>::max();
+    require(json(static_cast<unsigned long long>(maximum)).dump() == "18446744073709551615",
+            "constructed maximum unsigned integer changed sign");
+    for (int choice = 1; choice <= 20; ++choice) {
+        const auto ordinary = json(choice);
+        require(!ordinary.is_number_unsigned() && ordinary.dump() == std::to_string(choice) && fitsNativeInt(ordinary),
+                "ordinary native choice integer changed");
+        const auto wide = json(static_cast<unsigned long long>(maximum - static_cast<std::uint64_t>(choice - 1)));
+        require(wide.is_number_unsigned() && !fitsNativeInt(wide),
+                "wide integer must not enter the signed native range before choice bounds are applied");
+    }
+    for (const auto *text :
+         {"-9223372036854775808", "-2147483648", "-20", "-1", "0", "2147483647", "9223372036854775807"}) {
+        const auto value = json::parse(text);
+        require(value.is_number_integer() && !value.is_number_unsigned(), "signed integer changed storage category");
+        require(value.dump() == text, "signed integer changed spelling");
+        require(json::parse(value.dump()).get<long long>() == value.get<long long>(),
+                "signed integer changed value during round trip");
+    }
+    require(fitsNativeInt(json(std::numeric_limits<int>::min())) &&
+                fitsNativeInt(json(std::numeric_limits<int>::max())),
+            "signed native endpoints changed");
+    for (const auto *text : {"2147483648", "-2147483649", "4294967297", "-4294967295"})
+        require(!fitsNativeInt(json::parse(text)), "out-of-range authority integer became a native int");
+    for (const auto &value : {json(nullptr), json(true), json(1.5), json("1")})
+        require(!value.is_number_unsigned() && !fitsNativeInt(value), "non-integer value gained integer authority");
+}
+
 void concurrencyTests() {
     std::atomic<bool> passed{true};
     std::vector<std::thread> workers;
@@ -257,6 +309,38 @@ void performanceGuards() {
     require(counters.valuesDecoded == 8 * 32, "values must be decoded exactly once");
     require(counters.arrayAppends == 3 * 32, "arrays must append each child exactly once");
     require(counters.objectInsertions == 4 * 32, "objects must insert each key exactly once");
+    const std::string unsignedText =
+        R"({"choices":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],)"
+        R"("maximum":18446744073709551615,"negative":-2147483648,"nextSigned":9223372036854775808})";
+    const auto unsignedDocument = json::parse(unsignedText);
+    const auto unsignedCapacity = parseDiagnostics().retainedCapacity;
+    constexpr int unsignedRounds = 32;
+    std::size_t unsignedBytes = 0;
+    resetParseDiagnostics();
+    for (int round = 0; round < unsignedRounds; ++round) {
+        const auto encoded = unsignedDocument.dump();
+        require(encoded == unsignedText && encoded.size() == 151, "unsigned dump exceeded fixed output work");
+        unsignedBytes += encoded.size();
+        const auto restored = json::parse(encoded);
+        require(restored.at("maximum").is_number_unsigned() &&
+                    restored.at("maximum").get<unsigned long long>() == std::numeric_limits<std::uint64_t>::max() &&
+                    restored.at("nextSigned").is_number_unsigned() &&
+                    restored.at("nextSigned").get<unsigned long long>() == 9223372036854775808ULL &&
+                    restored.at("negative").get<long long>() == -2147483648LL,
+                "unsigned round trip lost integer identity");
+    }
+    counters = parseDiagnostics();
+    require(unsignedBytes == 151 * unsignedRounds && counters.valuesDecoded == 25 * unsignedRounds &&
+                counters.arrayAppends == 20 * unsignedRounds && counters.objectInsertions == 4 * unsignedRounds &&
+                counters.arrayGrowths == unsignedRounds,
+            "unsigned round-trip traversal or output budget differs");
+    require(counters.parserCreations == 0 && counters.parserGrowths == 0 && counters.scratchGrowths == 0 &&
+                counters.temporaryContexts == 0 && counters.retainedCapacity == unsignedCapacity,
+            "warmed unsigned round trips grew parser storage or used temporary contexts");
+    std::cout << "performance guards: unsigned round trips=" << unsignedRounds << "; output bytes=" << unsignedBytes
+              << "; decoded values=" << counters.valuesDecoded << "; array appends=" << counters.arrayAppends
+              << "; object insertions=" << counters.objectInsertions << "; array reserves=" << counters.arrayGrowths
+              << '\n';
     std::string array = "[0";
     for (int i = 1; i < 4096; ++i) {
         array += ",0";
@@ -300,6 +384,7 @@ int main(int argc, char **argv) {
             }
             require(threw, "null C-string unexpectedly parsed");
             regressionTests();
+            integerDumpTests();
             concurrencyTests();
             reentrantTest();
             std::cout << "DOM oracle compatibility, depth boundaries, ownership, "

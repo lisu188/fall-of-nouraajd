@@ -23,7 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CNavigation.h"
 #include "core/CStats.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
 #include "core/CUtil.h"
+#include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/CDetailViewport.h"
 #include "gui/CLayout.h"
@@ -36,7 +39,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGameTextPanel.h"
+#include "gui/object/CMinimapGraphicsObject.h"
+#include "gui/panel/CListView.h"
 #include "gui/object/CGameGraphicsObject.h"
+#include "gui/object/CWidget.h"
 #include "handler/CObjectHandler.h"
 #include "object/CInteraction.h"
 #include "object/CPlayer.h"
@@ -48,6 +54,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <iostream>
 #include <type_traits>
+#include <functional>
+#include <utility>
 
 namespace {
 
@@ -95,6 +103,202 @@ fn::sdl::TexturePtr make_solid_texture(const std::shared_ptr<CGui> &gui) {
     }
     SDL_SAFE(SDL_FillRect(surface.get(), nullptr, SDL_MapRGBA(surface->format, 32, 96, 160, 255)));
     return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get())));
+}
+
+class CollectionIndexPanel : public CGameGraphicsObject {
+    V_META(CollectionIndexPanel, CGameGraphicsObject,
+           V_METHOD(CollectionIndexPanel, readItems, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(CollectionIndexPanel, readOtherItems, CListView::collection_pointer, std::shared_ptr<CGui>))
+
+  public:
+    CListView::collection_pointer readItems(std::shared_ptr<CGui>) {
+        ++reads;
+        auto result = items;
+        if (onRead)
+            std::exchange(onRead, {})();
+        return result;
+    }
+
+    CListView::collection_pointer readOtherItems(std::shared_ptr<CGui>) {
+        ++reads;
+        return otherItems;
+    }
+
+    CListView::collection_pointer items = std::make_shared<CListView::collection_type>();
+    CListView::collection_pointer otherItems = std::make_shared<CListView::collection_type>();
+    std::function<void()> onRead;
+    std::size_t reads = 0;
+};
+
+class CollectionIndexList : public CListView {
+    V_META(CollectionIndexList, CListView, vstd::meta::empty())
+
+  public:
+    std::weak_ptr<CGameObject> source;
+
+  protected:
+    std::shared_ptr<CGameObject> resolveRefreshTarget() override { return source.lock(); }
+};
+
+struct CollectionIndexFixture {
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CollectionIndexPanel> panel;
+    std::shared_ptr<CollectionIndexList> list;
+    std::vector<std::shared_ptr<CGameObject>> items;
+};
+
+CollectionIndexFixture makeCollectionIndexFixture(int count) {
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiPanelTypes();
+    type_registration::registerGuiWidgetTypes();
+    type_registration::registerGuiAnimationTypes();
+    CTypes::register_type_metadata<CollectionIndexPanel, CGameGraphicsObject, CGameObject>();
+    CTypes::register_type_metadata<CollectionIndexList, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
+                                   CGameObject>();
+    CollectionIndexFixture fixture{make_headless_gui(),
+                                   std::make_shared<CGame>(),
+                                   std::make_shared<CollectionIndexPanel>(),
+                                   std::make_shared<CollectionIndexList>(),
+                                   {}};
+    fixture.gui->setGame(fixture.game);
+    fixture.game->setGui(fixture.gui);
+    for (const auto &[name, builder] : *CTypes::builders())
+        fixture.game->getObjectHandler()->registerType(name, builder);
+    fixture.panel->setGame(fixture.game);
+    fixture.list->setGame(fixture.game);
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(0, 0, 400, 200);
+    fixture.list->setLayout(layout);
+    fixture.list->setXPrefferedSize(8);
+    fixture.list->setYPrefferedSize(4);
+    fixture.list->setAllowOversize(false);
+    fixture.list->setShowEmpty(false);
+    fixture.list->setCollection("readItems");
+    fixture.list->source = fixture.panel;
+    fixture.panel->addChild(fixture.list);
+    fixture.gui->addChild(fixture.panel);
+    fixture.list->setRefreshEvent("collectionChanged");
+    for (int index = 0; index < count; ++index) {
+        auto item = std::make_shared<CGameObject>();
+        item->setGame(fixture.game);
+        item->setName("cacheItem" + std::to_string(index));
+        item->setTypeId(index % 2 == 0 ? "alpha" : "beta");
+        item->setLabel(index % 2 == 0 ? "Alpha" : "Beta");
+        fixture.panel->items->push_back(item);
+        fixture.items.push_back(item);
+    }
+    return fixture;
+}
+
+std::shared_ptr<CGameObject> collectionIndexItemAt(const CollectionIndexFixture &fixture, int x = 0, int y = 0) {
+    for (const auto &graphic : fixture.list->getProxiedObjects(fixture.gui, x, y)) {
+        auto animation = std::dynamic_pointer_cast<CAnimation>(graphic);
+        auto object = animation ? animation->getObject() : nullptr;
+        if (object && object->getName().starts_with("cacheItem"))
+            return object;
+    }
+    return nullptr;
+}
+
+void testListCollectionIndexIsBuiltOncePerRefresh() {
+    constexpr int items = 128;
+    constexpr int frames = 64;
+    auto fixture = makeCollectionIndexFixture(items);
+    fixture.list->refresh();
+    expect_true(fixture.panel->reads == 1 && fixture.list->getIndexBuildCountForTesting() == 1 &&
+                    fixture.list->getIndexedItemVisitsForTesting() == items,
+                "one 32-cell list refresh must read and index its complete collection exactly once");
+    for (int frame = 0; frame < frames; ++frame)
+        fixture.list->renderObject(fixture.gui, CUtil::rect(0, 0, 400, 200), frame);
+    expect_true(fixture.panel->reads == 1 && fixture.list->getIndexBuildCountForTesting() == 1,
+                "unchanged subscribed list frames must perform zero collection reads and index builds");
+    std::shared_ptr<CProxyTargetGraphicsObject> base = fixture.list;
+    base->refreshAll();
+    expect_true(fixture.panel->reads == 2 && fixture.list->getIndexBuildCountForTesting() == 2 &&
+                    fixture.list->getIndexedItemVisitsForTesting() == 2 * items,
+                "base-pointer refreshAll must invalidate once and share one new index across all proxy cells");
+    expect_true(collectionIndexItemAt(fixture, 3, 1) == fixture.items[11],
+                "shared index reuse must preserve exact ungrouped item identity and row-major positions");
+    std::cout << "[list index] items=" << items << " cells=32 refreshes=2 reads=" << fixture.panel->reads
+              << " builds=" << fixture.list->getIndexBuildCountForTesting()
+              << " item visits=" << fixture.list->getIndexedItemVisitsForTesting()
+              << " budgets=2/2/256 idle frames=" << frames << " idle rebuild budget=0\n";
+    fixture.game->getContext()->shutdown();
+}
+
+void testListIndexInvalidationPreservesLiveCollections() {
+    auto fixture = makeCollectionIndexFixture(6);
+    fixture.list->refresh();
+    fixture.list->setGrouping(true);
+    auto firstGroup = collectionIndexItemAt(fixture);
+    auto secondGroup = collectionIndexItemAt(fixture, 1);
+    expect_true(firstGroup && secondGroup && firstGroup->getTypeId() != secondGroup->getTypeId() &&
+                    !collectionIndexItemAt(fixture, 2),
+                "grouping changes must invalidate the index and retain one visible group per type");
+    fixture.list->setGrouping(false);
+    fixture.list->setSearchable(true);
+    fixture.list->restoreViewState({0, -1, "aLpHa"});
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[0] &&
+                    collectionIndexItemAt(fixture, 2) == fixture.items[4] && !collectionIndexItemAt(fixture, 3),
+                "filtered snapshots must preserve case-insensitive matching and source order");
+    fixture.list->restoreViewState({0, -1, ""});
+    fixture.panel->otherItems->push_back(fixture.items[5]);
+    fixture.list->setCollection("readOtherItems");
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[5],
+                "changing the callback name must immediately invalidate a retained index");
+    fixture.list->setCollection("readItems");
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[0],
+                "switching back to the original callback must rebuild its original collection");
+    fixture.panel->items = fixture.panel->otherItems;
+    fixture.panel->signal<true>("collectionChanged");
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[5],
+                "a model notification must invalidate stale indices before its queued proxy refresh runs");
+    for (int pass = 0; pass < 8; ++pass)
+        vstd::event_loop<>::instance()->runReady();
+    fixture.list->setRefreshEvent("");
+    fixture.panel->items = std::make_shared<CListView::collection_type>();
+    fixture.panel->items->push_back(fixture.items[1]);
+    const auto readsBeforeRefresh = fixture.panel->reads;
+    fixture.list->refreshAll();
+    expect_true(fixture.panel->reads == readsBeforeRefresh + 1,
+                "unversioned callbacks must still share one index within an explicit multi-cell refresh");
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[1], "unversioned callbacks must read current items");
+    fixture.panel->items->clear();
+    fixture.panel->items->push_back(fixture.items[2]);
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[2],
+                "unversioned callbacks must remain live without an explicit refresh notification");
+    fixture.list->setRefreshProperties({"inventory"});
+    const auto readsBeforeRejectedSubscription = fixture.panel->reads;
+    collectionIndexItemAt(fixture);
+    collectionIndexItemAt(fixture);
+    expect_true(fixture.panel->reads == readsBeforeRejectedSubscription + 2,
+                "rejected typed-signal subscriptions must not enable persistent collection caching");
+    fixture.panel->onRead = [&fixture] {
+        expect_true(!collectionIndexItemAt(fixture), "reentrant collection reads must fail closed without recursion");
+    };
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[2],
+                "a rejected reentrant read must not invalidate the outer collection result");
+    fixture.panel->onRead = [&fixture] { fixture.list->setCollection("readOtherItems"); };
+    expect_true(!collectionIndexItemAt(fixture),
+                "a callback that invalidates its source must not publish or render its stale result");
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[5],
+                "a subsequent read must recover using the callback selected during invalidation");
+    fixture.list->setCollection("readItems");
+    fixture.panel->onRead = [&fixture] { fixture.panel->removeChild(fixture.list); };
+    expect_true(!collectionIndexItemAt(fixture),
+                "a collection callback that detaches the list must not leak stale graphics or item identity");
+    fixture.panel->addChild(fixture.list);
+    expect_true(collectionIndexItemAt(fixture) == fixture.items[2],
+                "reattaching a list after callback invalidation must restore live collection reads");
+    fixture.panel->items.reset();
+    expect_true(!collectionIndexItemAt(fixture), "null custom collections must fail closed");
+    fixture.panel->items = std::make_shared<CListView::collection_type>();
+    fixture.panel->items->push_back(nullptr);
+    fixture.panel->items->push_back(fixture.items[3]);
+    expect_true(!collectionIndexItemAt(fixture) && collectionIndexItemAt(fixture, 1) == fixture.items[3],
+                "empty equipment slots must retain their indices before populated slots");
+    fixture.game->getContext()->shutdown();
 }
 
 void testBackgroundFreeObjectsResolveLayoutOnlyForDrawing() {
@@ -508,6 +712,138 @@ void testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability() {
     game->getContext()->shutdown();
 }
 
+void testCharacterPagerReservationKeepsWarmLayoutWorkBounded() {
+    struct CountingAbilityList : CListView {
+        std::size_t refreshes = 0;
+        void refresh() override {
+            ++refreshes;
+            CListView::refresh();
+        }
+    };
+    auto gui = make_headless_gui();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders())
+        game->getObjectHandler()->registerType(name, builder);
+    game->setGui(gui);
+    gui->setGame(game);
+    gui->setWidth(1920);
+    gui->setHeight(1080);
+    gui->applyUiPreferences(R"({"uiScale":100,"textScale":100})");
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    map->setObjects({player});
+    for (int index = 0; index < 24; ++index) {
+        auto action = std::make_shared<CInteraction>();
+        action->setGame(game);
+        action->setName("guardAbility" + std::to_string(index));
+        action->setTypeId(action->getName());
+        action->setLabel(action->getName());
+        player->addAction(action);
+    }
+    auto panel = std::make_shared<CGameCharacterPanel>();
+    panel->setGame(game);
+    auto shell = std::make_shared<CLayout>();
+    shell->setRect(58, 33, 1804, 1015);
+    panel->setLayout(shell);
+    auto list = std::make_shared<CountingAbilityList>();
+    list->setGame(game);
+    list->setCollection("interactionsCollection");
+    list->setRows(true);
+    list->setGrouping(false);
+    list->setShowEmpty(false);
+    list->setAllowOversize(true);
+    list->setStringProperty("uiGroup", "2:Abilities");
+    auto listLayout = std::make_shared<CLayout>();
+    listLayout->setX("53%");
+    listLayout->setY("23%");
+    listLayout->setW("45%");
+    listLayout->setH("27%");
+    list->setLayout(listLayout);
+    panel->addChild(list);
+    auto details = std::make_shared<CWidget>();
+    details->setRender("renderAbilityDetails");
+    details->setStringProperty("uiGroup", "3:Ability details");
+    auto detailsLayout = std::make_shared<CLayout>();
+    detailsLayout->setX("53%");
+    detailsLayout->setY("53%");
+    detailsLayout->setW("45%");
+    detailsLayout->setH("36%");
+    details->setLayout(detailsLayout);
+    panel->addChild(details);
+    auto footer = std::make_shared<CButton>();
+    footer->setText("Inspect modifiers");
+    footer->setBoolProperty("uiFooter", true);
+    auto footerLayout = std::make_shared<CLayout>();
+    footerLayout->setRect(36, 923, 505, 60);
+    footer->setLayout(footerLayout);
+    panel->addChild(footer);
+    gui->pushChild(panel);
+    panel->renderShell(gui, shell->getRect(panel));
+    list->refresh();
+    panel->renderShell(gui, shell->getRect(panel));
+    const auto beforeRefreshes = list->refreshes;
+    const auto beforeTextures = gui->getTextManager()->getTextureLoadCount();
+    const auto listBefore = *listLayout->getRect(list);
+    const auto detailsBefore = *detailsLayout->getRect(details);
+    for (int frame = 0; frame < 25; ++frame)
+        panel->renderShell(gui, shell->getRect(panel));
+    const auto refreshes = list->refreshes - beforeRefreshes;
+    const auto textures = gui->getTextManager()->getTextureLoadCount() - beforeTextures;
+    const auto listAfter = listLayout->getRect(list);
+    const auto detailsAfter = detailsLayout->getRect(details);
+    expect_true(refreshes == 0, "25 warm character layouts must perform zero additional ability proxy refreshes");
+    expect_true(textures == 0, "25 warm character layouts must perform zero additional text texture loads");
+    expect_true(listAfter->x == listBefore.x && listAfter->y == listBefore.y && listAfter->w == listBefore.w &&
+                    listAfter->h == listBefore.h && detailsAfter->y == detailsBefore.y &&
+                    detailsAfter->h == detailsBefore.h,
+                "warm character layout must retain its bounded list and unchanged detail geometry");
+    std::cout << "[character pager layout] frames=25 proxy refreshes=" << refreshes
+              << " refresh budget=0 text loads=" << textures << " text budget=0\n";
+    gui->setWidth(1920);
+    gui->setHeight(600);
+    gui->applyUiPreferences(R"({"uiScale":150,"textScale":150})");
+    shell->setRect(58, 18, 1804, 564);
+    list->setTileSize(64);
+    list->setSearchable(true);
+    panel->renderShell(gui, shell->getRect(panel));
+    list->refresh();
+    panel->renderShell(gui, shell->getRect(panel));
+    const auto shortRefreshesBefore = list->refreshes;
+    const auto shortTexturesBefore = gui->getTextManager()->getTextureLoadCount();
+    const auto shortListBefore = *listLayout->getRect(list);
+    const auto shortDetailsBefore = *detailsLayout->getRect(details);
+    const auto shortParsesBefore = listLayout->getValueParseCountForTesting() +
+                                   detailsLayout->getValueParseCountForTesting() +
+                                   footerLayout->getValueParseCountForTesting();
+    for (int frame = 0; frame < 25; ++frame)
+        panel->renderShell(gui, shell->getRect(panel));
+    const auto shortRefreshes = list->refreshes - shortRefreshesBefore;
+    const auto shortTextures = gui->getTextManager()->getTextureLoadCount() - shortTexturesBefore;
+    const auto shortParses = listLayout->getValueParseCountForTesting() +
+                             detailsLayout->getValueParseCountForTesting() +
+                             footerLayout->getValueParseCountForTesting() - shortParsesBefore;
+    const auto shortListAfter = listLayout->getRect(list);
+    const auto shortDetailsAfter = detailsLayout->getRect(details);
+    expect_true(shortRefreshes == 0,
+                "25 warm short character layouts must perform zero additional ability proxy refreshes");
+    expect_true(shortTextures == 0, "25 warm short character layouts must perform zero additional text texture loads");
+    expect_true(shortParses == 0, "25 warm short character layouts must perform zero additional authored-value parses");
+    expect_true(list->isVisible() && !details->isVisible() && shortListAfter->h >= list->getCellSize(gui),
+                "short character warm work must retain a complete row on its compact ability page");
+    expect_true(shortListAfter->x == shortListBefore.x && shortListAfter->y == shortListBefore.y &&
+                    shortListAfter->w == shortListBefore.w && shortListAfter->h == shortListBefore.h &&
+                    shortDetailsAfter->y == shortDetailsBefore.y && shortDetailsAfter->h == shortDetailsBefore.h,
+                "short character warm work must not churn the list or hidden detail geometry");
+    std::cout << "[character short pager layout] frames=25 proxy refreshes=" << shortRefreshes
+              << " refresh budget=0 text loads=" << shortTextures << " text budget=0 authored parses=" << shortParses
+              << " parse budget=0 listHeight=" << shortListAfter->h << " rowHeight=" << list->getCellSize(gui) << '\n';
+    game->getContext()->shutdown();
+}
+
 void testLoadingReaderReusesWarmTextures() {
     auto gui = make_headless_gui();
     auto reader = std::make_shared<CGameTextPanel>();
@@ -689,9 +1025,152 @@ void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
     game->getContext()->shutdown();
 }
 
+void testMinimapTerrainRevisionAvoidsUnchangedCollectionWork() {
+    constexpr std::size_t tileCount = 1024;
+    constexpr std::size_t frames = 64;
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    auto gui = make_headless_gui();
+    auto player = std::make_shared<CPlayer>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    player->setGame(game);
+    auto stats = std::make_shared<CStats>();
+    stats->setStamina(10);
+    player->setBaseStats(stats);
+    player->setHp(player->getHpMax());
+    map->setPlayer(player);
+    map->setXBounds({{0, 31}, {1, 31}});
+    map->setYBounds({{0, 15}, {1, 15}});
+    std::vector<std::shared_ptr<CTile>> tiles;
+    for (int z = 0; z < 2; ++z) {
+        for (int y = 0; y < 16; ++y) {
+            for (int x = 0; x < 32; ++x) {
+                auto tile = std::make_shared<CTile>();
+                tile->setGame(game);
+                tile->setTileType("ground");
+                tile->setCanStep(true);
+                tile->setPosx(x);
+                tile->setPosy(y);
+                tile->setPosz(z);
+                tiles.push_back(std::move(tile));
+            }
+        }
+    }
+    expect_true(map->installTiles(tiles) == tileCount, "minimap traversal guard installs exactly1024native tiles");
+    tiles.clear();
+    struct ProbeCleanup {
+        ~ProbeCleanup() { performance_guard::disableMapTileTraversalProbe(); }
+    } cleanup;
+    performance_guard::resetMapTileTraversalProbe();
+    {
+        auto copied = map->getTiles();
+        const auto work = performance_guard::mapTileTraversalWork();
+        expect_true(copied.size() == tileCount && work.snapshots == 1 && work.snapshotReferences == tileCount &&
+                        work.directVisits == 0,
+                    "the native snapshot probe must count an actual returned owning set before testing zero work");
+    }
+    performance_guard::resetMapTileTraversalProbe();
+    std::size_t callbacks = 0;
+    map->forTiles([&](std::shared_ptr<CTile>) { ++callbacks; });
+    const auto visitor_control = performance_guard::mapTileTraversalWork();
+    expect_true(callbacks == tileCount && visitor_control.snapshots == 0 && visitor_control.snapshotReferences == 0 &&
+                    visitor_control.directVisits == tileCount,
+                "the visitor probe must count every actual native callback without owning-set snapshots");
+    performance_guard::disableMapTileTraversalProbe();
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    auto rect = CUtil::rect(0, 0, 128, 128);
+    for (int warm = 0; warm < 3; ++warm)
+        minimap->renderObject(gui, rect, 0);
+    const auto builds = minimap->getTerrainTextureBuildCount();
+    const auto object_snapshots = minimap->getObjectSnapshotBuildCount();
+    const auto turn = map->getTurn();
+    const auto coords = player->getCoords();
+    const int hp = player->getHp();
+    gui->getRenderContext().resetStats();
+    performance_guard::resetMapTileTraversalProbe();
+    for (std::size_t frame = 0; frame < frames; ++frame)
+        minimap->renderObject(gui, rect, 0);
+    const auto warm = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(warm.snapshots == 0 && warm.snapshotReferences == 0,
+                "64warm minimap frames must allocate zero owning tile-set snapshots or copied tile references");
+    expect_true(warm.directVisits == 0 && minimap->getObjectSnapshotBuildCount() == object_snapshots,
+                "unchanged minimap frames must neither visit tiles nor rebuild marker snapshots");
+    expect_true(minimap->getTerrainTextureBuildCount() == builds && copies.successfulCopies == frames &&
+                    copies.attemptedCopies == frames && copies.failedCopies == 0,
+                "unchanged minimap terrain must reuse its texture for all64actual native copies");
+    map->setXBounds({});
+    map->setYBounds({});
+    minimap->renderObject(gui, rect, 0);
+    performance_guard::resetMapTileTraversalProbe();
+    minimap->renderObject(gui, rect, 0);
+    const auto derived = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(derived.snapshots == 0 && derived.snapshotReferences == 0 && derived.directVisits == 0,
+                "unchanged derived bounds must reuse their revision without visiting tile collections");
+    auto changed = map->getTile(2, 2, 0);
+    changed->setTileType("water");
+    const auto before_change = minimap->getTerrainTextureBuildCount();
+    performance_guard::resetMapTileTraversalProbe();
+    minimap->renderObject(gui, rect, 0);
+    const auto refreshed = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(refreshed.snapshots == 1 && refreshed.snapshotReferences == tileCount &&
+                    refreshed.directVisits == tileCount && minimap->getTerrainTextureBuildCount() == before_change + 1,
+                "in-place terrain mutation must derive bounds once and retain the ordered raster snapshot");
+    auto otherMap = std::make_shared<CMap>();
+    otherMap->setGame(game);
+    auto sharedMarker = std::make_shared<CMapObject>();
+    sharedMarker->setName("boundedSharedMinimapMarker");
+    sharedMarker->setPosX(2);
+    sharedMarker->setPosY(2);
+    sharedMarker->setPosZ(1);
+    sharedMarker->setCanStep(true);
+    map->addObject(sharedMarker);
+    otherMap->addObject(sharedMarker);
+    expect_true(map->getObjectByName(sharedMarker->getName()) == sharedMarker &&
+                    otherMap->getObjectByName(sharedMarker->getName()) == sharedMarker &&
+                    sharedMarker->getMap() == otherMap,
+                "the active-frame guard must retain the actual marker in A while B owns position updates");
+    minimap->renderObject(gui, rect, 0);
+    const auto sharedSnapshots = minimap->getObjectSnapshotBuildCount();
+    const auto sharedTerrainBuilds = minimap->getTerrainTextureBuildCount();
+    const auto sharedRevision = map->getNavigationRevision();
+    const auto ownerRevision = otherMap->getNavigationRevision();
+    performance_guard::resetMapTileTraversalProbe();
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        sharedMarker->setPosZ(static_cast<int>(frame % 2));
+        minimap->renderObject(gui, rect, 0);
+    }
+    const auto shared = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(shared.snapshots == 0 && shared.snapshotReferences == 0 && shared.directVisits == 0 &&
+                    minimap->getObjectSnapshotBuildCount() == sharedSnapshots &&
+                    minimap->getTerrainTextureBuildCount() == sharedTerrainBuilds,
+                "64 shared-marker level changes within cached extents must add zero tile or snapshot work");
+    expect_true(map->getNavigationRevision() == sharedRevision &&
+                    otherMap->getNavigationRevision() == ownerRevision + frames,
+                "all64 actual shared-marker moves must update B alone while A keeps its registry snapshot");
+    expect_true(map->getTurn() == turn && player->getCoords() == coords && player->getHp() == hp && !map->isMoving(),
+                "minimap work measurement must preserve gameplay turns, player state and movement");
+    std::cout << "[minimap terrain revision] tiles=" << tileCount << " frames=" << frames
+              << " warm snapshots=" << warm.snapshots << " snapshot references=" << warm.snapshotReferences
+              << " snapshot budget=0 fresh visits=" << warm.directVisits << " visit budget=0"
+              << " cached copies=" << copies.successfulCopies << " builds=0 derived visits=" << derived.directVisits
+              << " changed visits=" << refreshed.directVisits << " shared marker frames=" << frames
+              << " shared snapshots=" << shared.snapshots << " shared visits=" << shared.directVisits << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
+    testListCollectionIndexIsBuiltOncePerRefresh();
+    testListIndexInvalidationPreservesLiveCollections();
     testBackgroundFreeObjectsResolveLayoutOnlyForDrawing();
     testUnchangedLayoutValuesAreParsedOnlyOnce();
     testTerrainTextureScalingIsReusedAndBounded();
@@ -702,7 +1181,9 @@ void run_render_context_performance_tests() {
     test_detail_layout_draws_only_visible_cached_paragraphs();
     test_reward_receipt_draws_only_visible_cached_rows();
     testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability();
+    testCharacterPagerReservationKeepsWarmLayoutWorkBounded();
     testLoadingReaderReusesWarmTextures();
     testMovementSamplingReusesOneBoundedRecord();
     testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute();
+    testMinimapTerrainRevisionAvoidsUnchangedCollectionWork();
 }

@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
+#include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/CSdlResources.h"
@@ -47,15 +48,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
+#include "object/CTrigger.h"
 #include "handler/CEventHandler.h"
 #include "test_harness.h"
 #include "native_crash_diagnostics.h"
 #include "stat_composition_fixture.h"
+#include "core_concept_contracts.h"
 #include "vutil.h"
 
 #include <pybind11/embed.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -719,6 +723,36 @@ void test_sdl_raii_alias_owns_surface() {
     Uint8 a = 0;
     SDL_GetRGBA(color, surface->format, &r, &g, &b, &a);
     expect_true(r == 1 && g == 2 && b == 3 && a == 4, "SurfacePtr should provide raw non-owning access via get");
+}
+
+void testCoreConceptContracts() {
+    int animationCalls = 0;
+    auto animation = std::make_shared<CAnimation>();
+    animation->withCallback(core_concept_contracts::LvalueAnimation{&animationCalls});
+    expect_true(animation->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0) && animationCalls == 1,
+                "animation callbacks must invoke their stored lvalue target");
+
+    int triggerCalls = 0;
+    CCustomTrigger trigger("", "", core_concept_contracts::LvalueTrigger{&triggerCalls});
+    auto copiedTrigger = trigger;
+    trigger.trigger(nullptr, nullptr);
+    copiedTrigger.trigger(nullptr, nullptr);
+    expect_true(triggerCalls == 2, "trigger callbacks must stay copyable and preserve ignored return values");
+
+    const auto directory = std::filesystem::current_path().string();
+    expect_true(CUtil::findFiles(directory, core_concept_contracts::LvalueFilePredicate{}).empty(),
+                "file predicates must receive named paths through an lvalue callable");
+    expect_true(CUtil::findFiles(directory, &std::string::empty).empty(),
+                "file predicates must support member pointers through std::invoke");
+
+    int statusCalls = 0;
+    expect_true(sdl_safe([&] { return ++statusCalls; }) == 1 && statusCalls == 1,
+                "SDL status callbacks must retain their integer result and run once");
+    int voidCalls = 0;
+    sdl_safe([&] { ++voidCalls; });
+    expect_true(voidCalls == 1, "SDL void callbacks must run once");
+    SDL_Surface surface{};
+    expect_true(sdl_safe([&] { return &surface; }) == &surface, "SDL nullable callbacks must preserve pointers");
 }
 
 void test_tag_round_trip_and_ordering() {
@@ -3020,6 +3054,105 @@ void testSerializationScopeRestoration() {
     strict_thread.join();
     lenient_thread.join();
     expect_true(isolated == 64, "concurrent operation contexts must never share strict policy or graph state");
+
+    class DiagnosticEnvironment {
+      public:
+        DiagnosticEnvironment() {
+            if (const char *value = std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS"))
+                previous = value;
+        }
+        ~DiagnosticEnvironment() { set(previous ? previous->c_str() : nullptr); }
+        static void set(const char *value) {
+#ifdef _WIN32
+            _putenv_s("GAME_SAVE_STAGE_DIAGNOSTICS", value ? value : "");
+#else
+            if (value)
+                setenv("GAME_SAVE_STAGE_DIAGNOSTICS", value, 1);
+            else
+                unsetenv("GAME_SAVE_STAGE_DIAGNOSTICS");
+#endif
+        }
+
+      private:
+        std::optional<std::string> previous;
+    } environment;
+    const std::map<std::string, std::shared_ptr<CGameObject>> fixed{{"a", nullptr}, {"b", nullptr}};
+    DiagnosticEnvironment::set("0");
+    CSerializationProgress disabled_admission("write");
+    CSerializationWriteContext disabled("disabled-progress");
+    auto unchanged = CSerialization::serializeExpected(fixed, disabled);
+    expect_true(unchanged && disabled.progressCounters().visits == 0 && disabled.progressCounters().records == 0,
+                "disabled diagnostics must remain silent with zero diagnostic counter work");
+    DiagnosticEnvironment::set("1");
+    for (int index = 0; index < 128; ++index) {
+        CSerializationWriteContext unadmitted("unadmitted-tile-shaped-operation");
+        auto value = CSerialization::serializeExpected(fixed, unadmitted);
+        expect_true(value && value->dump() == unchanged->dump() && unadmitted.progressCounters().records == 0 &&
+                        unadmitted.progressCounters().visits == 0,
+                    "independent construction roots must stay silent even when the environment flag is enabled");
+    }
+    CSerializationProgress write_admission("write");
+    CSerializationWriteContext writer("enabled-progress");
+    auto encoded = CSerialization::serializeExpected(fixed, writer);
+    write_admission.finished();
+    write_admission.end();
+    const auto written = write_admission.counters();
+    expect_true(encoded && unchanged && encoded->dump() == unchanged->dump() && written.visits == 4 &&
+                    written.objects == 2 && written.mapEntries == 2 && written.properties == 0 &&
+                    written.arrayEntries == 0 && written.records == 4 && written.bytes <= 4 * 512,
+                "independent map entries must share one bounded diagnostic session without changing JSON");
+    auto game = std::make_shared<CGame>();
+    CSerializationProgress read_admission("read");
+    CSerializationReadContext reader(false, "enabled-progress");
+    auto decoded = CSerialization::deserializeExpected<std::map<std::string, std::shared_ptr<CGameObject>>>(
+        game, *encoded, reader);
+    read_admission.finished();
+    read_admission.end();
+    const auto read = read_admission.counters();
+    expect_true(decoded && decoded->empty() && read.visits == 4 && read.objects == 2 && read.mapEntries == 2 &&
+                    read.properties == 0 && read.arrayEntries == 0 && read.records == 4 && read.bytes <= 4 * 512,
+                "read visits include null attempts and share their independent-entry record budget");
+    auto progress_document = std::make_shared<json>();
+    CSerializationProgress cached_admission("write");
+    CSerializationWriteContext cached("cached-progress");
+    {
+        CSerializationOperation scope(cached);
+        DiagnosticEnvironment::set("0");
+        CSerialization::setProperty(progress_document, "number", std::any(7), cached);
+        cached.finish(*progress_document);
+    }
+    cached_admission.finished();
+    cached_admission.end();
+    expect_true(progress_document->at("number").get<int>() == 7 && cached_admission.counters().properties == 1 &&
+                    cached_admission.counters().visits == 1 && cached_admission.counters().records == 3,
+                "the existing flag must be read once per session rather than once per visit");
+    DiagnosticEnvironment::set("1");
+    CSerializationProgress array_admission("write");
+    CSerializationWriteContext array_writer("array-progress");
+    const std::set<std::shared_ptr<CGameObject>> array_values{nullptr};
+    auto array_encoded = CSerialization::serializeExpected(array_values, array_writer);
+    expect_true(array_encoded && array_writer.progressCounters().arrayEntries == 1 &&
+                    array_writer.progressCounters().objects == 1 && array_writer.progressCounters().visits == 2,
+                "array entries use existing visits rather than another collection scan");
+    array_admission.finished();
+    array_admission.end();
+    struct UnencodableProgressValue {};
+    CSerializationWriteContext failed("failed-progress");
+    bool original_failure = false;
+    try {
+        CSerializationProgress error_admission("write");
+        CSerializationOperation scope(failed);
+        CSerialization::setProperty(progress_document, "missing", std::any(UnencodableProgressValue{}), failed);
+    } catch (const CSerializationException &error) {
+        original_failure = error.getError().code == CSerializationErrorCode::MissingCodec &&
+                           error.getError().source == "failed-progress" && error.getError().propertyPath == "missing";
+    }
+    expect_true(original_failure && failed.progressCounters().properties == 1 && failed.progressCounters().records == 2,
+                "diagnostic unwind must preserve the original typed error and release its session");
+    auto following = CSerialization::serializeExpected(fixed, writer);
+    expect_true(following && following->dump() == unchanged->dump() && writer.progressCounters().visits == 0 &&
+                    writer.progressCounters().records == 0,
+                "admission unwind must release TLS before the next unadmitted root, even with the flag enabled");
 }
 
 void testSerializerBaseDestruction() {
@@ -3048,6 +3181,305 @@ void testSerializerBaseDestruction() {
         expect_true(!destroyed, "the base owner keeps the derived serializer alive");
     }
     expect_true(destroyed, "destruction through the serializer base releases derived resources");
+}
+
+struct CodecContractValue {
+    int number;
+
+    json encode(CSerializationWriteContext &) const { return json(number); }
+};
+
+struct CodecPlainEncoder {
+    json operator()(const CodecContractValue &) const;
+};
+
+struct CodecPlainDecoder {
+    CodecContractValue operator()(const std::shared_ptr<CGame> &, const json &) const;
+};
+
+struct CodecExpectedEncoder {
+    CSerializationResult<json> operator()(const CodecContractValue &, CSerializationWriteContext &) const;
+};
+
+struct CodecExpectedDecoder {
+    CSerializationResult<CodecContractValue> operator()(const std::shared_ptr<CGame> &, const json &,
+                                                        CSerializationReadContext &) const;
+};
+
+struct CodecInvalidEncoder {
+    void operator()(const CodecContractValue &) const;
+};
+
+struct CodecInvalidDecoder {
+    std::string operator()(const std::shared_ptr<CGame> &, const json &) const;
+};
+
+struct CodecInvalidContextEncoder : CodecPlainEncoder {
+    using CodecPlainEncoder::operator();
+    void operator()(const CodecContractValue &, CSerializationWriteContext &) const;
+};
+
+struct CodecInvalidContextDecoder : CodecPlainDecoder {
+    using CodecPlainDecoder::operator();
+    void operator()(const std::shared_ptr<CGame> &, const json &, CSerializationReadContext &) const;
+};
+
+struct CodecMoveOnlyEncoder : CodecPlainEncoder {
+    std::unique_ptr<int> state;
+};
+
+struct CodecMoveOnlyDecoder : CodecPlainDecoder {
+    std::unique_ptr<int> state;
+};
+
+struct CodecMoveOnlyValue {
+    std::unique_ptr<int> state;
+};
+
+struct CodecMoveOnlyValueEncoder {
+    json operator()(const CodecMoveOnlyValue &) const;
+};
+
+struct CodecMoveOnlyValueDecoder {
+    CodecMoveOnlyValue operator()(const std::shared_ptr<CGame> &, const json &) const;
+};
+
+struct CodecRvalueEncoder {
+    json operator()(const CodecContractValue &) &&;
+};
+
+struct CodecJsonInput {
+    struct Missing {
+        bool value;
+        explicit operator bool() const { return value; }
+    };
+
+    std::optional<json> value;
+    Missing operator!() & { return {!value}; }
+    const json &operator*() & { return *value; }
+};
+
+template <typename Value, typename Encode, typename Decode>
+concept CanRegisterJsonCodec = requires(Encode encode, Decode decode) {
+    CTypes::registerJsonCodec<Value>(std::move(encode), std::move(decode));
+    CTypes::registerJsonType<Value>(std::move(encode), std::move(decode));
+    CTypedJsonCodec<Value>(std::move(encode), std::move(decode));
+};
+
+template <typename Value>
+concept CanSerializeGameObject = requires(Value value) {
+    { CSerializerFunction<std::shared_ptr<json>, Value>::serialize(value) } -> std::same_as<std::shared_ptr<json>>;
+};
+
+template <typename Value>
+concept CanDeserializeGameObject =
+    requires(std::shared_ptr<CGame> game, std::shared_ptr<json> document, CSerializationReadContext &context) {
+        { CSerializerFunction<std::shared_ptr<json>, Value>::deserialize(game, document) } -> std::same_as<Value>;
+        {
+            CSerializerFunction<std::shared_ptr<json>, Value>::deserialize(game, document, context)
+        } -> std::same_as<Value>;
+    };
+
+template <typename Serialized>
+concept CanSerializeJson = requires {
+    { CSerialization::serialize<Serialized>(int{}) } -> std::same_as<Serialized>;
+};
+
+template <typename Serialized>
+concept CanDeserializeJson = requires(Serialized value, std::shared_ptr<CGame> game) {
+    { CSerialization::deserialize<Serialized, int>(game, std::move(value)) } -> std::same_as<int>;
+};
+
+static_assert(CanRegisterJsonCodec<CodecContractValue, CodecPlainEncoder, CodecPlainDecoder>);
+static_assert(CanRegisterJsonCodec<CodecContractValue, CodecExpectedEncoder, CodecExpectedDecoder>);
+static_assert(CanRegisterJsonCodec<CodecContractValue, decltype(&CodecContractValue::encode), CodecPlainDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecInvalidEncoder, CodecPlainDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecPlainEncoder, CodecInvalidDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecInvalidContextEncoder, CodecPlainDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecPlainEncoder, CodecInvalidContextDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecMoveOnlyEncoder, CodecPlainDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecPlainEncoder, CodecMoveOnlyDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecMoveOnlyValue, CodecMoveOnlyValueEncoder, CodecMoveOnlyValueDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue, CodecRvalueEncoder, CodecPlainDecoder>);
+static_assert(!CanRegisterJsonCodec<const CodecContractValue, CodecPlainEncoder, CodecPlainDecoder>);
+static_assert(!CanRegisterJsonCodec<CodecContractValue &, CodecPlainEncoder, CodecPlainDecoder>);
+static_assert(CanSerializeGameObject<std::shared_ptr<CItem>>);
+static_assert(CanSerializeGameObject<std::set<std::shared_ptr<CItem>>>);
+static_assert(CanSerializeGameObject<std::map<std::string, std::shared_ptr<CItem>>>);
+static_assert(!CanSerializeGameObject<std::shared_ptr<int>>);
+static_assert(!CanSerializeGameObject<std::shared_ptr<const CItem>>);
+static_assert(!CanSerializeGameObject<std::shared_ptr<volatile CItem>>);
+static_assert(!CanSerializeGameObject<std::set<std::shared_ptr<const CItem>>>);
+static_assert(!CanSerializeGameObject<std::map<std::string, std::shared_ptr<const CItem>>>);
+static_assert(!CanSerializeGameObject<std::set<int>>);
+static_assert(!CanSerializeGameObject<std::map<std::string, int>>);
+static_assert(!CanSerializeGameObject<std::map<int, std::shared_ptr<CItem>>>);
+static_assert(CanDeserializeGameObject<std::shared_ptr<CItem>>);
+static_assert(CanDeserializeGameObject<std::set<std::shared_ptr<CItem>>>);
+static_assert(CanDeserializeGameObject<std::map<std::string, std::shared_ptr<CItem>>>);
+static_assert(CanDeserializeGameObject<std::shared_ptr<const CItem>>);
+static_assert(CanDeserializeGameObject<std::set<std::shared_ptr<const CItem>>>);
+static_assert(CanDeserializeGameObject<std::map<std::string, std::shared_ptr<const CItem>>>);
+static_assert(CanDeserializeGameObject<std::shared_ptr<volatile CItem>>);
+static_assert(CanDeserializeGameObject<std::shared_ptr<const volatile CItem>>);
+static_assert(CanDeserializeGameObject<std::set<std::shared_ptr<volatile CItem>>>);
+static_assert(CanDeserializeGameObject<std::map<std::string, std::shared_ptr<volatile CItem>>>);
+static_assert(CanDeserializeGameObject<std::shared_ptr<void>>);
+static_assert(!CanDeserializeGameObject<std::shared_ptr<CItem[]>>);
+static_assert(!CanDeserializeGameObject<std::shared_ptr<int>>);
+static_assert(!CanDeserializeGameObject<std::set<int>>);
+static_assert(!CanDeserializeGameObject<std::map<std::string, int>>);
+static_assert(!CanDeserializeGameObject<std::map<int, std::shared_ptr<CItem>>>);
+static_assert(CanSerializeJson<json>);
+static_assert(CanSerializeJson<std::shared_ptr<json>>);
+static_assert(!CanSerializeJson<std::shared_ptr<const json>>);
+static_assert(!CanSerializeJson<int>);
+static_assert(!CanSerializeJson<std::shared_ptr<int>>);
+static_assert(!CanSerializeJson<json *>);
+static_assert(!CanSerializeJson<std::unique_ptr<json>>);
+static_assert(!CanSerializeJson<std::optional<json>>);
+static_assert(CanDeserializeJson<json>);
+static_assert(CanDeserializeJson<std::shared_ptr<json>>);
+static_assert(CanDeserializeJson<std::shared_ptr<const json>>);
+static_assert(CanDeserializeJson<json *>);
+static_assert(CanDeserializeJson<const json *>);
+static_assert(CanDeserializeJson<std::unique_ptr<json>>);
+static_assert(CanDeserializeJson<std::optional<json>>);
+static_assert(CanDeserializeJson<std::shared_ptr<int>>);
+static_assert(CanDeserializeJson<CodecJsonInput>);
+static_assert(!CanDeserializeJson<int>);
+static_assert(!CanDeserializeJson<std::shared_ptr<CodecContractValue>>);
+
+void testTypedJsonCodecCallableContracts() {
+    struct Encoder {
+        int &plainCalls;
+        int &contextCalls;
+        json operator()(const CodecContractValue &) const {
+            ++plainCalls;
+            return json(-1);
+        }
+        CSerializationResult<json> operator()(const CodecContractValue &value, CSerializationWriteContext &) const {
+            ++contextCalls;
+            return json(value.number);
+        }
+    };
+    struct Decoder {
+        int &plainCalls;
+        int &contextCalls;
+        CodecContractValue operator()(const std::shared_ptr<CGame> &, const json &) const {
+            ++plainCalls;
+            return {-1};
+        }
+        CSerializationResult<CodecContractValue> operator()(const std::shared_ptr<CGame> &, const json &value,
+                                                            CSerializationReadContext &) const {
+            ++contextCalls;
+            return CodecContractValue{value.get<int>()};
+        }
+    };
+
+    int plainCalls = 0;
+    int contextCalls = 0;
+    CTypedJsonCodec<CodecContractValue> contextual(Encoder{plainCalls, contextCalls},
+                                                   Decoder{plainCalls, contextCalls});
+    auto encoded = contextual.serialize(std::any(CodecContractValue{17}));
+    auto decoded = contextual.deserialize(nullptr, json(23));
+    expect_true(encoded && encoded->get<int>() == 17 && decoded &&
+                    std::any_cast<CodecContractValue>(*decoded).number == 23,
+                "context-aware codecs preserve expected results");
+    expect_true(plainCalls == 0 && contextCalls == 2,
+                "context-aware codec overloads retain priority over context-free overloads");
+
+    CTypedJsonCodec<CodecContractValue> member(
+        &CodecContractValue::encode,
+        [](const std::shared_ptr<CGame> &, const json &value) { return CodecContractValue{value.get<int>()}; });
+    auto memberEncoded = member.serialize(std::any(CodecContractValue{29}));
+    auto memberDecoded = member.deserialize(nullptr, json(31));
+    expect_true(memberEncoded && memberEncoded->get<int>() == 29 && memberDecoded &&
+                    std::any_cast<CodecContractValue>(*memberDecoded).number == 31,
+                "typed codecs invoke member functions and preserve raw value return conversions");
+}
+
+void testSerializationConstReads() {
+    using ItemReader = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<const CItem>>;
+    using VolatileItemReader = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<volatile CItem>>;
+    using SetReader = CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<const CItem>>>;
+    using MapReader = CSerializerFunction<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<const CItem>>>;
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CItem", [] { return std::make_shared<CItem>(); });
+    auto itemDocument = std::make_shared<json>(json{{"class", "CItem"}, {"properties", {{"power", 37}}}});
+    auto setDocument = std::make_shared<json>(json::array({*itemDocument}));
+    auto mapDocument = std::make_shared<json>(json{{"item", *itemDocument}});
+    CSerializationReadContext context;
+
+    auto item = ItemReader::deserialize(game, itemDocument);
+    auto contextualItem = ItemReader::deserialize(game, itemDocument, context);
+    expect_true(item && item->getPower() == 37 && contextualItem && contextualItem->getPower() == 37,
+                "game object reads support const pointees with and without an explicit context");
+
+    auto volatileItem = VolatileItemReader::deserialize(game, itemDocument);
+    auto contextualVolatileItem = VolatileItemReader::deserialize(game, itemDocument, context);
+    expect_true(volatileItem && std::const_pointer_cast<CItem>(volatileItem)->getPower() == 37 &&
+                    contextualVolatileItem && std::const_pointer_cast<CItem>(contextualVolatileItem)->getPower() == 37,
+                "game object reads preserve volatile views of the decoded object");
+
+    auto items = SetReader::deserialize(game, setDocument);
+    auto contextualItems = SetReader::deserialize(game, setDocument, context);
+    expect_true(items.size() == 1 && *items.begin() && (*items.begin())->getPower() == 37 &&
+                    contextualItems.size() == 1 && *contextualItems.begin() &&
+                    (*contextualItems.begin())->getPower() == 37,
+                "game object set reads preserve values through const pointer conversion");
+
+    auto namedItems = MapReader::deserialize(game, mapDocument);
+    auto contextualNamedItems = MapReader::deserialize(game, mapDocument, context);
+    expect_true(namedItems.size() == 1 && namedItems.at("item") && namedItems.at("item")->getPower() == 37 &&
+                    contextualNamedItems.size() == 1 && contextualNamedItems.at("item") &&
+                    contextualNamedItems.at("item")->getPower() == 37,
+                "game object map reads preserve keys and values through const pointer conversion");
+
+    const auto document = std::make_shared<const json>(json::array({41}));
+    expect_true(CSerialization::deserialize<std::shared_ptr<const json>, std::set<int>>(nullptr, document) ==
+                    std::set<int>{41},
+                "the JSON facade accepts an immutable shared document for reading");
+    bool rejectedMissingInput = false;
+    try {
+        CSerialization::deserialize<std::shared_ptr<const json>, std::set<int>>(nullptr, nullptr);
+    } catch (const CSerializationException &exception) {
+        rejectedMissingInput = exception.getError().code == CSerializationErrorCode::InvalidInput &&
+                               exception.getError().message == "Missing JSON input";
+    }
+    expect_true(rejectedMissingInput, "an immutable shared document retains the missing-input diagnostic");
+}
+
+void testSerializationReadableInputs() {
+    using Values = std::set<int>;
+    json document = json::array({43});
+    const Values expected{43};
+    expect_true(CSerialization::deserialize<json *, Values>(nullptr, &document) == expected,
+                "the JSON facade reads borrowed raw documents");
+    auto owned = std::make_unique<json>(document);
+    expect_true(CSerialization::deserialize<std::unique_ptr<json>, Values>(nullptr, std::move(owned)) == expected &&
+                    !owned,
+                "the JSON facade reads transferred unique documents");
+    expect_true(CSerialization::deserialize<std::optional<json>, Values>(nullptr, document) == expected,
+                "the JSON facade reads optional documents");
+    expect_true(CSerialization::deserialize<CodecJsonInput, Values>(nullptr, CodecJsonInput{document}) == expected,
+                "the JSON facade uses lvalue input operations and contextual boolean conversion");
+
+    const auto expectMissing = []<typename Input>(Input input) {
+        bool rejected = false;
+        try {
+            CSerialization::deserialize<Input, Values>(nullptr, std::move(input));
+        } catch (const CSerializationException &exception) {
+            rejected = exception.getError().code == CSerializationErrorCode::InvalidInput &&
+                       exception.getError().message == "Missing JSON input";
+        }
+        expect_true(rejected, "readable input wrappers preserve the missing-input diagnostic");
+    };
+    expectMissing(static_cast<json *>(nullptr));
+    expectMissing(std::unique_ptr<json>{});
+    expectMissing(std::optional<json>{});
+    expectMissing(CodecJsonInput{});
 }
 
 void testTypedJsonCodecsOwnResultsAndPreserveErrors() {
@@ -4678,6 +5110,7 @@ int main() {
     runDiagnosedCase("test_json_parse_expected_success_and_failure", test_json_parse_expected_success_and_failure);
     runDiagnosedCase("test_json_parse_dump_and_type_helpers", test_json_parse_dump_and_type_helpers);
     runDiagnosedCase("test_sdl_raii_alias_owns_surface", test_sdl_raii_alias_owns_surface);
+    runDiagnosedCase("testCoreConceptContracts", testCoreConceptContracts);
     runDiagnosedCase("test_direction_mapping", test_direction_mapping);
     runDiagnosedCase("test_rect_bounds_inclusion", test_rect_bounds_inclusion);
     runDiagnosedCase("test_tag_round_trip_and_ordering", test_tag_round_trip_and_ordering);
@@ -4769,6 +5202,9 @@ int main() {
     runDiagnosedCase("testSerializationScopeRestoration", testSerializationScopeRestoration);
     runDiagnosedCase("testSerializerBaseDestruction", testSerializerBaseDestruction);
     runDiagnosedCase("testTypedJsonCodecsOwnResultsAndPreserveErrors", testTypedJsonCodecsOwnResultsAndPreserveErrors);
+    runDiagnosedCase("testTypedJsonCodecCallableContracts", testTypedJsonCodecCallableContracts);
+    runDiagnosedCase("testSerializationConstReads", testSerializationConstReads);
+    runDiagnosedCase("testSerializationReadableInputs", testSerializationReadableInputs);
     runDiagnosedCase("testConsoleHistoryCodecPreservesOrderedGuiSnapshots",
                      testConsoleHistoryCodecPreservesOrderedGuiSnapshots);
     runDiagnosedCase("test_serialization_collection_and_error_helpers",
