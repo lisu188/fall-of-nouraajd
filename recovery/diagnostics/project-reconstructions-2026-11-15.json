@@ -1,0 +1,472 @@
+{
+  "boundary": "Static project/source selection only. No compilation or runtime verification. Missing source bodies and library dependencies remain independent blockers. All surviving .pro files are unchanged.",
+  "checks": [
+    {
+      "commit": "46855a8d1de201492858e67db9cb2941fb721151",
+      "position": 246,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 31
+    },
+    {
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "position": 247,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 31
+    },
+    {
+      "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+      "position": 248,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 29
+    },
+    {
+      "commit": "f873badeef24b84b8940982d21a2a9b87545fb30",
+      "position": 249,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 28
+    },
+    {
+      "commit": "eb8276b2fc795f3af5f36370c209db85c1fb818d",
+      "position": 250,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 28
+    },
+    {
+      "commit": "7c79af080a5bd21526ff5af890cb3f9559f689ac",
+      "position": 251,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 28
+    },
+    {
+      "commit": "44fe765077f6eb320afd672dd222d0a46c033157",
+      "position": 252,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 28
+    },
+    {
+      "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+      "position": 253,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    },
+    {
+      "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+      "position": 254,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 26
+    },
+    {
+      "commit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+      "position": 255,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+      "position": 256,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+      "position": 257,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+      "position": 258,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6",
+      "position": 259,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+      "position": 260,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "b4954bbcaad2b59cd68f24beb69fe05cbbe46081",
+      "position": 261,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 27
+    },
+    {
+      "commit": "e8b7c3d0e6da989122a0587943a98504342da3cd",
+      "position": 262,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 26
+    },
+    {
+      "commit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7",
+      "position": 263,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    },
+    {
+      "commit": "e398df1047d75ac0b2885d0dcfc03ad4c35990c2",
+      "position": 264,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    },
+    {
+      "commit": "cce51b01010c31cc69119e695dc3133c8c372210",
+      "position": 265,
+      "projectSurvivedUnchanged": false,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    },
+    {
+      "commit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb",
+      "position": 266,
+      "projectSurvivedUnchanged": true,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    },
+    {
+      "commit": "f2c254b087ffa7ab035dc86946997dbb5a4fe6c0",
+      "position": 267,
+      "projectSurvivedUnchanged": true,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    },
+    {
+      "commit": "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073",
+      "position": 268,
+      "projectSurvivedUnchanged": true,
+      "recipe": null,
+      "recipeBlocker": "Python initialization API conflicts with the declared ABI; supply --recipe",
+      "selectedProject": "game.pro",
+      "sourceCount": 25
+    }
+  ],
+  "entries": [
+    {
+      "commits": [
+        "46855a8d1de201492858e67db9cb2941fb721151"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "75ea3f5ea6cd94a23c5a2666cd62465a53ed7057",
+      "path": "game.pro",
+      "positions": [
+        246
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "3285f16956153ca4b2e6ab949bb6d8d8f386378a97039257c8ecaa920a31a752",
+      "source": "recovery/payloads/reconstructions/75/75ea3f5ea6cd94a23c5a2666cd62465a53ed7057-game.pro"
+    },
+    {
+      "commits": [
+        "5fe60e7c6947844088efc763b596a88546dcdb4f"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "b25dfc11ef699553ff570e025cbbeabc2eaf51e8",
+      "path": "game.pro",
+      "positions": [
+        247
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "931337e7a8d67255c55e51dabca0b1869cc49d6b4d9f4329a4c29d15d8ac1254",
+      "source": "recovery/payloads/reconstructions/b2/b25dfc11ef699553ff570e025cbbeabc2eaf51e8-game.pro"
+    },
+    {
+      "commits": [
+        "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d",
+      "path": "game.pro",
+      "positions": [
+        248
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a45e7ab2301934904ef12a5bb55c5a85034ffb879ec12764c2a7ecdef5f0a98c",
+      "source": "recovery/payloads/reconstructions/10/10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d-game.pro"
+    },
+    {
+      "commits": [
+        "f873badeef24b84b8940982d21a2a9b87545fb30",
+        "eb8276b2fc795f3af5f36370c209db85c1fb818d"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "70d87918c1d7c24681e98a3d8e860b33f0f42451",
+      "path": "game.pro",
+      "positions": [
+        249,
+        250
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "source": "recovery/payloads/reconstructions/70/70d87918c1d7c24681e98a3d8e860b33f0f42451-game.pro"
+    },
+    {
+      "commits": [
+        "7c79af080a5bd21526ff5af890cb3f9559f689ac"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "9597e896cd261a70d461bdd451808e031e50dd8a",
+      "path": "game.pro",
+      "positions": [
+        251
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "f5ff78094a7b4d055c47c692cfa52fdfdf5a1c6855499c3f89cc0309e3deff1c",
+      "source": "recovery/payloads/reconstructions/95/9597e896cd261a70d461bdd451808e031e50dd8a-game.pro"
+    },
+    {
+      "commits": [
+        "44fe765077f6eb320afd672dd222d0a46c033157"
+      ],
+      "excludedIncludeOnlySources": [
+        "src/CTypeHandler.cpp"
+      ],
+      "omissionEvidence": [
+        {
+          "content": "#include \"CTypeHandler.h\"\n",
+          "includedProjectHeader": {
+            "content": "#ifndef CTYPEHANDLER_H\n#define CTYPEHANDLER_H\n\n#include <QObject>\n\nclass CTypeHandler : public QObject {\n\tQ_OBJECT\npublic:\n};\n\n#endif // CTYPEHANDLER_H\n",
+            "path": "src/CTypeHandler.h",
+            "sha256": "f05b00cdaf53837c3f2c981024fa9cfc85b43acd01f4703512db9f2eedea93be"
+          },
+          "originalBlob": "f0dd31050658b4d9f40acad1e26dee9063bc4f66",
+          "path": "src/CTypeHandler.cpp",
+          "reason": "Complete intact translation unit contains only includes and whitespace; its project header has no static definitions, initializer objects or registration macros. HEADERS retains the header for qmake moc generation.",
+          "sha256": "f8cc8447f1dc64b999c35a04260a68a4054147cc8f751f0ee5afa66d62d9bbfe",
+          "sourceCommit": "44fe765077f6eb320afd672dd222d0a46c033157"
+        }
+      ],
+      "originalBlob": "4fe204b5a652a47eee6fcb5ca0e847ef69900392",
+      "path": "game.pro",
+      "positions": [
+        252
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "637acf61eee8b41467223e5ae51fb65fb006c1d2c5ffc2b480545c004d257dea",
+      "source": "recovery/payloads/reconstructions/4f/4fe204b5a652a47eee6fcb5ca0e847ef69900392-game.pro"
+    },
+    {
+      "commits": [
+        "a9534481e30ae59be3bee52c6ff23aaba2dbae48"
+      ],
+      "excludedIncludeOnlySources": [
+        "src/CTypeHandler.cpp"
+      ],
+      "omissionEvidence": [
+        {
+          "content": "#include \"CTypeHandler.h\"\n",
+          "includedProjectHeader": {
+            "content": "#ifndef CTYPEHANDLER_H\n#define CTYPEHANDLER_H\n\n#include <QObject>\n\nclass CTypeHandler : public QObject {\n\tQ_OBJECT\npublic:\n};\n\n#endif // CTYPEHANDLER_H\n",
+            "path": "src/CTypeHandler.h",
+            "sha256": "f05b00cdaf53837c3f2c981024fa9cfc85b43acd01f4703512db9f2eedea93be"
+          },
+          "originalBlob": "f0dd31050658b4d9f40acad1e26dee9063bc4f66",
+          "path": "src/CTypeHandler.cpp",
+          "reason": "Complete intact translation unit contains only includes and whitespace; its project header has no static definitions, initializer objects or registration macros. HEADERS retains the header for qmake moc generation.",
+          "sha256": "f8cc8447f1dc64b999c35a04260a68a4054147cc8f751f0ee5afa66d62d9bbfe",
+          "sourceCommit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48"
+        }
+      ],
+      "originalBlob": "ee49ba5ebb81e355b0effc08a4f07ead85652c5d",
+      "path": "game.pro",
+      "positions": [
+        253
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "ac981ee53170136b8a1874cae0ee053c977016c7fc29fb0204d4470b8dc310f6",
+      "source": "recovery/payloads/reconstructions/ee/ee49ba5ebb81e355b0effc08a4f07ead85652c5d-game.pro"
+    },
+    {
+      "commits": [
+        "70dc75ede4bbdda080775689a32f1f9edfe75ffa"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "267e7b62b2e9cb6678276b8e319bba55f59403d1",
+      "path": "game.pro",
+      "positions": [
+        254
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "19ce281299ebe51bf42410e268a470faf155fcbd661d12027a680ad6150de0ab",
+      "source": "recovery/payloads/reconstructions/26/267e7b62b2e9cb6678276b8e319bba55f59403d1-game.pro"
+    },
+    {
+      "commits": [
+        "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+        "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "69fd798f9c12545d2718d2787ad1ea609107a937",
+      "path": "game.pro",
+      "positions": [
+        255,
+        256
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "source": "recovery/payloads/reconstructions/69/69fd798f9c12545d2718d2787ad1ea609107a937-game.pro"
+    },
+    {
+      "commits": [
+        "9fc9416b1025044633a6b789212f67c56ecaafba"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "91fe15120dd506b4a0cfabb13cbca41cd66bea7a",
+      "path": "game.pro",
+      "positions": [
+        257
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "source": "recovery/payloads/reconstructions/91/91fe15120dd506b4a0cfabb13cbca41cd66bea7a-game.pro"
+    },
+    {
+      "commits": [
+        "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+        "058f240a56b188ae5a3605395c77cff2c5a3b8a6",
+        "7443e0fde387641ad9d02b7d8ef0a6c429d1001e",
+        "b4954bbcaad2b59cd68f24beb69fe05cbbe46081"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "3059c5de88b726b70736b936ebf8e360f82fec09",
+      "path": "game.pro",
+      "positions": [
+        258,
+        259,
+        260,
+        261
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "a61dc2520b38213854916cb6249d9da93326de7f92c7745b74bcf7ae3bdee3ff",
+      "source": "recovery/payloads/reconstructions/30/3059c5de88b726b70736b936ebf8e360f82fec09-game.pro"
+    },
+    {
+      "commits": [
+        "e8b7c3d0e6da989122a0587943a98504342da3cd"
+      ],
+      "excludedIncludeOnlySources": [],
+      "omissionEvidence": [],
+      "originalBlob": "7caf45e39f7a992d2d3d43870b97520462a3ea4d",
+      "path": "game.pro",
+      "positions": [
+        262
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "73d9722cdf1cc97b9efee0466447fc64f65c31453a3c0e2fc158a3468849aaef",
+      "source": "recovery/payloads/reconstructions/7c/7caf45e39f7a992d2d3d43870b97520462a3ea4d-game.pro"
+    },
+    {
+      "commits": [
+        "be8b99dfdfe8c13c33f4d60610f24dc7199031a7",
+        "e398df1047d75ac0b2885d0dcfc03ad4c35990c2",
+        "cce51b01010c31cc69119e695dc3133c8c372210"
+      ],
+      "excludedIncludeOnlySources": [
+        "src/CAnimation.cpp"
+      ],
+      "omissionEvidence": [
+        {
+          "content": "#include <QPixmap>\n#include \"CAnimation.h\"\n",
+          "includedProjectHeader": {
+            "content": "#pragma once\n#include <QObject>\n#include <map>\nclass QPixmap;\n\n",
+            "path": "src/CAnimation.h",
+            "sha256": "1eda2e8de79f9c2a3a57ca60900ea73d08ab28b6c21310c73e049e7138b0c3fb"
+          },
+          "originalBlob": "27aed5ae75c0b09f9dadc449ffff3e4e956b3612",
+          "path": "src/CAnimation.cpp",
+          "reason": "Complete intact translation unit contains only includes and whitespace; its project header has no static definitions, initializer objects or registration macros. HEADERS retains the header for qmake moc generation. Intact #266 project independently omits this unchanged include-only unit.",
+          "sha256": "5dd725a3fc6762bbbbb763d77e2519db7ccccc2516e9c9958ad3f619b135fb1d",
+          "sourceCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+        }
+      ],
+      "originalBlob": "e44a0288b373871a71c3dbe0d82ec6c483c2a014",
+      "path": "game.pro",
+      "positions": [
+        263,
+        264,
+        265
+      ],
+      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation.",
+      "sha256": "5911fd1c6a0a1c42f99353bc704976c70c61c3495195b492592c119a0dc1fa00",
+      "source": "recovery/payloads/reconstructions/e4/e44a0288b373871a71c3dbe0d82ec6c483c2a014-game.pro"
+    }
+  ],
+  "schemaVersion": 1
+}

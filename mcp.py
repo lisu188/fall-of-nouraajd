@@ -85,6 +85,7 @@ MCP_ALLOWED_EXPORTS = {
     "randint",
 }
 MCP_ALLOWED_HANDLE_METHODS = {
+    "BaldursGateClock": {"sevenSunsDeathCount"},
     "CGameObject": {
         "addTag",
         "getBoolProperty",
@@ -111,6 +112,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getParent",
         "keyboardEvent",
     },
+    "CGameQuestPanel": {"getText"},
     "CGameCampaignPanel": {
         "getBody",
         "getTitle",
@@ -126,6 +128,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getGui",
         "getGuiHandler",
         "getMap",
+        "getMapBindingEpoch",
         "getObjectHandler",
         "getRngHandler",
         "getSceneManager",
@@ -1361,6 +1364,8 @@ class EngineMcpServer:
         return True
 
     def serve_http(self, host: str, port: int) -> None:
+        if host.lower() not in {"127.0.0.1", "localhost"}:
+            raise ValueError("HTTP MCP server must bind to loopback; use SSH port forwarding for remote access")
         httpd = EngineHttpServer((host, port), EngineHttpRequestHandler, self)
         try:
             logger.info("HTTP MCP server listening on http://%s:%d/mcp", host, port)
@@ -3120,6 +3125,28 @@ class EngineMcpServer:
         return result
 
 
+def valid_local_http_host(value: str | None, port: int) -> bool:
+    if not value or len(value) > 128 or value != value.strip():
+        return False
+    if any(character in value for character in "\r\n\t"):
+        return False
+    try:
+        parsed = urlparse(f"http://{value}")
+        return (
+            parsed.netloc == value
+            and parsed.hostname in {"localhost", "127.0.0.1"}
+            and parsed.port in {None, port}
+            and parsed.username is None
+            and parsed.password is None
+            and not parsed.path
+            and not parsed.params
+            and not parsed.query
+            and not parsed.fragment
+        )
+    except ValueError:
+        return False
+
+
 class EngineHttpServer(ThreadingHTTPServer):
     daemon_threads = True
 
@@ -3135,6 +3162,14 @@ class EngineHttpServer(ThreadingHTTPServer):
 
 
 class EngineHttpRequestHandler(BaseHTTPRequestHandler):
+    def _validate_host_header(self) -> bool:
+        hosts = self.headers.get_all("Host", [])
+        if len(hosts) == 1 and valid_local_http_host(hosts[0], self.server.server_port):
+            return True
+        self.close_connection = True
+        self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden Host header")
+        return False
+
     def _send_safe_header(self, keyword: str, value: str) -> None:
         # HTTPMessage can preserve obsolete folded request values. Never echo
         # line breaks into response headers, including CORS and MCP metadata.
@@ -3146,6 +3181,8 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def do_OPTIONS(self) -> None:
+        if not self._validate_host_header():
+            return
         path = self.path.split("?", 1)[0]
         if path == "/mcp" and not self.server.mcp_server.validate_origin(self.headers.get("Origin")):
             self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden origin")
@@ -3153,6 +3190,8 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self._write_empty(HTTPStatus.NO_CONTENT, allow="GET, POST, DELETE, OPTIONS")
 
     def do_GET(self) -> None:
+        if not self._validate_host_header():
+            return
         path = self.path.split("?", 1)[0]
 
         if path in {"/healthz", "/status"}:
@@ -3265,6 +3304,8 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             self.server.mcp_server._remove_stream(session_id, stream.stream_id)
 
     def do_DELETE(self) -> None:
+        if not self._validate_host_header():
+            return
         path = self.path.split("?", 1)[0]
         if path != "/mcp":
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
@@ -3286,6 +3327,8 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self._write_empty(HTTPStatus.NO_CONTENT)
 
     def do_POST(self) -> None:
+        if not self._validate_host_header():
+            return
         path = self.path.split("?", 1)[0]
         if path != "/mcp":
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
@@ -3477,9 +3520,9 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def _add_default_headers(self) -> None:
-        self._send_safe_header(
-            "Access-Control-Allow-Origin", self.headers.get("Origin", "*") if self.headers.get("Origin") else "*"
-        )
+        origin = self.headers.get("Origin")
+        if origin:
+            self._send_safe_header("Access-Control-Allow-Origin", origin)
         self.send_header(
             "Access-Control-Allow-Headers",
             "content-type, accept, origin, mcp-session-id, mcp-protocol-version, last-event-id",

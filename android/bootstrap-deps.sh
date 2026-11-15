@@ -10,7 +10,7 @@ VCPKG_REF="${GAME_ANDROID_VCPKG_REF:-2026.05.25}"
 VCPKG_TRIPLET="arm64-android-dynamic"
 ANDROID_NDK_VERSION="29.0.14206865"
 
-for command in awk curl find git sed sha256sum tar; do
+for command in awk curl find git python3 sed sha256sum tar; do
     if ! command -v "${command}" >/dev/null 2>&1; then
         echo "Missing required command: ${command}" >&2
         exit 2
@@ -65,11 +65,27 @@ if [[ ! -f "${PYTHON_PREFIX}/include/python${PYTHON_VERSION%.*}/Python.h" || ! -
 fi
 
 VCPKG_ROOT="${DEPS_ROOT}/vcpkg"
+VCPKG_BASELINE="$(
+    python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("builtin-baseline", ""))' \
+        "${REPO_ROOT}/vcpkg.json"
+)"
+if [[ -z "${GAME_ANDROID_VCPKG_REF:-}" && -n "${VCPKG_BASELINE}" ]]; then
+    VCPKG_REF="${VCPKG_BASELINE}"
+fi
+
 if [[ ! -d "${VCPKG_ROOT}/.git" ]]; then
-    git clone --depth 1 --branch "${VCPKG_REF}" https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
+    if [[ "${VCPKG_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+        git init "${VCPKG_ROOT}"
+        git -C "${VCPKG_ROOT}" remote add origin https://github.com/microsoft/vcpkg.git
+        git -C "${VCPKG_ROOT}" fetch --depth 1 origin "${VCPKG_REF}"
+        git -C "${VCPKG_ROOT}" checkout --detach FETCH_HEAD
+    else
+        git clone --depth 1 --branch "${VCPKG_REF}" https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
+    fi
 else
-    VCPKG_HEAD="$(git -C "${VCPKG_ROOT}" describe --tags --exact-match 2>/dev/null || git -C "${VCPKG_ROOT}" rev-parse HEAD)"
-    if [[ "${VCPKG_HEAD}" != "${VCPKG_REF}" ]]; then
+    VCPKG_HEAD="$(git -C "${VCPKG_ROOT}" rev-parse HEAD)"
+    VCPKG_EXPECTED="$(git -C "${VCPKG_ROOT}" rev-parse --verify "${VCPKG_REF}^{commit}" 2>/dev/null || true)"
+    if [[ "${VCPKG_HEAD}" != "${VCPKG_EXPECTED}" ]]; then
         echo "Existing ${VCPKG_ROOT} is at ${VCPKG_HEAD}, expected ${VCPKG_REF}. Remove it or set GAME_ANDROID_DEPS_DIR." >&2
         exit 7
     fi

@@ -51,7 +51,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "75f9648c916991486a12fad2394e95aa1991716ff1827d556326d3b2dfe80cda"
+REVIEWED_GAMEPLAY_DIGEST = "09e46021d4808ba9d1eacc2e4739cac0b5dcdeffef11c73b76d47140596b62f0"
 
 
 @dataclass(frozen=True)
@@ -746,7 +746,84 @@ def contractEvidence():
     """Explicit regression identities and their proof boundary, not gameplay credit."""
     own = "tests/test_gameplay_branch_catalog.py:GameplayBranchCatalogTest."
     native = "test.py:GameTest."
+    city = "tests/test_baldurs_gate_city_content.py:BaldursGateCityContentTest."
     return {
+        "baldursGate.eldothGuard.spawnFailure": (
+            "source-double",
+            city + "testEldothHistorySpawnFailurePreservesModelStateAndExactExceptionThenRetries",
+        ),
+        "baldursGate.eldothGuard.partialHooks": (
+            "source-double",
+            city + "testEldothHistoryPartialHookFailureKeepsModelRetryHooksUnique",
+        ),
+        "baldursGate.eldothGuard.partialItems": (
+            "source-double",
+            city + "testEldothHistoryPartialInventoryFailureLeavesPlayerOwnershipAndRetriesFresh",
+        ),
+        "baldursGate.eldothGuard.controllerFailure": (
+            "source-double",
+            city + "testEldothHistoryControllerFailureRollsBackNewActorInModel",
+        ),
+        "baldursGate.eldothGuard.preexistingActor": (
+            "source-double",
+            city + "testEldothHistoryPreexistingActorSurvivesControllerFailureInModel",
+        ),
+        "baldursGate.eldothGuard.invalidSetup": (
+            "source-double",
+            city + "testEldothHistoryRefusalFrozenFullAndUnavailableChoicesDoNoModelWork",
+        ),
+        "baldursGate.eldothGuard.missingDefinition": (
+            "source-double",
+            city + "testEldothHistoryMissingSpawnDefinitionPreservesModelChoiceForRetry",
+        ),
+        "baldursGate.eldothGuard.replacedMapException": (
+            "source-double",
+            city + "testEldothHistoryCleanupUsesCapturedModelMapAndPreservesOriginalException",
+        ),
+        "baldursGate.eldothGuard.replacedMapReturn": (
+            "source-double",
+            city + "testEldothHistoryControllerMapReplacementReturnsFalseWithoutModelCommit",
+        ),
+        "baldursGate.eldothGuard.cleanupFailure": (
+            "source-double",
+            city + "testEldothHistoryCleanupFailureDoesNotMaskOriginalModelException",
+        ),
+        "baldursGate.eldothGuard.reentrantRoster": (
+            "source-double",
+            city + "testEldothHistoryReentrantFullRosterPreservesNewModelRosterWithoutJoining",
+        ),
+        "baldursGate.eldothGuard.reentrantHistory": (
+            "source-double",
+            city + "testEldothHistoryReentrantFreezeOrChoicePreservesModelHistory",
+        ),
+        "baldursGate.eldothGuard.otherHistoryChoice": (
+            "source-double",
+            city + "testEldothHistoryReentrantOtherChoiceSurvivesModelSuccessAndRepeat",
+        ),
+        "baldursGate.eldothGuard.replacedActor": (
+            "source-double",
+            city + "testEldothHistoryReentrantActorRemovalDeathOrReplacementPreventsModelJoin",
+        ),
+        "baldursGate.eldothGuard.existingRosterEntry": (
+            "source-double",
+            city + "testEldothHistoryReentrantRosterEntryIsNotDuplicatedInModel",
+        ),
+        "baldursGate.eldothGuard.nestedRecruitment": (
+            "source-double",
+            city + "testEldothHistoryRejectsNestedRecruitmentBeforeControllerWorkInModel",
+        ),
+        "baldursGate.eldothGuard.independentClock": (
+            "source-double",
+            city + "testEldothHistoryGuardAllowsAnotherClockInSameLoadedModelClasses",
+        ),
+        "baldursGate.eldothGuard.finalSetterGuardRelease": (
+            "source-double",
+            city + "testEldothHistoryGuardReleasesAfterFinalSetterFailureInModel",
+        ),
+        "baldursGate.eldothGuard.ownerRelease": (
+            "source-double",
+            city + "testEldothHistoryCompletedGuardDoesNotRetainClockOwnerInModel",
+        ),
         "res/maps/baldursGate/script.py:BaldursGatePortal.onDestroy": (
             "source-double",
             "tests/test_baldurs_gate_city_content.py:BaldursGateCityContentTest."

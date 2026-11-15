@@ -22,10 +22,25 @@ city. Its source fingerprint checks all 571 supporting CRE records. New or chang
 require an appearance audit instead of silently inheriting a generic portrait. The original-versus-EE
 source questions remain separate acceptance requirements.
 
-The generated configuration changes animation references on 1,326 creature definitions and the
+The original artwork increment changes animation references on 1,326 creature definitions and the
 Emissary Tar corpse container. Their other fields, item ownership, statistics, quests, dialogue,
 positioning, schedules and collision remain unchanged. The final pass includes the existing poison
 encounter factories so their cloned templates receive their own appearances.
+
+The integrated Seven Suns content adds one configured revealed-doppelganger template. It receives
+the same local doppelganger image as the native replacement factory, bringing the appearance pass to
+1,327 creature definitions plus the corpse container. The existing four-lineage native stock test
+asserts the actual prepared actors' animation path; native execution remains a separate validation lane.
+The appearance regression freezes the combined Seven Suns gameplay metadata while excluding only
+source actor artwork and asset declarations.
+
+The combined baseline was derived by a three-way structural merge of the reviewed artwork parent
+`27a98ea7` and Seven Suns main `6e7029b7`, relative to their common base `bef5940e`. No non-appearance
+scalar conflicts were present. The artwork parent's normalized gameplay digest remains the original
+`db282539abd9ce4b1d54b920b764c3f5d7f3b08e70d28d35b724511bfd61f037`;
+the Seven Suns parent's digest is `dbc9fa36a8ef934db2f5fdf92d262828c3844beb06879b0dca1848e2f6954d1e`.
+Their derived union, rather than an unrestricted rebaseline, is frozen as
+`3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02`.
 
 ## Resource staging and checks
 

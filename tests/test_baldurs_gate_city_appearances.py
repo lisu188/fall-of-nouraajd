@@ -19,8 +19,9 @@ from scripts import build_baldurs_gate_city as builder
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 PREFIX = "maps/baldursGate/images/npc/"
-# This digest freezes ff0b gameplay data after removing only source actors' artwork and map asset declarations.
-GAMEPLAY_SHA256_AT_FF0B = "db282539abd9ce4b1d54b920b764c3f5d7f3b08e70d28d35b724511bfd61f037"
+# The reviewed Seven Suns integration adds its stock, warning quest and dialogue metadata to the ff0b baseline.
+# Remove only source actor artwork and map asset declarations; all other gameplay fields remain frozen.
+GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
 
 
 def readJson(path):
@@ -151,9 +152,11 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
         self.assertEqual(PREFIX + "corpse", corpses[0]["animation"])
 
     def testOnlySourceActorAppearanceAndDeclaredAssetsDifferFromFrozenGameplay(self):
-        self.assertEqual(1327, len(sourceActors(self.config)))
+        actors = sourceActors(self.config)
+        self.assertEqual(1327, len(actors.keys() - {"citySevenSunsRevealedDoppss"}))
+        self.assertEqual(PREFIX + "doppelganger", actors["citySevenSunsRevealedDoppss"]["properties"]["animation"])
         self.assertEqual(
-            GAMEPLAY_SHA256_AT_FF0B,
+            GAMEPLAY_SHA256_WITH_SEVEN_SUNS,
             digest(withoutAppearance(self.document, self.config, self.geometry, self.dialogs)),
             "Actor identity, ownership, stats, placement, schedules, quests, dialogue and collision must remain intact",
         )

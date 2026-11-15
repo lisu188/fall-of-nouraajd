@@ -23,6 +23,8 @@ class CProxyGraphicsObject;
 
 class CScript;
 class CButton;
+class CMap;
+class CPlayer;
 
 class CListView : public CProxyTargetGraphicsObject {
     V_META(CListView, CProxyTargetGraphicsObject,
@@ -99,6 +101,12 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void refresh() override;
 
+    void refreshAll() override;
+
+    std::size_t getIndexBuildCountForTesting() const { return indexBuildCount; }
+
+    std::size_t getIndexedItemVisitsForTesting() const { return indexedItemVisits; }
+
     void refreshFromRefreshEvent();
 
     void refreshFromPropertyChanged(std::string propertyName);
@@ -155,6 +163,30 @@ class CListView : public CProxyTargetGraphicsObject {
 
     int tileSize = 50;
 
+    struct CollectionIndex {
+        std::unordered_multimap<int, std::shared_ptr<CGameObject>> items;
+        int typeCount = 0;
+        std::size_t revision = 0;
+        std::weak_ptr<CGameGraphicsObject> parent;
+        std::weak_ptr<CGui> gui;
+        std::weak_ptr<CGame> game;
+        std::weak_ptr<CMap> map;
+        std::weak_ptr<CPlayer> player;
+    };
+
+    std::shared_ptr<const CollectionIndex> collectionIndex;
+    std::size_t indexRevision = 0;
+    std::size_t indexBuildCount = 0;
+    std::size_t indexedItemVisits = 0;
+    std::size_t collectionBuildDepth = 0;
+    std::size_t collectionRefreshDepth = 0;
+    std::size_t proxyRefreshCount = 0;
+
+    void invalidateCollectionIndex();
+
+    bool collectionIndexIsCurrent(const std::shared_ptr<const CollectionIndex> &index,
+                                  const std::shared_ptr<CGui> &gui);
+
   public:
     CListView() = default;
     struct ViewState {
@@ -165,7 +197,12 @@ class CListView : public CProxyTargetGraphicsObject {
     ViewState getViewState() const { return {shift, focusedIndex, filterText}; }
     void restoreViewState(const ViewState &state);
     bool getSearchable() const { return searchable; }
-    void setSearchable(bool value) { searchable = value; }
+    void setSearchable(bool value) {
+        if (searchable != value) {
+            searchable = value;
+            invalidateCollectionIndex();
+        }
+    }
     bool getRows() const { return rows; }
     void setRows(bool value) { rows = value; }
     bool isSearching() const { return searching; }
@@ -284,7 +321,7 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void doShift(const std::shared_ptr<CGui> &gui, int val);
 
-    int shiftIndex(const std::shared_ptr<CGui> &gui, int arg);
+    int shiftIndex(const std::shared_ptr<CGui> &gui, int arg, int itemTypeCount);
 
     int getRightArrowIndex(const std::shared_ptr<CGui> &gui);
 
@@ -300,9 +337,7 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void clampShift(const std::shared_ptr<CGui> &gui, int itemTypeCount);
 
-    // TODO: do not generate whole map, instead add callback arguement and stop
-    // when met
-    std::unordered_multimap<int, std::shared_ptr<CGameObject>> calculateIndices(const std::shared_ptr<CGui> &gui);
+    std::shared_ptr<const CollectionIndex> calculateIndices(const std::shared_ptr<CGui> &gui);
 
     std::shared_ptr<SDL_Rect> calculateIndexPosition(const std::shared_ptr<CGui> &gui,
                                                      const std::shared_ptr<SDL_Rect> &loc, int index);
@@ -317,7 +352,8 @@ class CListView : public CProxyTargetGraphicsObject {
                     std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     void addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
-                 std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection, int itemIndex) const;
+                 const std::unordered_multimap<int, std::shared_ptr<CGameObject>> &indexedCollection,
+                 int itemIndex) const;
 
     void addSelectionBox(const std::shared_ptr<CGui> &gui,
                          std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;

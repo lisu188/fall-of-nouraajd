@@ -2519,7 +2519,9 @@ class ContentValidatorTest(unittest.TestCase):
             "sourceInventory": "[]",
             "sourceItemSlots": "[]",
             "sourceKillXp": 650,
+            "sourceAllegiance": 128,
             "sourceSchedule": 4294967295,
+            "sourceScheduleRaw": "0xffffffff",
             "phaseMin": 5,
             "phaseMax": 7,
             "sourceSpawnFact": "AR0800.BCS#spawn0",
@@ -2587,6 +2589,29 @@ class ContentValidatorTest(unittest.TestCase):
         for name, value in self.citySourceMetadata().items():
             expected = "int; got bool" if isinstance(value, int) else "string; got array"
             self.assertIssueContains(issues, "invalid" + name + ".properties." + name, "expected " + expected)
+
+    def testSevenSunsMetadataRejectsWrongTypesOnTheExactField(self):
+        root = self.make_fixture()
+        self.writeCitySourceSchemaFixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        invalid = (
+            ("badAllegianceBool", "sourceAllegiance", True, "expected int; got bool"),
+            ("badAllegianceString", "sourceAllegiance", "128", "expected int; got string"),
+            ("badAllegianceFloat", "sourceAllegiance", 128.0, "expected int; got number"),
+            ("badScheduleInt", "sourceScheduleRaw", -1, "expected string; got int"),
+            ("badScheduleBool", "sourceScheduleRaw", False, "expected string; got bool"),
+            ("badScheduleArray", "sourceScheduleRaw", [], "expected string; got array"),
+        )
+        for name, field, value, _ in invalid:
+            config[name] = {"class": "CCreature", "properties": {field: value}}
+        write_json(config_path, config)
+        issues = [str(issue) for issue in validate_repo(root)]
+        for name, field, _, expected in invalid:
+            with self.subTest(name=name):
+                self.assertTrue(
+                    any(f"{name}.properties.{field}" in issue and expected in issue for issue in issues), issues
+                )
 
     def testReviewedCitySourceMetadataRejectsTyposUnknownFieldsAndUnrelatedObjects(self):
         root = self.make_fixture()

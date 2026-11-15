@@ -392,7 +392,8 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
         self.assertIn("native city construction and five-level blocked fallback verified", output)
 
     def testCityStructuredMetadataAndOwnedItemsSurviveSaveReload(self):
-        output = self.runChild("""
+        output = self.runChild(
+            """
             import os
             from pathlib import Path
             import time
@@ -400,6 +401,7 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
             def decodeCityData(encoded):
                 return json.loads(encoded.removeprefix('city-json:'))
             os.environ['GAME_SAVE_STAGE_DIAGNOSTICS'] = '1'
+            os.environ['GAME_LOAD_STAGE_DIAGNOSTICS'] = '1'
             slot = 'city-metadata-' + str(os.getpid()) + '-' + str(time.time_ns())
             started = time.monotonic()
             def phase(name):
@@ -466,7 +468,10 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                     for suffix in ('.json', '.json.bak'):
                         (Path('save') / (slot + suffix)).unlink(missing_ok=True)
                 phase('finished')
-            """)
+            """,
+            timeout_seconds=30,
+            timeout_observation_seconds=30,
+        )
         self.assertIn("native city metadata and item ownership survived save reload", output)
 
     def testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument(self):
@@ -542,6 +547,30 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 for row in records
             )
         )
+
+        progress = [
+            (line, json.loads(line))
+            for line in errors.splitlines()
+            if line.startswith('{"diagnostic":"serialization-progress"')
+        ]
+        self.assertTrue(progress, "The enabled second save must expose real traversal progress")
+        self.assertLessEqual(len(progress), 32)
+        self.assertLessEqual(sum(len(line.encode()) + 1 for line, _row in progress), 32 * 512)
+        rows = [row for _line, row in progress]
+        self.assertEqual({"write"}, {row["direction"] for row in rows})
+        self.assertEqual(1, len({row["session"] for row in rows}))
+        self.assertEqual(("begin", "end"), (rows[0]["stage"], rows[-1]["stage"]))
+        self.assertTrue(rows[-1]["finished"])
+        self.assertTrue(all(row["unwinding"] is False for row in rows))
+        self.assertGreater(rows[-1]["objects"], 0)
+        self.assertGreater(rows[-1]["properties"], 0)
+        self.assertGreater(rows[-1]["arrayEntries"], 0)
+        counters = ("objects", "properties", "arrayEntries", "mapEntries", "graphNodes", "initializations")
+        self.assertEqual(rows[-1]["visits"], sum(rows[-1][key] for key in counters))
+        for key in ("elapsedMicroseconds", "visits", *counters):
+            values = [row[key] for row in rows]
+            self.assertTrue(all(type(value) is int and value >= 0 for value in values), key)
+            self.assertEqual(sorted(values), values, key)
 
     def testBook08NativeUseChangesOwnedBaseAndFreshCompositionOnce(self):
         self.runBook08Child(
@@ -1432,6 +1461,177 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
     def testBook08NativeHandInBeforeUsePreservesBookAndRewardAfterSave(self):
         self.runBook08HandInOrder("handInBeforeUse")
 
+    def testNativeLoadDiagnosticsAreExactOptInAndPreserveOwnedItems(self):
+        import json
+
+        output, errors = self.runChild(
+            """
+            import os
+            from pathlib import Path
+            import time
+            os.environ.pop('GAME_LOAD_STAGE_DIAGNOSTICS', None)
+            os.environ.pop('GAME_SAVE_STAGE_DIAGNOSTICS', None)
+            slot = 'load-stage-' + str(os.getpid()) + '-' + str(time.time_ns())
+            instance = game.CGameLoader.loadGame()
+            completed = False
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'multilevel', 'Warrior')
+                loop.run()
+                player = instance.getMap().getPlayer()
+                owned = instance.createObject('Dagger')
+                owned.setStringProperty('name', 'loadDiagnosticOwnedDagger')
+                player.addItem(owned)
+                point = tuple(player.getNumericProperty(k) for k in ('posx', 'posy', 'posz'))
+                turn = instance.getMap().getTurn()
+                assert game.CMapLoader.saveWithResult(instance.getMap(), slot)
+                for value in (None, '', '0', 'true', '01', '1'):
+                    if value is None:
+                        os.environ.pop('GAME_LOAD_STAGE_DIAGNOSTICS', None)
+                    else:
+                        os.environ['GAME_LOAD_STAGE_DIAGNOSTICS'] = value
+                    previous = instance.getMap()
+                    game.CGameLoader.loadSavedGame(instance, slot)
+                    world = instance.getMap()
+                    assert world is not previous, value
+                    restored = world.getPlayer()
+                    assert restored.getMap() is world
+                    assert tuple(restored.getNumericProperty(k) for k in ('posx', 'posy', 'posz')) == point
+                    assert world.getTurn() == turn
+                    copies = [item for item in restored.getItems() if item.getName() == 'loadDiagnosticOwnedDagger']
+                    assert len(copies) == 1 and copies[0].getTypeId() == 'Dagger'
+                    assert copies[0].getGame() is instance
+                    assert not any(item.getName() == 'loadDiagnosticOwnedDagger' for actor in world.getObjects()
+                                    if isinstance(actor, game.CCreature) and actor is not restored
+                                    for item in (*actor.getItems(), *actor.getEquipped().values()) if item)
+                    loop.run()
+                completed = True
+                print('native load diagnostics preserve silence and actual ownership', flush=True)
+            finally:
+                instance.getContext().shutdown()
+                if completed:
+                    for suffix in ('.json', '.json.bak'):
+                        (Path('save') / (slot + suffix)).unlink(missing_ok=True)
+            """,
+            return_stderr=True,
+        )
+        self.assertIn("native load diagnostics preserve silence and actual ownership", output)
+        records = [json.loads(line) for line in errors.splitlines() if line.startswith('{"diagnostic":"load-stage"')]
+        expected = [
+            stage + phase
+            for stage in (
+                "readParse",
+                "decode",
+                "resources",
+                "snapshot.construct",
+                "rehydrate",
+                "registrations.commit",
+                "install",
+                "verifiedCommit",
+                "resume.queue",
+            )
+            for phase in (".begin", ".end")
+        ] + ["terminal"]
+        self.assertEqual(expected, [row["stage"] for row in records], errors)
+        self.assertEqual(list(range(1, 20)), [row["sequence"] for row in records])
+        self.assertTrue(all(row["candidate"] == "primary" and row["success"] is True for row in records))
+        self.assertEqual("success", records[-1]["outcome"])
+        self.assertEqual(
+            sorted(row["elapsedMicroseconds"] for row in records), [row["elapsedMicroseconds"] for row in records]
+        )
+        self.assertTrue(
+            all(type(row["elapsedMicroseconds"]) is int and row["elapsedMicroseconds"] >= 0 for row in records)
+        )
+        self.assertTrue(
+            all(
+                set(row)
+                == {"diagnostic", "candidate", "stage", "elapsedMicroseconds", "sequence", "success", "outcome"}
+                for row in records
+            )
+        )
+        self.assertLessEqual(len(records), 48)
+
+    def testNativeLoadDiagnosticsIdentifyBackupAndMalformedFailureWithoutChangingTheMap(self):
+        import json
+
+        output, errors = self.runChild(
+            """
+            import os
+            from pathlib import Path
+            import time
+            os.environ['GAME_LOAD_STAGE_DIAGNOSTICS'] = '1'
+            os.environ.pop('GAME_SAVE_STAGE_DIAGNOSTICS', None)
+            slot = 'load-fallback-stage-' + str(os.getpid()) + '-' + str(time.time_ns())
+            instance = game.CGameLoader.loadGame()
+            completed = False
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'multilevel', 'Warrior')
+                loop.run()
+                original = instance.getMap()
+                assert game.CMapLoader.saveWithResult(original, slot)
+                assert game.CMapLoader.saveWithResult(original, slot)
+                primary = Path('save') / (slot + '.json')
+                backup = Path('save') / (slot + '.json.bak')
+                retained = backup.read_bytes()
+                primary.write_text('{ invalid', encoding='utf-8')
+                game.CGameLoader.loadSavedGame(instance, slot)
+                restored = instance.getMap()
+                assert restored is not original and restored.getPlayer() is not None
+                assert restored.getPlayer().getMap() is restored
+                assert primary.read_bytes() == retained and backup.read_bytes() == retained
+                loop.run()
+                primary.write_text('{ invalid', encoding='utf-8')
+                backup.write_text('{ invalid', encoding='utf-8')
+                game.CGameLoader.loadSavedGame(instance, slot)
+                assert instance.getMap() is restored
+                loop.run()
+                completed = True
+                print('native load diagnostics preserve backup recovery and malformed rejection', flush=True)
+            finally:
+                instance.getContext().shutdown()
+                if completed:
+                    for suffix in ('.json', '.json.bak'):
+                        (Path('save') / (slot + suffix)).unlink(missing_ok=True)
+            """,
+            return_stderr=True,
+        )
+        self.assertIn("native load diagnostics preserve backup recovery and malformed rejection", output)
+        records = [json.loads(line) for line in errors.splitlines() if line.startswith('{"diagnostic":"load-stage"')]
+        groups = []
+        for row in records:
+            if row["sequence"] == 1:
+                groups.append([])
+            self.assertTrue(groups, errors)
+            groups[-1].append(row)
+        self.assertEqual(2, len(groups), errors)
+        recovered, failed = groups
+        self.assertEqual(["readParse.begin", "readParse.end"], [row["stage"] for row in recovered[:2]])
+        self.assertTrue(all(row["candidate"] == "primary" for row in recovered[:2]))
+        self.assertFalse(recovered[1]["success"])
+        self.assertTrue(all(row["candidate"] == "backup" for row in recovered[2:]))
+        self.assertEqual(
+            [
+                "install.begin",
+                "install.end",
+                "verifiedCommit.begin",
+                "verifiedCommit.end",
+                "resume.queue.begin",
+                "resume.queue.end",
+                "terminal",
+            ],
+            [row["stage"] for row in recovered[-7:]],
+        )
+        self.assertEqual("success", recovered[-1]["outcome"])
+        self.assertEqual(
+            ["readParse.begin", "readParse.end", "readParse.begin", "readParse.end", "terminal"],
+            [row["stage"] for row in failed],
+        )
+        self.assertEqual(["primary", "primary", "backup", "backup", "backup"], [row["candidate"] for row in failed])
+        self.assertEqual("failure", failed[-1]["outcome"])
+        self.assertFalse(failed[-1]["success"])
+        for group in groups:
+            self.assertEqual(list(range(1, len(group) + 1)), [row["sequence"] for row in group])
+            self.assertLessEqual(len(group), 48)
+
 
 class CityNativeLoadingSourceTest(unittest.TestCase):
     def book08ParentAcceptanceFixture(self, method_name, marker, mode):
@@ -1741,7 +1941,12 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
         self.assertEqual(1, len(programs))
         program, kwargs = programs[0]
         ast.parse(textwrap.dedent(program))
-        self.assertEqual({}, kwargs, "Keep the shared bounded child timeout")
+        expected = (
+            {"timeout_seconds": 30, "timeout_observation_seconds": 30}
+            if method_name == ("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+            else {}
+        )
+        self.assertEqual(expected, kwargs, "Keep acceptance 30 seconds; observation must remain diagnostic only")
         return program
 
     def testCityQuestHintFallbackNeverReadsItsReflectedVirtualProperty(self):
@@ -1969,6 +2174,274 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
                 self.assertLessEqual(len(notes), 8400)
                 self.assertIs(output, timeout.stdout)
                 self.assertIs(errors, timeout.stderr)
+
+    def testPostDeadlineObservationNeverAcceptsALateSuccessfulChild(self):
+        import subprocess
+        from unittest.mock import Mock
+
+        deadline = subprocess.TimeoutExpired(["native-child"], 30, output=b"deadline stdout", stderr=b"deadline stderr")
+        process = Mock(returncode=None)
+
+        def communicate(**kwargs):
+            if process.communicate.call_count == 1:
+                raise deadline
+            process.returncode = 0
+            return "city-metadata-phase finished", "observed stderr"
+
+        process.communicate.side_effect = communicate
+        process.poll.side_effect = lambda: process.returncode
+        case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+        with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process) as start:
+            with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                case.runChild("pass", timeout_seconds=30, timeout_observation_seconds=30)
+        self.assertIs(deadline, caught.exception)
+        self.assertEqual(
+            [{"timeout": 30}, {"timeout": 30}], [call.kwargs for call in process.communicate.call_args_list]
+        )
+        process.kill.assert_not_called()
+        notes = "\n".join(deadline.__notes__)
+        self.assertIn("completed returncode=0", notes)
+        self.assertIn("city-metadata-phase finished", notes)
+        self.assertEqual(b"deadline stdout", deadline.stdout)
+        self.assertEqual(b"deadline stderr", deadline.stderr)
+        self.assertEqual("dummy", start.call_args.kwargs["env"]["SDL_VIDEODRIVER"])
+        self.assertEqual("software", start.call_args.kwargs["env"]["SDL_RENDER_DRIVER"])
+
+    def testObservationBeforeDeadlineKeepsSuccessAndMissingNativeBehavior(self):
+        from unittest.mock import Mock
+
+        for returncode in (0, 77, 1):
+            with self.subTest(returncode=returncode):
+                process = Mock(returncode=returncode)
+                process.communicate.return_value = ("stdout", "stderr")
+                process.poll.return_value = returncode
+                case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+                with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process):
+                    if returncode == 0:
+                        self.assertEqual(
+                            ("stdout", "stderr"),
+                            case.runChild("pass", return_stderr=True, timeout_observation_seconds=30),
+                        )
+                    else:
+                        with self.assertRaises(unittest.SkipTest if returncode == 77 else AssertionError):
+                            case.runChild("pass", timeout_observation_seconds=30)
+                process.communicate.assert_called_once_with(timeout=30)
+                process.kill.assert_not_called()
+
+    def testObservationDeadlineOrFailureKillsDrainsAndKeepsOriginalTimeout(self):
+        import subprocess
+        from unittest.mock import Mock
+
+        for observation_error in (subprocess.TimeoutExpired(["native-child"], 30), OSError("observer failed")):
+            with self.subTest(error=type(observation_error).__name__):
+                deadline = subprocess.TimeoutExpired(["native-child"], 30, output=b"original", stderr=b"original-error")
+                process = Mock(returncode=None)
+                process.communicate.side_effect = [
+                    deadline,
+                    observation_error,
+                    ("x" * 9000 + "drained stdout", "y" * 9000 + "drained stderr"),
+                ]
+                process.poll.side_effect = lambda: process.returncode
+                process.kill.side_effect = lambda: setattr(process, "returncode", -9)
+                case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+                with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process):
+                    with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                        case.runChild("pass", timeout_observation_seconds=30)
+                self.assertIs(deadline, caught.exception)
+                process.kill.assert_called_once_with()
+                self.assertEqual(
+                    [{"timeout": 30}, {"timeout": 30}, {"timeout": 5}],
+                    [call.kwargs for call in process.communicate.call_args_list],
+                )
+                notes = "\n".join(deadline.__notes__)
+                self.assertIn("drained stdout", notes)
+                self.assertIn("drained stderr", notes)
+                self.assertLess(len(notes), 17000)
+                self.assertEqual(b"original", deadline.stdout)
+                self.assertEqual(b"original-error", deadline.stderr)
+
+    def testObservationStalledDrainDefersReaderPipesAndKeepsAcceptanceTimeout(self):
+        import subprocess
+        from unittest.mock import Mock
+
+        for drain_error in (subprocess.TimeoutExpired(["child"], 5, output=b"latest stdout"), OSError("drain failed")):
+            with self.subTest(error=type(drain_error).__name__):
+                deadline = subprocess.TimeoutExpired(["child"], 30, output=b"original", stderr=b"original stderr")
+                process = Mock(returncode=None)
+                process.communicate.side_effect = [deadline, subprocess.TimeoutExpired(["child"], 30), drain_error]
+                process.poll.return_value = None
+                pipes = [SimpleNamespace(buffer=SimpleNamespace(raw=Mock()), close=Mock()) for _ in range(2)]
+                process.stdout, process.stderr = pipes
+                case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+                with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process):
+                    with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                        case.runChild("pass", timeout_observation_seconds=30)
+                self.assertIs(deadline, caught.exception)
+                self.assertEqual(30, deadline.timeout)
+                self.assertEqual(b"original", deadline.stdout)
+                self.assertEqual(
+                    [{"timeout": 30}, {"timeout": 30}, {"timeout": 5}],
+                    [call.kwargs for call in process.communicate.call_args_list],
+                )
+                process.kill.assert_called_once_with()
+                for pipe in pipes:
+                    pipe.buffer.raw.close.assert_not_called()
+                    pipe.close.assert_not_called()
+                notes = "\n".join(deadline.__notes__)
+                self.assertIn("max 5 seconds", notes)
+                self.assertIn("cleanupIncomplete pipesPending=reader-owned", notes)
+                self.assertIn(
+                    (
+                        "drainDeadlineExceeded"
+                        if isinstance(drain_error, subprocess.TimeoutExpired)
+                        else "drainError=OSError"
+                    ),
+                    notes,
+                )
+
+    def testObservationKillPollAndPipeOwnershipErrorsCannotMaskOriginalTimeout(self):
+        import subprocess
+        from unittest.mock import Mock
+
+        for scenario in ("kill-error", "already-exited-race", "poll-error", "pipe-owner-poison"):
+            with self.subTest(scenario=scenario):
+                deadline = subprocess.TimeoutExpired(["child"], 30, output=b"original", stderr=b"original stderr")
+                process = Mock(returncode=None)
+                process.poll.side_effect = OSError("poll failed") if scenario == "poll-error" else lambda: None
+                process.kill.side_effect = (
+                    ProcessLookupError("already exited")
+                    if scenario == "already-exited-race"
+                    else PermissionError("kill failed") if scenario == "kill-error" else None
+                )
+                drain = ("late stdout", "late stderr") if scenario == "already-exited-race" else OSError("drain failed")
+                process.communicate.side_effect = [deadline, subprocess.TimeoutExpired(["child"], 30), drain]
+                pipes = [
+                    SimpleNamespace(
+                        close=Mock(side_effect=OSError("close failed") if scenario == "pipe-owner-poison" else None)
+                    )
+                    for _ in range(2)
+                ]
+                process.stdout, process.stderr = pipes
+                case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+                with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process):
+                    with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                        case.runChild("pass", timeout_observation_seconds=30)
+                self.assertIs(deadline, caught.exception)
+                self.assertEqual(
+                    [{"timeout": 30}, {"timeout": 30}, {"timeout": 5}],
+                    [call.kwargs for call in process.communicate.call_args_list],
+                )
+                process.kill.assert_called_once_with()
+                notes = "\n".join(deadline.__notes__)
+                expected = {
+                    "kill-error": "killError=PermissionError",
+                    "already-exited-race": "killError=ProcessLookupError",
+                    "poll-error": "pollError=OSError",
+                    "pipe-owner-poison": "cleanupIncomplete pipesPending=reader-owned",
+                }[scenario]
+                self.assertIn(expected, notes)
+                if scenario != "already-exited-race":
+                    for pipe in pipes:
+                        pipe.close.assert_not_called()
+
+    def testObservationFailedDrainNeverAccessesThrowingOrBlockingPipeClose(self):
+        import subprocess
+        from unittest.mock import Mock
+
+        for failure_kind in ("throwing-close", "blocking-close"):
+            with self.subTest(failure_kind=failure_kind):
+                accesses = []
+
+                class ReaderOwnedRaw:
+                    @property
+                    def close(self):
+                        accesses.append(failure_kind)
+                        raise AssertionError("A live reader close must not be accessed")
+
+                raw = ReaderOwnedRaw()
+                pipes = [SimpleNamespace(buffer=SimpleNamespace(raw=raw), close=Mock()) for _ in range(2)]
+                deadline = subprocess.TimeoutExpired(["child"], 30, output=b"original")
+                process = Mock(returncode=None)
+                process.stdout, process.stderr = pipes
+                process.poll.return_value = None
+                process.communicate.side_effect = [
+                    deadline,
+                    subprocess.TimeoutExpired(["child"], 30),
+                    subprocess.TimeoutExpired(["child"], 5),
+                ]
+                case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+                with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process):
+                    with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                        case.runChild("pass", timeout_observation_seconds=30)
+                self.assertIs(deadline, caught.exception)
+                self.assertEqual([], accesses)
+                for pipe in pipes:
+                    pipe.close.assert_not_called()
+                self.assertIn("cleanupIncomplete pipesPending=reader-owned", "\n".join(deadline.__notes__))
+
+    def testObservationFirstCommunicationErrorAlsoUsesOneBoundedCleanup(self):
+        from unittest.mock import Mock
+
+        original = OSError("initial communication failed")
+        process = Mock(returncode=None)
+        process.poll.return_value = None
+        process.kill.side_effect = PermissionError("kill failed")
+        process.communicate.side_effect = [original, OSError("drain failed")]
+        process.stdout, process.stderr = SimpleNamespace(close=Mock()), SimpleNamespace(close=Mock())
+        case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+        with patch("tests.test_python_callback_lifecycle.subprocess.Popen", return_value=process):
+            with self.assertRaises(OSError) as caught:
+                case.runChild("pass", timeout_observation_seconds=30)
+        self.assertIs(original, caught.exception)
+        self.assertEqual(
+            [{"timeout": 30}, {"timeout": 5}], [call.kwargs for call in process.communicate.call_args_list]
+        )
+        process.kill.assert_called_once_with()
+        process.stdout.close.assert_not_called()
+        process.stderr.close.assert_not_called()
+
+    def testObservationIsBoundedAndOnlyTheMetadataProbeOptsIn(self):
+        from pathlib import Path
+        import subprocess
+        from unittest.mock import Mock
+
+        case = CityNativeLoadingRuntimeTest("testCityStructuredMetadataAndOwnedItemsSurviveSaveReload")
+        for value in (True, 30.0, -1, 31, 60):
+            with self.subTest(value=value):
+                with patch("tests.test_python_callback_lifecycle.subprocess.Popen") as start:
+                    with self.assertRaises(ValueError):
+                        case.runChild("pass", timeout_observation_seconds=value)
+                start.assert_not_called()
+        with self.assertRaises(ValueError):
+            case.runChild("pass", timeout_seconds=60, timeout_observation_seconds=30)
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        opted = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == "CityNativeLoadingRuntimeTest":
+                for method in node.body:
+                    for call in ast.walk(method):
+                        if (
+                            isinstance(call, ast.Call)
+                            and isinstance(call.func, ast.Attribute)
+                            and call.func.attr == "runChild"
+                        ):
+                            self.assertTrue(all(keyword.arg is not None for keyword in call.keywords))
+                            keywords = {
+                                keyword.arg: ast.literal_eval(keyword.value)
+                                for keyword in call.keywords
+                                if keyword.arg in {"timeout_seconds", "timeout_observation_seconds"}
+                            }
+                            if "timeout_observation_seconds" in keywords:
+                                opted.append((method.name, keywords))
+        self.assertEqual(
+            [
+                (
+                    "testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
+                    {"timeout_seconds": 30, "timeout_observation_seconds": 30},
+                )
+            ],
+            opted,
+        )
 
     def testSaveProbeHasFlushedElapsedBreadcrumbsAroundNativePersistence(self):
         from unittest.mock import Mock
@@ -2206,6 +2679,284 @@ class CityNativeLoadingSourceTest(unittest.TestCase):
                     with helper(root):
                         pass
             self.assertEqual(initial, json.loads(config.read_text(encoding="utf8")))
+
+    def testEmbeddedLoadProgramsSatisfyTheRepositoryIndentationGate(self):
+        import json
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[1]
+        module = ast.parse((root / "test.py").read_text(encoding="utf-8"))
+        owner = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == "GameTest")
+        gate = next(
+            node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == "test_indentation"
+        )
+        gate.decorator_list = []
+        namespace = {
+            "REPO_ROOT": root,
+            "git_tracked_files": lambda pattern: ("tests/test_city_native_loading.py",),
+            "json": json,
+        }
+        exec(compile(ast.Module(body=[gate], type_ignores=[]), "test.py", "exec"), namespace)
+        success, offenders = namespace["test_indentation"](self)
+        self.assertTrue(success, offenders)
+
+    def testLoadDiagnosticsAreOptInAndDoNotInspectTheGraph(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        self.assertTrue("class LoadStageDiagnostics {" in source, "Native load-stage diagnostics are absent")
+        helper = source.split("class LoadStageDiagnostics {", 1)[1].split("class SaveStageDiagnostics {", 1)[0]
+        self.assertIn('std::getenv("GAME_LOAD_STAGE_DIAGNOSTICS")', helper)
+        self.assertIn("flag[0] == '1' && flag[1] == '\\0'", helper)
+        self.assertIn("enum class Candidate { None, Primary, Backup }", helper)
+        self.assertIn("MAX_RECORDS = 48", helper)
+        self.assertIn("records < MAX_RECORDS - 1", helper)
+        self.assertIn("!enabled || records >= MAX_RECORDS", helper)
+        self.assertIn("~LoadStageDiagnostics() noexcept", helper)
+        self.assertIn('emit("terminal", outcome == Outcome::Success)', helper)
+        for forbidden in ("getTiles(", "getObjects(", "serialize", "getStats", "map->", "slot", "path", "std::string"):
+            self.assertNotIn(forbidden, helper)
+
+    def testLoadMarkersBracketExistingOperationsAndKeepCandidateOnlyLoadsUninstrumented(self):
+        from pathlib import Path
+
+        source = (Path(__file__).resolve().parents[1] / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        self.assertTrue("class LoadStageDiagnostics {" in source, "Native load-stage diagnostics are absent")
+        candidate = source.split("load_save_candidate(", 1)[1].split("try_load_saved_map(", 1)[0]
+        for stage, operation in (("readParse", "loadJson(path)"), ("decode", "CSaveFormat::decodeDocument(raw)")):
+            self.assertLess(candidate.index('mark("' + stage + '.begin")'), candidate.index(operation))
+            self.assertLess(candidate.index(operation), candidate.index('mark("' + stage + '.end"'))
+        restore = source.split("restore_save_document(", 1)[1].split("load_save_candidate(", 1)[0]
+        for stage, operation in (
+            ("resources", "load_map_resources(game, saveDocument.mapName, resourcesCurrent)"),
+            ("snapshot.construct", "handler->createObject<CMap>(game, saveConfigKey, strict)"),
+            ("rehydrate", "rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError)"),
+            ("registrations.commit", "registrations.commit()"),
+        ):
+            self.assertLess(restore.index('mark("' + stage + '.begin")'), restore.index(operation))
+            self.assertLess(restore.index(operation), restore.index('mark("' + stage + '.end"'))
+        install = source.split("void CGameLoader::loadSavedGame(", 1)[1].split("void CGameLoader::startGame(", 1)[0]
+        for stage, operation in (
+            ("install", "game->setMap(loaded->map)"),
+            ("verifiedCommit", "admission->commit(loaded->map)"),
+            ("resume.queue", "queueVerifiedLoadResume("),
+        ):
+            self.assertLess(install.index('mark("' + stage + '.begin")'), install.index(operation))
+            self.assertLess(install.index(operation), install.index('mark("' + stage + '.end"'))
+        self.assertIn("LoadStageDiagnostics::Outcome::Superseded", install)
+        self.assertIn("LoadStageDiagnostics::Outcome::Rejected", install)
+        self.assertLess(install.index("admission.reset()"), install.index('mark("resume.queue.begin")'))
+        self.assertEqual(1, source.count("try_load_saved_map(game, save, &diagnostics)"))
+
+    def testMapSerializationPreservesBothEmptyOptionalCollectionOmissions(self):
+        from pathlib import Path
+
+        from tests.test_defeat_continuation_source import cppBlock
+
+        source = (Path(__file__).resolve().parents[1] / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        body = cppBlock(source, "std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &object,\n")
+        text = " ".join(body.split())
+        self.assertIn('if (map && property->name() == "sceneRetiredObjects")', text)
+        self.assertIn("std::any_cast<const Retired &>(value).empty()) return;", text)
+        self.assertIn("const bool omitEmptyStaticTerrain = map && map->getStaticTerrainData().empty();", text)
+        self.assertIn(
+            'property->name() != "type" && !(omitEmptyStaticTerrain && property->name() == "staticTerrainData")',
+            text,
+        )
+
+    def testSerializationProgressCountsExistingVisitsWithoutNewGraphWork(self):
+        from pathlib import Path
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        header = (root / "src/core/CSerialization.h").read_text(encoding="utf-8")
+        self.assertTrue("void CSerializationProgress::begin(" in source)
+        helper = source[
+            source.index("void CSerializationProgress::begin(") : source.index(
+                "class CSerializationWriteContext::State"
+            )
+        ]
+        self.assertEqual(1, helper.count('std::getenv("GAME_SAVE_STAGE_DIAGNOSTICS")'))
+        self.assertTrue("if (activeSerializationProgress)" in helper)
+        self.assertEqual(2, helper.count("session = activeSerializationProgress;"))
+        self.assertTrue("if (!enabled)" in helper)
+        disabled_guard = helper.index("if (!enabled)")
+        admission = helper.index("activeSerializationProgress = this;")
+        self.assertLess(disabled_guard, admission)
+        self.assertIn("session = nullptr;", helper[disabled_guard:admission])
+        self.assertIn("return;", helper[disabled_guard:admission])
+        self.assertIn("#include <algorithm>", source)
+        self.assertTrue("activeSerializationProgress = nullptr;" in helper)
+        self.assertNotRegex(helper, "(?:meta|getType|getProperty|getTiles|getTile|dump)\\s*\\(")
+        self.assertNotRegex(helper, "\\b(?:for|while)\\s*\\(")
+        self.assertTrue("if (!session || !session->enabled)" in helper)
+        self.assertTrue("if (session == this)" in helper)
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::Object);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::Property);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::ArrayEntry);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::MapEntry);"))
+        self.assertEqual(1, source.count("context.visit(CSerializationVisit::GraphNode);"))
+        self.assertEqual(2, source.count("context.visit(CSerializationVisit::Initialization);"))
+        self.assertRegex(source, "pending\\.pop_back\\(\\);\\s*context\\.visit\\(CSerializationVisit::GraphNode\\);")
+        self.assertEqual(2, header.count("const CSerializationProgressCounters &progressCounters() const noexcept"))
+        self.assertEqual(2, source.count("progress.join();"))
+        join = helper[
+            helper.index("void CSerializationProgress::join()") : helper.index("void CSerializationProgress::end()")
+        ]
+        self.assertNotIn("getenv", join)
+        self.assertNotIn("mark(", join)
+        self.assertNotIn("activeSerializationProgress =", join)
+        loader = (root / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        self.assertEqual(1, loader.count('CSerializationProgress progress("write");'))
+        self.assertEqual(1, loader.count('CSerializationProgress progress("read");'))
+        self.assertRegex(
+            loader, r'CSerializationProgress progress\("write"\);\s*auto result = CSerialization::serializeExpected'
+        )
+        self.assertRegex(
+            loader,
+            r'CSerialization::StrictScope strict\(saveConfigKey\);\s*CSerializationProgress progress\("read"\);\s*map = handler->createObject<CMap>',
+        )
+        self.assertEqual(2, source.count("progress.end();"))
+        self.assertEqual(2, source.count("progress.finished();"))
+
+    def testSerializationProgressHasFixedRecordBytesAndDeterministicNativeBudget(self):
+        from pathlib import Path
+        import json
+        import re
+
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src/core/CSerialization.cpp").read_text(encoding="utf-8")
+        self.assertTrue("serializationProgressRecordLimit = 32;" in source)
+        self.assertTrue("serializationProgressRecordBytes = 512;" in source)
+        self.assertTrue("owner.counts.records + 1 < serializationProgressRecordLimit" in source)
+        self.assertTrue("owner.nextVisit * 4" in source)
+        self.assertTrue("void CSerializationProgress::mark(" in source)
+        mark = source[
+            source.index("void CSerializationProgress::mark(") : source.index("class CSerializationWriteContext::State")
+        ]
+        format_begin = mark.index('"{\\"diagnostic')
+        format_end = mark.index("direction, static_cast", format_begin)
+        packet = "".join(
+            (ast.literal_eval(value) for value in re.findall('"(?:[^"\\\\]|\\\\.)*"', mark[format_begin:format_end]))
+        )
+        fields = re.findall("%llu|%lld|%s", packet)
+        arguments = iter(
+            (
+                "write",
+                str(2**64 - 1),
+                "progress",
+                str(2**63 - 1),
+                *[str(2**64 - 1)] * 7,
+                "initialization",
+                "false",
+                "false",
+            )
+        )
+        record = re.sub("%llu|%lld|%s", lambda _match: next(arguments), packet)
+        self.assertEqual(14, len(fields))
+        self.assertLess(len(record.encode()), 512)
+        self.assertEqual("serialization-progress", json.loads(record)["diagnostic"])
+        self.assertTrue("std::min(static_cast<std::size_t>(length), sizeof(record) - 1)" in mark)
+        self.assertNotIn("json", mark)
+        native = (root / "tests/unit/test_serialization_performance.cpp").read_text(encoding="utf-8")
+        self.assertTrue("void testSerializationProgressRecordBudget()" in native)
+        self.assertEqual(1, native.count("    testSerializationProgressRecordBudget();"))
+        self.assertTrue("constexpr std::size_t visits = 65536;" in native)
+        thresholds = []
+        threshold = 1
+        while threshold <= 65536:
+            thresholds.append(threshold)
+            threshold *= 4
+        self.assertEqual(11, 2 + len(thresholds))
+        self.assertTrue("counts.records == 11" in native)
+        self.assertTrue("counts.bytes <= counts.records * 512" in native)
+        self.assertTrue("progress.counters().visits == 0" in native)
+        self.assertIn("constexpr int independentRoots = 512;", native)
+        self.assertIn("unadmitted-construction-root", native)
+        self.assertIn("context.progressCounters().records == 0", native)
+        self.assertIn(
+            "unadmitted-tile-shaped-operation", (root / "tests/unit/test_core.cpp").read_text(encoding="utf-8")
+        )
+        core = (root / "tests/unit/test_core.cpp").read_text(encoding="utf-8")
+        self.assertTrue("written.visits == 4" in core)
+        self.assertTrue("read.visits == 4" in core)
+        self.assertTrue("encoded->dump() == unchanged->dump()" in core)
+        self.assertTrue("error.getError().code == CSerializationErrorCode::MissingCodec" in core)
+        self.assertTrue("failed.progressCounters().records == 2" in core)
+        self.assertRegex(
+            core,
+            r'try \{\s*CSerializationProgress error_admission\("write"\);\s*CSerializationOperation scope\(failed\);',
+        )
+        self.assertNotIn("error_admission.end();", core)
+
+    def testOnlyObservedMcpSaveAndReloadChildrenOptIntoSerializationProgress(self):
+        from pathlib import Path
+        import os
+        import sys
+        import tempfile
+
+        source = (Path(__file__).resolve().parents[1] / "test.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        owner = next((node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest"))
+        methods = {node.name: node for node in owner.body if isinstance(node, ast.FunctionDef)}
+        start = methods["_start_stdio_mcp_process"]
+        self.assertIn("save_stage_diagnostics", {argument.arg for argument in start.args.kwonlyargs})
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            (root / "mcp.py").write_text("", encoding="utf-8")
+            scope = {
+                "REPO_ROOT": root,
+                "TEST_OUTPUT_DIR": root,
+                "CITY_WALKTHROUGH_CASES": {},
+                "os": os,
+                "sys": sys,
+                "Path": Path,
+                "build_dir": root,
+                "build_config": None,
+                "traceback": __import__("traceback"),
+            }
+            exec(
+                compile(
+                    ast.Module(body=[start, methods["_run_mcp_walkthrough"]], type_ignores=[]), "mcp-child", "exec"
+                ),
+                scope,
+            )
+            emitted = []
+            case = unittest.TestCase()
+            case._start_stdio_process = lambda command, **kwargs: emitted.append((command, kwargs)) or SimpleNamespace()
+            invoke = lambda **kwargs: scope["_start_stdio_mcp_process"](case, **kwargs)
+            invoke()
+            self.assertIsNone(emitted[-1][1]["env"])
+            invoke(save_stage_diagnostics=True)
+            self.assertEqual({"GAME_SAVE_STAGE_DIAGNOSTICS": "1"}, emitted[-1][1]["env"])
+            invoke(map_name="candlekeep")
+            self.assertIsNone(emitted[-1][1]["env"])
+            selected = []
+
+            def stopAfterOptions(map_name, **options):
+                selected.append((map_name, options))
+                raise RuntimeError("source-only child admission stop")
+
+            case._start_stdio_mcp_process = stopAfterOptions
+            case._write_mcp_walkthrough_log = lambda *_args: None
+            for map_name in ("baldursGate", "candlekeep", "test"):
+                scope["_run_mcp_walkthrough"](case, map_name)
+            self.assertEqual(
+                [("baldursGate", {"save_stage_diagnostics": True}), ("candlekeep", {}), ("test", {})], selected
+            )
+        random_case = methods["testStdioRandomSaveReloadAndSecondSessionControllerMovement"]
+        calls = [
+            node
+            for node in ast.walk(random_case)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and (node.func.attr == "_start_stdio_mcp_process")
+        ]
+        self.assertEqual(1, len(calls))
+        self.assertEqual(
+            {"save_stage_diagnostics": True}, {entry.arg: ast.literal_eval(entry.value) for entry in calls[0].keywords}
+        )
 
 
 if __name__ == "__main__":

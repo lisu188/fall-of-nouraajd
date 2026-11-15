@@ -4,6 +4,7 @@
 
 import ast
 import builtins
+import gc
 import json
 from pathlib import Path
 import re
@@ -11,6 +12,7 @@ import symtable
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
+import weakref
 from unittest.mock import Mock, patch
 
 from scripts.build_baldurs_gate_city import compileDialogs, decodeCityData
@@ -149,6 +151,18 @@ class CityPlayer(ModelPlayer, CityObject):
 
 
 class CityMap(ModelMap):
+    def registerTrigger(self, trigger):
+        for existing in self.registered_triggers:
+            if (
+                existing.getStringProperty("object") == trigger.getStringProperty("object")
+                and existing.getStringProperty("event") == trigger.getStringProperty("event")
+                and type(existing) is type(trigger)
+                and existing.getTypeId() == trigger.getTypeId()
+                and existing.getName() == trigger.getName()
+            ):
+                return
+        super().registerTrigger(trigger)
+
     def removeObject(self, obj):
         super().removeObject(obj)
         for hook in self.registered_triggers:
@@ -544,6 +558,294 @@ class BaldursGateCityContentTest(unittest.TestCase):
                     model.game_map.getBoolProperty("plugin_citySourceKillXp"),
                 )
 
+    def sevenSunsDeathModel(self):
+        model = CityModel()
+        originals = []
+        for name, source, area, creature in (
+            ("cityAr0601Actor1", "AR0601#actor1", "AR0601", "DOPMER"),
+            ("cityAr0601Actor3", "AR0601#actor3", "AR0601", "DOPMER"),
+            ("cityAr0602Actor1", "AR0602#actor1", "AR0602", "DOPMER"),
+            ("cityAr0602Actor2", "AR0602#actor2", "AR0602", "DOPMER"),
+            ("cityAr0603Actor2", "AR0603#actor2", "AR0603", "DOPPSS"),
+        ):
+            actor = CityCreature(
+                model,
+                name,
+                sourceActor=source,
+                sourceArea=area,
+                sourceCreature=creature,
+                sourceDialogue="DOPMER" if creature == "DOPMER" else "",
+            )
+            model.game_map.addObject(actor)
+            model.clock.initializeActor(actor)
+            originals.append(actor)
+        return model, originals
+
+    def sevenSunsModelCount(self, model):
+        count = getattr(model.clock, "sevenSunsDeathCount", None)
+        return count() if count else 0
+
+    def sevenSunsReplacement(self, model, old):
+        actor = CityCreature(
+            model,
+            old.getName(),
+            typeId="citySevenSunsRevealedDoppss",
+            sourceActor=old.getStringProperty("sourceActor"),
+            sourceArea=old.getStringProperty("sourceArea"),
+            sourceCreature="DOPPSS",
+        )
+        model.game_map.removeObject(old)
+        model.game_map.addObject(actor)
+        model.clock.setObjectProperty("plugin_citySevenSunsMerchantOld_" + old.getName(), old)
+        model.clock.setObjectProperty("plugin_citySevenSunsMerchantNew_" + old.getName(), actor)
+        model.game_map.setStringProperty(
+            "plugin_citySevenSunsMerchantState",
+            "city-json:" + json.dumps({"version": 1, "actors": {old.getName(): {"status": "replaced"}}}),
+        )
+        return actor
+
+    def sevenSunsDestroyEvent(self, model, actor):
+        actor.setHp(0)
+        if model.game_map.getObjectByName(actor.getName()) is actor:
+            model.game_map.removeObject(actor)
+        model.createObject("BaldursGateDeathTrigger").trigger(actor, None)
+
+    def testSevenSunsRetiredOriginalCannotStealGenericClaimOrReplacementCredit(self):
+        model, originals = self.sevenSunsDeathModel()
+        old = originals[0]
+        current = self.sevenSunsReplacement(model, old)
+        self.sevenSunsDestroyEvent(model, old)
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityDeath_" + old.getName()))
+        self.assertIsNone(model.clock.getObjectProperty("plugin_cityCorpse_" + old.getName()))
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertIs(current, model.game_map.getObjectByName(old.getName()))
+        self.sevenSunsDestroyEvent(model, current)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        self.assertIs(current, model.clock.getObjectProperty("plugin_cityCorpse_" + old.getName()))
+        self.assertEqual(
+            "DOPPSS", decodeCityData(model.game_map.getStringProperty("plugin_cityDeaths"))[old.getName()]["creature"]
+        )
+
+    def testSevenSunsCountsExactlyFiveOwnedDeathsOnceAndPreservesGenericRecords(self):
+        model, originals = self.sevenSunsDeathModel()
+        for expected, actor in enumerate(originals, 1):
+            self.sevenSunsDestroyEvent(model, actor)
+            self.assertEqual(expected, self.sevenSunsModelCount(model))
+            self.sevenSunsDestroyEvent(model, actor)
+            self.assertEqual(expected, self.sevenSunsModelCount(model))
+            self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+        rows = decodeCityData(model.game_map.getStringProperty("plugin_cityDeaths"))
+        self.assertEqual({actor.getName() for actor in originals}, set(rows))
+        for area in ("AR0601", "AR0602", "AR0603"):
+            self.assertTrue(model.game_map.getBoolProperty("plugin_cityCombatObserved_" + area))
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityOutcome_scarDoppelgangers_complete"))
+
+    def testSevenSunsLivingActorsAndForgedFlagsOrRowsCannotGrantCredit(self):
+        model, originals = self.sevenSunsDeathModel()
+        actor = originals[0]
+        model.createObject("BaldursGateDeathTrigger").trigger(actor, None)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        row = {
+            "sourceActor": actor.getStringProperty("sourceActor"),
+            "area": "AR0601",
+            "creature": "DOPMER",
+            "role": "original",
+        }
+        model.game_map.setStringProperty(
+            "plugin_citySevenSunsDeaths", "city-json:" + json.dumps({"version": 1, "lineages": {actor.getName(): row}})
+        )
+        model.game_map.setBoolProperty("plugin_cityDeath_" + actor.getName(), True)
+        model.game_map.setBoolProperty("plugin_cityFlag_fiveSSDoppleDead", True)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        model.clock.setObjectProperty("plugin_cityCorpse_" + actor.getName(), actor)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        model.game_map.removeObject(actor)
+        self.assertTrue(actor.isAlive())
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+
+    def testSevenSunsSameNameCloneDoesNotReplaceCanonicalOwner(self):
+        model, originals = self.sevenSunsDeathModel()
+        original = originals[4]
+        impostor = CityCreature(model, original.getName(), **original.properties)
+        model.game_map.removeObject(original)
+        model.game_map.addObject(impostor)
+        model.clock.initializeActor(impostor)
+        self.sevenSunsDestroyEvent(model, impostor)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertIs(original, model.clock.getObjectProperty("plugin_citySevenSunsOriginal_" + original.getName()))
+
+    def testSevenSunsWrongSourceAndUnrelatedDeathsKeepGenericBookkeepingOnly(self):
+        model, originals = self.sevenSunsDeathModel()
+        originals[0].setStringProperty("sourceActor", "AR0601#actor99")
+        self.sevenSunsDestroyEvent(model, originals[0])
+        for name, creature in (("cityAr0601Actor2", "DOPPSM"), ("cityAr0603Actor1", "JHASSO")):
+            actor = CityCreature(model, name, sourceCreature=creature, sourceArea="AR0603", sourceActor="AR0603#actor1")
+            model.game_map.addObject(actor)
+            model.clock.setObjectProperty("plugin_citySevenSunsMerchantOld_" + name, actor)
+            self.sevenSunsDestroyEvent(model, actor)
+            self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + name))
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertEqual(3, len(decodeCityData(model.game_map.getStringProperty("plugin_cityDeaths"))))
+
+    def testSevenSunsJsonRoundtripKeepsOnceCountWithSameOwnedAliases(self):
+        model, originals = self.sevenSunsDeathModel()
+        actor = originals[4]
+        self.sevenSunsDestroyEvent(model, actor)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        witness = decodeCityData(model.game_map.getStringProperty("plugin_citySevenSunsDeaths"))
+        model.game_map.setStringProperty(
+            "plugin_citySevenSunsDeaths", "city-json:" + json.dumps(json.loads(json.dumps(witness)))
+        )
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        self.sevenSunsDestroyEvent(model, actor)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+        self.assertEqual(witness, decodeCityData(model.game_map.getStringProperty("plugin_citySevenSunsDeaths")))
+
+    def testSevenSunsExistingDeathRecordWithoutWitnessIsNotInferred(self):
+        model = CityModel()
+        actor = CityCreature(
+            model, "cityAr0603Actor2", sourceActor="AR0603#actor2", sourceArea="AR0603", sourceCreature="DOPPSS"
+        )
+        model.game_map.addObject(actor)
+        self.sevenSunsDestroyEvent(model, actor)
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+
+    def testSevenSunsReplacementRestoreBindsExistingOldNewAliasesWithoutInferringDeaths(self):
+        model, originals = self.sevenSunsDeathModel()
+        old = originals[0]
+        current = self.sevenSunsReplacement(model, old)
+        model.clock.properties.pop("plugin_citySevenSunsOriginal_" + old.getName(), None)
+        model.clock.initializeActor(current)
+        self.assertIs(old, model.clock.getObjectProperty("plugin_citySevenSunsOriginal_" + old.getName()))
+        self.assertEqual(0, self.sevenSunsModelCount(model))
+        self.sevenSunsDestroyEvent(model, current)
+        self.assertEqual(1, self.sevenSunsModelCount(model))
+
+    def testSevenSunsReplacementNeedsExactOldNewPointersAndCommittedRole(self):
+        for mismatch in ("new", "old", "status", "masqueradeOriginal"):
+            with self.subTest(mismatch=mismatch):
+                model, originals = self.sevenSunsDeathModel()
+                old = originals[0]
+                current = self.sevenSunsReplacement(model, old)
+                if mismatch == "new":
+                    model.clock.setObjectProperty("plugin_citySevenSunsMerchantNew_" + old.getName(), originals[1])
+                elif mismatch == "old":
+                    model.clock.setObjectProperty(
+                        "plugin_citySevenSunsMerchantOld_" + old.getName(),
+                        CityCreature(model, old.getName(), **old.properties),
+                    )
+                elif mismatch == "masqueradeOriginal":
+                    current.setStringProperty("sourceCreature", "DOPMER")
+                    current.setStringProperty("sourceDialogue", "DOPMER")
+                    current.setStringProperty("typeId", current.getName())
+                else:
+                    model.game_map.setStringProperty(
+                        "plugin_citySevenSunsMerchantState",
+                        'city-json:{"actors":{"cityAr0601Actor1":{"status":"pending"}}}',
+                    )
+                self.sevenSunsDestroyEvent(model, current)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertIs(current, model.clock.getObjectProperty("plugin_cityCorpse_" + current.getName()))
+
+    def testSevenSunsInvalidWitnessLeavesGenericDeathRecordCorpseAndCombatObservation(self):
+        for document in (
+            {"version": True, "lineages": {}},
+            {"version": 1, "lineages": {}, "count": 5},
+            {"version": 1, "lineages": {"unrelated": {}}},
+        ):
+            with self.subTest(document=document):
+                model, originals = self.sevenSunsDeathModel()
+                actor = originals[4]
+                text = "city-json:" + json.dumps(document)
+                model.game_map.setStringProperty("plugin_citySevenSunsDeaths", text)
+                self.sevenSunsDestroyEvent(model, actor)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertEqual(text, model.game_map.getStringProperty("plugin_citySevenSunsDeaths"))
+                self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+                self.assertTrue(model.game_map.getBoolProperty("plugin_cityCombatObserved_AR0603"))
+
+    def testSevenSunsCanonicalSourceRequiresExactAreaActorDialogueAndConfiguredType(self):
+        for key, wrong in (
+            ("sourceArea", "AR0602"),
+            ("sourceActor", "AR0601#actor99"),
+            ("sourceDialogue", "DOPPSM"),
+            ("typeId", "unrelatedCreature"),
+        ):
+            with self.subTest(key=key):
+                model, originals = self.sevenSunsDeathModel()
+                actor = originals[0]
+                actor.setStringProperty(key, wrong)
+                self.sevenSunsDestroyEvent(model, actor)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+
+    def testSevenSunsMalformedMerchantReceiptFailsClosedWithoutBreakingGenericDeath(self):
+        for document in (
+            [],
+            {"actors": []},
+            {"actors": {"cityAr0601Actor1": []}},
+            {"actors": {"cityAr0601Actor1": None}},
+        ):
+            with self.subTest(document=document):
+                model, originals = self.sevenSunsDeathModel()
+                current = self.sevenSunsReplacement(model, originals[0])
+                model.game_map.setStringProperty(
+                    "plugin_citySevenSunsMerchantState", "city-json:" + json.dumps(document)
+                )
+                self.sevenSunsDestroyEvent(model, current)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertIs(current, model.clock.getObjectProperty("plugin_cityCorpse_" + current.getName()))
+                self.assertTrue(model.game_map.getBoolProperty("plugin_cityCombatObserved_AR0601"))
+
+    def testSevenSunsMalformedJsonCannotBreakGenericDeathOrGrantCount(self):
+        for key in ("plugin_citySevenSunsDeaths", "plugin_citySevenSunsMerchantState"):
+            with self.subTest(key=key):
+                model, originals = self.sevenSunsDeathModel()
+                actor = (
+                    self.sevenSunsReplacement(model, originals[0]) if key.endswith("MerchantState") else originals[4]
+                )
+                model.game_map.setStringProperty(key, "city-json:{broken")
+                self.sevenSunsDestroyEvent(model, actor)
+                self.assertEqual(0, self.sevenSunsModelCount(model))
+                self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCorpse_" + actor.getName()))
+                self.assertTrue(
+                    model.game_map.getBoolProperty("plugin_cityCombatObserved_" + actor.getStringProperty("sourceArea"))
+                )
+
+    def testSevenSunsMcpCannotDispatchTriggerOrGameEventDirectly(self):
+        import mcp
+
+        class CTrigger:
+            def trigger(self, *_args):
+                raise AssertionError("A direct MCP trigger must remain denied")
+
+        class CEventHandler:
+            def gameEvent(self, *_args):
+                raise AssertionError("A direct MCP event must remain denied")
+
+        server = mcp.EngineMcpServer(Path("."), Path("unused-native-build"))
+        server.handles.update(trigger=CTrigger(), handler=CEventHandler(), clock=CityModel().clock)
+        try:
+            for handle, method in (
+                ("trigger", "trigger"),
+                ("trigger", "triggerFlow"),
+                ("handler", "gameEvent"),
+                ("handler", "gameEventAsync"),
+                ("clock", "recordSevenSunsDeath"),
+                ("clock", "bindSevenSunsDeathOwner"),
+                ("clock", "initializeActor"),
+            ):
+                response = server._engine_handle_call({"handle": handle, "method": method})
+                self.assertTrue(response["isError"], response)
+                self.assertIn("not exported", response["structuredContent"]["error"])
+            response = server._engine_handle_call({"handle": "clock", "method": "sevenSunsDeathCount"})
+            self.assertFalse(response["isError"], response)
+            self.assertEqual(0, response["structuredContent"]["result"])
+            self.assertNotIn("CTrigger.trigger", mcp.MCP_ALLOWED_EXPORTS)
+            self.assertNotIn("CEventHandler.gameEvent", mcp.MCP_ALLOWED_EXPORTS)
+        finally:
+            server.close()
+
     def testResourceCallbacksUseOnlyNativeAllowedBuiltins(self):
         allowed = nativePluginBuiltins()
         unsupported = unsupportedPluginBuiltins(SCRIPT.read_text(encoding="utf-8"), allowed)
@@ -934,6 +1236,576 @@ class BaldursGateCityContentTest(unittest.TestCase):
         model.game_map.setNumericProperty("plugin_cityPhase", 7)
         model.clock.applySchedules()
         self.assertIs(eldoth, model.game_map.getObjectByName("eldoth"))
+
+    def eldothHistoryModel(self):
+        """Load real city callbacks against the source/model harness, without native acceptance."""
+        model = CityModel(intelligence=12)
+        start = model.createObject("BaldursGateStart")
+        start.setStringProperty("name", "cityStart")
+        model.game_map.addObject(start)
+        model.resources["eldoth"] = {
+            "class": "CCreature",
+            "properties": {
+                "sourceCreature": "ELDOTH",
+                "sourceArea": "AR0800",
+                "label": "Eldoth",
+                "affiliation": "original",
+                "npc": True,
+                "sourceInventory": json.dumps([{"item": "SW1H01"}, {"item": "POTN08"}]),
+            },
+        }
+        model.resources["unrelated"] = {
+            "class": "CCreature",
+            "properties": {"sourceCreature": "UNRELATED", "label": "Unrelated"},
+        }
+        model.clock.setStringProperty(
+            "actorDefinitions",
+            json.dumps(
+                [
+                    {"id": "unrelated", "sourceCreature": "UNRELATED", "x": 2, "y": 0, "z": 0, "phase": 5},
+                    {
+                        "id": "eldoth",
+                        "sourceCreature": "ELDOTH",
+                        "x": 0,
+                        "y": 0,
+                        "z": 0,
+                        "phase": 5,
+                        "phaseMax": 7,
+                        "requiresFlag": "eldothJoined",
+                    },
+                ]
+            ),
+        )
+        model.game_map.setStringProperty("plugin_cityHistory", 'city-json:{"tenya":"helped"}')
+        model.clock.setStringProperty("plugin_citySpawnedActors", 'city-json:["retained"]')
+        return model, model.dialog(start)
+
+    def eldothHistoryState(self, model):
+        return (
+            model.game_map.getStringProperty("plugin_cityHistory"),
+            model.clock.getStringProperty("plugin_citySpawnedActors"),
+            model.clock.getStringProperty("plugin_cityRoster"),
+            model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"),
+            tuple(model.game_map.getObjects()),
+            tuple(model.player.getItems()),
+            model.player.getGold(),
+        )
+
+    def assertEldothHistoryRetry(self, model, dialog):
+        self.assertTrue(dialog.historyEldothJoined())
+        actor = model.game_map.getObjectByName("eldoth")
+        self.assertIsNotNone(actor)
+        self.assertIs(actor, model.clock.getObjectProperty("plugin_cityCompanion_eldoth"))
+        self.assertEqual(["eldoth"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster")))
+        self.assertEqual(
+            {"tenya": "helped", "eldoth": "joined"},
+            decodeCityData(model.game_map.getStringProperty("plugin_cityHistory")),
+        )
+        self.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+        self.assertIsNone(model.game_map.getObjectByName("unrelated"))
+        before = self.eldothHistoryState(model)
+        self.assertFalse(dialog.historyEldothJoined())
+        self.assertFalse(dialog.historyEldothAbsent())
+        self.assertEqual(before, self.eldothHistoryState(model))
+        return actor
+
+    def testEldothHistorySpawnFailurePreservesModelStateAndExactExceptionThenRetries(self):
+        model, dialog = self.eldothHistoryModel()
+        before = self.eldothHistoryState(model)
+        failure = RuntimeError("Eldoth factory sentinel")
+        create_object = model.createObject
+
+        def failEldoth(name):
+            if name == "eldoth":
+                raise failure
+            return create_object(name)
+
+        with patch.object(model, "createObject", side_effect=failEldoth):
+            with self.assertRaises(RuntimeError) as caught:
+                dialog.historyEldothJoined()
+        self.assertIs(failure, caught.exception)
+        self.assertEqual(before, self.eldothHistoryState(model))
+        self.assertEldothHistoryRetry(model, dialog)
+
+    def testEldothHistoryPartialHookFailureKeepsModelRetryHooksUnique(self):
+        model, dialog = self.eldothHistoryModel()
+        before = self.eldothHistoryState(model)
+        failure = RuntimeError("death hook factory sentinel")
+        create_object = model.createObject
+        sequence = []
+
+        def createHook(name):
+            sequence.append(name)
+            if name == "BaldursGateDeathTrigger":
+                raise failure
+            result = create_object(name)
+            if name == "BaldursGatePersonTrigger":
+                result.setStringProperty("name", "generatedHook" + str(len(sequence)))
+            return result
+
+        with patch.object(model, "createObject", side_effect=createHook):
+            with self.assertRaises(RuntimeError) as caught:
+                dialog.historyEldothJoined()
+        self.assertIs(failure, caught.exception)
+        self.assertEqual(before, self.eldothHistoryState(model))
+        self.assertEqual(1, len(model.game_map.registered_triggers))
+        actor = self.assertEldothHistoryRetry(model, dialog)
+        self.assertEqual(
+            {"SW1H01", "POTN08"}, {item.getStringProperty("plugin_citySourceItem") for item in actor.getItems()}
+        )
+        hooks = [(hook.getName(), hook.getStringProperty("event")) for hook in model.game_map.registered_triggers]
+        self.assertEqual([("eldoth:onEnter", "onEnter"), ("eldoth:onDestroy", "onDestroy")], hooks)
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityDeath_eldoth"))
+
+    def testEldothHistoryPartialInventoryFailureLeavesPlayerOwnershipAndRetriesFresh(self):
+        model, dialog = self.eldothHistoryModel()
+        before = self.eldothHistoryState(model)
+        failure = RuntimeError("second source item sentinel")
+        create_object = model.createObject
+        discarded = []
+
+        def failItem(name):
+            if name == "cityItemPotn08":
+                raise failure
+            result = create_object(name)
+            if name == "eldoth":
+                discarded.append(result)
+            return result
+
+        with patch.object(model, "createObject", side_effect=failItem):
+            with self.assertRaises(RuntimeError) as caught:
+                dialog.historyEldothJoined()
+        self.assertIs(failure, caught.exception)
+        self.assertEqual(before, self.eldothHistoryState(model))
+        self.assertEqual(1, len(discarded[0].getItems()))
+        actor = self.assertEldothHistoryRetry(model, dialog)
+        self.assertIsNot(discarded[0], actor)
+        self.assertEqual(2, len(actor.getItems()))
+        self.assertEqual(before[5:], self.eldothHistoryState(model)[5:])
+
+    def testEldothHistoryControllerFailureRollsBackNewActorInModel(self):
+        for fail_target in (False, True):
+            with self.subTest(fail_target=fail_target):
+                model, dialog = self.eldothHistoryModel()
+                model.game_map.setBoolProperty("plugin_cityFlag_eldothJoined", True)
+                before = self.eldothHistoryState(model)
+                failure = RuntimeError("controller sentinel")
+                create_object = model.createObject
+
+                def failController(name):
+                    if name == "CTargetController":
+                        if not fail_target:
+                            raise failure
+                        controller = create_object(name)
+                        controller.setStringProperty = Mock(side_effect=failure)
+                        return controller
+                    return create_object(name)
+
+                with patch.object(model, "createObject", side_effect=failController):
+                    with self.assertRaises(RuntimeError) as caught:
+                        dialog.historyEldothJoined()
+                self.assertIs(failure, caught.exception)
+                self.assertEqual(before, self.eldothHistoryState(model))
+                self.assertEldothHistoryRetry(model, dialog)
+                self.assertEqual(2, len(model.game_map.registered_triggers))
+
+    def testEldothHistoryPreexistingActorSurvivesControllerFailureInModel(self):
+        model, dialog = self.eldothHistoryModel()
+        actor = model.createObject("eldoth")
+        old_controller = model.createObject("CController")
+        actor.setController(old_controller)
+        model.game_map.addObject(actor)
+        item = model.item("RING16", actor)
+        actor.effects.append(item)
+        before_actor = dict(actor.properties), tuple(actor.items), tuple(actor.effects), actor.getGold()
+        before = self.eldothHistoryState(model)
+        failure = RuntimeError("existing actor controller sentinel")
+        create_object = model.createObject
+
+        def failController(name):
+            if name == "CTargetController":
+                raise failure
+            return create_object(name)
+
+        with patch.object(model.clock, "spawnActors", side_effect=AssertionError("Must reuse existing Eldoth")):
+            with patch.object(model, "createObject", side_effect=failController):
+                with self.assertRaises(RuntimeError) as caught:
+                    dialog.historyEldothJoined()
+            self.assertIs(failure, caught.exception)
+            self.assertEqual(before, self.eldothHistoryState(model))
+            self.assertEqual(
+                before_actor, (dict(actor.properties), tuple(actor.items), tuple(actor.effects), actor.getGold())
+            )
+            self.assertIs(actor, self.assertEldothHistoryRetry(model, dialog))
+        self.assertEqual([item], actor.getItems())
+        self.assertEqual([item], actor.getEffects())
+
+    def testEldothHistoryRefusalFrozenFullAndUnavailableChoicesDoNoModelWork(self):
+        for blocked in ("absent", "frozen", "full", "wrongStart", "tooFar", "dead"):
+            with self.subTest(blocked=blocked):
+                model, dialog = self.eldothHistoryModel()
+                if blocked == "absent":
+                    self.assertTrue(dialog.historyEldothAbsent())
+                elif blocked == "frozen":
+                    self.assertTrue(dialog.finishHistoryChoices())
+                elif blocked == "full":
+                    model.clock.setStringProperty("plugin_cityRoster", json.dumps(["a", "b", "c", "d", "e"]))
+                elif blocked == "wrongStart":
+                    actor = model.actor("Other")
+                    dialog = model.dialog(actor)
+                elif blocked == "tooFar":
+                    model.player.moveTo(9, 9, 0)
+                elif blocked == "dead":
+                    actor = model.createObject("eldoth")
+                    actor.setHp(0)
+                    model.game_map.addObject(actor)
+                before = self.eldothHistoryState(model)
+                with patch.object(model, "createObject", side_effect=AssertionError("No factory work expected")):
+                    self.assertFalse(dialog.historyEldothJoined())
+                self.assertEqual(before, self.eldothHistoryState(model))
+
+    def testEldothHistoryMissingSpawnDefinitionPreservesModelChoiceForRetry(self):
+        model, dialog = self.eldothHistoryModel()
+        definitions = model.clock.getStringProperty("actorDefinitions")
+        model.clock.setStringProperty("actorDefinitions", "[]")
+        before = self.eldothHistoryState(model)
+        self.assertFalse(dialog.historyEldothJoined())
+        self.assertEqual(before, self.eldothHistoryState(model))
+        model.clock.setStringProperty("actorDefinitions", definitions)
+        self.assertEldothHistoryRetry(model, dialog)
+
+    def testEldothHistoryCleanupUsesCapturedModelMapAndPreservesOriginalException(self):
+        model, dialog = self.eldothHistoryModel()
+        original_map = model.game_map
+        before = self.eldothHistoryState(model)
+        replacement = CityMap(model)
+        replacement.setBoolProperty("plugin_cityFlag_eldothJoined", True)
+        replacement.setStringProperty("plugin_cityHistory", "replacement history")
+        failure = RuntimeError("map replacement sentinel")
+        create_object = model.createObject
+
+        def replaceMap(name):
+            if name == "CTargetController":
+                model.game_map = replacement
+                raise failure
+            return create_object(name)
+
+        with patch.object(model, "createObject", side_effect=replaceMap):
+            with self.assertRaises(RuntimeError) as caught:
+                dialog.historyEldothJoined()
+        self.assertIs(failure, caught.exception)
+        self.assertTrue(replacement.getBoolProperty("plugin_cityFlag_eldothJoined"))
+        self.assertEqual("replacement history", replacement.getStringProperty("plugin_cityHistory"))
+        self.assertEqual([], replacement.getObjects())
+        model.game_map = original_map
+        self.assertEqual(before, self.eldothHistoryState(model))
+        self.assertEldothHistoryRetry(model, dialog)
+
+    def testEldothHistoryControllerMapReplacementReturnsFalseWithoutModelCommit(self):
+        model, dialog = self.eldothHistoryModel()
+        original_map = model.game_map
+        before = self.eldothHistoryState(model)
+        replacement = CityMap(model)
+        create_object = model.createObject
+
+        def replaceMap(name):
+            result = create_object(name)
+            if name == "CTargetController":
+                model.game_map = replacement
+            return result
+
+        with patch.object(model, "createObject", side_effect=replaceMap):
+            self.assertFalse(dialog.historyEldothJoined())
+        self.assertEqual({}, replacement.properties)
+        model.game_map = original_map
+        self.assertEqual(before, self.eldothHistoryState(model))
+
+    def testEldothHistoryCleanupFailureDoesNotMaskOriginalModelException(self):
+        model, dialog = self.eldothHistoryModel()
+        failure = RuntimeError("primary controller sentinel")
+        cleanup_failure = ValueError("secondary cleanup sentinel")
+        create_object = model.createObject
+
+        def failController(name):
+            if name == "CTargetController":
+                raise failure
+            return create_object(name)
+
+        with patch.object(model, "createObject", side_effect=failController):
+            with patch.object(model.game_map, "removeObject", side_effect=cleanup_failure):
+                with self.assertRaises(RuntimeError) as caught:
+                    dialog.historyEldothJoined()
+        self.assertIs(failure, caught.exception)
+        self.assertEqual({"tenya": "helped"}, decodeCityData(model.game_map.getStringProperty("plugin_cityHistory")))
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+        self.assertEqual("", model.clock.getStringProperty("plugin_cityRoster"))
+        self.assertIsNotNone(model.game_map.getObjectByName("eldoth"))
+
+    def testEldothHistoryReentrantFullRosterPreservesNewModelRosterWithoutJoining(self):
+        model, dialog = self.eldothHistoryModel()
+        before_history = model.game_map.getStringProperty("plugin_cityHistory")
+        before_spawned = model.clock.getStringProperty("plugin_citySpawnedActors")
+        create_object = model.createObject
+
+        def fillRoster(name):
+            result = create_object(name)
+            if name == "CTargetController":
+                model.clock.setStringProperty("plugin_cityRoster", json.dumps(["a", "b", "c", "d", "e"]))
+            return result
+
+        with patch.object(model, "createObject", side_effect=fillRoster):
+            self.assertFalse(dialog.historyEldothJoined())
+        self.assertEqual(["a", "b", "c", "d", "e"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster")))
+        self.assertEqual(before_history, model.game_map.getStringProperty("plugin_cityHistory"))
+        self.assertEqual(before_spawned, model.clock.getStringProperty("plugin_citySpawnedActors"))
+        self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+        self.assertIsNone(model.game_map.getObjectByName("eldoth"))
+
+    def testEldothHistoryReentrantFreezeOrChoicePreservesModelHistory(self):
+        for choice in ("freeze", "absent"):
+            with self.subTest(choice=choice):
+                model, dialog = self.eldothHistoryModel()
+                create_object = model.createObject
+                chosen_history = []
+
+                def chooseHistory(name):
+                    result = create_object(name)
+                    if name == "CTargetController":
+                        if choice == "freeze":
+                            self.assertTrue(dialog.finishHistoryChoices())
+                        else:
+                            self.assertTrue(dialog.historyEldothAbsent())
+                        chosen_history.append(model.game_map.getStringProperty("plugin_cityHistory"))
+                    return result
+
+                with patch.object(model, "createObject", side_effect=chooseHistory):
+                    self.assertFalse(dialog.historyEldothJoined())
+                self.assertEqual(chosen_history[0], model.game_map.getStringProperty("plugin_cityHistory"))
+                self.assertEqual(
+                    "unspecified" if choice == "freeze" else "absent", decodeCityData(chosen_history[0])["eldoth"]
+                )
+                self.assertEqual("", model.clock.getStringProperty("plugin_cityRoster"))
+                self.assertIsNone(model.game_map.getObjectByName("eldoth"))
+                self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+
+    def testEldothHistoryReentrantOtherChoiceSurvivesModelSuccessAndRepeat(self):
+        model, dialog = self.eldothHistoryModel()
+        model.game_map.setStringProperty("plugin_cityHistory", "{}")
+        create_object = model.createObject
+
+        def chooseTenya(name):
+            result = create_object(name)
+            if name == "CTargetController":
+                self.assertTrue(dialog.historyTenyaKilled())
+            return result
+
+        with patch.object(model, "createObject", side_effect=chooseTenya):
+            self.assertTrue(dialog.historyEldothJoined())
+        self.assertEqual(
+            {"tenya": "killed", "eldoth": "joined"},
+            decodeCityData(model.game_map.getStringProperty("plugin_cityHistory")),
+        )
+        self.assertEqual(["eldoth"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster")))
+        state = self.eldothHistoryState(model)
+        self.assertFalse(dialog.historyEldothJoined())
+        self.assertEqual(state, self.eldothHistoryState(model))
+
+    def testEldothHistoryReentrantActorRemovalDeathOrReplacementPreventsModelJoin(self):
+        for mutation in ("remove", "kill", "replace"):
+            with self.subTest(mutation=mutation):
+                model, dialog = self.eldothHistoryModel()
+                actor = model.createObject("eldoth")
+                old_controller = model.createObject("CController")
+                actor.setController(old_controller)
+                model.game_map.addObject(actor)
+                item = model.item("RING16", actor)
+                before_history = model.game_map.getStringProperty("plugin_cityHistory")
+                create_object = model.createObject
+                replacements = []
+
+                def changeActor(name):
+                    result = create_object(name)
+                    if name == "CTargetController":
+                        if mutation == "kill":
+                            actor.setHp(0)
+                        else:
+                            model.game_map.removeObject(actor)
+                            if mutation == "replace":
+                                replacement = create_object("eldoth")
+                                replacements.append(replacement)
+                                model.game_map.addObject(replacement)
+                    return result
+
+                with patch.object(model, "createObject", side_effect=changeActor):
+                    self.assertFalse(dialog.historyEldothJoined())
+                self.assertEqual(before_history, model.game_map.getStringProperty("plugin_cityHistory"))
+                self.assertEqual("", model.clock.getStringProperty("plugin_cityRoster"))
+                self.assertIs(old_controller, actor.properties["controller"])
+                self.assertTrue(actor.getBoolProperty("npc"))
+                self.assertFalse(actor.getBoolProperty("alwaysSimulate"))
+                self.assertEqual([item], actor.getItems())
+                if mutation == "kill":
+                    self.assertIs(actor, model.game_map.getObjectByName("eldoth"))
+                    self.assertFalse(actor.isAlive())
+                elif mutation == "replace":
+                    self.assertIs(replacements[0], model.game_map.getObjectByName("eldoth"))
+                else:
+                    self.assertIsNone(model.game_map.getObjectByName("eldoth"))
+
+    def testEldothHistoryReentrantRosterEntryIsNotDuplicatedInModel(self):
+        model, dialog = self.eldothHistoryModel()
+        create_object = model.createObject
+        other = model.actor("Tiax", sourceCreature="TIAX")
+
+        def addRosterEntry(name):
+            result = create_object(name)
+            if name == "CTargetController":
+                actor = model.game_map.getObjectByName("eldoth")
+                model.clock.setObjectProperty("plugin_cityCompanion_eldoth", actor)
+                model.clock.setObjectProperty("plugin_cityCompanion_" + other.getName(), other)
+                model.clock.setStringProperty("plugin_cityRoster", json.dumps([other.getName(), "eldoth"]))
+            return result
+
+        with patch.object(model, "createObject", side_effect=addRosterEntry):
+            self.assertTrue(dialog.historyEldothJoined())
+        self.assertEqual(
+            [other.getName(), "eldoth"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster"))
+        )
+        self.assertEqual(
+            {"tenya": "helped", "eldoth": "joined"},
+            decodeCityData(model.game_map.getStringProperty("plugin_cityHistory")),
+        )
+        self.assertFalse(dialog.historyEldothJoined())
+        self.assertEqual(
+            [other.getName(), "eldoth"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster"))
+        )
+
+    def testEldothHistoryRejectsNestedRecruitmentBeforeControllerWorkInModel(self):
+        for separate_dialog in (False, True):
+            for freeze in (False, True):
+                for throw_after in (False, True):
+                    with self.subTest(separate_dialog=separate_dialog, freeze=freeze, throw_after=throw_after):
+                        model, dialog = self.eldothHistoryModel()
+                        nested = (
+                            model.dialog(model.game_map.getObjectByName("cityStart")) if separate_dialog else dialog
+                        )
+                        create_object = model.createObject
+                        original_history = model.game_map.getStringProperty("plugin_cityHistory")
+                        failure = RuntimeError("outer controller sentinel after nested recruitment")
+                        nested_results, controller_calls = [], []
+
+                        def reenter(name):
+                            result = create_object(name)
+                            if name == "CTargetController":
+                                controller_calls.append(result)
+                                if len(controller_calls) == 1:
+                                    nested_results.append(nested.historyEldothJoined())
+                                    if freeze:
+                                        self.assertTrue(dialog.finishHistoryChoices())
+                                    if throw_after:
+                                        raise failure
+                            return result
+
+                        with patch.object(model, "createObject", side_effect=reenter):
+                            if throw_after:
+                                with self.assertRaises(RuntimeError) as caught:
+                                    dialog.historyEldothJoined()
+                                self.assertIs(failure, caught.exception)
+                            else:
+                                self.assertEqual(not freeze, dialog.historyEldothJoined())
+                        roster = decodeCityData(model.clock.getStringProperty("plugin_cityRoster") or "[]")
+                        for name in roster:
+                            self.assertIs(
+                                model.clock.getObjectProperty("plugin_cityCompanion_" + name),
+                                model.game_map.getObjectByName(name),
+                            )
+                        self.assertEqual([False], nested_results)
+                        self.assertEqual(1, len(controller_calls))
+                        if freeze:
+                            self.assertTrue(model.game_map.getBoolProperty("plugin_cityHistoryFrozen"))
+                            self.assertEqual(
+                                "unspecified",
+                                decodeCityData(model.game_map.getStringProperty("plugin_cityHistory"))["eldoth"],
+                            )
+                            self.assertEqual([], roster)
+                            self.assertIsNone(model.game_map.getObjectByName("eldoth"))
+                            self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+                            self.assertFalse(dialog.historyEldothJoined())
+                        elif throw_after:
+                            self.assertEqual(original_history, model.game_map.getStringProperty("plugin_cityHistory"))
+                            self.assertEqual([], roster)
+                            self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+                            self.assertIsNone(model.game_map.getObjectByName("eldoth"))
+                            self.assertEldothHistoryRetry(model, dialog)
+                        else:
+                            self.assertEqual(["eldoth"], roster)
+                            self.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+                            self.assertIsNotNone(model.game_map.getObjectByName("eldoth"))
+                            self.assertEqual(
+                                "joined",
+                                decodeCityData(model.game_map.getStringProperty("plugin_cityHistory"))["eldoth"],
+                            )
+                            self.assertFalse(dialog.historyEldothJoined())
+
+    def testEldothHistoryGuardAllowsAnotherClockInSameLoadedModelClasses(self):
+        model, dialog = self.eldothHistoryModel()
+        other, _other_dialog = self.eldothHistoryModel()
+        previous_clock = other.clock
+        other.types = model.types
+        other.clock = other.createObject("BaldursGateClock")
+        other.clock.properties.update(previous_clock.properties)
+        other.clock.setStringProperty("name", "cityClock")
+        other.game_map.removeObject(previous_clock)
+        other.game_map.addObject(other.clock)
+        other_dialog = other.dialog(other.game_map.getObjectByName("cityStart"))
+        create_object = model.createObject
+        other_results = []
+
+        def recruitOtherClock(name):
+            result = create_object(name)
+            if name == "CTargetController":
+                other_results.append(other_dialog.historyEldothJoined())
+            return result
+
+        with patch.object(model, "createObject", side_effect=recruitOtherClock):
+            self.assertTrue(dialog.historyEldothJoined())
+        self.assertEqual([True], other_results)
+        for current in (model, other):
+            self.assertEqual(["eldoth"], decodeCityData(current.clock.getStringProperty("plugin_cityRoster")))
+            self.assertIs(
+                current.game_map.getObjectByName("eldoth"),
+                current.clock.getObjectProperty("plugin_cityCompanion_eldoth"),
+            )
+            self.assertTrue(current.game_map.getBoolProperty("plugin_cityFlag_eldothJoined"))
+
+    def testEldothHistoryGuardReleasesAfterFinalSetterFailureInModel(self):
+        model, dialog = self.eldothHistoryModel()
+        failure = RuntimeError("final history setter sentinel")
+        set_string = model.game_map.setStringProperty
+
+        def failHistory(key, value):
+            if key == "plugin_cityHistory":
+                raise failure
+            return set_string(key, value)
+
+        with patch.object(model.game_map, "setStringProperty", side_effect=failHistory):
+            with self.assertRaises(RuntimeError) as caught:
+                dialog.historyEldothJoined()
+        self.assertIs(failure, caught.exception)
+        # Final-setter atomicity is outside the claim; this asserts the transient guard releases.
+        self.assertEqual(["eldoth"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster")))
+        self.assertTrue(dialog.historyEldothJoined())
+        self.assertEqual(["eldoth"], decodeCityData(model.clock.getStringProperty("plugin_cityRoster")))
+        self.assertFalse(dialog.historyEldothJoined())
+
+    def testEldothHistoryCompletedGuardDoesNotRetainClockOwnerInModel(self):
+        model, dialog = self.eldothHistoryModel()
+        self.assertTrue(dialog.historyEldothJoined())
+        owner_ref = weakref.ref(model.clock)
+        model.game_map.objects.pop("cityClock")
+        model.clock = None
+        gc.collect()
+        self.assertIsNone(owner_ref())
 
     def testSourceDonationThresholdAndReputationCeiling(self):
         model = CityModel()

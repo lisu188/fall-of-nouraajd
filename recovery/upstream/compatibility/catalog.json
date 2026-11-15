@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "animation/animatedobject.h",
+      "source": "earliest/animation/animatedobject.h",
+      "sha256": "539826837ca8f49f5f7c17acdab374c49f7db9a86214062ca1671e5d39f5cf19",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "animation/animationprovider.cpp",
+      "source": "earliest/animation/animationprovider.cpp",
+      "sha256": "68e8926f4e78e835180b0735cf9ca284bf07163d49d604ff23da11490d8535d6",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "creatures/monsters/pritz.cpp",
+      "source": "earliest/creatures/monsters/pritz.cpp",
+      "sha256": "cf30b825ffcc3c25c2896ae071a6de63136899ae9d75e962f18fb2ae6bcf24fd",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "creatures/monsters/pritzmage.cpp",
+      "source": "earliest/creatures/monsters/pritzmage.cpp",
+      "sha256": "1e22eb03f1b93cb19a855f2750a3dc9d77acd73dbe045d018afc9c64021d4111",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "creatures/players/mage.cpp",
+      "source": "earliest/creatures/players/mage.cpp",
+      "sha256": "704e5115cbf4441b35d1008ce25d262853be0260f7acb69954440eb16786fe20",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "creatures/players/player.cpp",
+      "source": "earliest/creatures/players/player.cpp",
+      "sha256": "2b18e0d2c5398dc2a74ec5ec37ecf0c56596bb2ba80d1d04c6fb3bb620f0813f",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "creatures/players/rogue.cpp",
+      "source": "earliest/creatures/players/rogue.cpp",
+      "sha256": "2ca7ea019d3ca7081d760a87c801af024f6303a8e4e6c94c0f3dce4cac1dccfc",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "creatures/players/warrior.cpp",
+      "source": "earliest/creatures/players/warrior.cpp",
+      "sha256": "299d16910635ddf33b3eb003eeff58ea3406fcbf9a598834aef43c87bbbd6532",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "map/map.h",
+      "source": "earliest/map/map.h",
+      "sha256": "89f10e5f3746d3c1ee8b5d64871d9ec87d117632fc6a9b98762fb049a8213ade",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "map/tiles/tile.h",
+      "source": "earliest/map/tiles/tile.h",
+      "sha256": "363142caea34dfa3d474b9cd95a24860d76d25ead6751e42cdc97cdec08fd612",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    },
+    {
+      "tree": "dd543af0427f0a14bb95488618d3f27b265b6d91",
+      "path": "view/gameview.cpp",
+      "source": "earliest/view/gameview.cpp",
+      "sha256": "4d032a1e6cdf3951d0dec99366ae8be4206beb4834949a869633047361908644",
+      "replaceExisting": true,
+      "provenance": "Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending."
+    }
+  ]
+}

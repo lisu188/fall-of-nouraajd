@@ -73,10 +73,167 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <future>
 #include <thread>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 #include <utility>
 
 namespace {
+
+struct GuiReadyProbe {
+    bool operator()() & { return true; }
+};
+
+struct GuiExplicitReadyProbe {
+    std::optional<int> operator()() & { return 1; }
+};
+
+struct GuiInvalidReadyProbe {
+    std::string operator()() & { return {}; }
+};
+
+struct GuiRvalueReadyProbe {
+    bool operator()() && { return true; }
+};
+
+struct GuiReaderProbe {
+    int operator()() & { return 7; }
+};
+
+struct GuiRvalueReaderProbe {
+    int operator()() && { return 7; }
+};
+
+struct GuiOwnerReadyProbe {
+    bool operator()(std::shared_ptr<CListView> &) & { return true; }
+};
+
+template <typename Result> struct GuiOwnerResultProbe {
+    Result operator()(std::shared_ptr<CListView> &) & { return {}; }
+};
+
+struct GuiBooleanReferenceResult {
+    friend bool &operator||(bool, GuiBooleanReferenceResult) {
+        static bool ready = true;
+        return ready;
+    }
+};
+
+struct GuiNonBooleanLogicalResult {
+    friend int operator||(bool, GuiNonBooleanLogicalResult) { return 1; }
+};
+
+struct GuiOwnerCallbackProbe {
+    void operator()(std::shared_ptr<CListView> &) & {}
+};
+
+struct GuiRvalueOwnerCallbackProbe {
+    void operator()(std::shared_ptr<CListView> &) && {}
+};
+
+struct GuiNonDefaultResult {
+    explicit GuiNonDefaultResult(int) {}
+};
+
+struct GuiValueInitializedResult {
+    const int value;
+};
+
+template <typename Predicate, typename Reader>
+concept CanAwaitGuiReady =
+    requires(Predicate ready, Reader read) { gui_async::until(std::move(ready), std::move(read)); };
+
+template <typename T, typename Predicate, typename Callback>
+concept CanScheduleGuiReady = requires(std::weak_ptr<T> owner, Predicate ready, Callback callback) {
+    gui_async::whenReady(owner, std::move(ready), std::move(callback));
+};
+
+template <typename T>
+concept CanRunGuiTask = requires(const std::shared_ptr<CGameGraphicsObject> &owner, vstd::task<T> task) {
+    gui_async::run(owner, std::move(task));
+};
+
+static_assert(CanAwaitGuiReady<GuiReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiExplicitReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiInvalidReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiRvalueReadyProbe, GuiReaderProbe>);
+static_assert(!CanAwaitGuiReady<GuiReadyProbe, GuiRvalueReaderProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::optional<int>>, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::shared_ptr<int>>, GuiOwnerCallbackProbe>);
+static_assert(CanScheduleGuiReady<CListView, GuiOwnerResultProbe<GuiBooleanReferenceResult>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerResultProbe<std::string>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerResultProbe<GuiNonBooleanLogicalResult>, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CListView, GuiOwnerReadyProbe, GuiRvalueOwnerCallbackProbe>);
+static_assert(!CanScheduleGuiReady<CGameObject, GuiOwnerReadyProbe, GuiOwnerCallbackProbe>);
+static_assert(CanRunGuiTask<void>);
+static_assert(CanRunGuiTask<int>);
+static_assert(!std::default_initializable<GuiValueInitializedResult>);
+static_assert(CanRunGuiTask<GuiValueInitializedResult>);
+static_assert(!CanRunGuiTask<GuiNonDefaultResult>);
+
+template <typename T, auto Destroy>
+concept HasSdlResourceDeleter = requires { typename fn::sdl::ResourceDeleter<T, Destroy>; };
+
+static_assert(HasSdlResourceDeleter<SDL_Surface, SDL_FreeSurface>);
+static_assert(!HasSdlResourceDeleter<SDL_Surface, SDL_DestroyTexture>);
+static_assert(!HasSdlResourceDeleter<SDL_Surface, SDL_LockSurface>);
+static_assert(std::is_empty_v<fn::sdl::SurfaceDeleter>);
+static_assert(std::is_empty_v<fn::sdl::TextureDeleter>);
+static_assert(std::is_empty_v<fn::sdl::RendererDeleter>);
+static_assert(std::is_empty_v<fn::sdl::WindowDeleter>);
+static_assert(std::is_empty_v<fn::sdl::FontDeleter>);
+static_assert(std::is_nothrow_invocable_v<fn::sdl::SurfaceDeleter, SDL_Surface *>);
+
+struct SdlResourceProbe {
+    int releases = 0;
+};
+
+struct SdlReferenceResourceDeleter {
+    void operator()(SdlResourceProbe *&resource) const { ++resource->releases; }
+};
+
+struct SdlRvalueResourceDeleter {
+    void operator()(SdlResourceProbe *) &&;
+};
+
+struct SdlRvaluePointerDeleter {
+    void operator()(SdlResourceProbe *&&) const;
+};
+
+static_assert(HasSdlResourceDeleter<SdlResourceProbe, SdlReferenceResourceDeleter{}>);
+static_assert(!HasSdlResourceDeleter<SdlResourceProbe, SdlRvalueResourceDeleter{}>);
+static_assert(!HasSdlResourceDeleter<SdlResourceProbe, SdlRvaluePointerDeleter{}>);
+
+void releaseSdlResourceProbe(SdlResourceProbe *resource) { ++resource->releases; }
+
+void testSdlResourceDeletersPreserveOwnershipTransfers() {
+    using ReferenceDeleter = fn::sdl::ResourceDeleter<SdlResourceProbe, SdlReferenceResourceDeleter{}>;
+    SdlResourceProbe referenced;
+    ReferenceDeleter{}(nullptr);
+    ReferenceDeleter{}(&referenced);
+    expect_true(referenced.releases == 1, "an SDL deleter must invoke its stored callable with a pointer lvalue");
+
+    using ProbeDeleter = fn::sdl::ResourceDeleter<SdlResourceProbe, releaseSdlResourceProbe>;
+    using ProbePtr = std::unique_ptr<SdlResourceProbe, ProbeDeleter>;
+    SdlResourceProbe first, second;
+    ProbeDeleter{}(nullptr);
+    {
+        ProbePtr original(&first);
+        auto moved = std::move(original);
+        expect_true(!original && moved.get() == &first && first.releases == 0,
+                    "moving an SDL owner must transfer its resource without destroying it");
+        moved.reset(&second);
+        expect_true(first.releases == 1 && second.releases == 0,
+                    "resetting an SDL owner must destroy only its previous resource");
+        auto released = moved.release();
+        expect_true(!moved && released == &second && second.releases == 0,
+                    "releasing an SDL owner must leave destruction to its next owner");
+        moved.reset(released);
+    }
+    expect_true(first.releases == 1 && second.releases == 1,
+                "transferred SDL resources must be destroyed exactly once by their final owners");
+}
 
 template <typename Predicate> bool pumpGuiUntil(Predicate ready) {
     auto loop = vstd::event_loop<>::instance();
@@ -525,17 +682,18 @@ class QuestTextCountingPanel : public CGameQuestPanel {
 };
 
 class DragCallbackPanel : public CGamePanel {
-    V_META(DragCallbackPanel, CGamePanel,
-           V_METHOD(DragCallbackPanel, sourceCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(DragCallbackPanel, targetCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
-           V_METHOD(DragCallbackPanel, sourceClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, targetClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, sourceDragStart, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, targetDragValidate, bool, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, targetDrop, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-           V_METHOD(DragCallbackPanel, sourceDragCancel, void, std::shared_ptr<CGui>, int,
-                    std::shared_ptr<CGameObject>))
+    V_META(
+        DragCallbackPanel, CGamePanel,
+        V_METHOD(DragCallbackPanel, sourceCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(DragCallbackPanel, targetCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(DragCallbackPanel, sourceClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, targetClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, sourceDragStart, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, targetDragValidate, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, targetDrop, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, sourceDragCancel, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, throwingDecision, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(DragCallbackPanel, throwingAction, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
   public:
     CListView::collection_pointer sourceCollection(std::shared_ptr<CGui>) {
@@ -598,6 +756,16 @@ class DragCallbackPanel : public CGamePanel {
         last_source_object = object;
     }
 
+    bool throwingDecision(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>) {
+        ++decisionFailures;
+        throw std::runtime_error("list decision fixture failure");
+    }
+
+    void throwingAction(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>) {
+        ++actionFailures;
+        throw std::runtime_error("list action fixture failure");
+    }
+
     std::shared_ptr<CGameObject> sourceItem = std::make_shared<CGameObject>();
     std::shared_ptr<CGameObject> targetItem = std::make_shared<CGameObject>();
     std::shared_ptr<CGameObject> last_source_object;
@@ -612,6 +780,8 @@ class DragCallbackPanel : public CGamePanel {
     int drag_validations = 0;
     int drops = 0;
     int drag_cancels = 0;
+    int decisionFailures = 0;
+    int actionFailures = 0;
     bool allow_drag_start = true;
     bool allow_drop = true;
 };
@@ -2199,6 +2369,11 @@ void testMinimapFreshTraversalPreservesTerrainUpdates() {
         return pixel & 0x00ffffffu;
     };
     expect_true(render_pixel() == 0x002d6f37u, "native minimap must initially draw the registered grass tile");
+    const auto initial_builds = minimap->getTerrainTextureBuildCount();
+    upstairs->setTileType("road");
+    expect_true(render_pixel() == 0x002d6f37u && minimap->getTerrainTextureBuildCount() == initial_builds,
+                "terrain edits on another elevation must preserve the current level's cached terrain");
+    upstairs->setTileType("water");
     tile->setTileType("water");
     expect_true(render_pixel() == 0x001d5694u, "direct native tileType changes must appear on the next minimap frame");
     tile->setTileType("");
@@ -2230,6 +2405,409 @@ void testMinimapFreshTraversalPreservesTerrainUpdates() {
     map->setYBounds({});
     expect_true(render_pixel() != 0 && minimap->getTerrainTextureBuildCount() > stable_builds,
                 "removing metadata bounds must retain the existing native derived-bounds render path");
+    harness.game->getContext()->shutdown();
+}
+
+void testMinimapTerrainRevisionTracksNormalizedTileMutations() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 9}, {1, 9}});
+    map->setYBounds({{0, 5}, {1, 5}});
+    map->setWrapX({{0, 1}, {1, 1}});
+    auto make_tile = [] {
+        auto tile = std::make_shared<CTile>();
+        tile->setPosx(11);
+        tile->setPosy(2);
+        tile->setTileType("grass");
+        return tile;
+    };
+    auto tile = make_tile();
+    map->setTiles({tile});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render = [&] { minimap->renderObject(harness.gui, rect, 0); };
+    render();
+    const auto original_revision = map->getTerrainRevision(0);
+    const auto original_builds = minimap->getTerrainTextureBuildCount();
+    tile->setPosx(1);
+    render();
+    expect_true(tile->getPosx() == 1 && map->getTerrainRevision(0) > original_revision &&
+                    minimap->getTerrainTextureBuildCount() == original_builds + 1,
+                "canonicalizing raw tile coordinates within one normalized cell must refresh the terrain");
+
+    tile = make_tile();
+    map->setTiles({tile});
+    map->setXBounds({{0, 7}, {1, 7}});
+    expect_true(!map->hasRegisteredTile(tile.get()) && map->getTiles().contains(tile),
+                "the normalization fixture must retain a tile under neither its raw nor current normalized key");
+    render();
+    auto expect_refresh = [&](auto mutation, const char *message) {
+        const auto revision = map->getTerrainRevision(0);
+        const auto builds = minimap->getTerrainTextureBuildCount();
+        mutation();
+        render();
+        expect_true(map->getTerrainRevision(0) > revision && minimap->getTerrainTextureBuildCount() == builds + 1,
+                    message);
+    };
+    expect_refresh([&] { tile->setTileType("water"); },
+                   "a retained tile's type mutation must refresh after normalization changes");
+    expect_refresh(
+        [&] {
+            tile->setTileType("");
+            tile->setTypeId("RoadTile");
+        },
+        "a retained tile's typeId fallback must refresh after normalization changes");
+    expect_refresh([&] { tile->setPosx(12); }, "a retained tile's direct x mutation must refresh its old raster");
+    expect_refresh([&] { tile->setPosy(3); }, "a retained tile's direct y mutation must refresh its old raster");
+    const auto other_level = map->getTerrainRevision(1);
+    expect_refresh([&] { tile->setPosz(1); }, "a retained tile's level mutation must clear its previous terrain");
+    expect_true(map->getTerrainRevision(1) > other_level,
+                "a retained tile's direct level mutation must also invalidate its destination elevation");
+
+    const auto unchanged = map->getTerrainRevision(1);
+    tile->setPosx(12);
+    tile->setPosy(3);
+    tile->setPosz(1);
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(map->getTerrainRevision(1) == unchanged,
+                "unchanged native tile setters must preserve terrain revisions");
+    map->setTiles({});
+    const auto detached_revision = map->getTerrainRevision(1);
+    tile->setGame(harness.game);
+    tile->setTileType("water");
+    tile->setPosx(4);
+    tile->setTypeId("GroundTile");
+    expect_true(map->getTerrainRevision(1) == detached_revision,
+                "detached tiles must not invalidate the active map through their fallback game association");
+    harness.game->getContext()->shutdown();
+}
+
+void testSharedMinimapTilesInvalidateEveryRetainingMap() {
+    auto first = make_minimap_harness();
+    auto second = make_minimap_harness();
+    for (const auto &map : {first.map, second.map}) {
+        map->setXBounds({{0, 3}, {1, 3}});
+        map->setYBounds({{0, 3}, {1, 3}});
+        map->setDefaultTiles({{0, "GroundTile"}, {1, "GroundTile"}});
+    }
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("grass");
+    expect_true(first.map->addTile(tile, 2, 2, 0) && second.map->addTile(tile, 2, 2, 0),
+                "shared terrain fixture must retain the same tile in both map registries");
+    expect_true(tile->getMap() == second.map && first.map->getTiles().contains(tile),
+                "tile adoption must preserve the original registry while changing the current owner");
+    auto firstView = std::make_shared<CMinimapGraphicsObject>();
+    auto secondView = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto readPixel = [&](MinimapHarness &harness, const std::shared_ptr<CMinimapGraphicsObject> &view, int x = 80) {
+        view->renderObject(harness.gui, rect, 0);
+        Uint32 pixel = 0;
+        const SDL_Rect sample{x, 80, 1, 1};
+        expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel,
+                                         sizeof(pixel)) == 0,
+                    "shared terrain regression must read actual isolated-renderer pixels");
+        return pixel & 0x00ffffffu;
+    };
+    expect_true(readPixel(first, firstView) == 0x002d6f37u && readPixel(second, secondView) == 0x002d6f37u,
+                "both minimaps must initially display the shared grass tile");
+    const auto firstBuilds = firstView->getTerrainTextureBuildCount();
+    const auto secondBuilds = secondView->getTerrainTextureBuildCount();
+    tile->setTileType("water");
+    expect_true(readPixel(first, firstView) == 0x001d5694u && readPixel(second, secondView) == 0x001d5694u &&
+                    firstView->getTerrainTextureBuildCount() == firstBuilds + 1 &&
+                    secondView->getTerrainTextureBuildCount() == secondBuilds + 1,
+                "an adopted tile's appearance change must refresh every retaining map exactly once");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    expect_true(readPixel(first, firstView) == 0x00766748u && readPixel(second, secondView) == 0x00766748u,
+                "empty-type fallback changes must reach both terrain observers");
+    tile->setPosx(3);
+    expect_true(readPixel(first, firstView) == 0x00564830u && readPixel(second, secondView) == 0x00564830u &&
+                    readPixel(first, firstView, 112) == 0x00766748u &&
+                    readPixel(second, secondView, 112) == 0x00766748u,
+                "moving through the current owner must clear and redraw the tile in every retaining map");
+    const auto firstUpper = first.map->getTerrainRevision(1);
+    const auto secondUpper = second.map->getTerrainRevision(1);
+    tile->setPosz(1);
+    expect_true(readPixel(first, firstView, 112) == 0x00564830u && readPixel(second, secondView, 112) == 0x00564830u &&
+                    first.map->getTerrainRevision(1) > firstUpper && second.map->getTerrainRevision(1) > secondUpper,
+                "a shared tile's elevation change must invalidate both its old and new visible levels");
+    first.player->setPosZ(1);
+    second.player->setPosZ(1);
+    expect_true(readPixel(first, firstView, 112) == 0x00766748u && readPixel(second, secondView, 112) == 0x00766748u,
+                "both minimaps must show the shared tile at its actual elevation despite retained old keys");
+    const auto beforeRemoval = first.map->getTerrainRevision(1);
+    first.map->removeTile(2, 2, 0);
+    expect_true(first.map->getTerrainRevision(1) > beforeRemoval && readPixel(first, firstView, 112) == 0x00564830u,
+                "removing an old registry key must invalidate the tile's current visible elevation");
+    const auto removedBuilds = firstView->getTerrainTextureBuildCount();
+    tile->setTileType("water");
+    expect_true(readPixel(first, firstView, 112) == 0x00564830u &&
+                    firstView->getTerrainTextureBuildCount() == removedBuilds &&
+                    readPixel(second, secondView, 112) == 0x001d5694u,
+                "removed observers must stop rebuilding while the remaining owner still receives appearance changes");
+    first.game->getContext()->shutdown();
+    second.game->getContext()->shutdown();
+}
+
+void testTerrainObserversTrackDuplicateKeysAndWeakMaps() {
+    auto map = std::make_shared<CMap>();
+    auto tile = std::make_shared<CTile>();
+    expect_true(map->addTile(tile, 1, 1, 0) && map->addTile(tile, 2, 2, 0),
+                "duplicate-key terrain fixture must retain the same pointer at two stored coordinates");
+    const auto beforeDuplicateChange = map->getTerrainRevision(0);
+    tile->setTileType("grass");
+    expect_true(map->getTerrainRevision(0) == beforeDuplicateChange + 1,
+                "multiple registry keys must still notify a retaining map only once per appearance change");
+    map->removeTile(2, 2, 0);
+    const auto retainedRevision = map->getTerrainRevision(0);
+    tile->setTileType("water");
+    expect_true(map->getTiles().contains(tile) && map->getTerrainRevision(0) == retainedRevision + 1,
+                "removing one duplicate key must preserve terrain observation for the remaining key");
+    map->removeTile(1, 1, 0);
+    const auto removedRevision = map->getTerrainRevision(0);
+    tile->setTileType("grass");
+    tile->setPosz(1);
+    expect_true(map->getTerrainRevision(0) == removedRevision && map->getTerrainRevision(1) == 1,
+                "removing the last key must release observation for later appearance and position mutations");
+
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    auto third = std::make_shared<CMap>();
+    first->addTile(tile, 1, 1, 0);
+    second->addTile(tile, 1, 1, 0);
+    third->addTile(tile, 1, 1, 0);
+    const std::weak_ptr<CMap> firstLifetime = first;
+    const std::weak_ptr<CMap> thirdLifetime = third;
+    first.reset();
+    third.reset();
+    expect_true(firstLifetime.expired() && thirdLifetime.expired(),
+                "primary and additional terrain observers must not keep maps alive");
+    const auto survivingRevision = second->getTerrainRevision(0);
+    tile->setTileType("water");
+    expect_true(second->getTerrainRevision(0) == survivingRevision + 1,
+                "expired observers must be discarded without losing or duplicating the remaining map");
+    const std::weak_ptr<CMap> secondLifetime = second;
+    second.reset();
+    expect_true(secondLifetime.expired(), "the last observed map must also expire while its tile remains alive");
+    tile->setTileType("");
+    tile->setTypeId("RoadTile");
+    auto replacement = std::make_shared<CMap>();
+    replacement->addTile(tile, 3, 3, 0);
+    const auto replacementRevision = replacement->getTerrainRevision(0);
+    tile->setTypeId("WaterTile");
+    expect_true(replacement->getTerrainRevision(0) == replacementRevision + 1,
+                "a surviving tile must accept a fresh observer after all previous maps expire");
+}
+
+void testTerrainObserversDoNotAcquireNavigationLocks() {
+    auto first = std::make_shared<CMap>();
+    auto second = std::make_shared<CMap>();
+    auto tile = std::make_shared<CTile>();
+    first->addTile(tile, 1, 1, 0);
+    second->addTile(tile, 1, 1, 0);
+    const auto firstRevision = first->getTerrainRevision(0);
+    const auto secondRevision = second->getTerrainRevision(0);
+    std::future<void> mutation;
+    bool completedWhileLocked = false;
+    {
+        std::scoped_lock lock(first->getNavigationMutex(), second->getNavigationMutex());
+        mutation = std::async(std::launch::async, [tile] { tile->setTileType("water"); });
+        completedWhileLocked = mutation.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+    }
+    mutation.get();
+    expect_true(completedWhileLocked && first->getTerrainRevision(0) == firstRevision + 1 &&
+                    second->getTerrainRevision(0) == secondRevision + 1,
+                "shared terrain notifications must complete without acquiring any retaining map's navigation lock");
+}
+
+void testTerrainObserversTrackFinalBulkMembership() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 3}});
+    map->setWrapX({{0, 1}});
+    auto lower = std::make_shared<CTile>();
+    auto upper = std::make_shared<CTile>();
+    lower->setPosx(1);
+    upper->setPosx(5);
+    const std::set<std::shared_ptr<CTile>> ordered{lower, upper};
+    map->setTiles(ordered);
+    auto retained = *map->getTiles().begin();
+    auto displaced = retained == lower ? upper : lower;
+    expect_true(map->getTiles().size() == 1, "bulk replacement must collapse the fixture's normalized-key collision");
+    const auto beforeDisplacedChange = map->getTerrainRevision(0);
+    displaced->setTileType("water");
+    expect_true(map->getTerrainRevision(0) == beforeDisplacedChange,
+                "a tile displaced while building a replacement registry must never subscribe to its terrain");
+    retained->setTileType("water");
+    expect_true(map->getTerrainRevision(0) == beforeDisplacedChange + 1,
+                "the final stored tile must receive exactly one observer registration");
+    map->setTiles({});
+    const auto clearedRevision = map->getTerrainRevision(0);
+    retained->setTileType("grass");
+    expect_true(map->getTerrainRevision(0) == clearedRevision,
+                "bulk clearing must unsubscribe the previously retained tile");
+    const std::vector<std::shared_ptr<CTile>> installation{lower, upper};
+    expect_true(map->installTiles(installation) == 1, "bulk installation must retain only its first collision winner");
+    retained = *map->getTiles().begin();
+    displaced = retained == lower ? upper : lower;
+    const auto installedRevision = map->getTerrainRevision(0);
+    displaced->setTileType("lava");
+    expect_true(map->getTerrainRevision(0) == installedRevision,
+                "rejected installation entries must not receive terrain observers");
+    retained->setTileType("lava");
+    expect_true(map->getTerrainRevision(0) == installedRevision + 1,
+                "successful bulk installation must subscribe its final tile exactly once");
+}
+
+void testSharedMinimapMarkersUseFreshElevationAndDerivedBounds() {
+    for (const bool derivedBounds : {false, true}) {
+        auto first = make_minimap_harness();
+        auto second = make_minimap_harness();
+        for (const auto &map : {first.map, second.map}) {
+            map->setDefaultTiles({{0, "GroundTile"}});
+            if (!derivedBounds) {
+                map->setXBounds({{0, 3}});
+                map->setYBounds({{0, 3}});
+            } else {
+                expect_true(map->addTile(std::make_shared<CTile>(), 3, 3, 0),
+                            "derived marker fixture must retain an actual terrain extent");
+            }
+        }
+        auto marker = std::make_shared<CMapObject>();
+        marker->setName("sharedMinimapMarker");
+        marker->setPosX(2);
+        marker->setPosY(2);
+        marker->setPosZ(1);
+        marker->setCanStep(true);
+        first.map->addObject(marker);
+        second.map->addObject(marker);
+        expect_true(first.map->getObjectByName(marker->getName()) == marker &&
+                        second.map->getObjectByName(marker->getName()) == marker,
+                    "the same actual marker must be retained in both native map registries");
+        expect_true(marker->getMap() == second.map && first.map->getObjectByName(marker->getName()) == marker &&
+                        second.map->getObjectByName(marker->getName()) == marker,
+                    "the marker fixture must keep A's registry entry while B is its current owner");
+        auto firstView = std::make_shared<CMinimapGraphicsObject>();
+        auto secondView = std::make_shared<CMinimapGraphicsObject>();
+        const auto rect = CUtil::rect(0, 0, 128, 128);
+        auto markerPixels = [&](MinimapHarness &harness, const std::shared_ptr<CMinimapGraphicsObject> &view) {
+            view->renderObject(harness.gui, rect, 0);
+            std::vector<Uint32> pixels(128 * 128);
+            expect_true(SDL_RenderReadPixels(harness.gui->getRenderer(), rect.get(), SDL_PIXELFORMAT_ARGB8888,
+                                             pixels.data(), 128 * sizeof(Uint32)) == 0,
+                        "shared marker regression must read actual isolated-renderer pixels");
+            std::size_t count = 0;
+            int minX = 128;
+            for (std::size_t index = 0; index < pixels.size(); ++index) {
+                if ((pixels[index] & 0x00ffffffu) == 0x00ffaa00u) {
+                    ++count;
+                    minX = std::min(minX, static_cast<int>(index % 128));
+                }
+            }
+            return std::pair(count, minX);
+        };
+        expect_true(markerPixels(first, firstView).first == 0 && markerPixels(second, secondView).first == 0,
+                    "both warmed minimaps must initially exclude the shared marker on another elevation");
+        const auto firstRevision = first.map->getNavigationRevision();
+        const auto secondRevision = second.map->getNavigationRevision();
+        const auto firstSnapshots = firstView->getObjectSnapshotBuildCount();
+        const auto firstTerrain = firstView->getTerrainTextureBuildCount();
+        marker->setPosZ(0);
+        expect_true(first.map->getNavigationRevision() == firstRevision &&
+                        second.map->getNavigationRevision() > secondRevision,
+                    "the counterexample must mutate only B's revision while A still retains the actual marker");
+        expect_true(markerPixels(first, firstView).first > 0 && markerPixels(second, secondView).first > 0,
+                    "both minimaps must show a shared marker entering their displayed elevation");
+        expect_true(firstView->getObjectSnapshotBuildCount() == firstSnapshots &&
+                        firstView->getTerrainTextureBuildCount() == firstTerrain,
+                    "fresh elevation filtering must neither rebuild A's registry snapshot nor unchanged terrain");
+        if (derivedBounds) {
+            marker->setPosX(6);
+            const auto expanded = markerPixels(first, firstView);
+            expect_true(expanded.first > 0 && expanded.second > 110 &&
+                            firstView->getTerrainTextureBuildCount() == firstTerrain + 1,
+                        "shared coordinate changes must expand derived bounds and display the actual moved marker");
+            marker->setPosX(2);
+            const auto contracted = markerPixels(first, firstView);
+            expect_true(contracted.first > 0 && contracted.second == 78 &&
+                            firstView->getTerrainTextureBuildCount() == firstTerrain + 2,
+                        "returning a shared marker must contract derived bounds without stale coordinate extents");
+        }
+        marker->setPosZ(1);
+        expect_true(markerPixels(first, firstView).first == 0 && markerPixels(second, secondView).first == 0,
+                    "both minimaps must freshly exclude a shared marker leaving their displayed elevation");
+        expect_true(firstView->getObjectSnapshotBuildCount() == firstSnapshots &&
+                        first.map->getNavigationRevision() == firstRevision,
+                    "cross-owner position changes must not require an invented invalidation of A");
+        first.map->removeObject(marker);
+        expect_true(!first.map->getObjectByName(marker->getName()), "the old marker must leave A's real registry");
+        auto replacement = std::make_shared<CMapObject>();
+        replacement->setName(marker->getName());
+        replacement->setPosX(2);
+        replacement->setPosY(2);
+        replacement->setCanStep(true);
+        first.map->addObject(replacement);
+        expect_true(first.map->getObjectByName(replacement->getName()) == replacement &&
+                        markerPixels(first, firstView).first > 0,
+                    "a same-name replacement must enter the snapshot by actual registry identity");
+        const std::weak_ptr<CMapObject> oldLifetime = marker;
+        const std::weak_ptr<CMapObject> replacementLifetime = replacement;
+        second.map->removeObject(marker);
+        first.map->removeObject(replacement);
+        expect_true(!second.map->getObjectByName(marker->getName()) &&
+                        !first.map->getObjectByName(replacement->getName()),
+                    "both objects must leave their actual owning registries");
+        marker.reset();
+        replacement.reset();
+        expect_true(oldLifetime.expired() && replacementLifetime.expired(),
+                    "neither minimap may retain a removed original or same-name replacement actor");
+        expect_true(markerPixels(first, firstView).first == 0 && markerPixels(second, secondView).first == 0,
+                    "removed shared and replacement markers must disappear from both actual renders");
+        first.game->getContext()->shutdown();
+        second.game->getContext()->shutdown();
+    }
+}
+
+void testMinimapMarkerSnapshotTracksMembershipAndElevation() {
+    auto harness = make_minimap_harness();
+    auto map = harness.map;
+    map->setXBounds({{0, 3}, {1, 3}});
+    map->setYBounds({{0, 3}, {1, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+    auto render = [&] { minimap->renderObject(harness.gui, rect, 0); };
+    render();
+    const auto initial_snapshots = minimap->getObjectSnapshotBuildCount();
+    const auto initial_terrain = minimap->getTerrainTextureBuildCount();
+    auto marker = std::make_shared<CMapObject>();
+    marker->setName("minimapMarkerRevision");
+    marker->setPosX(2);
+    marker->setPosY(2);
+    map->addObject(marker);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 1 &&
+                    minimap->getTerrainTextureBuildCount() == initial_terrain,
+                "adding a marker must refresh membership while retaining unchanged terrain");
+    marker->setPosZ(1);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 2,
+                "moving a marker to another elevation must invalidate the current level's membership");
+    marker->setPosZ(0);
+    render();
+    expect_true(minimap->getObjectSnapshotBuildCount() == initial_snapshots + 3,
+                "returning a marker to the current elevation must rebuild its registry snapshot");
+    const std::weak_ptr<CMapObject> removed = marker;
+    map->setObjects({harness.player});
+    marker.reset();
+    drain_event_loop();
+    expect_true(removed.expired(), "a cached minimap marker must not retain a removed map object");
+    render();
+    const auto removed_snapshots = minimap->getObjectSnapshotBuildCount();
+    render();
+    expect_true(removed_snapshots == initial_snapshots + 4 &&
+                    minimap->getObjectSnapshotBuildCount() == removed_snapshots,
+                "marker removal must rebuild once and preserve the next unchanged snapshot");
     harness.game->getContext()->shutdown();
 }
 
@@ -3038,6 +3616,106 @@ void test_fight_panel_enemy_selection_uses_exact_instance() {
     expect_true(panel->enemiesSelect(nullptr, 0, enemy), "fight enemy selection should match the selected instance");
     expect_true(!panel->enemiesSelect(nullptr, 0, same_type_enemy),
                 "fight enemy selection should not match a different creature with the same configured id");
+}
+
+void testListCallbacksKeepMissingAndFailurePolicies() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("throwingDecision");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.panel->decisionFailures == 1 && harness.panel->source_clicks == 1 &&
+                    !harness.gui->hasDragSession(),
+                "a failing drag-start must reject the drag and preserve its ordinary click fallback");
+
+    harness.source->setDragEnabled(false);
+    harness.source->setCallback("throwingAction");
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25) &&
+                    harness.panel->actionFailures == 1,
+                "a failing ordinary callback must be contained while its input stays consumed");
+    harness.source->setCallback("");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.panel->actionFailures == 1, "an absent ordinary callback must not invoke a reflected action");
+
+    harness.source->setDragEnabled(true);
+    harness.source->setCallback("sourceClick");
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+    harness.target->setDrop("targetDrop");
+    const auto dropOnTarget = [&] {
+        harness.gui->clearDragSession();
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(125, 25);
+        return harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25);
+    };
+    expect_true(dropOnTarget() && harness.panel->drops == 1 && harness.panel->drag_validations == 0 &&
+                    harness.panel->drag_cancels == 0,
+                "an absent drop validator must permit a configured drop action");
+
+    harness.target->setDragValidate("throwingDecision");
+    expect_true(!dropOnTarget() && harness.panel->decisionFailures == 2 && harness.panel->drops == 1 &&
+                    harness.panel->drag_cancels == 1,
+                "a failing drop validator must reject the drop and notify the source once");
+
+    harness.target->setDragValidate("targetDragValidate");
+    harness.target->setDrop("throwingAction");
+    expect_true(dropOnTarget() && harness.panel->actionFailures == 2 && harness.gui->hasDragSession() &&
+                    harness.gui->getDragSession()->acceptedTarget.lock() == harness.target,
+                "a contained drop-action exception must preserve the existing accepted-target policy");
+
+    harness.gui->clearDragSession();
+    harness.source->setDragCancel("throwingAction");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(180, 25);
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 180, 25) &&
+                    harness.panel->actionFailures == 3,
+                "a failing cancellation callback must be contained while the release stays consumed");
+    harness.gui->clearDragSession();
+}
+
+void testListSelectionAndRightClickFailuresUseFalse() {
+    auto harness = create_drag_list_harness();
+    type_registration::registerGuiAnimationTypes();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        harness.game->getObjectHandler()->registerType(name, builder);
+    }
+    harness.panel->sourceItem->setAnimation("images/item");
+    harness.panel->sourceItem->setLabel("");
+    harness.panel->sourceItem->setDescription("");
+    const auto hasSelection = [&] {
+        for (const auto &graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+            if (vstd::cast<CSelectionBox>(graphic)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    expect_true(!hasSelection(), "an absent selection callback must leave the item unselected");
+    harness.source->setSelect("throwingDecision");
+    const int decisionsBefore = harness.panel->decisionFailures;
+    expect_true(!hasSelection() && harness.panel->decisionFailures == decisionsBefore + 1,
+                "a failing selection callback must leave the item unselected");
+    harness.source->setSelect("sourceDragStart");
+    expect_true(hasSelection(), "a successful selection callback must preserve its true result");
+    harness.source->setSelect("");
+
+    std::shared_ptr<CAnimation> animation;
+    for (const auto &graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+        auto candidate = vstd::cast<CAnimation>(graphic);
+        if (candidate && candidate->getObject() == harness.panel->sourceItem) {
+            animation = candidate;
+        }
+    }
+    expect_true(animation != nullptr, "the callback fixture must expose the item's actual animation");
+    if (!animation) {
+        return;
+    }
+    expect_true(!animation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
+                "an absent right-click callback must leave unlabelled-item input unhandled");
+    harness.source->setRightClickCallback("throwingDecision");
+    expect_true(!animation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
+                "a failing right-click callback must leave unlabelled-item input unhandled");
+    harness.source->setRightClickCallback("sourceDragStart");
+    expect_true(animation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
+                "a successful right-click callback must preserve its handled result");
 }
 
 void test_list_view_drag_callbacks_validate_and_drop_without_click_fallback() {
@@ -5140,6 +5818,7 @@ void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    testSdlResourceDeletersPreserveOwnershipTransfers();
     testAsyncModalWaitsOwnLazyInputsAndNeverPumpTheLoop();
     testPendingGuiInitializationDoesNotRetainDetachedWidgets();
     testRejectedGuiRefreshDoesNotLeaveItsBatchQueued();
@@ -5196,6 +5875,8 @@ int main() {
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_repeated_gui_creation_preserves_live_window_and_renderer();
+    testListCallbacksKeepMissingAndFailurePolicies();
+    testListSelectionAndRightClickFailuresUseFalse();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping();
@@ -5244,6 +5925,13 @@ int main() {
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
     testMinimapFreshTraversalPreservesTerrainUpdates();
+    testMinimapTerrainRevisionTracksNormalizedTileMutations();
+    testSharedMinimapTilesInvalidateEveryRetainingMap();
+    testTerrainObserversTrackDuplicateKeysAndWeakMaps();
+    testTerrainObserversDoNotAcquireNavigationLocks();
+    testTerrainObserversTrackFinalBulkMembership();
+    testSharedMinimapMarkersUseFreshElevationAndDerivedBounds();
+    testMinimapMarkerSnapshotTracksMembershipAndElevation();
     testCollapsedMinimapPreservesOrderedRasterWinner();
     testMinimapReplacementIdentityRefreshesCollapsedRaster();
     testRetainedMinimapTextureDoesNotOutliveItsRenderer();

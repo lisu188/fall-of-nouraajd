@@ -33,6 +33,9 @@ class CGameEvent : public CGameObject {
     class CType {
       public:
         static std::string onEnter;
+        static std::string onCombatAttempt;
+        static std::string onCombatRoll;
+        static std::string onCombatPacket;
         static std::string onTurn;
         static std::string onCreate;
         static std::string onDestroy;
@@ -73,6 +76,10 @@ class CEventHandler : public CGameObject {
 
   public:
     void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;
+
+    bool combatEvent(std::shared_ptr<CMapObject> object, const std::string &kind,
+                     const std::function<std::shared_ptr<CGameEvent>()> &makeEvent,
+                     const std::function<bool()> &current) const;
 
     vstd::task<void> gameEventAsync(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event,
                                     std::shared_ptr<vstd::move_only_function<void()>> commit = {},

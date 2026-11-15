@@ -196,6 +196,8 @@ class CityWalkthroughRegistrationTest(unittest.TestCase):
                 "CityNativeLoadingRuntimeTest.testCityStructuredMetadataAndOwnedItemsSurviveSaveReload",
                 "CityNativeLoadingRuntimeTest.testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument",
                 "CityNativeLoadingRuntimeTest.testOptionalCityReferencesRespectActualNativeMissingPropertyContract",
+                "CityNativeLoadingRuntimeTest.testNativeLoadDiagnosticsAreExactOptInAndPreserveOwnedItems",
+                "CityNativeLoadingRuntimeTest.testNativeLoadDiagnosticsIdentifyBackupAndMalformedFailureWithoutChangingTheMap",
             },
             set(names),
         )
