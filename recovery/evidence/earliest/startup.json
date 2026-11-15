@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "eventLoop": true,
+    "map": true,
+    "player": true,
+    "renderedFrame": true
+  },
+  "frame": {
+    "height": 718,
+    "path": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/earliest-final/snapshot-lfnq6aab/smoke/startup.png",
+    "sha256": "1ca10eab81d55270f28f6f33498b622ce294ddd5ab140dcb4635440d7921cd00",
+    "width": 1278
+  },
+  "reason": "",
+  "schemaVersion": 1,
+  "status": "ready"
+}
