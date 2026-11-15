@@ -339,7 +339,9 @@ class HistoricalRecoveryTest(unittest.TestCase):
 
     def testBundleIsSelfContainedAndNeverUpdatesOriginalRefs(self):
         self.commit({"main.cpp" + recovery.MARKER_SUFFIX: self.marker(b"int game;\n")})
-        mapping = recovery.replayHistory(self.repo, recovery.auditHistory(self.repo))
+        namespace = "refs/heads/recovery/bfg/2026-11-15"
+        mapping = recovery.replayHistory(self.repo, recovery.auditHistory(self.repo), ref_namespace=namespace)
+        self.assertTrue(all(ref.startswith(namespace + "/") for ref in mapping["recoveryRefs"]))
         refs_before = self.git("for-each-ref")
         bundle = self.root / "history.bundle"
         report = recovery.bundleHistory(self.repo, mapping, bundle)
@@ -353,6 +355,23 @@ class HistoricalRecoveryTest(unittest.TestCase):
         subprocess.run(["git", "clone", "--quiet", str(bundle), str(checkout)], check=True)
         self.assertEqual(b"int game;\n", (checkout / "main.cpp").read_bytes())
         self.assertEqual(refs_before, self.git("for-each-ref"))
+
+    def testVersionedReplayKeepsEarlierRecoveryRefsAndRejectsUnsafeNamespaces(self):
+        commit = self.commit({"main.cpp" + recovery.MARKER_SUFFIX: self.marker(b"int game;\n")})
+        original_ref = "refs/heads/recovery/bfg/" + commit
+        self.git("update-ref", original_ref, commit)
+        catalog = recovery.auditHistory(self.repo)
+        refs_before = self.git("for-each-ref")
+        first = recovery.replayHistory(self.repo, catalog, ref_namespace="refs/heads/recovery/bfg/v1")
+        second = recovery.replayHistory(self.repo, catalog, ref_namespace="refs/heads/recovery/bfg/v2")
+        self.assertEqual(first["commitMap"], second["commitMap"])
+        self.assertTrue(set(first["recoveryRefs"]).isdisjoint(second["recoveryRefs"]))
+        self.assertEqual(refs_before, self.git("for-each-ref"))
+        for namespace in ("refs/heads/main", "refs/heads/recovery/bfg/../bad", "refs/heads/recovery/bfg/", "bad ref"):
+            with self.subTest(namespace=namespace), patch.object(recovery, "writeTree") as write:
+                with self.assertRaises(recovery.RecoveryError):
+                    recovery.replayHistory(self.repo, catalog, ref_namespace=namespace)
+                write.assert_not_called()
 
     def testReplayRejectsCatalogThatHidesOrChangesDamagedHistory(self):
         self.commit({"main.cpp" + recovery.MARKER_SUFFIX: self.marker(b"int game;\n")})

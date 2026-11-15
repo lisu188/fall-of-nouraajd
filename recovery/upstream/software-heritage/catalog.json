@@ -1,0 +1,507 @@
+{
+  "count": 50,
+  "entries": [
+    {
+      "originalBlob": "025afb640bc05c35c08d6cc5754cfad08f22837b",
+      "paths": [
+        "json/value.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "419cfc759470371c4ad7da7d39f263e8c028184857b7702e7d76daf15be83f64",
+      "source": "025afb640bc05c35c08d6cc5754cfad08f22837b",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:025afb640bc05c35c08d6cc5754cfad08f22837b/"
+    },
+    {
+      "originalBlob": "02ce56c4313b7e7490c0416ed52bfd9c65694553",
+      "paths": [
+        "zlib/zconf.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "78eede3c265117bc8a1b0cb042e2ba8333fdbba6b78eb25094eb52b1fdc04bed",
+      "source": "02ce56c4313b7e7490c0416ed52bfd9c65694553",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:02ce56c4313b7e7490c0416ed52bfd9c65694553/"
+    },
+    {
+      "originalBlob": "0831ac7f0278d1bb315da4d91e40e562d4288529",
+      "paths": [
+        "zlib/zconf.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "2dfa3adb9ce7d715cb6eeac389e96d911e69494fdfb7098ae90145e64b40b380",
+      "source": "0831ac7f0278d1bb315da4d91e40e562d4288529",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:0831ac7f0278d1bb315da4d91e40e562d4288529/"
+    },
+    {
+      "originalBlob": "0887384a9e011c293daad2893176af5d952e3c9b",
+      "paths": [
+        "lib/zlib/zconf.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "7e3bd712a254e9e988f88fba4a9cd75d5a2cff9555208baab91dcd180d7d3531",
+      "source": "0887384a9e011c293daad2893176af5d952e3c9b",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:0887384a9e011c293daad2893176af5d952e3c9b/"
+    },
+    {
+      "originalBlob": "0c4dd67c8166f7851d4eac904db54b7bb8936751",
+      "paths": [
+        "json/json_valueiterator.inl"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "da8db7ef50ee9fd2c549d966f22433f8aef30e1e43d0c869d7839ce709b555f4",
+      "source": "0c4dd67c8166f7851d4eac904db54b7bb8936751",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:0c4dd67c8166f7851d4eac904db54b7bb8936751/"
+    },
+    {
+      "originalBlob": "0d94099e24fc9b80b582ec20ae594e59fb941912",
+      "paths": [
+        "minizip/miniz.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "44c3fb709b15c344cb59e5c671631c0595d5d81bb423bb104592d143e7995aa7",
+      "source": "0d94099e24fc9b80b582ec20ae594e59fb941912",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:0d94099e24fc9b80b582ec20ae594e59fb941912/"
+    },
+    {
+      "originalBlob": "0df8f9eb8babce0ad2fb118259b255c24e043f6f",
+      "paths": [
+        "lib/zlib/inffixed.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "f22fa1e452067f7ac761054407d4b84b28f9f8680a780fde649ee202212390ca",
+      "source": "0df8f9eb8babce0ad2fb118259b255c24e043f6f",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:0df8f9eb8babce0ad2fb118259b255c24e043f6f/"
+    },
+    {
+      "originalBlob": "0f8fb79f87d4f65e7f5667129c763e3a361199f2",
+      "paths": [
+        "zlib/gzguts.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "0f8fb79f87d4f65e7f5667129c763e3a361199f2",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:0f8fb79f87d4f65e7f5667129c763e3a361199f2/"
+    },
+    {
+      "originalBlob": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5",
+      "paths": [
+        "zlib/inftrees.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
+      "source": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5/"
+    },
+    {
+      "originalBlob": "174e755a0297b9379efad7d45f2063d803ee6340",
+      "paths": [
+        "scripts/random.py"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "7fb06b194f03fb7092c5142ef73044f14aa6f214dc7597be5e63a56ef1882fdf",
+      "source": "174e755a0297b9379efad7d45f2063d803ee6340",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:174e755a0297b9379efad7d45f2063d803ee6340/"
+    },
+    {
+      "originalBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0",
+      "paths": [
+        "zlib/zutil.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:258fa88799ad1d97e44fe1ac9df77948e82ea5c0/"
+    },
+    {
+      "originalBlob": "2b3d859c1a55c676b8417c4ff6cb7cde70b7c696",
+      "paths": [
+        "json/json_internalarray.inl"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "365101999ea5a3eda57990e058ce6074dd82b278b1f534e68f7dba6181028edf",
+      "source": "2b3d859c1a55c676b8417c4ff6cb7cde70b7c696",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:2b3d859c1a55c676b8417c4ff6cb7cde70b7c696/"
+    },
+    {
+      "originalBlob": "3e0c7672ac51d93782f020bba32eb1207617e70a",
+      "paths": [
+        "include/zlib.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "726b0569915917b967f87f3f08a1eec039101bf9dcc29d61c0b2b0b8f271b58d",
+      "source": "3e0c7672ac51d93782f020bba32eb1207617e70a",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:3e0c7672ac51d93782f020bba32eb1207617e70a/"
+    },
+    {
+      "originalBlob": "3e9affb9c511b924f117244ee21a11db417eb7b7",
+      "paths": [
+        "reindent.py"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "5b57e3f7a13946db5842d21bb71a09c3d72ba4a07298855f3a144fe73d861e6f",
+      "source": "3e9affb9c511b924f117244ee21a11db417eb7b7",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:3e9affb9c511b924f117244ee21a11db417eb7b7/"
+    },
+    {
+      "originalBlob": "4138c219c0eb91f0d6fea3a23e185c0c0c7067b5",
+      "paths": [
+        "include/zlib.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "87300c483a86ad0b06dd0fc9fd464d01c2384bf59bbd4cef380dcb8a7013586f",
+      "source": "4138c219c0eb91f0d6fea3a23e185c0c0c7067b5",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:4138c219c0eb91f0d6fea3a23e185c0c0c7067b5/"
+    },
+    {
+      "originalBlob": "46573e2afa3e6c57ffdc1a6e31af9519e3381bb5",
+      "paths": [
+        "lib/zlib/trees.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "0d82eb8e809981247e3513909e357c6b81560ff429658253259e04daa1ea2dcf",
+      "source": "46573e2afa3e6c57ffdc1a6e31af9519e3381bb5",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:46573e2afa3e6c57ffdc1a6e31af9519e3381bb5/"
+    },
+    {
+      "originalBlob": "50006d4f36e0b37d7c2aba3e2706dd427734dafb",
+      "paths": [
+        "base64/base64.cpp"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "2fc39e9c6e23014cf62c7a6ee94999509f42432ffd1f4f857347aa8aa981920e",
+      "source": "50006d4f36e0b37d7c2aba3e2706dd427734dafb",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:50006d4f36e0b37d7c2aba3e2706dd427734dafb/"
+    },
+    {
+      "originalBlob": "548201ab0099b51556da32c4873d1dbb2d211b5a",
+      "paths": [
+        "zlib/gzread.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
+      "source": "548201ab0099b51556da32c4873d1dbb2d211b5a",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:548201ab0099b51556da32c4873d1dbb2d211b5a/"
+    },
+    {
+      "originalBlob": "56e9bb1c115e81082f58a89b003b766760e12a12",
+      "paths": [
+        "zlib/trees.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
+      "source": "56e9bb1c115e81082f58a89b003b766760e12a12",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:56e9bb1c115e81082f58a89b003b766760e12a12/"
+    },
+    {
+      "originalBlob": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec",
+      "paths": [
+        "zlib/deflate.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
+      "source": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:5c4022f3d4774b98bb22104890b04a7d3f7f4aec/"
+    },
+    {
+      "originalBlob": "5faf5dbadf0355642db78521a837700c31c65973",
+      "paths": [
+        "lib/zlib/crc32.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "ad91a8be50983fd9dd45824c5a9e8e17e3b69188569d603af10da660ac28c209",
+      "source": "5faf5dbadf0355642db78521a837700c31c65973",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:5faf5dbadf0355642db78521a837700c31c65973/"
+    },
+    {
+      "originalBlob": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf",
+      "paths": [
+        "zlib/gzlib.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
+      "source": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf/"
+    },
+    {
+      "originalBlob": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b",
+      "paths": [
+        "zlib/adler32.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
+      "source": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:65ad6a5adc44c00428b35eb15ff26d16f9ef209b/"
+    },
+    {
+      "originalBlob": "70b15891245733b3fd276d30d938b565c005daa0",
+      "paths": [
+        "json/writer.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "9ea1fc73e3ebff02894c08a5ecc1da35dec10c92a32e77543b858fc680c6a283",
+      "source": "70b15891245733b3fd276d30d938b565c005daa0",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:70b15891245733b3fd276d30d938b565c005daa0/"
+    },
+    {
+      "originalBlob": "74b6b7e8150d6cd516a1b1450f3f66333e70bcc1",
+      "paths": [
+        "tinyxml/tinystr.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "c58bb1f55a421cbd5032b9fa189f68c5315dbf677990904f64107198aa224d3f",
+      "source": "74b6b7e8150d6cd516a1b1450f3f66333e70bcc1",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:74b6b7e8150d6cd516a1b1450f3f66333e70bcc1/"
+    },
+    {
+      "originalBlob": "75ed4b5978de4be3c44ad48a060b75500f17a0a2",
+      "paths": [
+        "zlib/inffixed.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "88a340c8e628d56682a99c3a9a38e44fafeb8b4c609e0df85ea17c66011e0f42",
+      "source": "75ed4b5978de4be3c44ad48a060b75500f17a0a2",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:75ed4b5978de4be3c44ad48a060b75500f17a0a2/"
+    },
+    {
+      "originalBlob": "7c53fae0f0dd52ad8075423fcdb3884bb9e307cf",
+      "paths": [
+        "lib/zlib/gzguts.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "a37f6dc13333302173c43c1af3a1fb92c6654e0ae35af1eade5c41e575ca0664",
+      "source": "7c53fae0f0dd52ad8075423fcdb3884bb9e307cf",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:7c53fae0f0dd52ad8075423fcdb3884bb9e307cf/"
+    },
+    {
+      "originalBlob": "7e4fec2d25d4a02b8a442a669088745c7e4c7728",
+      "paths": [
+        "scripts/types.py"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "da10868c88933372a7bb50f7d28eefb67951ae4bc7d824f5a478624b4457c15b",
+      "source": "7e4fec2d25d4a02b8a442a669088745c7e4c7728",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:7e4fec2d25d4a02b8a442a669088745c7e4c7728/"
+    },
+    {
+      "originalBlob": "8053b6117c023f64554ea783b23fa06985acff7b",
+      "paths": [
+        "zlib/crc32.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "b8252ca25db989e06910c09b031a328a18ab9c32fb3ab6e6f5c98c0e2b0089cb",
+      "source": "8053b6117c023f64554ea783b23fa06985acff7b",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:8053b6117c023f64554ea783b23fa06985acff7b/"
+    },
+    {
+      "originalBlob": "81e7aadd693847c3e26c6b150a1b644329cd0b2d",
+      "paths": [
+        "lib/zlib/inflate.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "e56078b7166916c1c88a682131a970a57c0cabb5898c5eca91385b6f3f5e450d",
+      "source": "81e7aadd693847c3e26c6b150a1b644329cd0b2d",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:81e7aadd693847c3e26c6b150a1b644329cd0b2d/"
+    },
+    {
+      "originalBlob": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1",
+      "paths": [
+        "zlib/zutil.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
+      "source": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1/"
+    },
+    {
+      "originalBlob": "8e60b46e00f870a083e05d3ed9d874c55aaeee22",
+      "paths": [
+        "json/json_internalmap.inl"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "cb2a656774849b5aa6befcf012c4beeff24e64fc4b5a767490eb8169783d2c40",
+      "source": "8e60b46e00f870a083e05d3ed9d874c55aaeee22",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:8e60b46e00f870a083e05d3ed9d874c55aaeee22/"
+    },
+    {
+      "originalBlob": "91be372d224da6833c03bd24d7158ff622ece35f",
+      "paths": [
+        "zlib/crc32.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
+      "source": "91be372d224da6833c03bd24d7158ff622ece35f",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:91be372d224da6833c03bd24d7158ff622ece35f/"
+    },
+    {
+      "originalBlob": "9987a775530c0393e7c27b73b1e854b946d5ee47",
+      "paths": [
+        "include/zconf.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "ec0d0a6e87b749ab5fc3f27c0e8292b7aed139ca0b6121ab27e6eb30e2e9b6ba",
+      "source": "9987a775530c0393e7c27b73b1e854b946d5ee47",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:9987a775530c0393e7c27b73b1e854b946d5ee47/"
+    },
+    {
+      "originalBlob": "a02c374a765d2692ecc2126a27470bf7edd71e90",
+      "paths": [
+        "lib/zlib/trees.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "ddf488d8fb4b931286df75cd40c8244244e3070426ebcd850da389b7b5e016fd",
+      "source": "a02c374a765d2692ecc2126a27470bf7edd71e90",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:a02c374a765d2692ecc2126a27470bf7edd71e90/"
+    },
+    {
+      "originalBlob": "a427e3510ecaaa6dadeb2a4e957bb6d4880576c7",
+      "paths": [
+        "scripts/warnings.py"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "529966d0e0710569d5ba02edc2fb3e6153059aa96c485a06ed302aa932e30327",
+      "source": "a427e3510ecaaa6dadeb2a4e957bb6d4880576c7",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:a427e3510ecaaa6dadeb2a4e957bb6d4880576c7/"
+    },
+    {
+      "originalBlob": "a8431abeacffd97e5028a9e54135a5f173528960",
+      "paths": [
+        "zlib/inflate.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
+      "source": "a8431abeacffd97e5028a9e54135a5f173528960",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:a8431abeacffd97e5028a9e54135a5f173528960/"
+    },
+    {
+      "originalBlob": "aa055479c833b2cc29f72b90fcc8daab2bfe3ffd",
+      "paths": [
+        "lib/zlib/inffixed.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "84407f0b6be8ad11c69c6b1441f0cb2df9a0c8d5f3c9d88dbb83550aab69c328",
+      "source": "aa055479c833b2cc29f72b90fcc8daab2bfe3ffd",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:aa055479c833b2cc29f72b90fcc8daab2bfe3ffd/"
+    },
+    {
+      "originalBlob": "aaeff4106097e3e1df1e0b996e54a7df19a30763",
+      "paths": [
+        "lib/zlib/crc32.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "3da29e22a85eeb1ed2c61649e1f40b82e741df0685553107785d7948f839d404",
+      "source": "aaeff4106097e3e1df1e0b996e54a7df19a30763",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:aaeff4106097e3e1df1e0b996e54a7df19a30763/"
+    },
+    {
+      "originalBlob": "ad9638d641e9f6bf83d2b654fefa15dcdb20c4ef",
+      "paths": [
+        "lib/zlib/inflate.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "ce5c6657db9fa896b5cfe0b2aeaaa673c01ac26c437dafc63acd5e8463df6653",
+      "source": "ad9638d641e9f6bf83d2b654fefa15dcdb20c4ef",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:ad9638d641e9f6bf83d2b654fefa15dcdb20c4ef/"
+    },
+    {
+      "originalBlob": "ae16e7b02452dac094dec14652258a769412b5de",
+      "paths": [
+        "json/json_batchallocator.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "f8d9da1d28d72a7b297b7827e43de1592cbed4337be5a6e11d984787185b184a",
+      "source": "ae16e7b02452dac094dec14652258a769412b5de",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:ae16e7b02452dac094dec14652258a769412b5de/"
+    },
+    {
+      "originalBlob": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1",
+      "paths": [
+        "zlib/infback.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
+      "source": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1/"
+    },
+    {
+      "originalBlob": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69",
+      "paths": [
+        "zlib/zlib.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69/"
+    },
+    {
+      "originalBlob": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169",
+      "paths": [
+        "zlib/deflate.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:cbf0d1ea5d966e572c4d3ae24d334c1ff1789169/"
+    },
+    {
+      "originalBlob": "d57e000e0972940bd0a830f8fa465763ec3de979",
+      "paths": [
+        "json/reader.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "637534e4a26bd3ecee7ba4b1bd1c03a74389c543a053983700603c17b5f67ead",
+      "source": "d57e000e0972940bd0a830f8fa465763ec3de979",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:d57e000e0972940bd0a830f8fa465763ec3de979/"
+    },
+    {
+      "originalBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
+      "paths": [
+        "images/buildings/cave/0.png"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "ca11acf366f56847fd93e379812fc6ee152381ba700f162de3797148223e744d",
+      "source": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:d6c544ba5c714dab550c51f926aa62a0b7bf908a/"
+    },
+    {
+      "originalBlob": "d9bf35455cbfff95e3ad47b2a56bfe0716a27a6d",
+      "paths": [
+        "include/zconf.h"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "9fb06335c510d887f2b552fd078e90466889ddc9b43bb84a053810ebfc377b74",
+      "source": "d9bf35455cbfff95e3ad47b2a56bfe0716a27a6d",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:d9bf35455cbfff95e3ad47b2a56bfe0716a27a6d/"
+    },
+    {
+      "originalBlob": "e652fc69e4fdf0381f0ff6e84e258e92b3813e86",
+      "paths": [
+        "scripts/hashlib.py"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "89b1567cee41e96c6eb639bac83113f0e9a5c96e877fd094942ef95e9dd3bc85",
+      "source": "e652fc69e4fdf0381f0ff6e84e258e92b3813e86",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:e652fc69e4fdf0381f0ff6e84e258e92b3813e86/"
+    },
+    {
+      "originalBlob": "e8defc6887a186055f17597968c4fc5791332811",
+      "paths": [
+        "zlib/gzwrite.c"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
+      "source": "e8defc6887a186055f17597968c4fc5791332811",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:e8defc6887a186055f17597968c4fc5791332811/"
+    },
+    {
+      "originalBlob": "ebc454276c30ff3bf1ad8dcd5d5191181d1d9989",
+      "paths": [
+        "images/buildings/market.png"
+      ],
+      "provenance": "Exact original recovered from Software Heritage on 2026-11-12 and retained in the local pre-BFG object archive; Git blob hash matches the BFG pointer.",
+      "sha256": "1b15952933b9ff704d61abb3da7f363b109b7745b349170c51dd326e61343c3e",
+      "source": "ebc454276c30ff3bf1ad8dcd5d5191181d1d9989",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:ebc454276c30ff3bf1ad8dcd5d5191181d1d9989/"
+    }
+  ],
+  "schemaVersion": 1,
+  "status": "hash-verified-original-payloads"
+}

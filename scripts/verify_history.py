@@ -216,15 +216,28 @@ def findHeader(source_root: Path, name: str) -> Path:
     return candidates[0]
 
 
+def findClassHeader(source_root: Path, names: tuple[str, ...], filenames: tuple[str, ...] = ()) -> tuple[str, Path]:
+    declarations = re.compile(r"\bclass\s+(" + "|".join(names) + r")\s*(?::[^{;]+)?\{")
+    candidates = []
+    for path in sorted(source_root.rglob("*.h")):
+        if filenames and path.name.lower() not in filenames:
+            continue
+        definition = declarations.search(path.read_text(errors="replace"))
+        if definition:
+            candidates.append((definition.group(1), path))
+    if len(candidates) != 1:
+        raise VerificationError(f"Expected one historical {'/'.join(names)} definition header; found {len(candidates)}")
+    return candidates[0]
+
+
 def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
     """Add a startup observer to the real target, retaining its original main function."""
-    prefixed = any(source_root.rglob("CGameScene.h"))
-    scene_name, view_name, map_name = (
-        ("CGameScene", "CGameView", "CMap") if prefixed else ("GameScene", "GameView", "Map")
+    scene_name, scene_header = findClassHeader(
+        source_root, ("CGameScene", "GameScene"), ("cgamescene.h", "gamescene.h")
     )
-    scene_header = findHeader(source_root, scene_name + ".h" if prefixed else "gamescene.h")
-    view_header = findHeader(source_root, view_name + ".h" if prefixed else "gameview.h")
-    map_header = findHeader(source_root, map_name + ".h" if prefixed else "map.h")
+    view_name, view_header = findClassHeader(source_root, ("CGameView", "GameView"), ("cgameview.h", "gameview.h"))
+    map_name, map_header = findClassHeader(source_root, ("CMap", "Map"), ("cmap.h", "map.h"))
+    prefixed = scene_name.startswith("C")
     scene_text = scene_header.read_text(encoding="utf-8")
     map_text = map_header.read_text(encoding="utf-8")
     has_map_getter = re.search(r"\bgetMap\s*\(", scene_text) is not None
@@ -249,7 +262,12 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path) -> dict:
         raise VerificationError("Map needs a reviewed tile-readiness adapter")
     coords3 = contains.group(1).count(",") >= 2
     static_player = re.search(r"\bstatic\s+\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
-    player_header = findHeader(source_root, "CPlayer.h" if prefixed else "player.h")
+    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player else map_text)
+    player_name = player_getter.group(1) if player_getter else ("CPlayer" if prefixed else "Player")
+    # Several Qt trees define CPlayer alongside CCreature in the same header.
+    _, player_header = findClassHeader(
+        source_root, (player_name,), ("cplayer.h", "player.h", "ccreature.h", "creature.h")
+    )
     opengl = any(
         re.search(r'^\s*#include\s*[<"](?:QtOpenGL/)?QGLWidget[>"]', path.read_text(errors="replace"), re.MULTILINE)
         for path in source_root.rglob("*.cpp")
@@ -287,7 +305,12 @@ SYSTEM_LIBRARY_DIRS = ("/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib")
 
 def prepareLibraryAliases(source_root: Path, build_root: Path) -> dict:
     """Provide lib<name>.so for Windows import libraries the project links but cannot ship."""
-    projects = "\n".join(path.read_text(errors="replace") for path in source_root.glob("*.pr[oi]"))
+    selected = selectProjects(source_root)
+    projects = " ".join(
+        word
+        for project in [*selected["dependencies"], selected["application"]]
+        for word in qmakeVariables(project, source_root).get("LIBS", [])
+    )
     aliases = {}
     directory = build_root / "library-aliases"
     for name, target in WINDOWS_LIBRARY_ALIASES.items():
@@ -320,19 +343,180 @@ def loadRecipes(path: Path) -> list[dict]:
     return [{"toolchainLock": lock, **recipe} for recipe in recipes]
 
 
+def qmakeAssignments(project: Path, source_root: Path, included: tuple[Path, ...] = ()) -> list[tuple[str, str, str]]:
+    """Read desktop Linux assignments and literal includes without visiting unrelated projects."""
+    project = project.resolve()
+    if not project.is_relative_to(source_root.resolve()) or project in included:
+        raise VerificationError(f"Historical qmake include escapes the snapshot or is cyclic: {project}")
+    text = re.sub(r"\\\r?\n", " ", project.read_text(encoding="utf-8"))
+    scopes = [True]
+    closed = True
+    assignments = []
+
+    def active(condition: str) -> bool:
+        for term in condition.split(":"):
+            alternatives = term.strip().split("|")
+            values = []
+            for alternative in alternatives:
+                alternative = alternative.strip()
+                negative = alternative.startswith("!")
+                name = alternative.lstrip("!")
+                value = {"unix": True, "linux": True, "win32": False, "macx": False, "android": False}.get(name)
+                # Unknown qmake predicates remain candidates; conflicting ABI declarations fail closed below.
+                values.append(True if value is None else value != negative)
+            if not any(values):
+                return False
+        return True
+
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if line.count("{") > 1:
+            raise VerificationError(f"Historical qmake inline scopes need an explicit adapter: {project}")
+        while line.startswith("}"):
+            if len(scopes) == 1:
+                raise VerificationError(f"Unbalanced historical qmake scope: {project}")
+            closed = scopes.pop()
+            line = line[1:].strip()
+        if "{" in line:
+            condition, line = line.split("{", 1)
+            enabled = not closed if condition.strip() == "else" else active(condition)
+            scopes.append(scopes[-1] and enabled)
+            line = line.strip()
+        closing = line.endswith("}")
+        if closing:
+            line = line[:-1].strip()
+        if scopes[-1] and line:
+            include = re.fullmatch(r"(?:(.*?)\s*:\s*)?include\s*\(([^)]+)\)", line)
+            assignment = re.fullmatch(r"(.*?)([\w.]+)\s*(\+=|-=|\*=|=)\s*(.*)", line)
+            if include and active(include.group(1) or ""):
+                name = include.group(2).strip().replace("$$PWD", str(project.parent))
+                if "$" in name:
+                    raise VerificationError(f"Historical qmake include needs an explicit adapter: {name}")
+                assignments.extend(qmakeAssignments(project.parent / name, source_root, (*included, project)))
+            elif assignment and active(assignment.group(1).rstrip(": ")):
+                assignments.append((assignment.group(2), assignment.group(3), assignment.group(4)))
+        if closing:
+            if len(scopes) == 1:
+                raise VerificationError(f"Unbalanced historical qmake scope: {project}")
+            closed = scopes.pop()
+    if len(scopes) != 1:
+        raise VerificationError(f"Unbalanced historical qmake scope: {project}")
+    return assignments
+
+
+def qmakeVariables(project: Path, source_root: Path) -> dict[str, list[str]]:
+    variables = {}
+    for name, operation, value in qmakeAssignments(project, source_root):
+        words = value.split()
+        if operation == "=":
+            variables[name] = words
+        elif operation == "-=":
+            variables[name] = [word for word in variables.get(name, []) if word not in words]
+        else:
+            variables.setdefault(name, []).extend(words)
+    return variables
+
+
+def selectProjects(source_root: Path) -> dict:
+    """Select the application and its declared subdirs dependencies in build order."""
+    roots = sorted(source_root.glob("*.pro"))
+    if len(roots) > 1:
+        selected = [
+            project
+            for project in roots
+            if qmakeVariables(project, source_root).get("GAME_RECOVERY_APPLICATION") == ["true"]
+        ]
+        if len(selected) > 1:
+            raise VerificationError("Multiple reconstructed historical application projects are selected")
+        if selected:
+            roots = selected
+    if len(roots) > 1:
+        # Windows case-only renames left both Game.pro and game.pro in several trees.
+        # The obsolete project names source files removed by the same refactor.
+        current = []
+        for project in roots:
+            sources = qmakeVariables(project, source_root).get("SOURCES", [])
+            if sources and all("$" not in name and (project.parent / name).is_file() for name in sources):
+                current.append(project)
+        if len(current) == 1:
+            roots = current
+    if len(roots) != 1:
+        raise VerificationError(f"Expected one historical qmake project, found {len(roots)}")
+    ordered = []
+    visiting = set()
+
+    def visit(project: Path) -> None:
+        project = project.resolve()
+        if not project.is_relative_to(source_root.resolve()) or project in visiting:
+            raise VerificationError("Historical qmake subdirs escape the snapshot or have cyclic dependencies")
+        visiting.add(project)
+        variables = qmakeVariables(project, source_root)
+        template = variables.get("TEMPLATE", ["app"])
+        if template == ["subdirs"]:
+            subdirs = variables.get("SUBDIRS", [])
+            visited = set()
+
+            def subdir(name: str) -> None:
+                if name in visited:
+                    return
+                if name not in subdirs or name in visiting:
+                    raise VerificationError("Historical qmake subdir dependency is missing or cyclic")
+                visiting.add(name)
+                for dependency in variables.get(name + ".depends", []):
+                    subdir(dependency)
+                location = variables.get(name + ".file") or variables.get(name + ".subdir") or [name]
+                if len(location) != 1 or "$" in location[0]:
+                    raise VerificationError("Historical qmake subdir needs an explicit project adapter")
+                target = project.parent / location[0]
+                candidates = [target] if target.suffix == ".pro" else sorted(target.glob("*.pro"))
+                if len(candidates) != 1:
+                    raise VerificationError(f"Expected one historical subdir project: {target}")
+                visit(candidates[0])
+                visiting.remove(name)
+                visited.add(name)
+
+            for name in subdirs:
+                subdir(name)
+        elif template in (["app"], ["lib"]):
+            ordered.append((project, template[0]))
+        else:
+            raise VerificationError(f"Unsupported historical qmake template: {template}")
+        visiting.remove(project)
+
+    visit(roots[0])
+    applications = [project for project, template in ordered if template == "app"]
+    if len(applications) != 1:
+        raise VerificationError(f"Expected one historical game application, found {len(applications)}")
+    return {"application": applications[0], "dependencies": [project for project, kind in ordered if kind == "lib"]}
+
+
 def selectRecipe(recipes: list[dict], source_root: Path, selected: str | None) -> dict:
     if selected:
         matching = [recipe for recipe in recipes if recipe["id"] == selected]
     else:
-        projects = sorted(path for pattern in ("*.pro", "*.pri") for path in source_root.rglob(pattern))
-        text = "\n".join(path.read_text(encoding="utf-8") for path in projects)
-        versions = re.findall(r"python([23])(?:\.([0-9]+)|([0-9]))", text, re.IGNORECASE)
+        projects = selectProjects(source_root)
+        ordered = [*projects["dependencies"], projects["application"]]
+        variables = [qmakeVariables(project, source_root) for project in ordered]
+        links = " ".join(word for values in variables for word in values.get("LIBS", []))
+        includes = " ".join(
+            word for values in variables for name in ("INCLUDEPATH", "DEPENDPATH") for word in values.get(name, [])
+        )
+        pattern = r"python([23])(?:\.([0-9]+)|([0-9]))"
+        versions = re.findall(pattern, links, re.IGNORECASE) or re.findall(pattern, includes, re.IGNORECASE)
         declared_abis = {version[0] + "." + (version[1] or version[2]) for version in versions}
+        declared_files = [
+            (project.parent / name).resolve()
+            for project, values in zip(ordered, variables)
+            for key in ("SOURCES", "HEADERS")
+            for name in values.get(key, [])
+        ]
+        code_files = declared_files or [path for pattern in ("*.h", "*.cpp") for path in source_root.rglob(pattern)]
         code = "\n".join(
             path.read_text(errors="replace")
-            for pattern in ("*.h", "*.cpp")
-            for path in source_root.rglob(pattern)
-            if not any(
+            for path in code_files
+            if path.is_file()
+            and path.is_relative_to(source_root)
+            and not any(
                 part.lower() in ("boost", "libraries", "json") for part in path.relative_to(source_root).parts[:-1]
             )
         )
@@ -397,7 +581,12 @@ def exportEvidence(result: dict, output_root: Path) -> None:
     for key in ("configure", "build", "smoke"):
         log_path = Path(result[key]["log"])
         if log_path.is_file():
-            shutil.copyfile(log_path, evidence_dir / ("startup.log" if key == "smoke" else key + ".log"))
+            destination = evidence_dir / ("startup.log" if key == "smoke" else key + ".log")
+            with destination.open("wb") as output:
+                for dependency in result.get("dependencies", []) if key != "smoke" else []:
+                    output.write(("\n=== " + dependency["project"] + " ===\n").encode())
+                    output.write(Path(dependency[key]["log"]).read_bytes())
+                output.write(log_path.read_bytes())
     result["evidenceDir"] = str(evidence_dir.resolve())
     writeJson(evidence_dir / "verification.json", result)
 
@@ -430,6 +619,7 @@ def verifySnapshot(
     except (RecoveryError, ValueError, OSError) as error:
         return {**result, "status": "blocked", "reason": f"Snapshot restoration is incomplete: {error}"}
     try:
+        projects = selectProjects(source_root)
         recipe = selectRecipe(recipes, source_root, selected_recipe)
         environment = dict(os.environ)
         environment.update({key: str(value) for key, value in recipe.get("environment", {}).items()})
@@ -453,6 +643,7 @@ def verifySnapshot(
         fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         result.update(
             {
+                "project": projects["application"].relative_to(source_root).as_posix(),
                 "libraryAliases": libraries,
                 "fingerprint": fingerprint,
                 "recipe": recipe,
@@ -469,14 +660,44 @@ def verifySnapshot(
                 cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
                 exportEvidence(cached, output_root)
                 return cached
-        projects = sorted(source_root.glob("*.pro"))
-        if len(projects) != 1:
-            raise VerificationError(f"Expected one historical qmake project, found {len(projects)}")
-        build_root = work_root / "build"
-        build_root.mkdir()
+        build_base = work_root / "build"
+        build_base.mkdir()
+        dependencies = []
+        for index, project in enumerate(projects["dependencies"]):
+            dependency_root = build_base / project.relative_to(source_root).parent
+            dependency_root.mkdir(parents=True, exist_ok=True)
+            dependency = {"project": project.relative_to(source_root).as_posix()}
+            dependencies.append(dependency)
+            result["dependencies"] = dependencies
+            dependency["configure"] = runCommand(
+                [
+                    recipe.get("qmakeCommand", "qmake"),
+                    str(project),
+                    "-o",
+                    str(dependency_root / "Makefile"),
+                    *recipe.get("qmakeArguments", []),
+                ],
+                dependency_root,
+                environment,
+                build_timeout,
+                work_root / f"dependency-{index}-configure.log",
+            )
+            if dependency["configure"]["returnCode"] != 0:
+                raise VerificationError(f"Historical dependency configuration failed: {dependency['project']}")
+            dependency["build"] = runCommand(
+                [recipe.get("makeCommand", "make"), f"-j{jobs}"],
+                dependency_root,
+                environment,
+                build_timeout,
+                work_root / f"dependency-{index}-build.log",
+            )
+            if dependency["build"]["returnCode"] != 0:
+                raise VerificationError(f"Historical dependency compilation/linking failed: {dependency['project']}")
+        build_root = build_base / projects["application"].relative_to(source_root).parent
+        build_root.mkdir(parents=True, exist_ok=True)
         configure = [
             recipe.get("qmakeCommand", "qmake"),
-            str(projects[0]),
+            str(projects["application"]),
             "-o",
             str(build_root / "Makefile"),
             *recipe.get("qmakeArguments", []),
@@ -529,11 +750,20 @@ def verifySnapshot(
             raise VerificationError("Could not build the case-insensitive file lookup shim; inspect file-lookup.log")
         result["fileLookup"]["semantics"] = "Windows-style case-insensitive file lookup for the game process"
         artifact_dir = work_root / "smoke"
+        smoke_environment = dict(environment)
+        if dependencies:
+            library_dirs = [
+                str(build_base / project.relative_to(source_root).parent) for project in projects["dependencies"]
+            ]
+            result["runtimeLibraryDirectories"] = library_dirs
+            smoke_environment["LD_LIBRARY_PATH"] = ":".join(
+                [*library_dirs, environment.get("LD_LIBRARY_PATH", "")]
+            ).rstrip(":")
         result["smoke"] = runSmoke(
             ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
-            source_root,
+            projects["application"].parent,
             artifact_dir,
-            environment=environment,
+            environment=smoke_environment,
             timeout=timeout,
         )
         result["smoke"]["startupReport"] = str(artifact_dir / "startup.json")

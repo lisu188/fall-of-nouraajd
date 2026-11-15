@@ -13,6 +13,15 @@ SPEC.loader.exec_module(SHARDS)
 
 
 class RecoveryWorkflowTest(unittest.TestCase):
+    def testStackedRecoveryPullRequestsRunTheExhaustiveWorkflow(self):
+        workflow = (ROOT / ".github/workflows/recover-history.yml").read_text()
+        trigger = workflow.split("  pull_request:\n", 1)[1].split("\npermissions:", 1)[0]
+        self.assertNotRegex(trigger, r"(?m)^    branches(?:-ignore)?:")
+        self.assertIn("      - recovery/**", trigger)
+        self.assertIn("scripts/verify_history.py --all", workflow)
+        self.assertIn("--trees-per-shard 16", workflow)
+        self.assertIn("max-parallel: 4", workflow)
+
     def testEveryTreeAssignedExactlyOnceWithinBudget(self):
         trees = [{"tree": str(index)} for index in range(365)]
         matrix = SHARDS.planShards({"trees": trees, "summary": {"damagedTreeCount": len(trees)}})
