@@ -1016,7 +1016,8 @@ class QuestRoute:
                 self.d.call(self.d.player, "getStats"), "getNumericProperty", "intelligence"
             ) + self.d.number("plugin_cityStanding")
         if condition.get("guardKills") and not self.d.number("plugin_cityGuardKills"):
-            nativeVictory(self.d, self.actorName([{"label": "Flaming Fist"}]))
+            nativeVictory(self.d, self.actorName([{"creature": "FLAM6", "area": "AR0130"}]))
+            self.d.test.assertGreater(self.d.number("plugin_cityGuardKills"), 0)
         if condition.get("noGuardKills"):
             self.d.test.assertEqual(0, self.d.number("plugin_cityGuardKills"))
         if condition.get("thiefInParty"):

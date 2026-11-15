@@ -1728,6 +1728,62 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             exercise("inventedOfficer")
 
+    def testGuardKillPrerequisiteUsesAnAuthoredHallGuardAndRequiresItsRecordedDeath(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        config = routes.documents()["config"]
+        guards = {
+            name: entry["properties"]
+            for name, entry in config.items()
+            if entry.get("class") in routes.ACTOR_CLASSES
+            and entry["properties"].get("sourceCreature") == "FLAM6"
+            and entry["properties"].get("sourceArea") == "AR0130"
+        }
+        self.assertEqual(3, len(guards))
+
+        def exercise(initial_kills, records_death):
+            counters = {"plugin_cityGuardKills": initial_kills, "plugin_cityReputation": 10}
+
+            def call(owner, method, *args):
+                if method == "getStats":
+                    return "stats"
+                if method == "getNumericProperty":
+                    return 12 if owner == "stats" else 5
+                if method == "getStringProperty":
+                    return guards[owner].get(args[0], "")
+                if method == "getBoolProperty":
+                    return False
+                self.fail(("Unexpected guard-prerequisite call", owner, method, args))
+
+            driver = SimpleNamespace(
+                test=self,
+                player="hero",
+                number=lambda key: counters.get(key, 0),
+                object=lambda name, required=False: name if name in guards else None,
+                call=call,
+            )
+
+            def victory(actual_driver, name):
+                self.assertIs(driver, actual_driver)
+                self.assertIn(name, guards)
+                self.assertIn("flaming fist", guards[name]["label"].casefold())
+                if records_death:
+                    counters["plugin_cityGuardKills"] += 1
+
+            with patch.object(routes, "nativeVictory", side_effect=victory) as fight:
+                if not initial_kills and not records_death:
+                    with self.assertRaisesRegex(AssertionError, "0 not greater than 0"):
+                        routes.QuestRoute(driver).conditions({"guardKills": True})
+                else:
+                    routes.QuestRoute(driver).conditions({"guardKills": True})
+            self.assertEqual(int(initial_kills == 0), fight.call_count)
+            self.assertEqual(initial_kills or int(records_death), counters["plugin_cityGuardKills"])
+
+        exercise(0, True)
+        exercise(2, False)
+        exercise(0, False)
+
     def testCanonicalRelocatedActorMatchesLaterAreaAlternativeWithoutCreatingAnotherActor(self):
         from types import SimpleNamespace
         from unittest.mock import patch
