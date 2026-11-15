@@ -15,12 +15,13 @@ import unittest
 from unittest.mock import patch
 
 from scripts import build_baldurs_gate_city as builder
+from tests.test_baldurs_gate_city_environment import normalizeEnvironmentAnimations
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 PREFIX = "maps/baldursGate/images/npc/"
 # The reviewed Seven Suns integration adds its stock, warning quest and dialogue metadata to the ff0b baseline.
-# Remove only source actor artwork and map asset declarations; all other gameplay fields remain frozen.
+# Restore reviewed environment paths and remove source actor artwork/assets; all gameplay fields remain frozen.
 GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
 
 
@@ -47,6 +48,7 @@ def sourceActors(config):
 def withoutAppearance(document, config, geometry, dialogs):
     document, config = deepcopy(document), deepcopy(config)
     document.pop("assets", None)
+    normalizeEnvironmentAnimations(config)
     for row in sourceActors(config).values():
         row["properties"].pop("animation", None)
     return {"map": document, "config": config, "geometry": geometry, "dialogs": dialogs}
@@ -196,7 +198,7 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
         with patch.object(builder, "CITY_APPEARANCE_SOURCE_GROUPS", reversed_groups):
             assets = apply(source, config)
         self.assertEqual(self.config, config)
-        self.assertEqual(self.document.get("assets"), assets)
+        self.assertEqual([row for row in self.document["assets"] if row["path"].startswith("images/npc/")], assets)
         self.assertEqual(before_source, source)
         self.assertEqual(assets, apply(source, config), "Reapplying appearance must be idempotent")
 
@@ -236,6 +238,7 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
     def testDeclaredAssetsExactlyCoverAllStaticMapLocalActorReferences(self):
         assets = self.document.get("assets")
         self.assertIsInstance(assets, list)
+        assets = [row for row in assets if row["path"].startswith("images/npc/")]
         self.assertEqual(41, len(assets))
         self.assertEqual(assets, sorted(assets, key=lambda row: row["path"]))
         paths = [row["path"] for row in assets]
@@ -261,7 +264,8 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
     def testProductionDeclaredAssetStagingCopiesExactFixtureBytesAndOnlyDeclaredFiles(self):
         assets = self.document.get("assets")
         self.assertIsInstance(assets, list)
-        self.assertEqual(41, len(assets))
+        self.assertEqual(41, sum(row["path"].startswith("images/npc/") for row in assets))
+        self.assertEqual(65, len(assets))
         cmake_source = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         match = re.search(r"(?ms)^function\(stage_map_declared_assets map_name\).*?^endfunction\(\)", cmake_source)
         self.assertIsNotNone(match)
@@ -311,6 +315,7 @@ class BaldursGateCityAppearanceAssetTest(unittest.TestCase):
         document = readJson(MAP_ROOT / "map.json")
         assets = document.get("assets")
         self.assertIsInstance(assets, list)
+        assets = [row for row in assets if row["path"].startswith("images/npc/")]
         self.assertEqual(41, len(assets))
         native = (ROOT / "src/gui/CTextureCache.cpp").read_text(encoding="utf-8")
         limit = re.search(r"constexpr int MAX_ALPHA_MASK_PIXELS = ([\d']+);", native)

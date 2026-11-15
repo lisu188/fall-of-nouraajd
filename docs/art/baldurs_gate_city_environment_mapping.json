@@ -1,0 +1,472 @@
+{
+  "schemaVersion": 1,
+  "scope": "City-local visual adaptations only; source identities are reviewed, building materials and facades are original art choices.",
+  "baseSourceCommit": "c735c1b7ae45c886141b8892b91fbcb5cca418ab",
+  "originalParityEstablished": false,
+  "nativeRuntimeVerified": false,
+  "portalAssignments": [
+    {
+      "object": "cityAr0100Portal1",
+      "sourceArea": "AR0100",
+      "destinationArea": "AR0101",
+      "appearance": "stoneTownhouse",
+      "animation": "maps/baldursGate/images/buildings/stoneTownhouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0100Portal4",
+      "sourceArea": "AR0100",
+      "destinationArea": "AR0162",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0100Portal5",
+      "sourceArea": "AR0100",
+      "destinationArea": "AR0157",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0100Portal7",
+      "sourceArea": "AR0100",
+      "destinationArea": "AR0116",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0100Portal8",
+      "sourceArea": "AR0100",
+      "destinationArea": "AR0161",
+      "appearance": "stoneTownhouse",
+      "animation": "maps/baldursGate/images/buildings/stoneTownhouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0100Portal9",
+      "sourceArea": "AR0100",
+      "destinationArea": "AR0167",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0200Portal1",
+      "sourceArea": "AR0200",
+      "destinationArea": "AR0002",
+      "appearance": "temple",
+      "animation": "maps/baldursGate/images/buildings/temple",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0200Portal13",
+      "sourceArea": "AR0200",
+      "destinationArea": "AR0108",
+      "appearance": "ducalPalace",
+      "animation": "maps/baldursGate/images/buildings/ducalPalace",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0200Portal9",
+      "sourceArea": "AR0200",
+      "destinationArea": "AR0119",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0300Portal3",
+      "sourceArea": "AR0300",
+      "destinationArea": "AR0114",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0300Portal4",
+      "sourceArea": "AR0300",
+      "destinationArea": "AR0103",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0300Portal6",
+      "sourceArea": "AR0300",
+      "destinationArea": "AR0307",
+      "appearance": "guildhall",
+      "animation": "maps/baldursGate/images/buildings/guildhall",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0600Portal1",
+      "sourceArea": "AR0600",
+      "destinationArea": "AR0617",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0600Portal7",
+      "sourceArea": "AR0600",
+      "destinationArea": "AR0131",
+      "appearance": "temple",
+      "animation": "maps/baldursGate/images/buildings/temple",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0600Portal9",
+      "sourceArea": "AR0600",
+      "destinationArea": "AR0619",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal11",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0715",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal2",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0721",
+      "appearance": "dockWarehouse",
+      "animation": "maps/baldursGate/images/buildings/dockWarehouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal20",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0143",
+      "appearance": "stoneTownhouse",
+      "animation": "maps/baldursGate/images/buildings/stoneTownhouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal3",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0720",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal4",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0720",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal5",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0719",
+      "appearance": "stoneTownhouse",
+      "animation": "maps/baldursGate/images/buildings/stoneTownhouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0700Portal6",
+      "sourceArea": "AR0700",
+      "destinationArea": "AR0719",
+      "appearance": "stoneTownhouse",
+      "animation": "maps/baldursGate/images/buildings/stoneTownhouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Boundary18",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0900",
+      "appearance": "cityGate",
+      "animation": "maps/baldursGate/images/buildings/cityGate",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal10",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0705",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal11",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0809",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal12",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0810",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal5",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0154",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal6",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0703",
+      "appearance": "magicShop",
+      "animation": "maps/baldursGate/images/buildings/magicShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal8",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0803",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr0800Portal9",
+      "sourceArea": "AR0800",
+      "destinationArea": "AR0805",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal1",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR0607",
+      "appearance": "guardBarracks",
+      "animation": "maps/baldursGate/images/buildings/guardBarracks",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal13",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR1116",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal14",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR1117",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal2",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR1113",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal3",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR1115",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal4",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR0601",
+      "appearance": "guildhall",
+      "animation": "maps/baldursGate/images/buildings/guildhall",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal5",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR0127",
+      "appearance": "guildhall",
+      "animation": "maps/baldursGate/images/buildings/guildhall",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal6",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR1112",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1100Portal8",
+      "sourceArea": "AR1100",
+      "destinationArea": "AR1109",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal10",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR1208",
+      "appearance": "dockWarehouse",
+      "animation": "maps/baldursGate/images/buildings/dockWarehouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal11",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR1209",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal12",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR1211",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal5",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR0609",
+      "appearance": "temple",
+      "animation": "maps/baldursGate/images/buildings/temple",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal7",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR1215",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal8",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR1213",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1200Portal9",
+      "sourceArea": "AR1200",
+      "destinationArea": "AR1207",
+      "appearance": "dockWarehouse",
+      "animation": "maps/baldursGate/images/buildings/dockWarehouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal1",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR0105",
+      "appearance": "innTavern",
+      "animation": "maps/baldursGate/images/buildings/innTavern",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal11",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR1303",
+      "appearance": "dockWarehouse",
+      "animation": "maps/baldursGate/images/buildings/dockWarehouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal18",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR0813",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal2",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR1312",
+      "appearance": "timberHouse",
+      "animation": "maps/baldursGate/images/buildings/timberHouse",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal6",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR1320",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal8",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR1302",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    },
+    {
+      "object": "cityAr1300Portal9",
+      "sourceArea": "AR1300",
+      "destinationArea": "AR1302",
+      "appearance": "merchantShop",
+      "animation": "maps/baldursGate/images/buildings/merchantShop",
+      "originClassification": "exterior"
+    }
+  ],
+  "tileAssignments": [
+    {
+      "resource": "cityStreetTile",
+      "animation": "maps/baldursGate/images/tiles/streetCobble",
+      "class": "CTile",
+      "tileType": "cityStreet",
+      "canStep": true
+    },
+    {
+      "resource": "cityWallTile",
+      "animation": "maps/baldursGate/images/tiles/stoneWall",
+      "class": "CTile",
+      "tileType": "cityWall",
+      "canStep": false
+    }
+  ],
+  "stagedUnassignedBuildings": [
+    "ruinedTemple"
+  ],
+  "stagedUnassignedTiles": [
+    "flagstonePaving",
+    "packedEarth",
+    "grassCourtyard",
+    "woodenFloor",
+    "marbleFloor",
+    "dungeonFlagstone",
+    "sewerWalkway",
+    "sewerWater",
+    "riverWater",
+    "rockWall"
+  ],
+  "limitations": [
+    "Building artwork is rendered as one-cell portal icons, not walkable multi-cell buildings.",
+    "Interior exits and stairs, disguised guild front houses, market tents, and the Low Lantern ship retain existing artwork.",
+    "The blocked cityWall recipe is a geometry abstraction; source collision indices do not prove all blocked cells are masonry.",
+    "No global GroundTile override, tile ID change, collision change, source-terrain migration, or staticTerrain activation.",
+    "Source door use-point vectors are insufficient to establish original facade directions; no rotations inferred.",
+    "Texture repeat seams and actual native rendering require separate verification; no native or owner acceptance is claimed."
+  ]
+}
