@@ -5,8 +5,11 @@
 import contextlib
 import io
 import json
+import os
 from pathlib import Path
+import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -82,6 +85,33 @@ class HistoricalSmokeTest(unittest.TestCase):
         self.assertEqual("failed", result["status"])
         self.assertTrue(result["timedOut"])
         self.assertIn("watchdog", result["reason"])
+
+    @unittest.skipUnless(shutil.which("g++") and sys.platform.startswith("linux"), "needs a Linux C++ compiler")
+    def testWindowsFileLookupResolvesOnlyMissingPathsCaseInsensitively(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            library = root / "libwindowspaths.so"
+            subprocess.run(
+                ["g++", "-shared", "-fPIC", "-std=c++11", "-o", str(library), str(verify.WINDOWS_PATHS_SOURCE), "-ldl"],
+                check=True,
+            )
+            (root / "config/items").mkdir(parents=True)
+            (root / "config/items/robe.json").write_text("robe")
+            (root / "config/items/Robe2.json").write_text("exact")
+            probe = (
+                "import sys\n"
+                "print(open('Config/ITEMS/Robe.json').read(), open('config/items/Robe2.json').read())\n"
+                "try:\n open('config/items/absent.json')\nexcept FileNotFoundError:\n print('absent')\n"
+            )
+            result = subprocess.run(
+                [sys.executable, "-c", probe],
+                cwd=root,
+                env={**os.environ, "LD_PRELOAD": str(library)},
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(["robe exact", "absent"], result.stdout.split("\n")[:2])
 
     def testObserverDoesNotReplaceHistoricalMain(self):
         source = verify.SMOKE_SOURCE.read_text(encoding="utf-8")

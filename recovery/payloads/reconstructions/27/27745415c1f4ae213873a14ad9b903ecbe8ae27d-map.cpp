@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <buildings/cave.h>
-#include <creatures/players/player.h>
 #include <map/tiles/roadtile.h>
 #include <map/tiles/watertile.h>
 #include <view/gamescene.h>

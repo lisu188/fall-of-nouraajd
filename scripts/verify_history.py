@@ -15,13 +15,14 @@ import shutil
 import signal
 import struct
 import subprocess
-import sys
 import tempfile
 import time
 import zlib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SMOKE_SOURCE = REPO_ROOT / "recovery/smoke/game_startup.cpp"
+# The historical game targeted Windows; startup runs with case-insensitive file lookup.
+WINDOWS_PATHS_SOURCE = REPO_ROOT / "recovery/smoke/windows_paths.cpp"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 REQUIRED_CHECKS = ("map", "player", "eventLoop", "renderedFrame")
 
@@ -415,6 +416,7 @@ def verifySnapshot(
             "toolchain": toolchain,
             "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
             "adapter": hashlib.sha256(SMOKE_SOURCE.read_bytes()).hexdigest(),
+            "fileLookup": hashlib.sha256(WINDOWS_PATHS_SOURCE.read_bytes()).hexdigest(),
             "verifier": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "restorer": hashlib.sha256((REPO_ROOT / "scripts/recover_history.py").read_bytes()).hexdigest(),
             "adapterConfig": adapter["configSha256"],
@@ -475,8 +477,35 @@ def verifySnapshot(
         executable = build_root / "RecoveryGame"
         if not executable.is_file():
             raise VerificationError("Build did not produce the actual game executable")
+        preload = work_root / "observer" / "libwindowspaths.so"
+        result["fileLookup"] = runCommand(
+            [
+                recipe.get("compilerCommand", "g++"),
+                "-shared",
+                "-fPIC",
+                "-O2",
+                "-std=c++11",
+                "-o",
+                str(preload),
+                str(WINDOWS_PATHS_SOURCE),
+                "-ldl",
+            ],
+            work_root,
+            environment,
+            build_timeout,
+            work_root / "file-lookup.log",
+        )
+        if result["fileLookup"]["returnCode"] != 0:
+            raise VerificationError("Could not build the case-insensitive file lookup shim; inspect file-lookup.log")
+        result["fileLookup"]["semantics"] = "Windows-style case-insensitive file lookup for the game process"
         artifact_dir = work_root / "smoke"
-        result["smoke"] = runSmoke(executable, source_root, artifact_dir, environment=environment, timeout=timeout)
+        result["smoke"] = runSmoke(
+            ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
+            source_root,
+            artifact_dir,
+            environment=environment,
+            timeout=timeout,
+        )
         result["smoke"]["startupReport"] = str(artifact_dir / "startup.json")
         result["artifactDir"] = str(artifact_dir)
         result["status"] = result["smoke"]["status"]

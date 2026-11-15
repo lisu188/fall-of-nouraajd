@@ -22,18 +22,19 @@ vendored jsoncpp/zlib/tmxparser/Boost.Python sources, images, and often `Game.pr
 
 ## Current state
 
-**13 original commits (13 trees) pass real build and headless startup** on the pinned
-historical toolchain (GCC 5.4, Qt 5.5.1, Ubuntu 16.04): the first twelve trees of the
-December 2013 line (`b9ae428b` … `da13b28d`, catalog order #1–#12) and the 2026
+**21 original commits (21 trees) pass real build and headless startup** on the pinned
+historical toolchain (GCC 5.4, Qt 5.5.1, Ubuntu 16.04): the first twenty trees of the
+December 2013 line (`b9ae428b` … `a264a952`, catalog order #1–#20) and the 2026
 reconstruction commit `108bdcbe`. Evidence for each is in `recovery/evidence/<commit>/`
 and summarized in `recovery/progress.json`. These runs use only **unmodified surviving
 original files**: the earlier root-era "compatibility repairs" that edited original
 headers were removed, and the reconstructions were rewritten against the original APIs.
 The earlier diagnostic evidence (GCC 15/Qt 5.15) for three commits is superseded.
 
-Trees #13–#15 compile with carried-forward reconstructions and generated projects but
-are not yet startup-verified; #16 (`08867695`) moved `creatures/players/*` and is the
-next tree needing manual reconstruction work.
+Startup runs with Windows-style case-insensitive file lookup (`recovery/smoke/windows_paths.cpp`,
+preloaded only into the game process): the game was developed on Windows and, from #20 on,
+opens `config/items/Robe.json` while the file is `robe.json`. Exact paths behave as before.
+The next tree needing manual work is reported by `history_workbench.py auto 21 …`.
 
 All 365 trees restore with no unresolved inputs and no BFG markers. Most of the later
 inputs are still the unverified donor proposals from the first checkpoint.
@@ -76,16 +77,16 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 16 80     # carry forward until the first failing tree
-python3 scripts/history_workbench.py prep 16        # then reconstruct, build, keep, verify by hand
-python3 scripts/history_workbench.py verify 16
+python3 scripts/history_workbench.py auto 21 120    # carry forward until the first failing tree
+python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
+python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
 python3 scripts/history_workbench.py progress
 ```
 
 ## Remaining work
 
-- Continue the chronological walk from #16 (December 2013 → April 2015), verifying
+- Continue the chronological walk from #21 (December 2013 → April 2015), verifying
   each tree; replace unverified donor proposals with content-keyed reconstructions.
 - Python-era trees: 40 declare several Python ABIs, 48 have initialization APIs that
   conflict with the declared ABI, and 18 use Python without declaring it, so recipe

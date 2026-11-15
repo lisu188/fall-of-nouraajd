@@ -93200,8 +93200,8 @@
     {
       "originalBlob": "27745415c1f4ae213873a14ad9b903ecbe8ae27d",
       "path": "map/map.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 0f2d04cf reconstruction across the 4a6a0310 source reformat",
-      "sha256": "2224efe9614c7d3d9611fe5dc7afd17d79c1b7d850028d2eb89b7f75d2e8609c",
+      "provenance": "content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); Player comes through view/gamescene.h so the same file builds before and after creatures/players/ moved; carried unchanged across the 4a6a0310 source reformat",
+      "sha256": "48bc7736a90a8eb0157c5984792cea297bc6a35d2624e697a2a8c34df4c6f595",
       "source": "payloads/reconstructions/27/27745415c1f4ae213873a14ad9b903ecbe8ae27d-map.cpp"
     },
     {
@@ -93273,6 +93273,174 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the 6d39ac77 reconstruction (previous version of stats/stats.cpp)",
       "sha256": "d76f9bfa9ccc06aeacd787594b33800e71b43407d7438bf22ec4d93eb908daef",
       "source": "payloads/reconstructions/ff/ff3d46a0900f209fe18a6bee08d4592037821072-stats.cpp"
+    },
+    {
+      "originalBlob": "04855a2dca1fcbebb115d404f24805f1dd447528",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3e8ae69135343931bdd2c2b991501be297258d5a (previous version of creatures/creature.cpp)",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/04/04855a2dca1fcbebb115d404f24805f1dd447528-creature.cpp"
+    },
+    {
+      "originalBlob": "14bed295c45009afd79794e686e3d6ca8f7bcff0",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 3096492a reconstruction; dropped includes of the item subclasses removed in this commit and included items/armor.h and items/weapon.h",
+      "sha256": "39d09f023504927943a1b1e51d0536ddad42ef7959a1f3b989cd1201e89505ef",
+      "source": "payloads/reconstructions/14/14bed295c45009afd79794e686e3d6ca8f7bcff0-player.cpp"
+    },
+    {
+      "originalBlob": "15da77d01cfd03136938d6d608982b6968fce441",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 73 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "d22eed4b0b423cb82e15dfe464d01465e57b1911bc71d833f294607476414963",
+      "source": "payloads/reconstructions/15/15da77d01cfd03136938d6d608982b6968fce441-Game.pro"
+    },
+    {
+      "originalBlob": "1c22979740439a35fae1fd560b04f7ae698e6ca6",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 217e1fa2 reconstruction with player.h at its new creatures/ path",
+      "sha256": "710e6ccb3b40d7d605a7b357aa82525fb10679e2f4f8d0d615333c9413de2860",
+      "source": "payloads/reconstructions/1c/1c22979740439a35fae1fd560b04f7ae698e6ca6-interaction.cpp"
+    },
+    {
+      "originalBlob": "217e1fa27cd7418ae31d610b1654243e9564d98e",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 51538e9c356cd19cc2021268cdc93bae0d3763e9 (previous version of interactions/interaction.cpp)",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/21/217e1fa27cd7418ae31d610b1654243e9564d98e-interaction.cpp"
+    },
+    {
+      "originalBlob": "3096492a10846f78c0c46073fce145625dc3e746",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; surviving 08867695 creatures/player.cpp with the same-commit player.h changes: out-of-line lock accessors, performAction (the fight round formerly in Interaction::mousePressEvent, which the surviving 5a89254f interaction.cpp now delegates) and defeatCreature",
+      "sha256": "41c1154390963fed472c7b562ff22b899fd4527ed799cbc9354cc53e7db7288c",
+      "source": "payloads/reconstructions/30/3096492a10846f78c0c46073fce145625dc3e746-player.cpp"
+    },
+    {
+      "originalBlob": "33a4078c8428a57a35c744b645c707cbf40d9a64",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7859caf8ac (previous version of creatures/creature.cpp)",
+      "sha256": "52a34b15dde74c261dd570c739613044230861c1d1174bbbc0307355f3584b98",
+      "source": "payloads/reconstructions/33/33a4078c8428a57a35c744b645c707cbf40d9a64-creature.cpp"
+    },
+    {
+      "originalBlob": "3e79503c277a1ecac97286482c2dab3595931549",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1c25469b4d (previous version of creatures/creature.cpp)",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/3e/3e79503c277a1ecac97286482c2dab3595931549-creature.cpp"
+    },
+    {
+      "originalBlob": "3e8ae69135343931bdd2c2b991501be297258d5a",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3e79503c277a1ecac97286482c2dab3595931549 (previous version of creatures/creature.cpp)",
+      "sha256": "f4a4b228cd1a0f0c88a6c153e312aaed72b8f25c4dafceda8a3a44f349732246",
+      "source": "payloads/reconstructions/3e/3e8ae69135343931bdd2c2b991501be297258d5a-creature.cpp"
+    },
+    {
+      "originalBlob": "4d1dbb28e4a09e3debe947e7a29d95b00bcede2e",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "0f194c8a0660ed2d24f0a9e1eaab1b55dfd9dcde087abe551a98d6b9e39f83b1",
+      "source": "payloads/reconstructions/4d/4d1dbb28e4a09e3debe947e7a29d95b00bcede2e-Game.pro"
+    },
+    {
+      "originalBlob": "51538e9c356cd19cc2021268cdc93bae0d3763e9",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8895196e12 (previous version of interactions/interaction.cpp)",
+      "sha256": "182ce95ca6bc6b8cdd215505fd6e6b941303f07daae129bf123e562a4a1bc025",
+      "source": "payloads/reconstructions/51/51538e9c356cd19cc2021268cdc93bae0d3763e9-interaction.cpp"
+    },
+    {
+      "originalBlob": "5c4fab9cf01a417d224f3d4e329e6130a10f4bbe",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8428884b94 (previous version of creatures/creature.cpp)",
+      "sha256": "723df41fac4a1f64821b29ba3c99d3e6ec0c4198b4cee64c1a8ce0056c95d7e4",
+      "source": "payloads/reconstructions/5c/5c4fab9cf01a417d224f3d4e329e6130a10f4bbe-creature.cpp"
+    },
+    {
+      "originalBlob": "63c87b0045b2eca5214a36529c3d6d148546de3c",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 74 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "36c0b0054b3ed29d7d01a151bbe4e32d5afabfc8f37a158513683306bbecc3f4",
+      "source": "payloads/reconstructions/63/63c87b0045b2eca5214a36529c3d6d148546de3c-Game.pro"
+    },
+    {
+      "originalBlob": "6e5718200da392b1c4f10ee5ac1a160fa3054f05",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 87d8078c26 (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/6e/6e5718200da392b1c4f10ee5ac1a160fa3054f05-gamescene.cpp"
+    },
+    {
+      "originalBlob": "7859caf8ac6531b0231352020038ae1bc06db07a",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the c6dbc139 reconstruction: inventory, gold and addItem/loseItem/getInventory moved into Creature (same-commit creature.h/player.h), starting items from the configuration's items list through the surviving Item::getItem",
+      "sha256": "52a34b15dde74c261dd570c739613044230861c1d1174bbbc0307355f3584b98",
+      "source": "payloads/reconstructions/78/7859caf8ac6531b0231352020038ae1bc06db07a-creature.cpp"
+    },
+    {
+      "originalBlob": "7f8e82af23a32a8d3ae95caac2a860b376b02f32",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 62 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "6b2d95b7122bc4e4845b7ced7d0745fba856c11a2be2b5689991738c27ec05e8",
+      "source": "payloads/reconstructions/7f/7f8e82af23a32a8d3ae95caac2a860b376b02f32-Game.pro"
+    },
+    {
+      "originalBlob": "8428884b948f50a6d4d7b1c984f724a7c7bcd0b0",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapted from the 04855a2d reconstruction: Creature(path, map, x, y) loads its configuration in the constructor (same-commit creature.h/player.cpp/monster.cpp) and levels from 0 to 1 so level-1 actions apply",
+      "sha256": "723df41fac4a1f64821b29ba3c99d3e6ec0c4198b4cee64c1a8ce0056c95d7e4",
+      "source": "payloads/reconstructions/84/8428884b948f50a6d4d7b1c984f724a7c7bcd0b0-creature.cpp"
+    },
+    {
+      "originalBlob": "87d8078c26bc47865cbc582745003d689d6fbb6f",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the da0d2da6 reconstruction: the player is a config-driven Player (sorcerer.json) after the class hierarchy flattened",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/87/87d8078c26bc47865cbc582745003d689d6fbb6f-gamescene.cpp"
+    },
+    {
+      "originalBlob": "994fafd655f3031dc709176d7f0585fd4b64fbb2",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 14bed295 reconstruction: inventory functions moved to Creature, out-of-line getLoot, updateViews and removeFromFightList, defeat handling folded back into performAction (defeatCreature removed from player.h)",
+      "sha256": "db0eac2f481a38aa8efdf75f4bd52fdbc54df2d595537c072c411ca52676a023",
+      "source": "payloads/reconstructions/99/994fafd655f3031dc709176d7f0585fd4b64fbb2-player.cpp"
+    },
+    {
+      "originalBlob": "c6dbc139602528ab99dd4de4c00a68e056dde3a6",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the 5c4fab9c reconstruction with armor/weapon headers at their new items/ paths",
+      "sha256": "dc4f1eb0e73750097ed36cdb3b71fba6a6b89981a3a960b3f01bbc5a5d30be4e",
+      "source": "payloads/reconstructions/c6/c6dbc139602528ab99dd4de4c00a68e056dde3a6-creature.cpp"
+    },
+    {
+      "originalBlob": "d219e66c13cacf2cd5d17ee65ffd6075605aa26f",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "6b2d95b7122bc4e4845b7ced7d0745fba856c11a2be2b5689991738c27ec05e8",
+      "source": "payloads/reconstructions/d2/d219e66c13cacf2cd5d17ee65ffd6075605aa26f-Game.pro"
+    },
+    {
+      "originalBlob": "e4345eeb70dfe1310db077338f6966d05279e6ac",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 69 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro",
+      "sha256": "3042c6e2e8ecb15f93c4a2b0651775e3a12bce72d91afaa397424cd87072df5f",
+      "source": "payloads/reconstructions/e4/e4345eeb70dfe1310db077338f6966d05279e6ac-Game.pro"
+    },
+    {
+      "originalBlob": "e550689d8e13c4bd58c34c9007da23103bde25bd",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 994fafd6 reconstruction: potion subclasses were removed in this commit, so starting potions now come only from the player configuration's items list",
+      "sha256": "30fa34748298c14fae75eb5d54982b8c9cadadd3c378b3552129478e0b8506a2",
+      "source": "payloads/reconstructions/e5/e550689d8e13c4bd58c34c9007da23103bde25bd-player.cpp"
+    },
+    {
+      "originalBlob": "f27c3b303de001c2569726588986622b6437584d",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e5718200d (previous version of view/gamescene.cpp)",
+      "sha256": "9726bf1d6d5e9433986b34ff3cd5ac99c6ab4c818bc828802f313ab93552bec0",
+      "source": "payloads/reconstructions/f2/f27c3b303de001c2569726588986622b6437584d-gamescene.cpp"
     }
   ],
   "schemaVersion": 1
