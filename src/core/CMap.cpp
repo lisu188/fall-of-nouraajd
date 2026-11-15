@@ -57,6 +57,11 @@ class MovementPresentationCleanup {
     std::function<void()> cancel;
 };
 
+std::atomic_bool mapTileTraversalProbeEnabled{false};
+std::atomic_size_t mapTileSnapshotCounter{0};
+std::atomic_size_t mapTileSnapshotReferenceCounter{0};
+std::atomic_size_t mapDirectTileVisitCounter{0};
+
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
 std::atomic_size_t mapCoordinateLookupProbeCounter{0};
 thread_local std::optional<performance_guard::MapTurnSelectionWork> mapTurnSelectionWork;
@@ -404,6 +409,7 @@ void CMap::setDefaultTiles(std::map<int, std::string> tiles) {
     if (defaultTiles == tiles)
         return;
     defaultTiles = std::move(tiles);
+    terrainChanged();
     routingChanged();
 }
 
@@ -444,6 +450,7 @@ void CMap::updateCoordinateNormalization(IntMap &setting, IntMap values) {
     }
     if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
         navigationDomainCanonical = false;
+    terrainChanged();
     routingChanged();
 }
 
@@ -740,6 +747,21 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
 
 std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
 
+std::uint64_t CMap::getTerrainRevision(int level) const {
+    std::lock_guard lock(terrainMutex);
+    auto found = terrainLevelRevisions.find(level);
+    return found == terrainLevelRevisions.end() ? terrainConfigurationRevision
+                                                : std::max(terrainConfigurationRevision, found->second);
+}
+
+void CMap::terrainChanged(std::optional<int> level) {
+    std::lock_guard lock(terrainMutex);
+    if (level)
+        terrainLevelRevisions[*level] = ++terrainRevision;
+    else
+        terrainConfigurationRevision = ++terrainRevision;
+}
+
 std::recursive_mutex &CMap::getNavigationMutex() const { return navigationMutex; }
 
 std::uint64_t CMap::getRoutingEpoch() const {
@@ -944,6 +966,23 @@ void CMap::bumpNavigationRevision() {
     recordDirectPropertyChanged("navigationRevision");
 }
 
+void performance_guard::resetMapTileTraversalProbe() {
+    mapTileSnapshotCounter.store(0, std::memory_order_relaxed);
+    mapTileSnapshotReferenceCounter.store(0, std::memory_order_relaxed);
+    mapDirectTileVisitCounter.store(0, std::memory_order_relaxed);
+    mapTileTraversalProbeEnabled.store(true, std::memory_order_relaxed);
+}
+
+performance_guard::MapTileTraversalWork performance_guard::mapTileTraversalWork() {
+    return {mapTileSnapshotCounter.load(std::memory_order_relaxed),
+            mapTileSnapshotReferenceCounter.load(std::memory_order_relaxed),
+            mapDirectTileVisitCounter.load(std::memory_order_relaxed)};
+}
+
+void performance_guard::disableMapTileTraversalProbe() {
+    mapTileTraversalProbeEnabled.store(false, std::memory_order_relaxed);
+}
+
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     std::lock_guard lock(navigationMutex);
     if (!tile) {
@@ -987,7 +1026,9 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     tile->setOwningMap(this->ptr<CMap>());
     tile->setXYZ(coords.x, coords.y, coords.z);
     tiles.insert(std::make_pair(coords, tile));
+    tile->addTerrainObserver(this->ptr<CMap>());
     includeNavigationTile(coords);
+    terrainChanged(coords.z);
     bumpNavigationRevision();
     routingChanged(coords);
     recordDirectPropertyChanged("tiles");
@@ -1012,9 +1053,11 @@ std::size_t CMap::installTiles(std::span<const std::shared_ptr<CTile>> newTiles)
         }
         tile->setOwningMap(map);
         tile->setXYZ(coords.x, coords.y, coords.z);
+        tile->addTerrainObserver(map);
         includeNavigationTile(coords);
     }
     if (!tiles.empty()) {
+        terrainChanged();
         bumpNavigationRevision();
         routingChanged();
         recordDirectPropertyChanged("tiles");
@@ -1029,7 +1072,12 @@ void CMap::removeTile(int x, int y, int z) {
     if (it != this->tiles.end()) {
         auto tile = it->second;
         this->tiles.erase(it);
+        terrainChanged(coords.z);
         if (tile) {
+            if (tile->getPosz() != coords.z)
+                terrainChanged(tile->getPosz());
+            if (std::ranges::none_of(tiles, [&tile](const auto &entry) { return entry.second == tile; }))
+                tile->removeTerrainObserver(this);
             tile->clearOwningMap(this->ptr<CMap>());
         }
     }
@@ -1375,7 +1423,10 @@ void CMap::invalidateSimulationSelection() {
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                     std::function<bool(std::shared_ptr<CTile>)> predicate) {
+    const bool probing = mapTileTraversalProbeEnabled.load(std::memory_order_relaxed);
     for (std::shared_ptr<CTile> tile : tiles | std::views::values | std::views::filter(predicate)) {
+        if (probing)
+            mapDirectTileVisitCounter.fetch_add(1, std::memory_order_relaxed);
         func(tile);
     }
 }
@@ -1763,6 +1814,7 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
     auto map = this->ptr<CMap>();
     for (const auto &[coords, tile] : tiles) {
         if (tile) {
+            tile->removeTerrainObserver(this);
             tile->clearOwningMap(map);
         }
     }
@@ -1778,6 +1830,9 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
         tiles[coords] = ob;
         includeNavigationTile(coords);
     }
+    for (const auto &[coords, tile] : tiles)
+        tile->addTerrainObserver(map);
+    terrainChanged();
     bumpNavigationRevision();
     routingChanged();
     recordDirectPropertyChanged("tiles");
@@ -1787,6 +1842,10 @@ std::set<std::shared_ptr<CTile>> CMap::getTiles() {
     std::set<std::shared_ptr<CTile>> result;
     for (const auto &[coords, tile] : tiles) {
         result.insert(tile);
+    }
+    if (mapTileTraversalProbeEnabled.load(std::memory_order_relaxed)) {
+        mapTileSnapshotCounter.fetch_add(1, std::memory_order_relaxed);
+        mapTileSnapshotReferenceCounter.fetch_add(result.size(), std::memory_order_relaxed);
     }
     return result;
 }

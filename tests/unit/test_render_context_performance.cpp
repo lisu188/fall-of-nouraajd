@@ -39,6 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGameTextPanel.h"
+#include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/panel/CListView.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CWidget.h"
@@ -1024,6 +1025,147 @@ void testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute() {
     game->getContext()->shutdown();
 }
 
+void testMinimapTerrainRevisionAvoidsUnchangedCollectionWork() {
+    constexpr std::size_t tileCount = 1024;
+    constexpr std::size_t frames = 64;
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    auto gui = make_headless_gui();
+    auto player = std::make_shared<CPlayer>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    player->setGame(game);
+    auto stats = std::make_shared<CStats>();
+    stats->setStamina(10);
+    player->setBaseStats(stats);
+    player->setHp(player->getHpMax());
+    map->setPlayer(player);
+    map->setXBounds({{0, 31}, {1, 31}});
+    map->setYBounds({{0, 15}, {1, 15}});
+    std::vector<std::shared_ptr<CTile>> tiles;
+    for (int z = 0; z < 2; ++z) {
+        for (int y = 0; y < 16; ++y) {
+            for (int x = 0; x < 32; ++x) {
+                auto tile = std::make_shared<CTile>();
+                tile->setGame(game);
+                tile->setTileType("ground");
+                tile->setCanStep(true);
+                tile->setPosx(x);
+                tile->setPosy(y);
+                tile->setPosz(z);
+                tiles.push_back(std::move(tile));
+            }
+        }
+    }
+    expect_true(map->installTiles(tiles) == tileCount, "minimap traversal guard installs exactly1024native tiles");
+    tiles.clear();
+    struct ProbeCleanup {
+        ~ProbeCleanup() { performance_guard::disableMapTileTraversalProbe(); }
+    } cleanup;
+    performance_guard::resetMapTileTraversalProbe();
+    {
+        auto copied = map->getTiles();
+        const auto work = performance_guard::mapTileTraversalWork();
+        expect_true(copied.size() == tileCount && work.snapshots == 1 && work.snapshotReferences == tileCount &&
+                        work.directVisits == 0,
+                    "the native snapshot probe must count an actual returned owning set before testing zero work");
+    }
+    performance_guard::resetMapTileTraversalProbe();
+    std::size_t callbacks = 0;
+    map->forTiles([&](std::shared_ptr<CTile>) { ++callbacks; });
+    const auto visitor_control = performance_guard::mapTileTraversalWork();
+    expect_true(callbacks == tileCount && visitor_control.snapshots == 0 && visitor_control.snapshotReferences == 0 &&
+                    visitor_control.directVisits == tileCount,
+                "the visitor probe must count every actual native callback without owning-set snapshots");
+    performance_guard::disableMapTileTraversalProbe();
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    auto rect = CUtil::rect(0, 0, 128, 128);
+    for (int warm = 0; warm < 3; ++warm)
+        minimap->renderObject(gui, rect, 0);
+    const auto builds = minimap->getTerrainTextureBuildCount();
+    const auto object_snapshots = minimap->getObjectSnapshotBuildCount();
+    const auto turn = map->getTurn();
+    const auto coords = player->getCoords();
+    const int hp = player->getHp();
+    gui->getRenderContext().resetStats();
+    performance_guard::resetMapTileTraversalProbe();
+    for (std::size_t frame = 0; frame < frames; ++frame)
+        minimap->renderObject(gui, rect, 0);
+    const auto warm = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(warm.snapshots == 0 && warm.snapshotReferences == 0,
+                "64warm minimap frames must allocate zero owning tile-set snapshots or copied tile references");
+    expect_true(warm.directVisits == 0 && minimap->getObjectSnapshotBuildCount() == object_snapshots,
+                "unchanged minimap frames must neither visit tiles nor rebuild marker snapshots");
+    expect_true(minimap->getTerrainTextureBuildCount() == builds && copies.successfulCopies == frames &&
+                    copies.attemptedCopies == frames && copies.failedCopies == 0,
+                "unchanged minimap terrain must reuse its texture for all64actual native copies");
+    map->setXBounds({});
+    map->setYBounds({});
+    minimap->renderObject(gui, rect, 0);
+    performance_guard::resetMapTileTraversalProbe();
+    minimap->renderObject(gui, rect, 0);
+    const auto derived = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(derived.snapshots == 0 && derived.snapshotReferences == 0 && derived.directVisits == 0,
+                "unchanged derived bounds must reuse their revision without visiting tile collections");
+    auto changed = map->getTile(2, 2, 0);
+    changed->setTileType("water");
+    const auto before_change = minimap->getTerrainTextureBuildCount();
+    performance_guard::resetMapTileTraversalProbe();
+    minimap->renderObject(gui, rect, 0);
+    const auto refreshed = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(refreshed.snapshots == 1 && refreshed.snapshotReferences == tileCount &&
+                    refreshed.directVisits == tileCount && minimap->getTerrainTextureBuildCount() == before_change + 1,
+                "in-place terrain mutation must derive bounds once and retain the ordered raster snapshot");
+    auto otherMap = std::make_shared<CMap>();
+    otherMap->setGame(game);
+    auto sharedMarker = std::make_shared<CMapObject>();
+    sharedMarker->setName("boundedSharedMinimapMarker");
+    sharedMarker->setPosX(2);
+    sharedMarker->setPosY(2);
+    sharedMarker->setPosZ(1);
+    sharedMarker->setCanStep(true);
+    map->addObject(sharedMarker);
+    otherMap->addObject(sharedMarker);
+    expect_true(map->getObjectByName(sharedMarker->getName()) == sharedMarker &&
+                    otherMap->getObjectByName(sharedMarker->getName()) == sharedMarker &&
+                    sharedMarker->getMap() == otherMap,
+                "the active-frame guard must retain the actual marker in A while B owns position updates");
+    minimap->renderObject(gui, rect, 0);
+    const auto sharedSnapshots = minimap->getObjectSnapshotBuildCount();
+    const auto sharedTerrainBuilds = minimap->getTerrainTextureBuildCount();
+    const auto sharedRevision = map->getNavigationRevision();
+    const auto ownerRevision = otherMap->getNavigationRevision();
+    performance_guard::resetMapTileTraversalProbe();
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        sharedMarker->setPosZ(static_cast<int>(frame % 2));
+        minimap->renderObject(gui, rect, 0);
+    }
+    const auto shared = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(shared.snapshots == 0 && shared.snapshotReferences == 0 && shared.directVisits == 0 &&
+                    minimap->getObjectSnapshotBuildCount() == sharedSnapshots &&
+                    minimap->getTerrainTextureBuildCount() == sharedTerrainBuilds,
+                "64 shared-marker level changes within cached extents must add zero tile or snapshot work");
+    expect_true(map->getNavigationRevision() == sharedRevision &&
+                    otherMap->getNavigationRevision() == ownerRevision + frames,
+                "all64 actual shared-marker moves must update B alone while A keeps its registry snapshot");
+    expect_true(map->getTurn() == turn && player->getCoords() == coords && player->getHp() == hp && !map->isMoving(),
+                "minimap work measurement must preserve gameplay turns, player state and movement");
+    std::cout << "[minimap terrain revision] tiles=" << tileCount << " frames=" << frames
+              << " warm snapshots=" << warm.snapshots << " snapshot references=" << warm.snapshotReferences
+              << " snapshot budget=0 fresh visits=" << warm.directVisits << " visit budget=0"
+              << " cached copies=" << copies.successfulCopies << " builds=0 derived visits=" << derived.directVisits
+              << " changed visits=" << refreshed.directVisits << " shared marker frames=" << frames
+              << " shared snapshots=" << shared.snapshots << " shared visits=" << shared.directVisits << '\n';
+    game->getContext()->shutdown();
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
@@ -1043,4 +1185,5 @@ void run_render_context_performance_tests() {
     testLoadingReaderReusesWarmTextures();
     testMovementSamplingReusesOneBoundedRecord();
     testActiveTurnOverlayReadsReuseTheCommittedPlayerRoute();
+    testMinimapTerrainRevisionAvoidsUnchangedCollectionWork();
 }

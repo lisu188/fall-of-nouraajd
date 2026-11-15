@@ -21,20 +21,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CSdlResources.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <tuple>
+
+class CMap;
 
 class CMinimapGraphicsObject : public CGameGraphicsObject {
     V_META(CMinimapGraphicsObject, CGameGraphicsObject,
            V_METHOD(CMinimapGraphicsObject, browseLandmarks, void, std::shared_ptr<CGui>))
 
+    struct ViewCache;
+    std::unique_ptr<ViewCache> viewCache;
     fn::sdl::GuiTexturePtr terrainTexture;
-    std::size_t terrainSignature = 0;
+    std::weak_ptr<CMap> terrainMap;
+    std::tuple<std::uint64_t, int, int, int, int, int, int, int> terrainSignature{};
     std::size_t terrainTextureBuildCount = 0;
+    std::size_t objectSnapshotBuildCount = 0;
     bool expanded = false;
     bool expandPressed = false;
 
   public:
+    CMinimapGraphicsObject();
+    ~CMinimapGraphicsObject() override;
+
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
     std::size_t getTerrainTextureBuildCount() const { return terrainTextureBuildCount; }
+    std::size_t getObjectSnapshotBuildCount() const { return objectSnapshotBuildCount; }
 
     // The minimap is an opaque overlay rendered above the map layer. CGameGraphicsObject::event() only
     // invokes these hooks once the event is already inside the minimap rectangle (or the object is modal)
