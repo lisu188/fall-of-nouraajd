@@ -19,6 +19,10 @@ tree that contained that exact original file. Typical loop::
 ``save`` moves working reconstructions into ``recovery/payloads/reconstructions`` and
 records them in ``recovery/overrides.json``; ``export`` copies matching successful
 evidence into ``recovery/evidence/<commit>``.
+
+Set ``HISTORY_TOOLCHAIN_ROOTFS`` to a rootfs materialized by ``history_rootfs.py``
+to use bwrap locally. Source and Git inputs remain read-only; writable inputs and
+outputs stay under ``HISTORY_WORK_DIR``. Docker remains the default runner.
 """
 
 from __future__ import annotations
@@ -37,18 +41,18 @@ import sys
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 import recover_history as rh  # noqa: E402
+import history_rootfs as hr  # noqa: E402
 
 WORK = Path(os.environ.get("HISTORY_WORK_DIR", REPO / ".cache/history-recovery/workbench")).resolve()
 RECON = WORK / "recon"
 NOTES = RECON / "notes.json"
 IMAGE = os.environ.get("HISTORY_TOOLCHAIN_IMAGE", "nouraajd-recovery:qt5")
+ROOTFS = Path(os.environ["HISTORY_TOOLCHAIN_ROOTFS"]).resolve() if os.environ.get("HISTORY_TOOLCHAIN_ROOTFS") else None
 CODE = (".cpp", ".h", ".c", ".inl", ".pri", ".qrc")
 BLOB = re.compile(r"[0-9a-f]{40}\Z")
 CATALOG = json.loads((REPO / "recovery/catalog.json").read_text())
 TREE_OF = {commit: tree for tree in CATALOG["trees"] for commit in tree["commits"]}
 ORDER = [item["commit"] for item in CATALOG["commits"] if item["commit"] in TREE_OF]
-# Docker mounts this directory at the same path so recorded paths stay valid.
-SHARED = Path(os.path.commonpath([REPO, WORK]))
 
 
 def resolve(ref: str) -> str:
@@ -85,37 +89,64 @@ def note(blob: str, text: str) -> None:
 
 
 def workbenchOverrides() -> Path:
-    """Committed overrides plus working reconstructions, resolvable from SHARED."""
+    """Keep a self-contained, pinned input set under the writable work directory."""
     committed = json.loads((REPO / "recovery/overrides.json").read_text())
     working = {path.name: path for path in workingReconstructions()}
-    prefix = (REPO / "recovery").relative_to(SHARED).as_posix() + "/"
+    inputs = WORK / "inputs"
+    inputs.mkdir(parents=True, exist_ok=True)
     entries = []
     for entry in committed["entries"]:
         if entry.get("originalBlob") in working:
             continue
         entry = dict(entry)
         if "source" in entry:
-            entry["source"] = prefix + entry["source"]
+            source = (REPO / "recovery" / rh.safePath(entry["source"])).resolve()
+            if not source.is_relative_to(REPO / "recovery"):
+                raise ValueError("Committed recovery payload escapes its source directory")
+            data = source.read_bytes()
+            digest = hashlib.sha256(data).hexdigest()
+            if digest != entry.get("sha256"):
+                raise ValueError("Committed recovery payload differs from its SHA-256 pin")
+            target = inputs / digest
+            if target.is_symlink() or (target.exists() and hashlib.sha256(target.read_bytes()).hexdigest() != digest):
+                raise ValueError("Staged recovery input differs from its SHA-256 pin")
+            if not target.exists():
+                target.write_bytes(data)
+            entry["source"] = target.relative_to(WORK).as_posix()
         entries.append(entry)
     for blob, path in working.items():
         entries.append(
             {
                 "originalBlob": blob,
-                "source": path.relative_to(SHARED).as_posix(),
+                "source": path.relative_to(WORK).as_posix(),
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 "provenance": "working reconstruction",
             }
         )
-    path = SHARED / ".history-workbench-overrides.json"
+    path = WORK / "overrides.json"
     path.write_text(json.dumps({"schemaVersion": 1, "entries": entries}))
     return path
 
 
 def docker(command: str, workdir: Path, timeout: float = 3600) -> subprocess.CompletedProcess:
+    read_only = hr.gitReadMounts(REPO)
+    if ROOTFS is not None:
+        return hr.runRootfs(
+            ROOTFS,
+            ["/bin/bash", "-c", command],
+            workdir,
+            read_only,
+            [WORK],
+            environment={"PATH": "/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin"},
+            timeout=timeout,
+        )
     image_id = subprocess.check_output(["docker", "image", "inspect", "--format", "{{.Id}}", IMAGE], text=True).strip()
     arguments = ["docker", "run", "--rm", "--network", "none"]
     arguments += ["-e", "PATH=/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin"]
-    arguments += ["-e", "GAME_RECOVERY_TOOLCHAIN_ID=" + image_id, "-v", f"{SHARED}:{SHARED}", "-w", str(workdir)]
+    arguments += ["-e", "GAME_RECOVERY_TOOLCHAIN_ID=" + image_id]
+    for path in read_only:
+        arguments += ["-v", f"{path}:{path}:ro"]
+    arguments += ["-v", f"{WORK}:{WORK}", "-w", str(workdir)]
     arguments += ["--entrypoint", "bash", IMAGE, "-c", command]
     return subprocess.run(arguments, timeout=timeout, capture_output=True, text=True)
 
@@ -385,24 +416,44 @@ def progress() -> None:
     previous = json.loads(path.read_text()) if path.exists() else {}
     published = {item["originalCommit"]: item for item in previous.get("snapshots", []) if item.get("published")}
     snapshots = []
-    for report_path in sorted((REPO / "recovery/evidence").glob("*/verification.json")):
-        report = json.loads(report_path.read_text())
-        commit = report["sourceCommit"]
-        if report.get("status") != "success" or report_path.parent.name != commit:
-            continue
-        item = {
-            "originalCommit": commit,
-            "originalTree": report["sourceTree"],
-            "evidence": report_path.parent.relative_to(REPO).as_posix(),
-            "restoredFilesFingerprint": report["restoration"]["restoredFilesFingerprint"],
-            "toolchainImage": report.get("toolchainImage") or previous.get("toolchainImage"),
-            "validation": "build-and-startup-passed",
-            "published": False,
-        }
-        old = published.get(commit)
-        if old and old.get("restoredFilesFingerprint") == item["restoredFilesFingerprint"]:
-            item.update(published=True, url=old["url"])
-        snapshots.append(item)
+    expected_image = os.environ.get("HISTORY_TOOLCHAIN_IMAGE_ID")
+    if ROOTFS is not None:
+        expected_image = hr.loadMetadata(ROOTFS)["imageId"]
+    overrides = rh.loadOverrides(REPO / "recovery/overrides.json")
+    with rh.GitObjects(REPO) as objects:
+        for report_path in sorted((REPO / "recovery/evidence").glob("*/verification.json")):
+            report = json.loads(report_path.read_text())
+            commit = report["sourceCommit"]
+            image_id = report.get("toolchainImage", "")
+            if (
+                report.get("status") != "success"
+                or report_path.parent.name != commit
+                or commit not in TREE_OF
+                or report.get("sourceTree") != TREE_OF[commit]["tree"]
+                or not isinstance(image_id, str)
+                or not hr.IMAGE_ID.fullmatch(image_id)
+                or (expected_image is not None and image_id != expected_image)
+            ):
+                continue
+            try:
+                current = rh.prepareSnapshot(objects, CATALOG, commit, overrides)[1]["restoredFilesFingerprint"]
+            except rh.RecoveryError:
+                continue
+            if report.get("restoration", {}).get("restoredFilesFingerprint") != current:
+                continue
+            item = {
+                "originalCommit": commit,
+                "originalTree": report["sourceTree"],
+                "evidence": report_path.parent.relative_to(REPO).as_posix(),
+                "restoredFilesFingerprint": current,
+                "toolchainImage": image_id,
+                "validation": "build-and-startup-passed",
+                "published": False,
+            }
+            old = published.get(commit)
+            if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
+                item.update(published=True, url=old["url"])
+            snapshots.append(item)
     order = {commit: index for index, commit in enumerate(ORDER)}
     snapshots.sort(key=lambda item: order.get(item["originalCommit"], len(order)))
     trees = {item["originalTree"] for item in snapshots}
@@ -410,7 +461,7 @@ def progress() -> None:
         **{
             key: previous[key]
             for key in ("ciStatus", "sourceInputsReadyTreeCount", "toolchainImage")
-            if key in previous
+            if key in previous and key != "toolchainImage"
         },
         "schemaVersion": 1,
         "status": "in-progress",
@@ -421,6 +472,9 @@ def progress() -> None:
         "publishedCommitCount": sum(1 for item in snapshots if item["published"]),
         "snapshots": snapshots,
     }
+    image_ids = sorted({item["toolchainImage"] for item in snapshots})
+    if len(image_ids) == 1:
+        value["toolchainImage"] = image_ids[0]
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
     print(f"{len(snapshots)} validated commits, {len(trees)} trees")
 

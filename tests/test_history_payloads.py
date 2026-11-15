@@ -27,6 +27,20 @@ def payloadPins():
 
 
 class HistoryPayloadPinsTest(unittest.TestCase):
+    def testArchivedOriginalPayloadsMatchTheirBfgPointers(self):
+        catalog_path = RECOVERY_ROOT / "upstream/software-heritage/catalog.json"
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        self.assertEqual(catalog["count"], len(catalog["entries"]))
+        identities = set()
+        for entry in catalog["entries"]:
+            with self.subTest(original=entry["originalBlob"]):
+                content = (catalog_path.parent / entry["source"]).read_bytes()
+                header = b"blob " + str(len(content)).encode("ascii") + b"\0"
+                self.assertEqual(entry["originalBlob"], hashlib.sha1(header + content).hexdigest())
+                self.assertNotIn(entry["originalBlob"], identities)
+                identities.add(entry["originalBlob"])
+                self.assertTrue(entry["paths"])
+
     def testEveryPinnedPayloadKeepsItsExactBytes(self):
         pins = payloadPins()
         if not pins:
