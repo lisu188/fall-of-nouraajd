@@ -344,6 +344,76 @@ class RecoveryReadmeTest(unittest.TestCase):
         with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
             snapshotDocumentation(self.report, self.evidence)
 
+    def conflictReport(self):
+        helper = history_source_prep.conflicts_prep
+        files = {
+            name: {"beforeSha256": digest, "afterSha256": hashlib.sha256(name.encode()).hexdigest()}
+            for name, digest in sorted(helper.INPUTS.items())
+        }
+        recorded = {
+            "files": files,
+            "supplied": {helper.SUPPLIED_PATH: {"sha256": helper.SUPPLIED_SHA256, "sourceCommit": helper.SUPPLIED_COMMIT}},
+            "side": helper.SIDE,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {
+                "path": name,
+                "before": {"kind": "file", "sha256": hashes["beforeSha256"]},
+                "after": {"kind": "file", "sha256": hashes["afterSha256"]},
+            }
+            for name, hashes in files.items()
+        ]
+        outputs.append(
+            {"path": helper.SUPPLIED_PATH, "before": None, "after": {"kind": "file", "sha256": helper.SUPPLIED_SHA256}}
+        )
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "conflictResolution",
+                    "command": ["resolve-whitespace-conflicts"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "conflictResolution": recorded, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "whitespaceConflictResolution"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Resolved whitespace-only conflict hunks\n")
+        return helper
+
+    def testConflictResolutionHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.conflictReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_conflict_resolution.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("in every hunk both sides differ only in whitespace", readme)
+        self.assertIn("python3 recovery/prepare_conflict_resolution.py", readme)
+        self.assertIn("also omitted `pathfinder/pathfindercache.cpp`", readme)
+
+    def testConflictResolutionRejectsChangedInputsOutputsAndSide(self):
+        helper = self.conflictReport()
+        recorded = self.report["sourcePreparation"]["identity"]["conflictResolution"]
+        recorded["side"] = "HEAD"
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        recorded["side"] = helper.SIDE
+        first = sorted(helper.INPUTS)[0]
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = recorded["files"][first]["afterSha256"]
+        recorded["files"][first]["beforeSha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def resourceReport(self):
         resource = (
             '<RCC>\n    <qresource prefix="/">\n'

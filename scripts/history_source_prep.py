@@ -16,10 +16,12 @@ try:
     from scripts import history_prepare_reflection as reflection_prep
     from scripts import history_prepare_coordinates as coordinates_prep
     from scripts import history_prepare_resource_aliases as aliases_prep
+    from scripts import history_prepare_conflicts as conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
     import history_prepare_coordinates as coordinates_prep
     import history_prepare_resource_aliases as aliases_prep
+    import history_prepare_conflicts as conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
@@ -239,6 +241,7 @@ def preparationRequired(source_root: Path) -> bool:
         or reflection_prep.reflectionPlan(source_root) is not None
         or coordinates_prep.coordinateHashPlan(source_root) is not None
         or aliases_prep.resourceAliasPlan(source_root) is not None
+        or conflicts_prep.conflictResolutionPlan(source_root) is not None
     )
 
 
@@ -274,6 +277,9 @@ def prepareSources(
     reflection = reflection_prep.reflectionPlan(source_root)
     coordinates = coordinates_prep.coordinateHashPlan(source_root)
     resource_aliases = aliases_prep.resourceAliasPlan(source_root)
+    conflicts = conflicts_prep.conflictResolutionPlan(source_root)
+    if conflicts and set(conflicts["files"]) & {overlay["path"] for overlay in include_overlays}:
+        raise ValueError("Conflict resolution and include separator preparation overlap")
     if coordinates:
         target = source_root / coordinates["path"]
         if target.is_symlink() or (
@@ -299,6 +305,7 @@ def prepareSources(
         and not reflection
         and not coordinates
         and not resource_aliases
+        and not conflicts
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -369,6 +376,21 @@ def prepareSources(
                 "log": str(log),
             }
         )
+    if conflicts:
+        conflicts_prep.writeResolutions(source_root, conflicts["data"])
+        identity = {key: value for key, value in conflicts.items() if key != "data"}
+        result["identity"]["conflictResolution"] = identity
+        log = output_root / "conflict-resolution.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "conflictResolution",
+                "command": ["history_source_prep.py", "resolve-whitespace-conflicts"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -425,7 +447,15 @@ def prepareSources(
                             else (
                                 "manifest-named alias of an original renamed resource"
                                 if resource_aliases and name in aliases_prep.ALIASES
-                                else "Windows include separators on an isolated build-source copy"
+                                else (
+                                    "original whitespace-only merge-conflict hunks resolved"
+                                    if conflicts and name in conflicts_prep.INPUTS
+                                    else (
+                                        "following commit's omitted source supplied"
+                                        if conflicts and name in conflicts["supplied"]
+                                        else "Windows include separators on an isolated build-source copy"
+                                    )
+                                )
                             )
                         )
                     )

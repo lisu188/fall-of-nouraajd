@@ -185,6 +185,47 @@ def resourceAliasAttachments(report: dict, preparation: dict) -> dict[str, bytes
     return {"recovery/prepare_resource_aliases.py": replay}
 
 
+def conflictResolutionAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.conflicts_prep
+    recorded = preparation.get("identity", {}).get("conflictResolution", {})
+    replay = Path(helper.__file__).read_bytes()
+    files = recorded.get("files", {})
+    if (
+        {key: value for key, value in recorded.items() if key not in ("files", "supplied")}
+        != {
+            "side": helper.SIDE,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "whitespaceConflictResolution"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+        or set(files) != set(helper.INPUTS)
+        or any(files[name].get("beforeSha256") != digest for name, digest in helper.INPUTS.items())
+        or recorded.get("supplied")
+        not in ({}, {helper.SUPPLIED_PATH: {"sha256": helper.SUPPLIED_SHA256, "sourceCommit": helper.SUPPLIED_COMMIT}})
+    ):
+        raise VerificationError("Conflict resolution differs from its reviewed original inputs or boundary")
+    outputs = {
+        entry.get("path"): (entry.get("before"), entry.get("after"))
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in helper.INPUTS or entry.get("path") == helper.SUPPLIED_PATH
+    }
+    expected = {
+        name: (
+            {"kind": "file", "sha256": files[name]["beforeSha256"]},
+            {"kind": "file", "sha256": files[name]["afterSha256"]},
+        )
+        for name in helper.INPUTS
+    }
+    if recorded["supplied"]:
+        expected[helper.SUPPLIED_PATH] = (None, {"kind": "file", "sha256": helper.SUPPLIED_SHA256})
+    if outputs != expected:
+        raise VerificationError("Conflict resolution outputs lack their exact preparation fingerprints")
+    return {"recovery/prepare_conflict_resolution.py": replay}
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -199,11 +240,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_reflection = "reflectionRegistration" in names
     has_coordinates = "coordinatesHash" in names
     has_aliases = "resourceAliases" in names
+    has_conflicts = "conflictResolution" in names
     expected_names = (
         (["supplementalResources"] if has_resources else [])
         + (["reflectionRegistration"] if has_reflection else [])
         + (["coordinatesHash"] if has_coordinates else [])
         + (["resourceAliases"] if has_aliases else [])
+        + (["conflictResolution"] if has_conflicts else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -228,6 +271,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         attachments.update(coordinateHashAttachments(report, preparation, evidence_dir))
     if has_aliases:
         attachments.update(resourceAliasAttachments(report, preparation))
+    if has_conflicts:
+        attachments.update(conflictResolutionAttachments(report, preparation))
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -266,6 +311,11 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_reflection and name == source_prep.reflection_prep.TARGET)
                 or (has_coordinates and name == source_prep.coordinates_prep.TARGET)
                 or (has_aliases and name in source_prep.aliases_prep.ALIASES)
+                or (has_conflicts and name in source_prep.conflicts_prep.INPUTS)
+                or (
+                    has_conflicts
+                    and name in preparation["identity"]["conflictResolution"].get("supplied", {})
+                )
             )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
@@ -347,6 +397,10 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     reflection_preparation = "recovery/prepare_reflection_registration.py" in preparation_files
     coordinates_preparation = "recovery/prepare_coordinates_hash.py" in preparation_files
     alias_preparation = "recovery/prepare_resource_aliases.py" in preparation_files
+    conflict_preparation = "recovery/prepare_conflict_resolution.py" in preparation_files
+    conflict_supplied = bool(
+        report.get("sourcePreparation", {}).get("identity", {}).get("conflictResolution", {}).get("supplied")
+    )
     compatibility_modes = [
         name
         for enabled, name in (
@@ -354,6 +408,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             (reflection_preparation, "parentReflectionRegistration"),
             (coordinates_preparation, "originalCoordinateHash"),
             (alias_preparation, "renamedResourceAliases"),
+            (conflict_preparation, "whitespaceConflictResolution"),
         )
         if enabled
     ]
@@ -430,6 +485,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         or reflection_preparation
         or coordinates_preparation
         or alias_preparation
+        or conflict_preparation
     ):
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
@@ -510,6 +566,26 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             if alias_preparation
             else []
         ),
+        *(
+            [
+                "Startup used an explicit build-only resolution of original merge-conflict hunks. This commit",
+                "was recorded with unresolved conflict markers in seven files, so it cannot compile as committed;",
+                "in every hunk both sides differ only in whitespace. The attached helper keeps the origin/master",
+                "side, which equals the parent commit's file, after verifying each original and resolved hash.",
+                *(
+                    [
+                        "This commit also omitted `pathfinder/pathfindercache.cpp`, which its headers declare; the",
+                        "helper supplies the hash-pinned file the immediately following commit adds unchanged.",
+                    ]
+                    if conflict_supplied
+                    else []
+                ),
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if conflict_preparation
+            else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -546,6 +622,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_reflection_registration.py"] if reflection_preparation else []),
         *(["python3 recovery/prepare_coordinates_hash.py"] if coordinates_preparation else []),
         *(["python3 recovery/prepare_resource_aliases.py"] if alias_preparation else []),
+        *(["python3 recovery/prepare_conflict_resolution.py"] if conflict_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,
