@@ -83,9 +83,18 @@ callers and configuration; underdetermined formulas, map transitions and layouts
 are labeled as inference. Compilation/startup do not prove historical gameplay parity.
 
 Catalog #128 (`856d7792`) is an original defect: it renamed `images/monsters/*/time.txt`
-to `time.json` but left the surviving `creatures.qrc` naming the old files, so `rcc`
-fails exactly as it would have originally; #129 restores the manifest. It needs an
-explicit build-only compatibility step before it can be accepted.
+to `time.json` (identical bytes) but left the surviving `creatures.qrc` naming the old
+files, so `rcc` fails on the original manifest; #129 updates it. Only that exact original
+state receives hash-pinned build-only aliases: each manifest-named `time.txt` gets the
+bytes of its rename target, as the parent commit held them. The original manifest,
+sources and images are unchanged; verification labels its evidence and progress entry
+`renamedResourceAliases`.
+
+From #156 the tree vendors TmxParser (`tmx/`, `tinyxml/`, `base64/`, `zlib/`); the
+reconstructed #156, #157 and #160 projects compile it, as the surviving #164
+`teleporter.cpp` requires. The surviving `map.h` declares `loadMapFromTmx` from #159
+and `config/map.tmx` is BFG-removed; as in the earlier donor, reconstructed `Map`
+bodies keep loading `config/map.json` and leave that path undefined (inference).
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`
