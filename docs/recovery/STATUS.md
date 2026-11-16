@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **150 commits / 150 trees** against the
-restored inputs: **144 game startups and 6 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **152 commits / 152 trees** against the
+restored inputs: **146 game startups and 6 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -153,6 +153,13 @@ read-only `bwrap` mounts and an isolated network/display. Its content identity i
 It contains GCC 5.4, Qt 5.5.1, CPython 2.7/3.3/3.4 and their Boost.Python libraries.
 Compact provenance is in `recovery/toolchains/evidence/local-2026-11-15/`.
 This local image identity is separate from any future CI-built image.
+
+Catalog #119 and #120 were verified on a Docker host with an image built from the
+byte-identical recipe (`Dockerfile`, `build.sh`, `sources*.json` hashes as recorded in
+`recipe-provenance.json`, staged with `sources-git.json`); its identity is
+`sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d`. Re-running
+the already accepted #118 on that image reproduced success. Each snapshot in
+`recovery/progress.json` records the image that verified it.
 
 ## Resume
 

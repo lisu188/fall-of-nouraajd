@@ -95647,6 +95647,62 @@
       "provenance": "Content reconstruction of the BFG-removed original; Adapted genuine surviving immediately preceding #117 eacc2b048f24ef3ac1622e2ddfb6767e75ce0649:view/gameview.cpp to original #118 QWidget BackPackObject clicked signal/paint event and GameView-owned PlayerStatsView. Uses the actual backpack image, connects clicked to the authored showCharView slot, and binds the original stats widget to the actual player after real Scene startup. Child QWidget ownership preserves value-member lifetimes. Top-center backpack placement and exact original widget layout/signal timing are inferred; original main/config/headers/widgets/resources unchanged. Startup does not prove ordinary click behavior or gameplay parity.",
       "sha256": "084aab2e7dc29fe38d728bbf28ed27186ffb5438e989af81f328c6563d2c8480",
       "source": "payloads/reconstructions/f4/f4f8341ef74e233052ad7217fef609710f7861b5-gameview.cpp"
+    },
+    {
+      "originalBlob": "0f1d12502ec20d26023cc1d8a777880d473f1dcb",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 824c9ade reconstruction: list views take Comparer-ordered sets (same-commit playerlistview.h)",
+      "sha256": "35817f4d3c0a11d71cc99f36ec029fe5e0360fe6631c4e1876a61b86fb469622",
+      "source": "payloads/reconstructions/0f/0f1d12502ec20d26023cc1d8a777880d473f1dcb-gameview.cpp"
+    },
+    {
+      "originalBlob": "0f75e9ef9043aabb7b24d83fba949c94aedf4cc2",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 98850cf3 reconstruction: inventory, equipped and actions are Comparer-ordered sets exposed through the unchanged plain-set accessors (same-commit creature.h)",
+      "sha256": "a01f98cd251232084eb96ce23e70c02074a59b60bc96a35b076727d379b8b97c",
+      "source": "payloads/reconstructions/0f/0f75e9ef9043aabb7b24d83fba949c94aedf4cc2-creature.cpp"
+    },
+    {
+      "originalBlob": "0fa59fba8ca22ca6821f5c0df8f8f4daea80dde2",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the previous interaction reconstruction: Interaction::setAnimation was removed from the same-commit interaction.h",
+      "sha256": "4c0d5059e8b1ae235cea442136b39495f0c10fcc72fd53c943d87efd4b51ae36",
+      "source": "payloads/reconstructions/0f/0fa59fba8ca22ca6821f5c0df8f8f4daea80dde2-interaction.cpp"
+    },
+    {
+      "originalBlob": "302c0add3bfa57a055abf4e3765fd4da7f2791e5",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the ec097c57 reconstruction: one static tile size replaces the removed per-map size and MapObject::getSize, and map objects no longer remember their animation path (same-commit map.h)",
+      "sha256": "8c31979ea4caf9070dbbe343bafc1ba8b36db92d648488d8773a4c0bb28620cf",
+      "source": "payloads/reconstructions/30/302c0add3bfa57a055abf4e3765fd4da7f2791e5-map.cpp"
+    },
+    {
+      "originalBlob": "824c9adea3bae16566a804dd9becd3ce2f102f5a",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the f4f8341e reconstruction: the inventory, skills and equipped list views moved from Player into GameView (same-commit gameview.h/player.h); the view creates them after the game starts and refreshes them through the creature's new inventory/skills/equipped signals; player positioning that the removed Player views did is done by the view",
+      "sha256": "55d0ea767ece1092d5e1d8f185d7b8db93d204b57c084798db4815f299ec2478",
+      "source": "payloads/reconstructions/82/824c9adea3bae16566a804dd9becd3ce2f102f5a-gameview.cpp"
+    },
+    {
+      "originalBlob": "98850cf354ca7e6994d2f37b7783a258ce4e9437",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the fa914510 reconstruction: emits the skillsChanged, inventoryChanged and equippedChanged signals and defines getActions declared in the same-commit creature.h",
+      "sha256": "a7840e1c5f3d6db67dd81723b90c1330a105d3fc16a7268d778d380a48d3887c",
+      "source": "payloads/reconstructions/98/98850cf354ca7e6994d2f37b7783a258ce4e9437-creature.cpp"
+    },
+    {
+      "originalBlob": "a46487e910e445d28ba0f82365095257061634c2",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 466fd0ff reconstruction: no per-map tile size is configured (same-commit map.h)",
+      "sha256": "ac2b4e0d0949bcb4453124c7c184bb2ae7aeea700e6fd8b636b62cab306f7221",
+      "source": "payloads/reconstructions/a4/a46487e910e445d28ba0f82365095257061634c2-gamescene.cpp"
+    },
+    {
+      "originalBlob": "ec097c57481272f5ed99b7e675a3ef6e8669ff5b",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 32c76f68b2 (previous version of map/map.cpp)",
+      "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
+      "source": "payloads/reconstructions/ec/ec097c57481272f5ed99b7e675a3ef6e8669ff5b-map.cpp"
     }
   ],
   "schemaVersion": 1
