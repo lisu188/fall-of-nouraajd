@@ -16,13 +16,13 @@ void GameView::start() {
     // The player's lists are shown by the view and refreshed by the creature's signals.
     playerInventoryView = new PlayerListView((std::set<ListItem *, Comparer> *)player->getInventory());
     playerSkillsView = new PlayerListView((std::set<ListItem *, Comparer> *)player->getActions());
-    playerEquippedView = new PlayerListView((std::set<ListItem *, Comparer> *)player->getEquipped());
+    // Equipment moved into numbered slots (std::map) whose view was still a stub in this
+    // revision (surviving playerequippedview.cpp), so no list view shows it.
+    playerEquippedView = 0;
     playerInventoryView->setParentItem(charView);
-    playerEquippedView->setParentItem(charView);
     scene->addItem(playerSkillsView);
     connect(player, SIGNAL(inventoryChanged()), playerInventoryView, SLOT(update()));
     connect(player, SIGNAL(skillsChanged()), playerSkillsView, SLOT(update()));
-    connect(player, SIGNAL(equippedChanged()), playerEquippedView, SLOT(update()));
     scene->removeItem(&loading);
     init = true;
 }
@@ -77,7 +77,6 @@ void GameView::showCharView() {
         charView->setPos(mapToScene(this->width() / 2 - charView->boundingRect().width() / 2,
                                     this->height() / 2 - charView->boundingRect().height() / 2));
         playerInventoryView->setPos(0, 0);
-        playerEquippedView->setPos(charView->boundingRect().width() - playerEquippedView->boundingRect().width(), 0);
         charView->update();
     } else {
         charView->setVisible(false);

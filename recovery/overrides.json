@@ -95182,7 +95182,7 @@
     {
       "originalBlob": "6eb88a3320dbc6f6e1b994b86d9001da97fbe33b",
       "path": "view/gameview.cpp",
-      "provenance": "Missing game view body inferred from earlier donor and exact #150 intact headers/UI sources: views are owned by GameView, constructed from surviving Creature collections, refreshed through declared signals; BackPackObject renders original PNG and emits declared clicked signal. Not exact original content; layout and gameplay parity unverified.",
+      "provenance": "content reconstruction of the BFG-removed original; from the 8a3884ee reconstruction: equipment is shown by the surviving slot-based PlayerEquippedView (same-commit gameview.h), refreshed by equippedChanged",
       "sha256": "c1549c7ecf8c52b7dd31870fcfff4bc10e3e174ec4d5741964271933a08ee51b",
       "source": "payloads/reconstructions/6e/6eb88a3320dbc6f6e1b994b86d9001da97fbe33b-gameview.cpp"
     },
@@ -95791,8 +95791,8 @@
     {
       "originalBlob": "8a3884eea3f1479e3ebbd252e0982dfc082e7f56",
       "path": "view/gameview.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9bd50bb1511ccb54138110c475b9c3e1613a8f0e (previous version of view/gameview.cpp)",
-      "sha256": "35817f4d3c0a11d71cc99f36ec029fe5e0360fe6631c4e1876a61b86fb469622",
+      "provenance": "content reconstruction of the BFG-removed original; from the previous gameview reconstruction: equipped items are slot-mapped and their surviving PlayerEquippedView is still a stub, so no list view is created for them",
+      "sha256": "18112df08513d8d57b09bf7591b4dcdf5de4833a930f1c037374d2da204d2d60",
       "source": "payloads/reconstructions/8a/8a3884eea3f1479e3ebbd252e0982dfc082e7f56-gameview.cpp"
     },
     {
@@ -95843,6 +95843,34 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6d3dc7979db57f360f46edde7bc13ba319208e62 (previous version of map/map.cpp)",
       "sha256": "9ebbe826c58e0cf6a96f11518f0984f4c51ab0670669559ee3e50bf68e76f8e8",
       "source": "payloads/reconstructions/ea/eae9cd274b5d4a9a3f170c150538fb57198c5870-map.cpp"
+    },
+    {
+      "originalBlob": "423fc15364238b3e77de56832a57554a7eb7c9e9",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 448c39bd reconstruction: hasInInventory and hasItem declared in the same-commit creature.h",
+      "sha256": "5b46f8c7e44f9ebafe81750e1e0ed07cabe11e106b0ab906f3469f9fd635b66a",
+      "source": "payloads/reconstructions/42/423fc15364238b3e77de56832a57554a7eb7c9e9-creature.cpp"
+    },
+    {
+      "originalBlob": "448c39bd95dacc5026a5b9a7136904b8e9f88956",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 51cc3081 reconstruction: equipment moves into numbered slots (std::map; config/slots.json slot 1 right hand for weapons, 4 chest for armor) with setItem(slot, item), hasEquipped and slot-based weapon/armor accessors (same-commit creature.h, surviving item.cpp)",
+      "sha256": "da452b71c32a4ead66189c18b16476acecf5d12c23affbcd5f2de20701ccd108",
+      "source": "payloads/reconstructions/44/448c39bd95dacc5026a5b9a7136904b8e9f88956-creature.cpp"
+    },
+    {
+      "originalBlob": "787c07abfc9c8eaf691de467cac982ca3df6403f",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 422070ea reconstruction: MapObject::setParentItem was removed from the same-commit map.h",
+      "sha256": "ae92c58918a7c3d7ee8c1ae23d5f0ff541f28f61639a4b8a9e4eb75a911bd4e9",
+      "source": "payloads/reconstructions/78/787c07abfc9c8eaf691de467cac982ca3df6403f-map.cpp"
+    },
+    {
+      "originalBlob": "8f14ea380b0123c39f2ba1425e283a3e3ffed642",
+      "path": "view/mapview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7476f6bac498deb69ac2f9eb80963e8cab3c5705 (previous version of view/mapview.cpp)",
+      "sha256": "539dbfbe69530be242b9864451dc2933fff9bccd6a39f18c5a20e3c6e9582e4e",
+      "source": "payloads/reconstructions/8f/8f14ea380b0123c39f2ba1425e283a3e3ffed642-mapview.cpp"
     }
   ],
   "schemaVersion": 1
