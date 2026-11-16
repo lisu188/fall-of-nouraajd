@@ -24,6 +24,88 @@ CPP_TOKENS = re.compile(
 )
 
 
+SUPPLEMENTAL_QRC = "recovery_supplemental_images.qrc"
+SUPPLEMENTAL_QMAKE_ARGUMENT = "RESOURCES+=$$_PRO_FILE_PWD_/" + SUPPLEMENTAL_QRC
+SUPPLEMENTAL_INPUTS = {
+    "animation/animationprovider.cpp": "9bb143c1a9f29e7b07da200d23b003db36ccc8a12b4a9559e1ff86e3a672ba46",
+    "config/interactions.json": "9dc5e72dc28ede2c1ed627d09b83bca9587cd3dedd99c6c9a8e950a1ec364b34",
+    "images.qrc": "41b1e493f0cbb29996abaff166808e22d77476eefd48a42957e37cfe6e09153a",
+}
+SUPPLEMENTAL_IMAGES = {
+    "images/interactions/abyssalshadows/0.png": "07cb42c9b283fd4c04a1486e3dc207bf631fef02dd774ae6e29bb8950bd02398",
+    "images/interactions/armorofendlesswinter/0.png": "a3ef4298d68e1a3f3e02010362fba3c1a1fc34808930c816ccead4eb2378df8d",
+    "images/interactions/attack/0.png": "43ab0a5cd12951a3be7ecf547b9d154acf6da949763a24018dbbe7f156579b91",
+    "images/interactions/backstab/0.png": "c89a43bb6def8d290e2147abbb40374c5133d52c9f46f3843e2b4ca913ab3663",
+    "images/interactions/barrier/0.png": "790132a8aef56777672ea70d2cde861d92a9c6bdca3ddd6b20e38df45945535e",
+    "images/interactions/bloodlash/0.png": "853187c73a72f7250c1374c2817d5dbcadae099b9cbf0a5df327285ad6a66d1b",
+    "images/interactions/bloodthirst/0.png": "dffa9919ce78ea9c630049f9f5aae6db025814c7a6f5fec8d28b20d66b7ea52c",
+    "images/interactions/chaosblast/0.png": "255c6409d532ed1ca2539d6d8340680b3a223c7199a0a1ff0cdfd5ff20d4ed8a",
+    "images/interactions/chloroform/0.png": "4246708ff5abd3f1e71af3157b331e42785fdde83ec757ec3411faf7eb6b5735",
+    "images/interactions/deathstrike/0.png": "c0b87a24c16574cd27b5239d0b443c050440085d3978ba748e4809c4f48fcaf0",
+    "images/interactions/devour/0.png": "8c85a01931f710885837616bae6891f3f98eea25707f595178752605f791ad00",
+    "images/interactions/doubleattack/0.png": "c62e498185044edc2f35b9e4025800bc8f99b9af8fe5c899947955008e28500b",
+    "images/interactions/endlesspain/0.png": "f893283c0a7253076f8becd9b3ca496959bed2d7a8c113407e1112ea6b5500da",
+    "images/interactions/frostbolt/0.png": "320b12e60d00ec6c19d0b2283656a7867cb8709357426198c39ea200aa7d2a94",
+    "images/interactions/lethalpoison/0.png": "bbed760353474361861bac85752f03822e4a347b83e8e94bebb5d84b9abfaf73",
+    "images/interactions/magicmissile/0.png": "3d330005b87da024d4a9efd312fc29b67501296cf5013625c7a696c7b623b69b",
+    "images/interactions/mutilation/0.png": "aa4f24b9800f68b0fd2055efb1ffeb4b58338bf90c349e8ae22d4dfd8cd7964a",
+    "images/interactions/shadowbolt/0.png": "13cfabf00bef6f2780dea5906e83a4462a2a096a0b3bbd425256fcbf93e2b941",
+    "images/interactions/sneakattack/0.png": "5531765521c55e08750bbd5b829fd5e49990d0149b991afc1ca8c33a54e5775f",
+    "images/interactions/strike/0.png": "21edb56961749e8f4ebbf8bde378492d8b4ae64ddb20ab519fcbe5cc7ba57c06",
+    "images/interactions/stun/0.png": "a7dd3bc29c13fe238c2bbd3c3fe2832f4eba1c4f231f2bf880dfae22a63f76ed",
+}
+SUPPLEMENTAL_PROVENANCE = {
+    "donorCommit": "95b01c98de4f4b1e49ec72e367e295720898efeb",
+    "donorManifestSha256": "eb38ec7532942928d923a4fd1be6654bcb2cd2056ae009795cdfa9213fb9f013",
+    "sourceCommit": "83f5addfdbc6f59cc91ac0a9fee63e7131b6b7d8",
+}
+
+
+def resourceInput(source_root: Path, name: str) -> bytes | None:
+    path = source_root / name
+    if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent != source_root):
+        raise ValueError(f"Supplemental Qt resource input crosses a symlink: {name}")
+    if not path.is_file():
+        return None
+    if not path.resolve().is_relative_to(source_root.resolve()):
+        raise ValueError(f"Supplemental Qt resource input escapes the source tree: {name}")
+    return path.read_bytes()
+
+
+def supplementalResourcePlan(source_root: Path) -> dict | None:
+    """Recognize only the exact original #98 resource omission and pin its existing image bytes."""
+    for name, expected in SUPPLEMENTAL_INPUTS.items():
+        data = resourceInput(source_root, name)
+        if data is None or hashlib.sha256(data).hexdigest() != expected:
+            return None
+    for name, expected in SUPPLEMENTAL_IMAGES.items():
+        data = resourceInput(source_root, name)
+        if data is None or hashlib.sha256(data).hexdigest() != expected:
+            raise ValueError(f"Supplemental Qt resource image differs from its original bytes: {name}")
+    data = (
+        '<RCC>\n    <qresource prefix="/">\n'
+        + "".join(f"        <file>{name}</file>\n" for name in sorted(SUPPLEMENTAL_IMAGES))
+        + "    </qresource>\n</RCC>\n"
+    ).encode()
+    return {
+        "path": SUPPLEMENTAL_QRC,
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "inputs": {**SUPPLEMENTAL_INPUTS, **SUPPLEMENTAL_IMAGES},
+        "qmakeArgument": SUPPLEMENTAL_QMAKE_ARGUMENT,
+        "provenance": SUPPLEMENTAL_PROVENANCE,
+        "validationBoundary": "Game startup with supplemental Qt resource compatibility; original manifest unchanged",
+        "resourceReplaySha256": hashlib.sha256(
+            Path(__file__).with_name("history_prepare_resources.py").read_bytes()
+        ).hexdigest(),
+        "data": data,
+    }
+
+
+def preparationArguments(source_root: Path) -> list[str]:
+    """Use the same explicit resource argument in workbench and observer builds."""
+    return [SUPPLEMENTAL_QMAKE_ARGUMENT] if supplementalResourcePlan(source_root) else []
+
+
 def runtimeDirectoryPlan(source_root: Path) -> list[dict]:
     required = []
     for source in sorted(source_root.rglob("*.cpp")):
@@ -136,7 +218,11 @@ def includeOverlays(source_root: Path) -> list[dict]:
 
 
 def preparationRequired(source_root: Path) -> bool:
-    return (source_root / "preprocessor.py").is_file() or bool(includeOverlays(source_root))
+    return (
+        (source_root / "preprocessor.py").is_file()
+        or bool(includeOverlays(source_root))
+        or supplementalResourcePlan(source_root) is not None
+    )
 
 
 def sourceManifest(source_root: Path) -> dict:
@@ -167,10 +253,36 @@ def prepareSources(
     }
     generator = source_root / "preprocessor.py"
     include_overlays = includeOverlays(source_root)
-    if not generator.is_file() and not include_overlays:
+    supplement = supplementalResourcePlan(source_root)
+    if supplement:
+        target = source_root / supplement["path"]
+        if target.is_symlink():
+            raise ValueError("Supplemental Qt resource output is symlinked")
+        if target.exists() and (not target.is_file() or target.read_bytes() != supplement["data"]):
+            raise ValueError("Supplemental Qt resource output already exists with different bytes")
+    if not generator.is_file() and not include_overlays and not supplement:
         return result
     output_root.mkdir(parents=True, exist_ok=True)
     before = sourceManifest(source_root)
+    if supplement:
+        target = source_root / supplement["path"]
+        if target.is_symlink():
+            raise ValueError("Supplemental Qt resource output is symlinked")
+        target.write_bytes(supplement["data"])
+        identity = {key: value for key, value in supplement.items() if key != "data"}
+        result["identity"]["supplementalResources"] = identity
+        result["qmakeArguments"] = [supplement["qmakeArgument"]]
+        log = output_root / "supplemental-resources.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "supplementalResources",
+                "command": ["history_source_prep.py", "generate-supplemental-qrc"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -213,12 +325,16 @@ def prepareSources(
         outputs = [
             {
                 "path": name,
-                "before": before[name],
-                "after": after[name],
-                "purpose": "Windows include separators on an isolated build-source copy",
+                "before": before.get(name),
+                "after": after.get(name),
+                "purpose": (
+                    "supplemental Qt resources"
+                    if name == SUPPLEMENTAL_QRC
+                    else "Windows include separators on an isolated build-source copy"
+                ),
             }
-            for name in before
-            if before[name] != after[name]
+            for name in sorted(set(before) | set(after))
+            if before.get(name) != after.get(name) or (supplement and name == SUPPLEMENTAL_QRC)
         ]
         result.update({"status": "success", "outputs": outputs})
         result["identity"]["outputs"] = outputs
@@ -287,6 +403,7 @@ def prepareSources(
                 entry["path"] == "gen/prop.h"
                 or (entry["path"].startswith("src/") and entry["path"].endswith(".h"))
                 or entry["path"] in {overlay["path"] for overlay in include_overlays}
+                or (supplement and entry["path"] == SUPPLEMENTAL_QRC)
             )
         )
     ]

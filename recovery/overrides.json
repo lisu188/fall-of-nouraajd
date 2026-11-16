@@ -4426,9 +4426,10 @@
       "tree": "0c437f82022d5640036583f068e4de2b273dd5bd"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=29",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/0c437f82022d5640036583f068e4de2b273dd5bd-images.qrc",
       "tree": "0c437f82022d5640036583f068e4de2b273dd5bd"
     },
     {
@@ -9217,9 +9218,10 @@
       "tree": "1a6c07270143702ee9e19cb1613e0edb4e54875c"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=28",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/1a6c07270143702ee9e19cb1613e0edb4e54875c-images.qrc",
       "tree": "1a6c07270143702ee9e19cb1613e0edb4e54875c"
     },
     {
@@ -78816,9 +78818,10 @@
       "tree": "da8d4ff1c5c10c6e21131dab10913215eff77024"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=30",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/da8d4ff1c5c10c6e21131dab10913215eff77024-images.qrc",
       "tree": "da8d4ff1c5c10c6e21131dab10913215eff77024"
     },
     {
@@ -79723,9 +79726,10 @@
       "tree": "de9e3b066277e5db8e01074a06e43a0c28ddb518"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=31",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/de9e3b066277e5db8e01074a06e43a0c28ddb518-images.qrc",
       "tree": "de9e3b066277e5db8e01074a06e43a0c28ddb518"
     },
     {
@@ -83381,9 +83385,10 @@
       "tree": "e4fa30d9c332bc5c3314260337db543717d4419c"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=32",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/e4fa30d9c332bc5c3314260337db543717d4419c-images.qrc",
       "tree": "e4fa30d9c332bc5c3314260337db543717d4419c"
     },
     {
@@ -90769,9 +90774,10 @@
       "tree": "fc84a2ec513ed3d42f29b2fa122a47d67473197b"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=27",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "71d622787c7169ac4ff8491e499771b2520cedafb7eee0112d6b29afd6837ae2",
+      "source": "payloads/resources/fc84a2ec513ed3d42f29b2fa122a47d67473197b-images.qrc",
       "tree": "fc84a2ec513ed3d42f29b2fa122a47d67473197b"
     },
     {
@@ -93107,9 +93113,10 @@
       "tree": "ffee761da016546507d64cda072b997f0992a5d9"
     },
     {
-      "blob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
       "path": "images.qrc",
-      "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images.qrc; headerMatch=0; apiOverlap=0/10000; distance=33",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "payloads/resources/ffee761da016546507d64cda072b997f0992a5d9-images.qrc",
       "tree": "ffee761da016546507d64cda072b997f0992a5d9"
     },
     {
@@ -94139,8 +94146,8 @@
     {
       "originalBlob": "3059c5de88b726b70736b936ebf8e360f82fec09",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "b5c11b52ede575bf86f149bc906cb6cb453d41364b42d9c013140230fe2ad6a8",
+      "provenance": "Refine missing application .pro reconstruction with all33 supplied Tmx/base64/tinyxml/zlib C/C++ translation units and lib include path. Actual reconstructed map now invokes the parser, exposing fail-before unresolved Tmx link symbols. Preserve Python2.7 ABI, unique reconstructed application marker, and existing path guards; no surviving project edits or new production dependency.",
+      "sha256": "fa84d16f037e636e3c4567aa575a93d21620f8ed10a19653f54bc2b1812ca468",
       "source": "payloads/reconstructions/30/3059c5de88b726b70736b936ebf8e360f82fec09-game.pro"
     },
     {
@@ -94160,8 +94167,8 @@
     {
       "originalBlob": "d59b1fb1b9c5d957efe4284a887026060ac53395",
       "path": "src/GameScript.cpp",
-      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
-      "sha256": "41f2f4d9ff2cde3f00799d92d6dcc49f56a46ff292c69c25302067d3e048a117",
+      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance. Native #260 runtime exposed original scripts/game/interaction.py importing Interaction and calling Stats.getDamage; export an alias of the real CInteraction binding and bind the genuine Stats::getDamage method. No fake type or no-op binding; exact init_game/Python2.7 ABI retained.",
+      "sha256": "6eb81b62721310c7ec71c6be88a42e9184d5f5409c67f318f8d6849d6fb55e93",
       "source": "payloads/reconstructions/d5/d59b1fb1b9c5d957efe4284a887026060ac53395-GameScript.cpp"
     },
     {
@@ -94615,8 +94622,8 @@
     {
       "originalBlob": "2fb6d3f750cb02eab89f696962666606246db62d",
       "path": "src/CPlayerView.cpp",
-      "provenance": "Content reconstruction from intact #247 5fe60e7c playerlistview.cpp, playerequippedview.cpp, playerstatsview.cpp and scrollobject.cpp; merge into original #260 CPlayerView.h combined classes, apply same-commit C-prefix names and templated Comparer<CMapObject>. Replace removed Map::getTileSize with genuine same-commit 50-pixel scale from untouched CItemSlot.cpp and CTile.cpp. Preserve actual inventory/equipment/health/mana/experience rendering and scrolling behavior; no stand-in UI.",
-      "sha256": "7304c93e3318b882d512b2fce3b341d68f2974e323d941651f0d81ef547dbf4b",
+      "provenance": "Content reconstruction from intact #247 5fe60e7c playerlistview.cpp, playerequippedview.cpp, playerstatsview.cpp and scrollobject.cpp; merge into original #260 CPlayerView.h combined classes, apply same-commit C-prefix names and templated Comparer<CMapObject>. Replace removed Map::getTileSize with genuine same-commit 50-pixel scale from untouched CItemSlot.cpp and CTile.cpp. Preserve actual inventory/equipment/health/mana/experience rendering and scrolling behavior; no stand-in UI. Match actual surviving arrow/item PNG paths rather than obsolete animation directories, and initialize the no-argument PlayerStatsView player pointer to null before the original setPlayer callback.",
+      "sha256": "1c1e87e8d37a840190aa6f76a5fb53cadcaad456112c5449c3d17a478eadd4a7",
       "source": "payloads/reconstructions/2f/2fb6d3f750cb02eab89f696962666606246db62d-CPlayerView.cpp"
     },
     {
@@ -94650,8 +94657,8 @@
     {
       "originalBlob": "5a949ff899495dfbb4b29ce40386cb9c98e12dda",
       "path": "src/CCreature.cpp",
-      "provenance": "Generated missing-body reconstruction: retain intact55e6516e object/CCreature.cpp arithmetic for experience, damage, health/mana, equipment and statistics, adapted to genuine #260 pointer containers/Stats pointer/no-argument callbacks. Combined CPlayer/CMonster methods from intact #247 5fe60e7c src/player.cpp (b18c9ab09ac9225e896e0b8d98a184d7104cd8c8) and monster.cpp (cf3f3ceaf75dba3b8bd9ec980aad7785071bd03c), with same-commit C-prefix names, QString and direct scene APIs. JSON loading bridges actual monsters properties/config to original declared loadFromJson API. Initial scalar state is reconstructed explicitly. Retains historical default/custom-comparator pointer container bridges as found in original247 Player::getLoot; full-game runtime and cross-tree compatibility remain unverified.",
-      "sha256": "d5d14add534094eb914231379db28f01fc970d1e28ae0de1d88457214b34a6fb",
+      "provenance": "Generated missing-body reconstruction: retain intact55e6516e object/CCreature.cpp arithmetic for experience, damage, health/mana, equipment and statistics, adapted to genuine #260 pointer containers/Stats pointer/no-argument callbacks. Combined CPlayer/CMonster methods from intact #247 5fe60e7c src/player.cpp (b18c9ab09ac9225e896e0b8d98a184d7104cd8c8) and monster.cpp (cf3f3ceaf75dba3b8bd9ec980aad7785071bd03c), with same-commit C-prefix names, QString and direct scene APIs. JSON loading bridges actual monsters properties/config to original declared loadFromJson API. Initial scalar state is reconstructed explicitly. Retains historical default/custom-comparator pointer container bridges as found in original247 Player::getLoot; full-game runtime and cross-tree compatibility remain unverified. Native #260 startup regression exposed intact CItemSlot::update using map::at for every equipment slot. Initialize each genuine config/slots.json ID with a null empty slot before loading occupied equipment; preserve original ItemSlot and configuration bytes.",
+      "sha256": "1016536c81a643ccaf2991b7a0f042f8bfdbd552c2f6f89aa996aef4ca06a5c5",
       "source": "payloads/reconstructions/5a/5a949ff899495dfbb4b29ce40386cb9c98e12dda-CCreature.cpp"
     },
     {
@@ -94664,8 +94671,8 @@
     {
       "originalBlob": "51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5",
       "path": "src/CItem.cpp",
-      "provenance": "Generated adaptation of intact #2475fe60e7c:src/item.cpp blob6776325d5546af8c14a14c3433c5021eeac82566 and potion.cpp blob465840edb9a59f0e82e7b72fd12cd109f0da9e13. Combine genuine #260 item classes, apply C-prefix/QString/default constructor changes, retain real pickup/equip/unequip/mouse-use/health-mana potion behavior, load JSON properties from actual config/objects layout and use original getStats()->addBonus/removeBonus API. No future GUI handler or event API, no surviving source edits.",
-      "sha256": "30bd4bacb30b2cbfb4d581d1f594575ec222177b86d27bbd45d5c0cda2596d17",
+      "provenance": "Generated adaptation of intact #2475fe60e7c:src/item.cpp blob6776325d5546af8c14a14c3433c5021eeac82566 and potion.cpp blob465840edb9a59f0e82e7b72fd12cd109f0da9e13. Combine genuine #260 item classes, apply C-prefix/QString/default constructor changes, retain real pickup/equip/unequip/mouse-use/health-mana potion behavior, load JSON properties from actual config/objects layout and use original getStats()->addBonus/removeBonus API. No future GUI handler or event API, no surviving source edits. Accept both genuine target flat item/armor configuration and nested property descriptors while preserving their actual stats/equip/potion behavior.",
+      "sha256": "e822732e58fba6d44ed213d112eded34794404e66f3f421e0ec5df8f4e51e725",
       "source": "payloads/reconstructions/51/51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5-CItem.cpp"
     },
     {
@@ -94765,6 +94772,440 @@
       "provenance": "Missing 2014 map reconstructed from surviving later map donor by removing its single market1/Market object; genuine #331 config/buildings.json and CObject.h have no Market/CMarket. First surviving CMarket.h history f25cffe508b1d872875d941854c4b6170c9cbefc is Trading works dated2015-02-08, after target2014-11-01. All other14 donor objects/coordinates, tile layers, bounds and start properties preserved. Not an exact original map.",
       "sha256": "a2bdedfc0bad2e694b5853d54ada3fe67a0205052088aad58067c47ff0efcb17",
       "source": "payloads/reconstructions/71/71bf6f468f812262bf46a24ca77fbdad44af400c-map.json"
+    },
+    {
+      "originalBlob": "6a2c626e84df7fa30e1903164a4e7d29f087d686",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #91 body to genuine #92 hoverEnterEvent/hoverLeaveEvent replacing mouse handlers. Tooltip visibility and placement follow intact ListItem handlers using the existing MapObject::statsView; displayed class/HP/mana text and hover enabling are inferred. Original handler behavior unavailable. Prior config/persistence inference retained; surviving originals unchanged.",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "payloads/reconstructions/6a/6a2c626e84df7fa30e1903164a4e7d29f087d686-creature.cpp"
+    },
+    {
+      "originalBlob": "544a06e9770f1ba147d48e4734e013a7f57f3a8b",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #91 body to genuine #92 Player::setMap(Map*) and original ListItem::setNumber, which now dereferences getMap()->getTileSize(). A real startup trace located null Map at ListItem::setNumber via constructor updateViews. Defer panel layout until map assignment, propagate the genuine map to inventory/equipment/actions before layout, and attach existing player panels to owning GameScene instead of constructor singleton. Exact original attachment policy remains inferred; surviving source unchanged. Prior persistence provenance retained.",
+      "sha256": "f73e5fee2f7d1666ea671b481e9c869c205ae03fcf409c42fc47e5344b081a63",
+      "source": "payloads/reconstructions/54/544a06e9770f1ba147d48e4734e013a7f57f3a8b-player.cpp"
+    },
+    {
+      "originalBlob": "d8eebeb95fdc4734ed2094dc13c298671c8b0529",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; genuine #92 header/callers require no further body change. Original internal delta unavailable; prior reconstruction provenance retained.",
+      "sha256": "6a64f77947027d73148c6be8215fd54775f447b03bfc479ef305dde455e72d40",
+      "source": "payloads/reconstructions/d8/d8eebeb95fdc4734ed2094dc13c298671c8b0529-interaction.cpp"
+    },
+    {
+      "originalBlob": "3b42528aeb65a9c7563ec3cbb228a646f5aa7265",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; genuine #92 header/callers require no further body change. Original internal delta unavailable; prior reconstruction provenance retained.",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "payloads/reconstructions/3b/3b42528aeb65a9c7563ec3cbb228a646f5aa7265-map.cpp"
+    },
+    {
+      "originalBlob": "49ce48b5b1b1d941cf3e648b6abc0371a1683ccf",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6a2c626e84df7fa30e1903164a4e7d29f087d686 (previous version of creatures/creature.cpp)",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "payloads/reconstructions/49/49ce48b5b1b1d941cf3e648b6abc0371a1683ccf-creature.cpp"
+    },
+    {
+      "originalBlob": "43066470fdc285e47dbba103f369c056e67904ad",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3b42528aeb65a9c7563ec3cbb228a646f5aa7265 (previous version of map/map.cpp)",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "payloads/reconstructions/43/43066470fdc285e47dbba103f369c056e67904ad-map.cpp"
+    },
+    {
+      "originalBlob": "214cf1545dc5fa41b72519f8f58e739df8094549",
+      "path": "CMap.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "12703f50348e2d6a6fffffb9d908a4c5747e87c485f0e69df3762b87b9a368de",
+      "source": "payloads/reconstructions/21/214cf1545dc5fa41b72519f8f58e739df8094549-CMap.cpp"
+    },
+    {
+      "originalBlob": "55619f91e1effd284e5e8ae500dab4d40476810b",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "2ac0fb899fcf11bd99127f23a2975aaf0b72a7f0337572ef2a1be8d45a5461e6",
+      "source": "payloads/reconstructions/55/55619f91e1effd284e5e8ae500dab4d40476810b-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "89db0c16cbbc4a799e23c8512e58a70706cdb8c3",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "9f22f1d77e65bf96642bb3b4edd0e3e1d1b28a6a53e1c27283651ca0dd4419eb",
+      "source": "payloads/reconstructions/89/89db0c16cbbc4a799e23c8512e58a70706cdb8c3-GameScript.cpp"
+    },
+    {
+      "originalBlob": "d28ea8454c9af1b3fa778242a7b6d04ac9fbe60a",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "f96f940562b62725deeb8582dced4615a880bd66ad3c36ebb85bd5d876f53eed",
+      "source": "payloads/reconstructions/d2/d28ea8454c9af1b3fa778242a7b6d04ac9fbe60a-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "5b08dfa2f0bc500b0a0b422217ba0c2f5b228ffe",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "a758d10541f3ba3688a5af1c22f99b95b520a5c02791933d31dc22cf5767f2ed",
+      "source": "payloads/reconstructions/5b/5b08dfa2f0bc500b0a0b422217ba0c2f5b228ffe-CCreature.cpp"
+    },
+    {
+      "originalBlob": "d0f1d2f0038e37a409c5e2c8fa62711da7322e69",
+      "path": "object/CCreature.h",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "03f38b4a0a2b37287b4824afa7f928093ae7fc4c7316d3b21343700ef71d7e28",
+      "source": "payloads/reconstructions/d0/d0f1d2f0038e37a409c5e2c8fa62711da7322e69-CCreature.h"
+    },
+    {
+      "originalBlob": "d769a9de7a72631bc886b3bda363737873be0ccf",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "a50eeae7e652fbb1a3d5e670f1f0876dedcc750160bd5ba107531b2efe3a3b9d",
+      "source": "payloads/reconstructions/d7/d769a9de7a72631bc886b3bda363737873be0ccf-CItem.cpp"
+    },
+    {
+      "originalBlob": "54ed05c16423e789a9e400f8c2cdd74323fa54b8",
+      "path": "CMap.cpp",
+      "provenance": "Missing #333 content reconstructed from verified #332 candidate, updated to original CMap.h/CScriptHandler.h naming. Original CScriptHandler.cpp now installs the map loader and imports the map script, so duplicate earlier map-owned loader setup is removed. Bodies/API otherwise retained; not an exact original.",
+      "sha256": "fb77b71d3a44ab0ecf9000c5867c836afd36098583daa078dc3f1e6452f46ec8",
+      "source": "payloads/reconstructions/54/54ed05c16423e789a9e400f8c2cdd74323fa54b8-CMap.cpp"
+    },
+    {
+      "originalBlob": "7f2bb362cabf0290d84ce866c4f20100c974ce4d",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #333 content reconstructed from verified #332 candidate, updated to original CMap.h/CScriptHandler.h naming. Original CScriptHandler.cpp now installs the map loader and imports the map script, so duplicate earlier map-owned loader setup is removed. Bodies/API otherwise retained; not an exact original.",
+      "sha256": "9f22f1d77e65bf96642bb3b4edd0e3e1d1b28a6a53e1c27283651ca0dd4419eb",
+      "source": "payloads/reconstructions/7f/7f2bb362cabf0290d84ce866c4f20100c974ce4d-GameScript.cpp"
+    },
+    {
+      "originalBlob": "44761c8ef6b349cb78b8459f78c9a1931827829f",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #333 content reconstructed from verified #332 candidate, updated to original CMap.h/CScriptHandler.h naming. Original CScriptHandler.cpp now installs the map loader and imports the map script, so duplicate earlier map-owned loader setup is removed. Bodies/API otherwise retained; not an exact original. The same removed originalBlob spans the surviving CMap API rename at #335, so a dependent-template compile-time dispatch calls actual declared getLootHandler() or getLootProvider(), with no empty fallback. Reviewed to preserve both genuine interfaces and one consistent payload.",
+      "sha256": "cdc32aabc88b3be26aa8bbfbc6dab9e91bc3b8be98281ca7bbf79480dca3d5d7",
+      "source": "payloads/reconstructions/44/44761c8ef6b349cb78b8459f78c9a1931827829f-CCreature.cpp"
+    },
+    {
+      "originalBlob": "125ff2b5f893bc42739f3d165731f8d400745df7",
+      "path": "lib/zlib/crc32.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
+      "source": "payloads/reconstructions/12/125ff2b5f893bc42739f3d165731f8d400745df7-crc32.c"
+    },
+    {
+      "originalBlob": "221faa7f05440b2bc0fac2cbf753d9cc43576c52",
+      "path": "lib/zlib/adler32.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
+      "source": "payloads/reconstructions/22/221faa7f05440b2bc0fac2cbf753d9cc43576c52-adler32.c"
+    },
+    {
+      "originalBlob": "236315b730bbedbbded53605ba20b984204ae41e",
+      "path": "lib/zlib/zlib.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "payloads/reconstructions/23/236315b730bbedbbded53605ba20b984204ae41e-zlib.h"
+    },
+    {
+      "originalBlob": "4811377b743c73a86d64b8fb755c76a7394fe4f4",
+      "path": "lib/zlib/infback.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
+      "source": "payloads/reconstructions/48/4811377b743c73a86d64b8fb755c76a7394fe4f4-infback.c"
+    },
+    {
+      "originalBlob": "4af03ef7d47ecfa80f7165227f173056b0748be2",
+      "path": "lib/zlib/deflate.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
+      "source": "payloads/reconstructions/4a/4af03ef7d47ecfa80f7165227f173056b0748be2-deflate.c"
+    },
+    {
+      "originalBlob": "4b267038746863b42c3f5bac514ab6e41a905396",
+      "path": "lib/zlib/inftrees.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
+      "source": "payloads/reconstructions/4b/4b267038746863b42c3f5bac514ab6e41a905396-inftrees.c"
+    },
+    {
+      "originalBlob": "4eac53fb2dac6f9d4cc9c2b0c67e9650dd7c8620",
+      "path": "lib/zlib/deflate.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "payloads/reconstructions/4e/4eac53fb2dac6f9d4cc9c2b0c67e9650dd7c8620-deflate.h"
+    },
+    {
+      "originalBlob": "5aa8ae6eb8c38b618d00ad0050111b84444a7b34",
+      "path": "src/CMapObject.cpp",
+      "provenance": "Missing CMapObject body adapted from surviving6367c691:src/CMapObject.cpp to original #260 header: four-argument moveTo with silent relocation, exact50-pixel coordinate scale, typed Tmx properties, direct map removal and genuine Event script callbacks. No surviving source edit or later event-handler API.",
+      "sha256": "5ebb8936aa128917f4188f9a2c2e3bcbdf8095e306f9d01a4390ce7f5ea34ae7",
+      "source": "payloads/reconstructions/5a/5aa8ae6eb8c38b618d00ad0050111b84444a7b34-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "5b2aa6e7d8061e22ba8af1406d3587d772e75143",
+      "path": "lib/zlib/zutil.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
+      "source": "payloads/reconstructions/5b/5b2aa6e7d8061e22ba8af1406d3587d772e75143-zutil.c"
+    },
+    {
+      "originalBlob": "5ede1d8b5b260796db8fc7ea95dba13586f34e4f",
+      "path": "lib/zlib/inflate.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
+      "source": "payloads/reconstructions/5e/5ede1d8b5b260796db8fc7ea95dba13586f34e4f-inflate.c"
+    },
+    {
+      "originalBlob": "618f28ee5808e9ccb829314e1eec436909af7065",
+      "path": "src/CMap.cpp",
+      "provenance": "Generated missing monolithic CMap implementation for genuine #260 CMap.h, CGameScene/CTile callers and vendored Tmx API. Transcribe surviving later55e6516e CMapLoader.cpp layer/tileset/object-property/entry semantics to Tmx::Map; retain direct scene, CObjectHandler, CLootProvider, set-of-objects and currentMap interfaces. Movement uses original no-argument callbacks and CompletionListener. Missing default/bound properties use available GrassTile/map dimensions, checking HasProperty because the supplied Tmx library returns a nonempty error string for absent literal properties; procedural river/road bodies are explicit generated implementations, not recovered original behavior. Native #260 startup acceptance only, not gameplay parity.",
+      "sha256": "91f1aa2add767fd56ee3506235e30ba5ab22e8712df1f043a34af26e2e40b588",
+      "source": "payloads/reconstructions/61/618f28ee5808e9ccb829314e1eec436909af7065-CMap.cpp"
+    },
+    {
+      "originalBlob": "6b8bae413c7f17afc471946989a4e9208a81684f",
+      "path": "config/objects/weapons.json",
+      "provenance": "Replace unrelated tile-config donor for missing weapons.json with intact55e6516e:config/weapons.json blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5. Original weapon image identities, CWeapon API and authored ChaosSword/Staff/Dagger references support the donor; add original CTypeHandler schema. Numeric donor stats are inferred, not exact recovered target balance.",
+      "sha256": "b818341b5fa7908d948c2dc06b7eff3a4510bd453f27ece71fe5c47a087de136",
+      "source": "payloads/reconstructions/6b/6b8bae413c7f17afc471946989a4e9208a81684f-weapons.json"
+    },
+    {
+      "originalBlob": "755d145cf21e338ffcdb2f4fc969387c81b6eb85",
+      "path": "src/CObjectHandler.cpp",
+      "provenance": "Generated missing object factory matching original CObjectHandler.h and CTypeHandler/Reflection APIs. Loads actual config/objects, supports surviving flat and nested property descriptors, constructs true registered C-prefixed or qualified Python types, sets map/type identity before original loadFromJson callbacks, converts actual Stats property fields, rejects unknown or duplicate configurations. No stand-in types.",
+      "sha256": "b0c8621cece8eee0dfe25da5e1a271855c1b70d4d5ce5a700ab3062abdd2b1e7",
+      "source": "payloads/reconstructions/75/755d145cf21e338ffcdb2f4fc969387c81b6eb85-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "78efddd0cf63a22ebb6ca3b360c1d7b5ba74cd9b",
+      "path": "maps/map.tmx",
+      "provenance": "Missing TMX map reconstructed from the prior converted later-map donor, removing only Market and StartEvent objects unsupported by the genuine 2014-09-09 target APIs/configuration/scripts. The original target misc.json defines Event only, buildings.json defines Cave/Teleporter, CBuilding.h has no Market, and the original scripts/game/object.py defines Cave/Teleporter only. No fake classes/events or empty script substitutes. All tile geometry, tilesets, layer metadata, entry coordinates and six supported Cave/Teleporter/ChaosSword objects are preserved. Exact original map bytes and its lost event content remain unavailable; this is an inferred donor adaptation.",
+      "sha256": "09d122d84eac8cc3c31ec4355ddc3e1bdfa4dab54714e9923416074e65e529ef",
+      "source": "payloads/reconstructions/78/78efddd0cf63a22ebb6ca3b360c1d7b5ba74cd9b-map.tmx"
+    },
+    {
+      "originalBlob": "906fd04f04f4cea091f6b4a933cdd1832d532c7b",
+      "path": "lib/zlib/gzread.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
+      "source": "payloads/reconstructions/90/906fd04f04f4cea091f6b4a933cdd1832d532c7b-gzread.c"
+    },
+    {
+      "originalBlob": "b4cae5f9af95ab738df1f14196305790009abb33",
+      "path": "lib/zlib/inffast.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "payloads/reconstructions/b4/b4cae5f9af95ab738df1f14196305790009abb33-inffast.c"
+    },
+    {
+      "originalBlob": "b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8",
+      "path": "lib/zlib/gzlib.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
+      "source": "payloads/reconstructions/b5/b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8-gzlib.c"
+    },
+    {
+      "originalBlob": "d0c918100d6534de11bfc3511da72af5e15db5fc",
+      "path": "lib/zlib/gzwrite.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
+      "source": "payloads/reconstructions/d0/d0c918100d6534de11bfc3511da72af5e15db5fc-gzwrite.c"
+    },
+    {
+      "originalBlob": "d42ca23c99de51bec9ffe012e48506ac6aa33a9a",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "Generated missing source matching original CPathFinder.h creature-pointer API, Cell/cost/neighbor declarations, PathFinderWorker and CompletionListener signals. Cardinal/random movement and reverse cost-field search adapt genuine later pathfinder structure to finite actual map bounds, with Qt queued relative movement. Native startup compiles/links this API; pathfinding behavior/performance and concurrent turns remain unverified.",
+      "sha256": "5b2ac46cc066dfa55c481777dff162ffd9c039052a887ce541f5ff2e5be3c7da",
+      "source": "payloads/reconstructions/d4/d42ca23c99de51bec9ffe012e48506ac6aa33a9a-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "e84852a3ca7b5bd6b76889beaf8ce183586037d6",
+      "path": "lib/zlib/zutil.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "payloads/reconstructions/e8/e84852a3ca7b5bd6b76889beaf8ce183586037d6-zutil.h"
+    },
+    {
+      "originalBlob": "f0e1d5e28e028b93033a5a084fd0e778910cd0e2",
+      "path": "lib/zlib/trees.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
+      "source": "payloads/reconstructions/f0/f0e1d5e28e028b93033a5a084fd0e778910cd0e2-trees.c"
+    },
+    {
+      "originalBlob": "f39c7a58c2a5066e15cb7c3aaec9cae2c2f91885",
+      "path": "lib/zlib/gzguts.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "payloads/reconstructions/f3/f39c7a58c2a5066e15cb7c3aaec9cae2c2f91885-gzguts.h"
+    },
+    {
+      "originalBlob": "f68945ca869f9b7f409a3a5bb3058647ea43a859",
+      "path": "game.pro",
+      "provenance": "Missing #334 project reconstructed byte-preserving from genuine immediate predecessor #333 game.pro settings/source/header/resource lists, with only the four new genuine same-commit Quest/QuestHandler source/header paths appended. No surviving original project or code edited. Not an exact original.",
+      "sha256": "538dbba4e847ce39d49b63c5d85e2727ced4f52840d323f4dfa03b5f4bbd3209",
+      "source": "payloads/reconstructions/f6/f68945ca869f9b7f409a3a5bb3058647ea43a859-game.pro"
+    },
+    {
+      "originalBlob": "500072ea74e6d100fff962bf4ccdaa7deb7974d1",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Reconstructed missing #108 GameScene from genuine surviving immediately preceding #107 c049ac73064442354af6224d06fe1c8b847bb8d9:view/gamescene.cpp (3,565 original bytes). Same-commit #108 GameScene/Player/Map/GameView headers are byte-identical to #107; use actual startGame/load/save/event handling and getView bodies instead of old #71-era donor. Exact removed implementation delta is unavailable. Formatting applied only to the missing reconstruction; the donor and all surviving historical originals remain unchanged.",
+      "sha256": "58c45409272b472fedb2723f318b28fa9a84a54539e829af9799e672950b6241",
+      "source": "payloads/reconstructions/50/500072ea74e6d100fff962bf4ccdaa7deb7974d1-gamescene.cpp"
+    },
+    {
+      "originalBlob": "114e92ee55dd1e74a4cd2fed2c4db50b00519a74",
+      "path": "CMap.cpp",
+      "provenance": "Missing #335 CMap implementation reconstructed from #333 candidate with only surviving same-commit CMap.h declared handler renames/const removal: getLootHandler/lootHandler/objectHandler, preserving native loading/event/map behavior and exact original headers. Shared missing creature CPP uses reviewed dependent-template dispatch to actual old/new loot API, never an empty fallback. Not exact original.",
+      "sha256": "49df84c88504124c37b63ba47f5a10a518ed7cf8b2bac99a82868e68c250f24a",
+      "source": "payloads/reconstructions/11/114e92ee55dd1e74a4cd2fed2c4db50b00519a74-CMap.cpp"
+    },
+    {
+      "originalBlob": "c99c3fab51c9cd0e5c4e08eeb8976a1dcc23f9fe",
+      "path": "CMap.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "5dd0bb5fb794daebb86fde691e9553f7c946a475b62ce790ba05a68b031081cf",
+      "source": "payloads/reconstructions/c9/c99c3fab51c9cd0e5c4e08eeb8976a1dcc23f9fe-CMap.cpp"
+    },
+    {
+      "originalBlob": "b0eea438d414ac8f5121276bc032baa3885ae222",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "24875144d2f2b61ad72691904fe6165c21ace244eddba0555536a81abc35b63f",
+      "source": "payloads/reconstructions/b0/b0eea438d414ac8f5121276bc032baa3885ae222-GameScript.cpp"
+    },
+    {
+      "originalBlob": "21ed4813a35777a6e054c870bf06295fdf1e986b",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "payloads/reconstructions/21/21ed4813a35777a6e054c870bf06295fdf1e986b-CCreature.cpp"
+    },
+    {
+      "originalBlob": "6a85f6aaaa21b613598c3111a8a59b53b0e7f35d",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "1724c2d2fbf24687e48f6f17f28a17b4875b348cb7c570ae43f10866076c9637",
+      "source": "payloads/reconstructions/6a/6a85f6aaaa21b613598c3111a8a59b53b0e7f35d-CItem.cpp"
+    },
+    {
+      "originalBlob": "dee6f6894a095a75e175dbeb66b5a9bdb511e450",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "24875144d2f2b61ad72691904fe6165c21ace244eddba0555536a81abc35b63f",
+      "source": "payloads/reconstructions/de/dee6f6894a095a75e175dbeb66b5a9bdb511e450-GameScript.cpp"
+    },
+    {
+      "originalBlob": "92db1c50940de267343f2438a1f9acd64a15241a",
+      "path": "game.pro",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "cf1828c317db6a869bc89b01b97764f54f4b5b876dfbbeb6d04133a59aaefa98",
+      "source": "payloads/reconstructions/92/92db1c50940de267343f2438a1f9acd64a15241a-game.pro"
+    },
+    {
+      "originalBlob": "e002f325958d029c4230c7f2cdf61efd9cf9029a",
+      "path": "config/interactions.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "b1c6981b4af44abb68d3ff52186bb71166ea716d5ffa270d2144954fb4a0b03c",
+      "source": "payloads/reconstructions/e0/e002f325958d029c4230c7f2cdf61efd9cf9029a-interactions.json"
+    },
+    {
+      "originalBlob": "60fcbe36a016804c1addc17f0695be9d0ddac77e",
+      "path": "config/weapons.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "f92b712627946194dab152fc38fb9ed9b473b6c5ce28af934c2f8ac6cf3aa801",
+      "source": "payloads/reconstructions/60/60fcbe36a016804c1addc17f0695be9d0ddac77e-weapons.json"
+    },
+    {
+      "originalBlob": "37dc13de6694265ff593d0e474a6946704f45e25",
+      "path": "config/monsters.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "dcba654730c76fa2ae07087ac47ec9416849cbdc1b2c8c974d8cd65304f1cd64",
+      "source": "payloads/reconstructions/37/37dc13de6694265ff593d0e474a6946704f45e25-monsters.json"
+    },
+    {
+      "originalBlob": "61b8ec54270990c88fe4331a7b335d4e53545788",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "a2bdedfc0bad2e694b5853d54ada3fe67a0205052088aad58067c47ff0efcb17",
+      "source": "payloads/reconstructions/61/61b8ec54270990c88fe4331a7b335d4e53545788-map.json"
+    },
+    {
+      "originalBlob": "c93d43ffc6a48ffd8cc4cbe460eacef4387d8b6a",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #338 module carried from prior staged candidate plus binding to genuine same-commit CGuiHandler::showPanel(QString), called by original scripts/game/object.py Market class. Pending native verification; no surviving original bytes changed.",
+      "sha256": "0c0398251247a74491b28f9ad5f33eaaef647a86cdac89c17721662702b3f263",
+      "source": "payloads/reconstructions/c9/c93d43ffc6a48ffd8cc4cbe460eacef4387d8b6a-GameScript.cpp"
+    },
+    {
+      "originalBlob": "76588b5f1d2753a8dde9c8fc67cf596b10d07a67",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing #338 map uses the intact later donor JSON including its original market1/Market object and all layer/object coordinates. Unlike #331\u2013337, genuine same-commit scripts/game/object.py now declares Market(CBuilding), config/buildings.json selects game.object.Market, and market.png original pointer exists; therefore the earlier-era unsupported-object removal is not carried here. This remains a donor-backed reconstructed map, not recovered original map content. Pending native verification; no surviving original bytes changed.",
+      "sha256": "c30adeeb2c1192a4378512e0e7630547c29e52d2e693bc33ada9b8bb6b0e9ad4",
+      "source": "payloads/reconstructions/76/76588b5f1d2753a8dde9c8fc67cf596b10d07a67-map.json"
+    },
+    {
+      "originalBlob": "58f1cf45ae3026623441be92e48d25049a215288",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #339 reconstruction, not exact original. Carries prior inventory implementation with genuine CPlayerView.h CListView/CPlayerInventoryView renames; new CTradeItemsView iterates actual genuine parent CTradePanel::getItems() set, preserving item rendering rather than inventing player-market API. No surviving originals changed; pending native build/startup.",
+      "sha256": "e1f220b689d8127cbccb3b408cf832bb2f32b0937f263e039aacd7c5d88dea91",
+      "source": "payloads/reconstructions/58/58f1cf45ae3026623441be92e48d25049a215288-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "977eb41ed0be6856591477680da1de8525fe18f4",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #339 reconstruction, not exact original. Carries prior item use/equip/drag behavior through genuine same-commit CMouseHandler::handleClick/getClickAction/onClickAction declarations. Mouse event acceptance remains before action dispatch; consumable inventory ownership/events and real drag payload behavior retained. No surviving originals changed; pending native build/startup.",
+      "sha256": "cf4d0b76fa1569ef2364dda336385e06b02b5aa143f115168d5fc8cd4ad06c6a",
+      "source": "payloads/reconstructions/97/977eb41ed0be6856591477680da1de8525fe18f4-CItem.cpp"
+    },
+    {
+      "originalBlob": "097236850e1feffb0c0d53a3c12b41eda31dcd3c",
+      "path": "game.pro",
+      "provenance": "Missing #339 reconstruction, not exact original. Prior reconstructed project plus only two genuine newly added CMouseHandler source/header paths. No surviving originals changed; pending native build/startup.",
+      "sha256": "99143e478d7d12f3ca1a7428298cdf0af536b8afaf58307c5b38ae11fe63d858",
+      "source": "payloads/reconstructions/09/097236850e1feffb0c0d53a3c12b41eda31dcd3c-game.pro"
+    },
+    {
+      "originalBlob": "08ec144f196a9a5195e281997b5695828ccbd2ab",
+      "path": "creatures/creature.cpp",
+      "provenance": "Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited.",
+      "sha256": "ed9e1bc1401e2c6dcb98cc025f4773e6d5277f674ce9dc808bf1c9d04c1296d1",
+      "source": "payloads/reconstructions/08/08ec144f196a9a5195e281997b5695828ccbd2ab-creature.cpp"
+    },
+    {
+      "originalBlob": "0b0a9c19112914c23dcd4a6e2e032f335f7abf76",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Missing #150 Interaction body inferred from native-verified #97 implementation and exact #150 surviving header: public/default/copy constructors, ListItem ordering and Effect state serialization added. Removed undeclared legacy setAnimation override, retaining inherited real resource loading. Historical ordering/effect persistence parity unverified.",
+      "sha256": "58c845dc10998af9d2593755795e2cbfce4f8fdd9e05369db918e2212cc511ec",
+      "source": "payloads/reconstructions/0b/0b0a9c19112914c23dcd4a6e2e032f335f7abf76-interaction.cpp"
+    },
+    {
+      "originalBlob": "6eb88a3320dbc6f6e1b994b86d9001da97fbe33b",
+      "path": "view/gameview.cpp",
+      "provenance": "Missing game view body inferred from earlier donor and exact #150 intact headers/UI sources: views are owned by GameView, constructed from surviving Creature collections, refreshed through declared signals; BackPackObject renders original PNG and emits declared clicked signal. Not exact original content; layout and gameplay parity unverified.",
+      "sha256": "c1549c7ecf8c52b7dd31870fcfff4bc10e3e174ec4d5741964271933a08ee51b",
+      "source": "payloads/reconstructions/6e/6eb88a3320dbc6f6e1b994b86d9001da97fbe33b-gameview.cpp"
+    },
+    {
+      "originalBlob": "74b5208082ffe0051446bac78b0e1e3eacdaa584",
+      "path": "creatures/player.cpp",
+      "provenance": "Missing #150 player body inferred from earlier surviving donor and exact original Player.h/GameView caller: restored declared update() to refresh inventory/action maps and emit statsChanged. Remaining donor combat preserved; historical behavior not proven.",
+      "sha256": "75da6d199f773ae6f971796626112c01f18ac91371f486f4b9304049acce94d8",
+      "source": "payloads/reconstructions/74/74b5208082ffe0051446bac78b0e1e3eacdaa584-player.cpp"
+    },
+    {
+      "originalBlob": "9a8894c8b2ad2550e0b28afe00d7c7c75d05da54",
+      "path": "view/gamescene.cpp",
+      "provenance": "Missing scene body inferred from earlier recovered donor and exact #150 intact declarations; restored declared map accessor/StepTimer mouse movement and kept player/game initialization and arrow movement. Removed undeclared later tile-size setter. Original behavior not proven; startup evidence and gameplay parity reported separately.",
+      "sha256": "0ff54d69a1d66b67ec744c7e4890a6bd6e585d095bf3d823d3368927b2dd42de",
+      "source": "payloads/reconstructions/9a/9a8894c8b2ad2550e0b28afe00d7c7c75d05da54-gamescene.cpp"
+    },
+    {
+      "originalBlob": "a8de3873c648161f0ab8c80b2f9c67fabde5193b",
+      "path": "map/map.cpp",
+      "provenance": "Missing map body inferred from earlier recovered donor; adapted to exact #150 intact Map/MapObject declarations: no later TMX/entry-coordinate API, original JSON map/state and declared ownership preserved. Not exact original content; gameplay parity unverified. Missing ensureSize background generation is inferred as GrassTile (declared in original tiles.json) when the original default string is empty; preserves every explicitly authored road/mountain and player coordinate. Before this missing-body repair native observer reported real healthy player but no terrain at authored spawn (0,0,0). Historical terrain parity is unverified.",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "payloads/reconstructions/a8/a8de3873c648161f0ab8c80b2f9c67fabde5193b-map.cpp"
     }
   ],
   "schemaVersion": 1

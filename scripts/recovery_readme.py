@@ -11,8 +11,10 @@ import json
 from pathlib import Path
 import re
 import shlex
+import xml.etree.ElementTree as ET
 
 try:
+    from scripts import history_source_prep as source_prep
     from scripts.verify_history import (
         EDITOR_CHECKS,
         REQUIRED_CHECKS,
@@ -21,6 +23,7 @@ try:
         verifiedStartupMode,
     )
 except ModuleNotFoundError:
+    import history_source_prep as source_prep
     from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
 
 
@@ -41,6 +44,50 @@ def successfulCommand(command, name):
         raise VerificationError(f"Recovered README requires successful {name} evidence")
 
 
+def supplementalResourceAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    supplement = preparation.get("identity", {}).get("supplementalResources", {})
+    expected_inputs = {**source_prep.SUPPLEMENTAL_INPUTS, **source_prep.SUPPLEMENTAL_IMAGES}
+    boundary = "Game startup with supplemental Qt resource compatibility; original manifest unchanged"
+    if (
+        report.get("startupCompatibility") != "supplementalQtResources"
+        or report.get("startupSelection", {}).get("boundary") != boundary
+        or supplement.get("validationBoundary") != boundary
+        or supplement.get("path") != source_prep.SUPPLEMENTAL_QRC
+        or supplement.get("qmakeArgument") != source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT
+        or preparation.get("qmakeArguments") != [source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT]
+        or supplement.get("inputs") != expected_inputs
+        or supplement.get("provenance") != source_prep.SUPPLEMENTAL_PROVENANCE
+    ):
+        raise VerificationError("Supplemental resource evidence differs from the reviewed original inputs and boundary")
+    helper = Path(__file__).with_name("history_prepare_resources.py").read_bytes()
+    if hashlib.sha256(helper).hexdigest() != supplement.get("resourceReplaySha256"):
+        raise VerificationError("Portable supplemental resource helper differs from verified semantics")
+    resource = evidence_dir / "supplemental_images.qrc"
+    if not resource.is_file() or resource.is_symlink():
+        raise VerificationError("Supplemental resource attachment is absent or symlinked")
+    data = resource.read_bytes()
+    if hashlib.sha256(data).hexdigest() != supplement.get("sha256"):
+        raise VerificationError("Supplemental resource attachment differs from its verified output")
+    try:
+        document = ET.fromstring(data)
+    except ET.ParseError as error:
+        raise VerificationError("Supplemental resource attachment is not a valid manifest") from error
+    groups = document.findall("qresource")
+    if (
+        document.tag != "RCC"
+        or len(groups) != 1
+        or groups[0].attrib != {"prefix": "/"}
+        or any(node.tag != "file" or node.attrib for node in groups[0])
+        or len(groups[0]) != len(source_prep.SUPPLEMENTAL_IMAGES)
+        or {node.text for node in groups[0]} != set(source_prep.SUPPLEMENTAL_IMAGES)
+    ):
+        raise VerificationError("Supplemental resource aliases differ from the original image inputs")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == source_prep.SUPPLEMENTAL_QRC]
+    if len(outputs) != 1 or outputs[0].get("after", {}).get("sha256") != supplement["sha256"]:
+        raise VerificationError("Supplemental resource output lacks its exact preparation fingerprint")
+    return {"recovery/supplemental_images.qrc": data, "recovery/prepare_supplemental_resources.py": helper}
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -51,8 +98,11 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     names = [step.get("name") for step in steps]
     has_includes = "windowsIncludeSeparators" in names
     has_generator = "generator" in names
-    expected_names = (["windowsIncludeSeparators"] if has_includes else []) + (
-        ["interpreter", "generator"] if has_generator else []
+    has_resources = "supplementalResources" in names
+    expected_names = (
+        (["supplementalResources"] if has_resources else [])
+        + (["windowsIncludeSeparators"] if has_includes else [])
+        + (["interpreter", "generator"] if has_generator else [])
     )
     if not expected_names or names != expected_names:
         raise VerificationError("Recovered README requires recorded source preparation execution evidence")
@@ -68,7 +118,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     if not has_generator and (inputs or "interpreter" in identity):
         raise VerificationError("Include-only preparation cannot claim a historical Python generator")
     include_files = {}
-    attachments = {}
+    attachments = supplementalResourceAttachments(report, preparation, evidence_dir) if has_resources else {}
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -99,7 +149,12 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         if (
             path.is_absolute()
             or ".." in path.parts
-            or not (name == "gen/prop.h" or (name.startswith("src/") and name.endswith(".h")) or name in include_files)
+            or not (
+                name == "gen/prop.h"
+                or (name.startswith("src/") and name.endswith(".h"))
+                or name in include_files
+                or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
+            )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
         for stage in ("before", "after"):
@@ -176,6 +231,9 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     if not startup_path.is_file() or json.loads(startup_path.read_text(encoding="utf-8")) != startup:
         raise VerificationError("Copied startup report differs from the recorded native game result")
     preparation_files = sourcePreparationAttachments(report, evidence_dir)
+    resource_preparation = "recovery/supplemental_images.qrc" in preparation_files
+    if bool(report.get("startupCompatibility")) != resource_preparation:
+        raise VerificationError("Recovered startup compatibility lacks its explicit resource preparation evidence")
     generator_preparation = "generator" in [
         step.get("name") for step in report.get("sourcePreparation", {}).get("steps", [])
     ]
@@ -217,7 +275,13 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             description = str(entry.get("provenance", "Recorded reconstructed replacement")).replace("\n", " ")
             provenance.append(f"- `{path}`: {description}")
     compiler_flags = report.get("recipe", {}).get("qmakeArguments", [])
-    reviewed_flags = {"QMAKE_CXXFLAGS+=-include functional", "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"}
+    reviewed_flags = {
+        "QMAKE_CXXFLAGS+=-include functional",
+        "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider",
+        source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT,
+    }
+    if resource_preparation != (source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT in compiler_flags):
+        raise VerificationError("Supplemental resource qmake argument and attached preparation differ")
     if any(
         not isinstance(flag, str) or (flag not in reviewed_flags and not re.fullmatch(r"[A-Za-z0-9_+=./:-]+", flag))
         for flag in compiler_flags
@@ -228,7 +292,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
         prerequisites += f", with CPython {abi} development files and its matching Boost.Python library"
-    if include_preparation:
+    if include_preparation or resource_preparation:
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
         f"# Recovered {mode} snapshot",
@@ -256,6 +320,19 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             else []
         ),
         "",
+        *(
+            [
+                "Startup used supplemental Qt resource compatibility. The original manifest omitted 21 interaction",
+                "images required by the original animation loader. Verification generated a separate manifest from",
+                "the existing original images using the immediately following original commit's resource entries.",
+                "The original manifest, provider and configuration remain unchanged. Their exact hashes, the image",
+                "hashes, generated manifest and compatibility boundary are recorded in the attached preparation proof.",
+                "This result establishes startup with that recorded compatibility step.",
+                "",
+            ]
+            if resource_preparation
+            else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -288,6 +365,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         "Build from this snapshot's root directory:",
         "",
         "```sh",
+        *(["python3 recovery/prepare_supplemental_resources.py"] if resource_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

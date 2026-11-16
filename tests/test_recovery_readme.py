@@ -72,6 +72,102 @@ class RecoveryReadmeTest(unittest.TestCase):
         self.assertEqual("startup.png", metadata["smoke"]["startup"]["frame"]["path"])
         self.assertEqual("/original/build/startup.png", self.report["smoke"]["startup"]["frame"]["path"])
 
+    def resourceReport(self):
+        resource = (
+            '<RCC>\n    <qresource prefix="/">\n'
+            + "".join(f"        <file>{name}</file>\n" for name in sorted(history_source_prep.SUPPLEMENTAL_IMAGES))
+            + "    </qresource>\n</RCC>\n"
+        ).encode()
+        digest = hashlib.sha256(resource).hexdigest()
+        boundary = "Game startup with supplemental Qt resource compatibility; original manifest unchanged"
+        helper = Path(history_source_prep.__file__).with_name("history_prepare_resources.py").read_bytes()
+        output = {
+            "path": history_source_prep.SUPPLEMENTAL_QRC,
+            "before": None,
+            "after": {"kind": "file", "sha256": digest},
+            "purpose": "supplemental Qt resources",
+        }
+        preparation = {
+            "status": "success",
+            "outputs": [output],
+            "steps": [
+                {
+                    "name": "supplementalResources",
+                    "command": ["history_source_prep.py", "generate-supplemental-qrc"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                    "log": "/original/preparation.log",
+                }
+            ],
+            "qmakeArguments": [history_source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT],
+            "identity": {
+                "implementationSha256": "a" * 64,
+                "outputs": [output],
+                "supplementalResources": {
+                    "path": history_source_prep.SUPPLEMENTAL_QRC,
+                    "sha256": digest,
+                    "inputs": {**history_source_prep.SUPPLEMENTAL_INPUTS, **history_source_prep.SUPPLEMENTAL_IMAGES},
+                    "qmakeArgument": history_source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT,
+                    "provenance": history_source_prep.SUPPLEMENTAL_PROVENANCE,
+                    "validationBoundary": boundary,
+                    "resourceReplaySha256": hashlib.sha256(helper).hexdigest(),
+                },
+            },
+        }
+        self.report.update(
+            sourcePreparation=preparation,
+            startupCompatibility="supplementalQtResources",
+            startupSelection={"mode": "game", "boundary": boundary},
+        )
+        self.report["recipe"]["qmakeArguments"] = [history_source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT]
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Supplemental resources prepared from original images\n")
+        (self.evidence / "supplemental_images.qrc").write_bytes(resource)
+
+    def testResourceCompatibilityDocumentationIncludesPinnedReplayAndItsBoundary(self):
+        self.resourceReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        readme = files["README.md"].decode()
+        self.assertIn("Startup used supplemental Qt resource compatibility", readme)
+        self.assertIn("original manifest, provider and configuration remain unchanged", readme)
+        self.assertIn("python3 recovery/prepare_supplemental_resources.py", readme)
+        self.assertEqual(
+            (self.evidence / "supplemental_images.qrc").read_bytes(), files["recovery/supplemental_images.qrc"]
+        )
+        self.assertIn("recovery/prepare_supplemental_resources.py", files)
+        qmake = next(line for line in readme.splitlines() if line.startswith("qmake "))
+        self.assertIn(history_source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT, shlex.split(qmake))
+
+    def testResourceCompatibilityCannotLoseItsPinsBoundaryArgumentOrAttachment(self):
+        self.resourceReport()
+        original = copy.deepcopy(self.report)
+        for change in ["marker", "boundary", "image", "provenance", "output", "argument", "helper"]:
+            with self.subTest(change=change):
+                self.report = copy.deepcopy(original)
+                supplement = self.report["sourcePreparation"]["identity"]["supplementalResources"]
+                if change == "marker":
+                    self.report.pop("startupCompatibility")
+                elif change == "boundary":
+                    self.report["startupSelection"]["boundary"] = "Authored game startup"
+                elif change == "image":
+                    supplement["inputs"][next(iter(history_source_prep.SUPPLEMENTAL_IMAGES))] = "d" * 64
+                elif change == "provenance":
+                    supplement["provenance"] = {}
+                elif change == "output":
+                    self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "d" * 64
+                elif change == "argument":
+                    self.report["recipe"]["qmakeArguments"] = []
+                else:
+                    supplement["resourceReplaySha256"] = "d" * 64
+                (self.evidence / "source-preparation.json").write_text(json.dumps(self.report["sourcePreparation"]))
+                with self.assertRaises(VerificationError):
+                    snapshotDocumentation(self.report, self.evidence)
+        self.report = original
+        (self.evidence / "source-preparation.json").write_text(json.dumps(self.report["sourcePreparation"]))
+        (self.evidence / "supplemental_images.qrc").write_bytes(b"changed attachment")
+        with self.assertRaisesRegex(VerificationError, "verified output"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def editorReport(self):
         self.report["startupMode"] = "editor"
         self.report["startupSelection"] = {

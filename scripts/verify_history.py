@@ -661,7 +661,11 @@ def selectRecipe(recipes: list[dict], source_root: Path, selected: str | None) -
         matching = [recipe for recipe in recipes if str(recipe.get("pythonAbi", "none")) == abi]
     if len(matching) != 1:
         raise VerificationError(f"Expected one build recipe; found {len(matching)}")
-    return recipeForSource(matching[0], source_root)
+    recipe = recipeForSource(matching[0], source_root)
+    arguments = source_prep.preparationArguments(source_root)
+    if arguments:
+        recipe = {**recipe, "qmakeArguments": [*recipe.get("qmakeArguments", []), *arguments]}
+    return recipe
 
 
 def toolchainFingerprint(recipe: dict, environment: dict[str, str]) -> dict:
@@ -692,6 +696,14 @@ def exportEvidence(result: dict, output_root: Path) -> None:
     )
     evidence_dir = output_root / "evidence" / result["fingerprint"]
     evidence_dir.mkdir(parents=True, exist_ok=True)
+    supplemental = result.get("sourcePreparation", {}).get("identity", {}).get("supplementalResources")
+    if supplemental:
+        if supplemental.get("path") != source_prep.SUPPLEMENTAL_QRC:
+            raise VerificationError("Unexpected supplemental Qt resource output")
+        resource = Path(result["restoration"]["outputDir"]) / source_prep.SUPPLEMENTAL_QRC
+        if hashlib.sha256(resource.read_bytes()).hexdigest() != supplemental.get("sha256"):
+            raise VerificationError("Supplemental Qt resource output differs from its preparation proof")
+        shutil.copyfile(resource, evidence_dir / "supplemental_images.qrc")
     frame_path = Path(startup["frame"]["path"])
     if not frame_path.is_absolute():
         frame_path = artifact_root / frame_path
@@ -758,6 +770,10 @@ def verifySnapshot(
         result["sourcePreparation"] = preparation
         if preparation["status"] == "failed":
             raise VerificationError(preparation["reason"])
+        supplemental = preparation["identity"].get("supplementalResources")
+        if supplemental:
+            startup["boundary"] = supplemental["validationBoundary"]
+            result["startupCompatibility"] = "supplementalQtResources"
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")

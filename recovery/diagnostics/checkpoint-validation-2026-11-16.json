@@ -1,0 +1,29 @@
+{
+  "ci": {
+    "previousDeliveryWaiverApplies": false,
+    "status": "not-run-for-current-head-yet"
+  },
+  "date": "2026-11-16",
+  "focusedValidation": {
+    "command": "python3 unittest discovery: test_history*.py, test_recovery_readme.py, test_recovery_workflow.py",
+    "seconds": 8.144,
+    "status": "passed",
+    "testCount": 165
+  },
+  "mainAncestryConnectedCommitCount": 65,
+  "mainAncestryPendingAdditionalCommitCount": 44,
+  "modernGameValidation": {
+    "reason": "Only historical recovery tooling, inputs, evidence and documentation change; modern game source, resources, build files and submodule SHAs are unchanged.",
+    "status": "not-run"
+  },
+  "nativeValidation": {
+    "boundary": "Full historical compilation plus real isolated game/editor startup and rendered frame; historical gameplay parity is unverified.",
+    "compatibilityTreeCount": 1,
+    "editorTreeCount": 4,
+    "gameTreeCount": 116,
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+    "treeCount": 120
+  },
+  "publishedCommitCount": 109,
+  "schemaVersion": 1
+}

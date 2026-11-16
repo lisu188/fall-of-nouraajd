@@ -1,8 +1,9 @@
 # Historical recovery status
 
-Work in progress on recovering the BFG-damaged history. The tooling branch is
-`recovery/bfg-history` (draft PR #1653); follow-up increments are stacked on it.
-Existing branches, tags, and `main` are preserved.
+Work in progress on recovering the BFG-damaged history. Recovery tooling and the
+93-snapshot checkpoint were merged through PR #1660. PR #1659 connected the
+65 published recovered commits to main ancestry. The resumed checkpoint is on
+`codex/resume-bfg-recovery-20261116`. Existing branches and tags are preserved.
 
 ## Objective and acceptance
 
@@ -29,32 +30,47 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain has now revalidated the earlier checkpoint and accepted
-**81 commits / 81 trees** against the current restored inputs (catalog #1–#80 and
-#367). Each accepted tree compiled and started its real game under isolated Xvfb,
-with map/player, rendered frame and clean shutdown. Matching hashes, compiler logs,
-startup records and screenshots are retained in `recovery/evidence/<commit>/`.
-`recovery/progress.json` is the authoritative current count; it rejects evidence
-whose restored fingerprint or explicit toolchain image identity no longer matches.
+The pinned local toolchain currently accepts **120 commits / 120 trees** against the
+restored inputs: **116 game startups and 4 authored editor startups**. Each accepted
+tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
+under isolated Xvfb. Game startups also require a loaded map and healthy player;
+editor startups follow the surviving original editor entrypoint. Matching hashes,
+compiler logs, startup records and screenshots are retained in
+`recovery/evidence/<commit>/`. `recovery/progress.json` is authoritative and rejects
+evidence with a different restored fingerprint or toolchain image identity.
 
-**65 verified commits (#1–#64 plus #367) are published** under new refs:
+Revision #98 has an original resource-manifest omission: genuine configuration
+requests 21 interaction images that are already present in the same tree but absent
+from its unchanged manifest. A hash-pinned supplemental qrc is generated only in an
+isolated build copy. Its evidence and README explicitly identify this compatibility
+boundary; it must not be reported as unmodified authored startup. Compilation and
+startup evidence do not establish historical gameplay parity.
 
-- `recovery/bfg/2026-11-15/e1131adb2c47336c7dbe62dee0246216feb554eb`
-- `recovery/bfg/2026-11-15/108bdcbeda04cefeba5e1895f91df023cea8487f`
+**109 verified commits (#1–#108 plus #367) are published** under new refs:
 
-`recovery/mappings/2026-11-15-prefix.json` records original-to-recovered identities.
-A 14,437,423-byte portable bundle was independently cloned without alternates and
-passed strict fsck, topology/identity checks and documentation/frame verification.
-Its SHA-256 is `e5a86fa8f5d69a74fb2727ae8c49ba70a0eb18f1cb3bb9e2d590a6baac4d5ad6`;
-compact verification and publication records accompany the mapping. Existing
-branches/tags are unchanged. The continuation PR is draft #1658, stacked on the
-explicitly approved PR #1655 branch; it has not been merged.
+- `recovery/bfg/2026-11-16/998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0`
+- `recovery/bfg/2026-11-16/108bdcbeda04cefeba5e1895f91df023cea8487f`
+
+`recovery/mappings/2026-11-16-prefix.json` records original-to-recovered identities.
+All 65 previously published recovered commit IDs are unchanged. The 17,964,845-byte
+portable bundle passed an independent clone without alternates and strict fsck of
+2,113 reachable objects, plus parent-order, identity, original-file/mode and
+README/frame checks. Its SHA-256 is
+`bb630b209f4cce4ffd875a9c644c50fafc8a7271552a96e70bf97508e9758401`.
+Compact verification accompanies the mapping; the earlier refs/bundle remain intact.
+
+The first 65 recovered commits are already ancestors of main through merge commit
+`c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
+`9acf3570ced5f0dcd8a9192184e169172d52ac28`. The additional 44 commits are published;
+connecting their ancestry to main requires retaining the recovery branch's merge
+parent. Squash or rebase merging would discard that connection. The owner waived
+queued CI only for PRs #1659 and #1660; that waiver does not apply to this checkpoint.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
 Most later replacements remain unverified donor proposals. The chronological walk
-has passed #79 using a recorded Linux build-copy translation of the surviving
-Windows include path and an empty save-directory prerequisite. Reconstructions are derived from same-version headers,
+uses recorded Linux build-copy translations of surviving Windows include paths
+and an empty save-directory prerequisite where required. Reconstructions are derived from same-version headers,
 callers and configuration; underdetermined formulas, map transitions and layouts
 are labeled as inference. Compilation/startup do not prove historical gameplay parity.
 
@@ -138,7 +154,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 81 367 --verify  # stop at the first failure
+python3 scripts/history_workbench.py auto 108 367 --verify  # stop at the first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export

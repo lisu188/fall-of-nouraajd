@@ -444,6 +444,7 @@ def export() -> None:
                 "startup.log",
                 "source-preparation.json",
                 "source-preparation.log",
+                "supplemental_images.qrc",
             ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
@@ -504,6 +505,9 @@ def progress() -> None:
                 ),
                 "published": False,
             }
+            if report.get("startupCompatibility") == "supplementalQtResources":
+                item["startupCompatibility"] = "supplementalQtResources"
+                item["validation"] = "build-and-startup-with-resource-compatibility-passed"
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])
