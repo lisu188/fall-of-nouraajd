@@ -40,6 +40,7 @@ def selectedCode(source):
     tree = ast.parse(source)
     load = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "load")
     helpers = {
+        "optionalObjectProperty",
         "decodeData",
         "questId",
         "firstMatch",
@@ -119,6 +120,12 @@ def selectedCode(source):
 class SourceObject:
     def __init__(self, game, name="", **values):
         self.game, self.name, self.values, self.game_map = game, name, values, None
+
+    def __getattr__(self, name):
+        values = self.__dict__.get("values", {})
+        if name not in values:
+            raise AttributeError(name)
+        return values[name]
 
     def getGame(self):
         return self.game

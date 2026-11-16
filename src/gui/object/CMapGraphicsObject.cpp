@@ -329,8 +329,11 @@ void CMapGraphicsObject::submitOrder(std::shared_ptr<CGui> gui, TravelOrder orde
         return;
     pendingOrder = order;
     stopRequested = false;
-    if (travelling)
+    if (travelling) {
+        if (pendingSearch)
+            pendingSearch->request_stop();
         return;
+    }
     travelling = true;
     try {
         gui_async::spawn(ptr<CMapGraphicsObject>(), travelAsync(std::move(gui), false));
@@ -344,6 +347,8 @@ void CMapGraphicsObject::submitOrder(std::shared_ptr<CGui> gui, TravelOrder orde
 void CMapGraphicsObject::cancelTravel() {
     stopRequested = true;
     pendingOrder.reset();
+    if (pendingSearch)
+        pendingSearch->request_stop();
 }
 
 vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool reusePreview) {
@@ -370,6 +375,7 @@ vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool
         auto request = controller->getRequestSerial();
         const auto context = gui->getGame()->getContext();
         const auto generation = context->captureTransitionGeneration();
+        const auto bindingEpoch = gui->getGame()->getMapBindingEpoch();
         self->travelling = true;
         if (reusePreview)
             self->stopRequested = false;
@@ -377,6 +383,7 @@ vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool
         ScopeExit finish([self, gui, context, controller, player, &request] {
             self->travelling = false;
             self->pendingOrder.reset();
+            self->pendingSearch.reset();
             self->stopRequested = false;
             self->clearMotion();
             if (controller->getRequestSerial() == request)
@@ -387,6 +394,8 @@ vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool
         bool singleTurn = false;
         while (gui->isActive() && self->isAttachedToGui(gui) && !self->stopRequested &&
                gui->getGame()->getMap() == map && map->getPlayer() == player && player->isAlive() &&
+               player->getMap() == map && player->getGame() == gui->getGame() &&
+               gui->getGame()->getContext() == context && gui->getGame()->getMapBindingEpoch() == bindingEpoch &&
                player->getController() == controller && context->isTransitionGenerationCurrent(generation)) {
             bool wait = false;
             if (self->pendingOrder) {
@@ -394,8 +403,22 @@ vstd::task<void> CMapGraphicsObject::travelAsync(std::shared_ptr<CGui> gui, bool
                 singleTurn = order.singleTurn;
                 wait = order.wait;
                 const auto destination = order.relative ? player->getCoords() + order.destination : order.destination;
-                controller->setTarget(player, destination);
-                request = controller->getRequestSerial();
+                request = controller->getRequestSerial() + (controller->getMovementSuspended() ? 0 : 1);
+                self->pendingSearch.emplace();
+                co_await controller->setTargetAsync(player, destination, self->pendingSearch->get_token());
+                if (!vstd::event_loop<>::instance()->isMainThread())
+                    co_await vstd::post(vstd::event_loop<>::instance());
+                self->pendingSearch.reset();
+                if (!gui->isActive() || !self->isAttachedToGui(gui) || self->stopRequested ||
+                    gui->getGame()->getMap() != map || map->getPlayer() != player || !player->isAlive() ||
+                    player->getMap() != map || player->getGame() != gui->getGame() ||
+                    gui->getGame()->getContext() != context || gui->getGame()->getMapBindingEpoch() != bindingEpoch ||
+                    player->getController() != controller || !context->isTransitionGenerationCurrent(generation))
+                    break;
+                if (self->pendingOrder)
+                    continue;
+                if (controller->getRequestSerial() != request)
+                    break;
                 if (!wait && controller->isCompleted(player)) {
                     if (map->normalizeCoords(destination) != player->getCoords())
                         gui->notify("That destination is not reachable.");

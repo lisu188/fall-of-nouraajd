@@ -203,7 +203,7 @@
           "conditions": {
             "kills": [
               {
-                "label": "Angel",
+                "creature": "CATP",
                 "area": "AR0005"
               }
             ]
@@ -239,7 +239,7 @@
           "conditions": {
             "kills": [
               {
-                "label": "Angel",
+                "creature": "CATP",
                 "area": "AR0005"
               }
             ],
@@ -257,7 +257,7 @@
           "conditions": {
             "kills": [
               {
-                "label": "Angel",
+                "creature": "CATP",
                 "area": "AR0005"
               }
             ],

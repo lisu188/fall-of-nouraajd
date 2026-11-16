@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CNativeCombatFacts.h"
+#include "seven_suns_warning_fixture.h"
+#include "seven_suns_merchant_fixture.h"
 #include "core/CAsync.h"
 #include "core/CGameContext.h"
 #include "core/CGame.h"
@@ -32,8 +35,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTrigger.h"
 #include "handler/CObjectHandler.h"
 #include "gui/CGui.h"
+#include "gui/CTextManager.h"
 #include "gui/CMovementBatch.h"
 #include "gui/object/CMinimapGraphicsObject.h"
+#include "gui/object/CStatsGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CEffect.h"
@@ -58,6 +63,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <utility>
 #include <vector>
+
+namespace performance_guard {
+std::string combatInitiativeText(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &attacker,
+                                 const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                 const std::vector<std::shared_ptr<CCreature>> &allies);
+}
 
 namespace {
 
@@ -943,6 +954,142 @@ void test_bulk_inventory_property_notifications_are_count_bounded() {
                 "legacy inventoryChanged remains item-level until GUI refresh migrates to property notifications");
 }
 
+class StatCompositionProbe {
+  public:
+    StatCompositionProbe() { performance_guard::resetStatCompositionProbe(); }
+    ~StatCompositionProbe() { performance_guard::disableStatCompositionProbe(); }
+    std::size_t count() const { return performance_guard::statCompositionProbeCount(); }
+};
+
+void expectResourceSnapshot(const std::shared_ptr<CCreature> &creature) {
+    const int hpMax = creature->getHpMax();
+    const int hpRatio = creature->getHpRatio();
+    const int manaMax = creature->getManaMax();
+    const int manaRatio = creature->getManaRatio();
+    StatCompositionProbe probe;
+    const auto snapshot = CStatsGraphicsUtil::captureResources(creature);
+    expect_true(probe.count() == 1, "one resource snapshot must compose effective stats exactly once");
+    expect_true(snapshot.hp == creature->getHp() && snapshot.hpMax == hpMax && snapshot.hpRatio == hpRatio &&
+                    snapshot.mana == creature->getMana() && snapshot.manaMax == manaMax &&
+                    snapshot.manaRatio == manaRatio,
+                "resource snapshots must retain the public maxima and exact HP/mana ratio semantics");
+}
+
+void testResourceSnapshotsPreserveRatiosAndFreshStatOwnership() {
+    auto creature = std::make_shared<CCreature>();
+    creature->getBaseStats()->setMainStat("intelligence");
+    std::size_t cases = 0;
+    for (const int stamina : {-2, 0, 1, 10}) {
+        for (const int intelligence : {-2, 0, 1, 10}) {
+            creature->getBaseStats()->setStamina(stamina);
+            creature->getBaseStats()->setIntelligence(intelligence);
+            for (const int hp : {-20, -1, 0, 1, 35, 100}) {
+                for (const int mana : {-20, -1, 0, 1, 35, 100}) {
+                    creature->setHp(hp);
+                    creature->setMana(mana);
+                    expectResourceSnapshot(creature);
+                    ++cases;
+                }
+            }
+        }
+    }
+    for (int mode = 0; mode < 7; ++mode) {
+        auto fixture = stat_composition_fixture::make(mode);
+        fixture.creature->setHp(9);
+        fixture.creature->setMana(13);
+        expectResourceSnapshot(fixture.creature);
+        for (const auto &source : fixture.sources) {
+            source->setStamina(source->getStamina() + 2);
+            source->setIntelligence(source->getIntelligence() + 3);
+            source->setStrength(source->getStrength() + 4);
+        }
+        expectResourceSnapshot(fixture.creature);
+        auto first = fixture.creature->getStats();
+        auto second = fixture.creature->getStats();
+        const auto expected = second->modifier();
+        first->setStamina(first->getStamina() + 100);
+        expect_true(first != second && second->modifier() == expected &&
+                        fixture.creature->getStats()->modifier() == expected,
+                    "public stat reads must remain fresh mutable values after snapshot rendering");
+    }
+    StatCompositionProbe probe;
+    const auto empty = CStatsGraphicsUtil::captureResources(nullptr);
+    expect_true(probe.count() == 0 && empty.hp == 0 && empty.mana == 0,
+                "a missing resource actor must not compose stats");
+    std::cout << "resource snapshot guard: ratioCases=" << cases
+              << " compositionModes=7 readsPerSnapshot=1 nestedMutationAndOwnership=preserved\n";
+}
+
+void testStatsHudComposesOncePerDraw() {
+    constexpr std::size_t frames = 64;
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(make_actor_stats());
+    creature->setHp(35);
+    creature->setMana(28);
+    StatCompositionProbe probe;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        CStatsGraphicsUtil::drawStats(gui, creature, 0, 0, 240, 120, true, false);
+    }
+    expect_true(probe.count() == frames,
+                "numeric HP/mana HUD draws must compose once per frame, not once per maximum or ratio");
+    std::cout << "stats HUD work: frames=" << frames << " compositions=" << probe.count() << " budget=" << frames
+              << " legacy=320\n";
+}
+
+void testInitiativeSnapshotsComposeOncePerActiveParticipant() {
+    constexpr std::size_t passes = 64;
+    auto fixture = make_open_map(1, 1);
+    const auto actor = [&](const std::string &name, int agility) {
+        auto result = make_actor(fixture, name, ZERO, "");
+        result->setLabel(name);
+        result->getBaseStats()->setAgility(agility);
+        add_object(fixture, result);
+        return result;
+    };
+    auto hero = actor("Hero", 10);
+    auto alpha = actor("Alpha", 10);
+    auto zulu = actor("Zulu", 10);
+    auto fast = actor("Fast", 20);
+    auto dead = actor("Dead", 50);
+    dead->setHp(0);
+    auto detached = make_actor(fixture, "Detached", ZERO, "");
+    const std::vector<std::shared_ptr<CCreature>> opponents{zulu, dead, nullptr, alpha, detached};
+    const std::vector<std::shared_ptr<CCreature>> allies{fast};
+    std::size_t reads = 0;
+    {
+        StatCompositionProbe probe;
+        for (std::size_t pass = 0; pass < passes; ++pass) {
+            const auto text = performance_guard::combatInitiativeText(fixture.map, hero, opponents, allies);
+            expect_true(text == "Initiative: Fast (41) > Hero (21) > Alpha (21) > Zulu (21)",
+                        "initiative snapshots must preserve scores, attacker tie priority and name tie ordering");
+        }
+        reads = probe.count();
+    }
+    expect_true(reads == passes * 4, "initiative sorting and formatting must share one score per active actor");
+    zulu->getBaseStats()->setAgility(30);
+    {
+        StatCompositionProbe probe;
+        expect_true(performance_guard::combatInitiativeText(fixture.map, hero, opponents, allies) ==
+                            "Initiative: Zulu (61) > Fast (41) > Hero (21) > Alpha (21)" &&
+                        probe.count() == 4,
+                    "each new initiative snapshot must observe nested stat changes immediately");
+    }
+    fast->setHp(0);
+    {
+        StatCompositionProbe probe;
+        expect_true(performance_guard::combatInitiativeText(fixture.map, hero, opponents, allies) ==
+                            "Initiative: Zulu (61) > Hero (21) > Alpha (21)" &&
+                        probe.count() == 3,
+                    "new initiative snapshots must exclude participants that died since the previous pass");
+    }
+    std::cout << "initiative work: passes=" << passes << " activeActors=4 compositions=" << reads
+              << " budget=" << passes * 4 << "\n";
+    fixture.game->getContext()->shutdown();
+}
+
 void test_stat_composition_eliminates_repeated_reflective_increments() {
     using namespace stat_composition_fixture;
     constexpr std::size_t reads_per_fixture = 32;
@@ -1062,6 +1209,196 @@ class HealingSelectionProbeScope {
     HealingSelectionProbeScope &operator=(const HealingSelectionProbeScope &) = delete;
 };
 
+void testOpponentEffectCreditSelectionWorkIsBounded() {
+    constexpr std::size_t actionCount = 32;
+    constexpr std::size_t effectCount = 64;
+    constexpr std::size_t turns = 64;
+    class EffectCreditActionProbe : public CInteraction {
+      public:
+        std::size_t calls = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+        bool configureEffect(std::shared_ptr<CEffect>) override { return false; }
+    };
+    class SelectionProbeScope {
+      public:
+        SelectionProbeScope() { performance_guard::resetInteractionSelectionProbe(); }
+        ~SelectionProbeScope() { performance_guard::disableInteractionSelectionProbe(); }
+    };
+    auto fixture = make_open_map(2, 1);
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    fixture.game->getObjectHandler()->registerType("CStats", [] { return std::make_shared<CStats>(); });
+    fixture.game->getObjectHandler()->registerType("CEffect", [] { return std::make_shared<CEffect>(); });
+    auto actor = make_actor(fixture, "effectCreditActor", Coords(0, 0, 0), "effectCreditOpponent");
+    auto opponent = make_actor(fixture, "effectCreditOpponent", Coords(1, 0, 0), "effectCreditActor");
+    for (const auto &creature : {actor, opponent}) {
+        auto stats = std::make_shared<CStats>();
+        stats->setMainStat("intelligence");
+        stats->setIntelligence(100);
+        stats->setStamina(10);
+        stats->setDmgMin(10);
+        stats->setDmgMax(10);
+        creature->setBaseStats(stats);
+        creature->setHp(creature->getHpMax());
+        creature->setMana(creature->getManaMax());
+    }
+    for (std::size_t index = 0; index < effectCount; ++index) {
+        auto effect = std::make_shared<CEffect>();
+        effect->setGame(fixture.game);
+        effect->setTypeId("activeEffect" + std::to_string(index));
+        effect->setDuration(4);
+        opponent->addEffect(effect);
+    }
+    std::vector<std::shared_ptr<EffectCreditActionProbe>> probes;
+    for (std::size_t index = 0; index < actionCount; ++index) {
+        auto effect = std::make_shared<CEffect>();
+        effect->setGame(fixture.game);
+        effect->setTypeId((index < actionCount / 2 ? "activeEffect" : "freshEffect") + std::to_string(index));
+        effect->setDuration(4);
+        auto action = std::make_shared<EffectCreditActionProbe>();
+        action->setGame(fixture.game);
+        action->setTypeId("creditAction" + std::to_string(index));
+        action->setEffect(effect);
+        actor->addAction(action);
+        probes.push_back(action);
+    }
+    const auto effects = opponent->getEffects();
+    const auto actions = actor->getInteractions();
+    const auto objects = fixture.map->getObjects();
+    const auto mana = actor->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    performance_guard::InteractionSelectionWork legacyWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "default legacy ranking must retain a usable action");
+        legacyWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t legacyCalls = 0;
+    for (const auto &action : probes) {
+        legacyCalls += action->calls;
+        action->calls = 0;
+    }
+    expect_true(legacyWork.targetSnapshots == 0 && legacyWork.targetEffectEntries == 0 &&
+                    legacyWork.admissionLookups == 0 &&
+                    legacyWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && legacyCalls == turns,
+                "default legacy ranking must preserve a zero target-admission budget and its ordinary action work");
+    expect_true(opponent->getEffects() == effects && actor->getInteractions() == actions &&
+                    fixture.map->getObjects() == objects && actor->getMana() == mana,
+                "default policy work must preserve native effects/actions/registry and owned mana");
+    controller->setBoolProperty("discountKnownTargetEffectDuration", true);
+    performance_guard::InteractionSelectionWork work;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "fixed offensive selection must retain a usable action");
+        work = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t calls = 0;
+    for (std::size_t index = 0; index < probes.size(); ++index) {
+        calls += probes[index]->calls;
+        if (index < actionCount / 2)
+            expect_true(probes[index]->calls == 0, "rejected effects must not displace fresh effect credit");
+    }
+    expect_true(work.targetSnapshots == turns && work.targetEffectEntries == effectCount * turns &&
+                    work.weakeningEvaluations == 2 * (actionCount - 1) * turns &&
+                    work.admissionLookups == work.weakeningEvaluations && calls == turns,
+                "offensive work must take one target snapshot, visit each effect once and rank candidates linearly");
+    expect_true(opponent->getEffects() == effects && actor->getInteractions() == actions &&
+                    fixture.map->getObjects() == objects && actor->getMana() == mana,
+                "the counting-only selection guard must not grow effects/actions/registry or spend mana");
+    actor->setActions({});
+    std::vector<std::shared_ptr<EffectCreditActionProbe>> directProbes;
+    for (std::size_t index = 0; index < actionCount; ++index) {
+        auto action = std::make_shared<EffectCreditActionProbe>();
+        action->setGame(fixture.game);
+        action->setTypeId("directAction" + std::to_string(index));
+        actor->addAction(action);
+        directProbes.push_back(action);
+    }
+    performance_guard::InteractionSelectionWork directWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "pure direct actions must remain usable");
+        directWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t directCalls = 0;
+    for (const auto &action : directProbes)
+        directCalls += action->calls;
+    expect_true(directWork.targetSnapshots == 0 && directWork.targetEffectEntries == 0 &&
+                    directWork.admissionLookups == 0 &&
+                    directWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && directCalls == turns,
+                "pure direct actions must preserve a zero target-effect work budget");
+    actor->setActions({});
+    std::vector<std::shared_ptr<EffectCreditActionProbe>> anonymousProbes;
+    for (std::size_t index = 0; index < actionCount; ++index) {
+        auto effect = std::make_shared<CEffect>();
+        effect->setGame(fixture.game);
+        effect->setName("anonymousEffect" + std::to_string(index));
+        effect->setDuration(4);
+        auto action = std::make_shared<EffectCreditActionProbe>();
+        action->setGame(fixture.game);
+        action->setTypeId("anonymousAction" + std::to_string(index));
+        action->setEffect(effect);
+        actor->addAction(action);
+        anonymousProbes.push_back(action);
+    }
+    performance_guard::InteractionSelectionWork anonymousWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "anonymous effects must retain their duration estimate");
+        anonymousWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    std::size_t anonymousCalls = 0;
+    for (const auto &action : anonymousProbes)
+        anonymousCalls += action->calls;
+    expect_true(anonymousWork.targetSnapshots == 0 && anonymousWork.targetEffectEntries == 0 &&
+                    anonymousWork.admissionLookups == 0 &&
+                    anonymousWork.weakeningEvaluations == 2 * (actionCount - 1) * turns && anonymousCalls == turns,
+                "anonymous templates must not build target keys from identities replaced by actual cloning");
+    actor->setActions({});
+    auto selfEffect = std::make_shared<CEffect>();
+    selfEffect->setGame(fixture.game);
+    selfEffect->setTypeId("selfEffect");
+    selfEffect->setDuration(4);
+    selfEffect->addTag(CTag::Buff);
+    auto selfAction = std::make_shared<EffectCreditActionProbe>();
+    selfAction->setGame(fixture.game);
+    selfAction->setTypeId("selfAction");
+    selfAction->setEffect(selfEffect);
+    actor->addAction(selfAction);
+    performance_guard::InteractionSelectionWork selfWork;
+    {
+        SelectionProbeScope probe;
+        for (std::size_t turn = 0; turn < turns; ++turn)
+            expect_true(controller->control(actor, opponent), "self-only actions must preserve their first pass");
+        selfWork = performance_guard::interactionSelectionProbeCounts();
+    }
+    expect_true(selfWork.targetSnapshots == 0 && selfWork.targetEffectEntries == 0 && selfWork.admissionLookups == 0 &&
+                    selfWork.weakeningEvaluations == 0 && selfAction->calls == turns,
+                "self-only action turns must never prepare opponent effect admission keys");
+    const auto disabled = performance_guard::interactionSelectionProbeCounts();
+    expect_true(disabled.targetSnapshots == 0 && disabled.targetEffectEntries == 0 &&
+                    disabled.weakeningEvaluations == 0 && disabled.admissionLookups == 0,
+                "the scoped selection probe must release all optional counting state");
+    std::cout << "opponent effect credit guard: actions=" << actionCount << " effects=" << effectCount
+              << " turns=" << turns << " snapshots=" << work.targetSnapshots
+              << " effectVisits=" << work.targetEffectEntries << " effectBudget=" << effectCount * turns
+              << " rankCalls=" << work.weakeningEvaluations << " rankBudget=" << 2 * (actionCount - 1) * turns
+              << " lookups=" << work.admissionLookups << " actionCallbacks=" << calls << " callbackBudget=" << turns
+              << " pureTargetSnapshots=" << directWork.targetSnapshots
+              << " anonymousTargetSnapshots=" << anonymousWork.targetSnapshots
+              << " selfTargetSnapshots=" << selfWork.targetSnapshots
+              << " legacyTargetSnapshots=" << legacyWork.targetSnapshots
+              << " legacyTargetLookups=" << legacyWork.admissionLookups << " noEffectKeyBudget=0\n";
+    opponent->setEffects({});
+    expect_true(opponent->getEffects().empty() && fixture.game->getContext()->getEffectOwnerCount() == 0,
+                "public cleanup must release opponent effects and their context ownership");
+    fixture.game->getContext()->shutdown();
+}
+
 void testHealingItemSelectionWorkAndCallbacksAreBounded() {
     constexpr std::size_t inventoryCount = 96;
     constexpr std::size_t turns = 64;
@@ -1146,6 +1483,79 @@ void testHealingItemSelectionWorkAndCallbacksAreBounded() {
     std::cout << "healing item selection guard: inventory=" << inventoryCount << " turns=" << turns
               << " visits=" << visits << " visit budget=" << inventoryCount * turns << " item callbacks=" << itemCalls
               << " callback budget=" << turns << " attack callbacks=" << attack->calls
+              << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
+}
+
+void testEqualPowerHealingTieSelectionKeepsFixedWork() {
+    constexpr std::size_t inventoryCount = 96;
+    constexpr std::size_t turns = 64;
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "healingTieActor", Coords(0, 0, 0), "healingTieOpponent");
+    auto opponent = make_actor(fixture, "healingTieOpponent", Coords(1, 0, 0), "healingTieActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    auto actorStats = std::make_shared<CStats>();
+    actorStats->setMainStat("intelligence");
+    actorStats->setStamina(10);
+    actor->setBaseStats(actorStats);
+    actor->setHp(35);
+    auto opponentStats = std::make_shared<CStats>();
+    opponentStats->setMainStat("intelligence");
+    opponentStats->setStamina(10);
+    opponentStats->setDmgMin(16);
+    opponentStats->setDmgMax(16);
+    opponent->setBaseStats(opponentStats);
+    opponent->setHp(70);
+    auto attack = std::make_shared<CombatActionCountProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("tieAttack");
+    attack->setTypeId("Attack");
+    actor->addAction(attack);
+    std::vector<std::shared_ptr<HealingSelectionPotionProbe>> probes;
+    std::shared_ptr<HealingSelectionPotionProbe> preferred;
+    for (std::size_t index = 0; index < inventoryCount; ++index) {
+        auto item = std::make_shared<HealingSelectionPotionProbe>();
+        item->setGame(fixture.game);
+        item->setName("healingTieItem" + std::to_string(index));
+        item->setTypeId(index % 2 == 0 ? "aConfiguredHeal" : "bConfiguredHeal");
+        item->setPower(2);
+        if (index < 64)
+            item->addTag(CTag::Heal);
+        actor->addItem(item);
+        probes.push_back(item);
+        if (index == 0)
+            preferred = item;
+    }
+    const auto inventory = actor->getItems();
+    const auto actions = actor->getInteractions();
+    const auto effects = actor->getEffects();
+    const auto objects = fixture.map->getObjects();
+    const auto epoch = fixture.map->getRoutingEpoch();
+    const int mana = actor->getMana();
+    auto controller = std::make_shared<CMonsterFightController>();
+    HealingSelectionProbeScope selection;
+    int renderedFrames = 0;
+    auto frameObserver = vstd::event_loop<>::instance()->connectFrameCallback([&](int) { ++renderedFrames; });
+    for (std::size_t turn = 0; turn < turns; ++turn) {
+        expect_true(controller->control(actor, opponent), "equal-power fixed workload must take one healing turn");
+        expect_true(preferred->calls == turn + 1, "each tie turn must invoke the same semantic winner once");
+    }
+    const auto visits = performance_guard::healingItemSelectionProbeCount();
+    std::size_t callbacks = 0;
+    for (const auto &item : probes) {
+        callbacks += item->calls;
+        expect_true(item->calls == (item == preferred ? turns : 0), "unselected equal-power items must stay unused");
+    }
+    expect_true(visits == inventoryCount * turns && callbacks == turns && attack->calls == 0 && renderedFrames == 0,
+                "tie selection must retain one inventory scan, one callback and zero attack/render work per turn");
+    expect_true(actor->getItems() == inventory && actor->getInteractions() == actions &&
+                    actor->getEffects() == effects && fixture.map->getObjects() == objects &&
+                    fixture.map->getRoutingEpoch() == epoch && actor->getHp() == 35 && actor->getMana() == mana &&
+                    opponent->getHp() == 70,
+                "fixed healing ties must not mutate ownership, actions, effects, navigation or resource workload");
+    std::cout << "equal-power healing tie guard: inventory=" << inventoryCount << " turns=" << turns
+              << " visits=" << visits << " visitBudget=" << inventoryCount * turns << " callbacks=" << callbacks
+              << " callbackBudget=" << turns << " attackCallbacks=" << attack->calls
               << " renderedFrames=" << renderedFrames << " frameBudget=0\n";
 }
 
@@ -1723,6 +2133,62 @@ void testAssignedPlayerQueriesAreMutationAndCallbackBounded() {
     fixture.game->getContext()->shutdown();
 }
 
+void testEmptyTextMetricsKeepZeroTextureWork() {
+    constexpr int EMPTY_REQUESTS = 1024;
+    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "dummy", SDL_HINT_OVERRIDE);
+    SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
+    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0)
+        expect_true(SDL_Init(SDL_INIT_VIDEO) == 0, "empty text guard must initialize isolated SDL video");
+    const auto driver = SDL_GetCurrentVideoDriver();
+    const bool isolated = driver && std::string(driver) == "dummy";
+    expect_true(isolated, "empty text guard must use the dummy video driver");
+    if (!isolated)
+        return;
+    auto gui = std::make_shared<CGui>();
+    auto renderer = gui->getRenderer();
+    SDL_RendererInfo rendererInfo{};
+    const bool software = renderer && SDL_GetRendererInfo(renderer, &rendererInfo) == 0 &&
+                          (rendererInfo.flags & SDL_RENDERER_SOFTWARE) != 0;
+    expect_true(software, "empty text guard needs a real software renderer");
+    if (!software)
+        return;
+    auto manager = std::make_shared<CTextManager>(gui);
+    const std::string sentinel = "empty text work sentinel";
+    const auto sentinelSize = manager->getTextureSize(sentinel);
+    const bool fontReady = sentinelSize.first > 0 && sentinelSize.second > 0 && manager->getTextureLoadCount() == 1 &&
+                           manager->getCachedFontCount() > 0;
+    expect_true(fontReady, "empty text guard must first rasterize a real nonempty font texture");
+    if (!fontReady)
+        return;
+    const auto loads = manager->getTextureLoadCount();
+    const auto entries = manager->getCachedTextureCount();
+    const auto fonts = manager->getCachedFontCount();
+    const auto copies = gui->getRenderContext().getStats().attemptedCopies;
+    const char *const roles[] = {"body", "title", "heading", "dialogue", "small"};
+    int nonzeroSizes = 0;
+    SDL_ClearError();
+    for (int index = 0; index < EMPTY_REQUESTS; ++index) {
+        if (manager->measureText("", index, roles[index % 5]) != std::make_pair(0, 0))
+            ++nonzeroSizes;
+    }
+    const auto emptyLoads = manager->getTextureLoadCount() - loads;
+    const std::string error = SDL_GetError();
+    std::cout << "empty text work guard: requests=" << EMPTY_REQUESTS << " texture-loads=" << emptyLoads
+              << " texture-load-budget=0 cache-before=" << entries
+              << " cache-after=" << manager->getCachedTextureCount() << " font-before=" << fonts
+              << " font-after=" << manager->getCachedFontCount()
+              << " copy-delta=" << gui->getRenderContext().getStats().attemptedCopies - copies
+              << " copy-budget=0 sdl-error=[" << error << "]\n";
+    expect_true(nonzeroSizes == 0, "1024 distinct empty metric keys must all retain zero native dimensions");
+    expect_true(emptyLoads == 0 && manager->getCachedTextureCount() == entries &&
+                    manager->getCachedFontCount() == fonts,
+                "1024 empty requests must add zero texture loads, cache entries, evictions or font entries");
+    expect_true(gui->getRenderContext().getStats().attemptedCopies == copies && error.empty(),
+                "1024 empty requests must add zero render copies or SDL errors");
+    expect_true(manager->getTextureSize(sentinel) == sentinelSize && manager->getTextureLoadCount() == loads,
+                "fixed empty workload must preserve the existing nonempty texture and its cache hit");
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -1848,6 +2314,226 @@ void testEquipmentTailChecksKeepFixedWork() {
               << " factories=" << factories << "\n";
     context->shutdown();
 }
+void testMapTileTraversalProbeCountsActualSnapshotsAndVisits() {
+    constexpr int WIDTH = 4;
+    constexpr int HEIGHT = 3;
+    constexpr std::size_t TILES = WIDTH * HEIGHT;
+    auto fixture = make_open_map(WIDTH, HEIGHT);
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    performance_guard::resetMapTileTraversalProbe();
+    performance_guard::disableMapTileTraversalProbe();
+    const auto disabled_snapshot = fixture.map->getTiles();
+    std::set<std::shared_ptr<CTile>> disabled_visits;
+    fixture.map->forTiles([&](auto tile) { disabled_visits.insert(tile); });
+    const auto disabled = performance_guard::mapTileTraversalWork();
+    expect_true(disabled_snapshot.size() == TILES && disabled_visits == disabled_snapshot && disabled.snapshots == 0 &&
+                    disabled.snapshotReferences == 0 && disabled.directVisits == 0,
+                "disabled tile probes preserve the real snapshot and traversal without recording work");
+
+    performance_guard::resetMapTileTraversalProbe();
+    const auto snapshot = fixture.map->getTiles();
+    const auto repeated = fixture.map->getTiles();
+    std::set<std::shared_ptr<CTile>> visits;
+    fixture.map->forTiles([&](auto tile) { visits.insert(tile); });
+    int filtered_visits = 0;
+    fixture.map->forTiles([&](auto) { ++filtered_visits; }, [](auto tile) { return tile->getCoords().x == 0; });
+    const auto enabled = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(snapshot == disabled_snapshot && repeated == snapshot && visits == snapshot &&
+                    filtered_visits == HEIGHT && enabled.snapshots == 2 && enabled.snapshotReferences == TILES * 2 &&
+                    enabled.directVisits == TILES + HEIGHT,
+                "enabled probes count actual snapshot references and accepted direct callback visits exactly");
+
+    fixture.map->getTiles();
+    fixture.map->forTiles([](auto) {});
+    const auto stopped = performance_guard::mapTileTraversalWork();
+    expect_true(stopped.snapshots == enabled.snapshots && stopped.snapshotReferences == enabled.snapshotReferences &&
+                    stopped.directVisits == enabled.directVisits,
+                "disabled probes stop recording subsequent real tile work");
+    performance_guard::resetMapTileTraversalProbe();
+    const auto reset = performance_guard::mapTileTraversalWork();
+    auto empty_map = std::make_shared<CMap>();
+    const auto empty_snapshot = empty_map->getTiles();
+    empty_map->forTiles([](auto) {});
+    const auto empty = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    expect_true(reset.snapshots == 0 && reset.snapshotReferences == 0 && reset.directVisits == 0 &&
+                    empty_snapshot.empty() && empty.snapshots == 1 && empty.snapshotReferences == 0 &&
+                    empty.directVisits == 0,
+                "reset clears previous work and even an empty snapshot counts as a real request");
+    expect_true(fixture.map->getNavigationRevision() == revision && fixture.map->getTurn() == turn &&
+                    fixture.game->getMapBindingEpoch() == epoch,
+                "tile instrumentation adds no navigation, turn or map-binding publication");
+    std::cout << "tile traversal probe guard: tiles=" << TILES << " snapshots=" << enabled.snapshots
+              << " references=" << enabled.snapshotReferences << " directVisits=" << enabled.directVisits << "\n";
+    fixture.game->getContext()->shutdown();
+}
+
+void testNativeCombatFactWorkRemainsIndexedAndBounded() {
+    auto fixture = make_open_map(8, 8);
+    auto attacker = make_actor(fixture, "unitFactAttacker", Coords(0, 0, 0), "");
+    auto victim = make_actor(fixture, "unitFactVictim", Coords(1, 0, 0), "");
+    add_object(fixture, attacker);
+    add_object(fixture, victim);
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(fixture.game);
+    constexpr int PASSES = 128;
+    constexpr int LISTENERS = 8;
+    int matching = 0;
+    int unrelated = 0;
+    for (int i = 0; i < LISTENERS; ++i) {
+        for (const auto &kind : {"onCombatAttempt", "onCombatRoll", "onCombatPacket"}) {
+            auto trigger = std::make_shared<CCustomTrigger>(victim->getName(), kind, [&](auto, auto) { ++matching; });
+            trigger->setName(std::string("nativeFactGuard_") + kind + "_" + std::to_string(i));
+            fixture.map->getEventHandler()->registerTrigger(trigger);
+        }
+    }
+    // Unrelated listeners cannot turn the producer into a whole-map broadcast.
+    for (int i = 0; i < 1024; ++i) {
+        fixture.map->getEventHandler()->registerTrigger(std::make_shared<CCustomTrigger>(
+            "otherActor" + std::to_string(i), "onCombatPacket", [&](auto, auto) { ++unrelated; }));
+    }
+    int registered = 0;
+    for (const auto &trigger : fixture.map->getEventHandler()->getTriggers()) {
+        if (trigger->getObject() == victim->getName() &&
+            (trigger->getEvent() == "onCombatAttempt" || trigger->getEvent() == "onCombatRoll" ||
+             trigger->getEvent() == "onCombatPacket")) {
+            ++registered;
+        }
+    }
+    expect_true(registered == LISTENERS * 3, "all 24 differently named native listeners must really be registered");
+    const auto generation = fixture.game->getContext()->captureTransitionGeneration();
+    const auto epoch = fixture.game->getMapBindingEpoch();
+    const auto revision = fixture.map->getNavigationRevision();
+    const auto turn = fixture.map->getTurn();
+    const auto registry = fixture.map->getObjects();
+    DamageValue damage;
+    damage.normal = 7;
+    const auto run = [&] {
+        for (int i = 0; i < PASSES; ++i) {
+            CNativeCombatScope operation(fixture.game);
+            CNativeCombatFacts facts(attacker, victim);
+            facts.attempt(action);
+            facts.roll(i % 2 == 0, 0);
+            facts.packet(damage, 10, 10);
+            operation.finish();
+        }
+    };
+    run();
+    expect_true(matching == 0 && unrelated == 0, "disabled maps have a zero combat callback budget");
+    fixture.map->setBoolProperty("nativeCombatFacts", true);
+    performance_guard::resetMapTileTraversalProbe();
+    performance_guard::resetMapCoordinateLookupProbe();
+    run();
+    const auto tile_work = performance_guard::mapTileTraversalWork();
+    const auto coordinate_work = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapTileTraversalProbe();
+    performance_guard::disableMapCoordinateLookupProbe();
+    expect_true(matching == PASSES * LISTENERS * 3 && unrelated == 0,
+                "three facts per producer invoke only the eight indexed listeners for this victim");
+    expect_true(tile_work.snapshots == 0 && tile_work.snapshotReferences == 0 && tile_work.directVisits == 0 &&
+                    coordinate_work == 0,
+                "fact publication performs no tile traversal or spatial scan");
+    expect_true(fixture.map->getObjects() == registry && fixture.map->getNavigationRevision() == revision &&
+                    fixture.map->getTurn() == turn && fixture.game->getMapBindingEpoch() == epoch &&
+                    fixture.game->getContext()->isTransitionGenerationCurrent(generation),
+                "observation cannot advance the map, alter ownership or invalidate navigation");
+    std::cout << "native combat facts guard: passes=" << PASSES << " listeners=" << LISTENERS
+              << " callbacks=" << matching << " unrelated=" << unrelated << " tiles=" << tile_work.directVisits
+              << " coordinateProbes=" << coordinate_work << "\n";
+    fixture.game->getContext()->shutdown();
+}
+
+// Copyright (C) 2026 Andrzej Lis
+// SPDX-License-Identifier: GPL-3.0-or-later
+void testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded() {
+    SevenSunsWarningFixture fixture;
+    const auto objectCount = fixture.map->getObjects().size();
+    const auto triggerCount = fixture.map->getTriggers().size();
+    const auto effectOwners = fixture.game->getContext()->getEffectOwnerCount();
+    const auto experience = fixture.player->getExp();
+    const auto gold = fixture.player->getGold();
+    std::size_t callerChecks = 0;
+    auto session = fixture.begin([&] { ++callerChecks; });
+    expect_true(session != nullptr, "fixed warning workload must admit its exact native actor");
+    if (!session)
+        return;
+    SevenSunsWarningFixture::finish(*session);
+    session->close();
+    session.reset();
+    const auto receipt = fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey);
+    const auto journal = fixture.journal();
+    for (int pass = 0; pass < 128; ++pass) {
+        auto replay = fixture.begin([&] { ++callerChecks; });
+        expect_true(replay && replay->view().at("status").get<std::string>() == "retired",
+                    "settled replay is a bounded acknowledgement, never another source action");
+        if (replay)
+            replay->close();
+    }
+    constexpr std::size_t CallerCheckBudget = 16384;
+    expect_true(fixture.actorFactories == 0 && fixture.itemFactories == 0 && fixture.questFactories == 1 &&
+                    fixture.destroyCalls == 0 && fixture.map->getObjects().size() + 1 == objectCount &&
+                    fixture.map->getTriggers().size() == triggerCount &&
+                    fixture.game->getContext()->getEffectOwnerCount() == effectOwners &&
+                    fixture.player->getExp() == experience && fixture.player->getGold() == gold &&
+                    fixture.journal() == journal && fixture.player->getQuests().size() == 1 && !receipt.empty() &&
+                    receipt.size() <= 4096 &&
+                    fixture.map->getStringProperty(SevenSunsWarningFixture::StateKey) == receipt && callerChecks > 0 &&
+                    callerChecks <= CallerCheckBudget && fixture.stockAndEffectIntact() &&
+                    fixture.protectedActorsIntact() && fixture.map->tryBeginSaveSnapshot().has_value(),
+                "three source edges plus128 replays preserve bounded registry/trigger/receipt/owner/quest work");
+    std::cout << "Seven Suns warning guard: edges=3 replays=128 actorFactories=" << fixture.actorFactories
+              << " itemFactories=" << fixture.itemFactories << " questFactories=" << fixture.questFactories
+              << " triggerGrowth=0 receiptBytes=" << receipt.size()
+              << " receiptBudget=4096 callerChecks=" << callerChecks << " callerCheckBudget=" << CallerCheckBudget
+              << '\n';
+}
+
+void testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded() {
+    SevenSunsMerchantFixture f;
+    std::size_t checks = 0;
+    auto flow = f.beginMerchant(0, [&] { ++checks; });
+    SevenSunsMerchantFixture::finish(*flow, {1, 5, 11, 12});
+    flow.reset();
+    const auto objects = f.map->getObjects().size(), triggers = f.map->getEventHandler()->getTriggers().size();
+    const auto xp = f.player->getExp(), gold = f.player->getGold();
+    auto first = f.settle();
+    f.focus(2);
+    auto second = f.settle();
+    std::array<std::shared_ptr<CCreature>, 4> replacements;
+    for (std::size_t i = 0; i < 4; ++i)
+        replacements[i] = f.replacement(i);
+    const auto receipt = f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey);
+    const auto effectOwners = f.game->getContext()->getEffectOwnerCount();
+    std::size_t scans = first.at("checked").get<int>() + second.at("checked").get<int>();
+    for (int n = 0; n < 128; ++n) {
+        auto result = CSevenSunsMerchantDialogue::settle(f.game, f.clock, [&] { ++checks; });
+        scans += result.at("checked").get<int>();
+        expect_true(result.at("checked").get<int>() == 4 && result.at("replaced").get<int>() == 0,
+                    "every coordinator replay has exactly four bounded candidates and zero additional replacements");
+    }
+    bool owners = true;
+    for (std::size_t i = 0; i < 4; ++i)
+        owners = owners && replacements[i] && f.replacement(i) == replacements[i] && f.oldOwnershipIntact(i);
+    constexpr std::size_t CheckBudget = 65536, ReceiptBudget = 65536, ScanBudget = 4 * (128 + 2);
+    expect_true(
+        first.at("replaced").get<int>() == 2 && second.at("replaced").get<int>() == 2 && owners &&
+            scans == ScanBudget && f.map->getObjects().size() == objects &&
+            f.map->getEventHandler()->getTriggers().size() == triggers &&
+            f.game->getContext()->getEffectOwnerCount() == effectOwners && f.merchantDestroyed == 0 &&
+            f.newDestroyed == 0 && f.player->getExp() == xp && f.player->getGold() == gold &&
+            f.player->getQuests().empty() &&
+            f.map->getStringProperty(SevenSunsMerchantFixture::MerchantStateKey) == receipt &&
+            receipt.size() <= ReceiptBudget && checks > 0 && checks <= CheckBudget &&
+            f.map->tryBeginSaveSnapshot().has_value(),
+        "four once-owned replacements plus128 replays cannot grow registry/triggers/effects/receipt or grant rewards");
+    std::cout << "Seven Suns merchant guard: lineages=4 replacements=4 replays=128 eligibilityChecks=" << scans
+              << " eligibilityBudget=" << ScanBudget << " callerChecks=" << checks << " callerBudget=" << CheckBudget
+              << " receiptBytes=" << receipt.size() << " receiptBudget=" << ReceiptBudget << '\n';
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -1857,6 +2543,9 @@ void run_engine_hotspot_performance_tests() {
     }
 
     test_stat_composition_eliminates_repeated_reflective_increments();
+    testResourceSnapshotsPreserveRatiosAndFreshStatOwnership();
+    testStatsHudComposesOncePerDraw();
+    testInitiativeSnapshotsComposeOncePerActiveParticipant();
     testSuspendedPlayerNavigationWorkIsBounded();
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
     test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
@@ -1873,6 +2562,7 @@ void run_engine_hotspot_performance_tests() {
     testStalePlannedMapMoveWorkIsBounded();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testHealingItemSelectionWorkAndCallbacksAreBounded();
+    testOpponentEffectCreditSelectionWorkIsBounded();
     testMonsterItemTurnDispatchAndCleanupAreBounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
     testOctobogzPhaseCallbackAndStateGrowthAreBounded();
@@ -1881,4 +2571,10 @@ void run_engine_hotspot_performance_tests() {
     testMapBindingEpochQueriesAndPublicationsAreBounded();
     testAssignedPlayerQueriesAreMutationAndCallbackBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
+    testMapTileTraversalProbeCountsActualSnapshotsAndVisits();
+    testNativeCombatFactWorkRemainsIndexedAndBounded();
+    testSevenSunsWarningThreeEdgesAnd128ReplaysAreBounded();
+    testSevenSunsMerchantFourLineagesAnd128CoordinatorReplaysStayBounded();
+    testEmptyTextMetricsKeepZeroTextureWork();
+    testEqualPowerHealingTieSelectionKeepsFixedWork();
 }

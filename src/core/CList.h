@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,36 +19,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "object/CGameObject.h"
 
-class CListString : public CGameObject {
+namespace collection_detail {
+template <typename Values>
+    requires(fn::SetLike<Values> || fn::MapLike<Values>)
+class CValues : public CGameObject {
+  public:
+    void setValues(Values _values) { values = _values; }
+
+    Values getValues() { return values; }
+
+  protected:
+    Values values;
+};
+
+template <typename Value> class CSetValues : public CValues<std::set<Value>> {
+  public:
+    void addValue(Value val) { this->values.insert(val); }
+};
+}
+
+class CListString : public collection_detail::CSetValues<std::string> {
     V_META(CListString, CGameObject, V_PROPERTY(CListString, std::set<std::string>, values, getValues, setValues))
   public:
     CListString() = default;
-
-  private:
-    std::set<std::string> values;
-
-  public:
-    void addValue(std::string val) { values.insert(val); }
-
-    void setValues(std::set<std::string> _values) { this->values = _values; }
-
-    std::set<std::string> getValues() { return values; }
 };
 
-class CListInt : public CGameObject {
+class CListInt : public collection_detail::CSetValues<int> {
     V_META(CListInt, CGameObject, V_PROPERTY(CListInt, std::set<int>, values, getValues, setValues))
   public:
     CListInt() = default;
-
-  private:
-    std::set<int> values;
-
-  public:
-    void addValue(int val) { values.insert(val); }
-
-    void setValues(std::set<int> _values) { this->values = _values; }
-
-    std::set<int> getValues() { return values; }
 };
 
 typedef std::map<std::string, std::string> string_string_map;
@@ -56,58 +55,26 @@ typedef std::map<std::string, int> string_int_map;
 typedef std::map<int, std::string> int_string_map;
 typedef std::map<int, int> int_int_map;
 
-class CMapStringString : public CGameObject {
+class CMapStringString : public collection_detail::CValues<string_string_map> {
     V_META(CMapStringString, CGameObject, V_PROPERTY(CMapStringString, string_string_map, values, getValues, setValues))
   public:
     CMapStringString() = default;
-
-  private:
-    std::map<std::string, std::string> values;
-
-  public:
-    void setValues(std::map<std::string, std::string> _values) { this->values = _values; }
-
-    std::map<std::string, std::string> getValues() { return values; }
 };
 
-class CMapStringInt : public CGameObject {
+class CMapStringInt : public collection_detail::CValues<string_int_map> {
     V_META(CMapStringInt, CGameObject, V_PROPERTY(CMapStringInt, string_int_map, values, getValues, setValues))
   public:
     CMapStringInt() = default;
-
-  private:
-    std::map<std::string, int> values;
-
-  public:
-    void setValues(std::map<std::string, int> _values) { this->values = _values; }
-
-    std::map<std::string, int> getValues() { return values; }
 };
 
-class CMapIntString : public CGameObject {
+class CMapIntString : public collection_detail::CValues<int_string_map> {
     V_META(CMapIntString, CGameObject, V_PROPERTY(CMapIntString, int_string_map, values, getValues, setValues))
   public:
     CMapIntString() = default;
-
-  private:
-    std::map<int, std::string> values;
-
-  public:
-    void setValues(std::map<int, std::string> _values) { this->values = _values; }
-
-    std::map<int, std::string> getValues() { return values; }
 };
 
-class CMapIntInt : public CGameObject {
+class CMapIntInt : public collection_detail::CValues<int_int_map> {
     V_META(CMapIntInt, CGameObject, V_PROPERTY(CMapIntInt, int_int_map, values, getValues, setValues))
   public:
     CMapIntInt() = default;
-
-  private:
-    std::map<int, int> values;
-
-  public:
-    void setValues(std::map<int, int> _values) { this->values = _values; }
-
-    std::map<int, int> getValues() { return values; }
 };

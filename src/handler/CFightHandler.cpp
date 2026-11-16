@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
 #include "handler/CRngHandler.h"
+#include "handler/CSevenSunsMerchantDialogue.h"
 
 struct CCombatOwnership {
     CCombatOwnership() = default;
@@ -126,6 +127,10 @@ class CCombatParticipantGuard {
     bool admitted = false;
 };
 
+bool CFightHandler::hasActiveCombatClaim(const std::shared_ptr<CCreature> &actor) {
+    return CCombatParticipantGuard::isOwned(actor);
+}
+
 template <typename Callback> class DefeatScopeExit {
   public:
     explicit DefeatScopeExit(Callback callback) : callback(std::move(callback)) {}
@@ -172,6 +177,7 @@ using creature_state_type = std::tuple<std::string, int, int, std::vector<effect
 
 struct effect_application_result {
     bool died = false;
+    bool interrupted = false;
     std::shared_ptr<CCreature> caster;
 };
 
@@ -307,52 +313,58 @@ int initiative_score(const std::shared_ptr<CCreature> &creature) {
     return creature->getStats()->getAgility() * 2 + creature->getLevel();
 }
 
-encounter_type build_turn_order(const std::shared_ptr<CMap> &encounterMap, const std::shared_ptr<CCreature> &attacker,
-                                const encounter_type &opponents, const encounter_type &allies = {}) {
-    encounter_type order;
+struct InitiativeEntry {
+    std::shared_ptr<CCreature> creature;
+    int score;
+};
+
+using InitiativeOrder = std::vector<InitiativeEntry>;
+
+InitiativeOrder build_turn_order(const std::shared_ptr<CMap> &encounterMap, const std::shared_ptr<CCreature> &attacker,
+                                 const encounter_type &opponents, const encounter_type &allies = {}) {
+    InitiativeOrder order;
+    order.reserve(1 + opponents.size() + allies.size());
     if (is_active_participant(encounterMap, attacker)) {
-        order.push_back(attacker);
+        order.push_back({attacker, initiative_score(attacker)});
     }
     for (const auto &opponent : opponents) {
         if (is_active_participant(encounterMap, opponent)) {
-            order.push_back(opponent);
+            order.push_back({opponent, initiative_score(opponent)});
         }
     }
     for (const auto &ally : allies) {
         if (is_active_participant(encounterMap, ally)) {
-            order.push_back(ally);
+            order.push_back({ally, initiative_score(ally)});
         }
     }
     std::stable_sort(order.begin(), order.end(), [attacker](const auto &left, const auto &right) {
-        if (left == right) {
+        if (left.creature == right.creature) {
             return false;
         }
-        const auto leftScore = initiative_score(left);
-        const auto rightScore = initiative_score(right);
-        if (leftScore != rightScore) {
-            return leftScore > rightScore;
+        if (left.score != right.score) {
+            return left.score > right.score;
         }
-        if (left == attacker) {
+        if (left.creature == attacker) {
             return true;
         }
-        if (right == attacker) {
+        if (right.creature == attacker) {
             return false;
         }
-        return combat_name(left) < combat_name(right);
+        return combat_name(left.creature) < combat_name(right.creature);
     });
     return order;
 }
 
-std::string format_turn_order(const encounter_type &turnOrder) {
+std::string format_turn_order(const InitiativeOrder &turnOrder) {
     std::string text = "Initiative: ";
     bool first = true;
-    for (const auto &creature : turnOrder) {
+    for (const auto &entry : turnOrder) {
         if (!first) {
             text += " > ";
         }
-        text += combat_name(creature);
+        text += combat_name(entry.creature);
         text += " (";
-        text += vstd::str(initiative_score(creature));
+        text += vstd::str(entry.score);
         text += ")";
         first = false;
     }
@@ -580,8 +592,32 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
         return result;
     }
 
+    const auto receiverGame = cr->getGame();
+    const auto receiverMap = cr->getMap();
+    const bool guardReceiver = receiverMap && receiverMap->getBoolProperty("nativeCombatFacts");
+    const auto receiverContext = guardReceiver && receiverGame ? receiverGame->getContext() : nullptr;
+    const auto receiverGeneration = receiverContext ? receiverContext->captureTransitionGeneration() : 0;
+    const auto receiverInvalid = [&] {
+        if (!guardReceiver) {
+            return false;
+        }
+        const bool current = receiverGame && receiverContext && receiverContext->isActive() &&
+                             receiverContext->isTransitionGenerationCurrent(receiverGeneration) &&
+                             receiverGame->getContext() == receiverContext && receiverGame->getMap() == receiverMap &&
+                             cr->getGame() == receiverGame && cr->getMap() == receiverMap &&
+                             receiverMap->getBoolProperty("nativeCombatFacts") &&
+                             receiverMap->getObjectByName(cr->getName()) == cr;
+        result.interrupted = !current;
+        return !current;
+    };
+    if (receiverInvalid()) {
+        return result;
+    }
     auto effects = cr->getEffects();
     for (const auto &effect : effects) {
+        if (receiverInvalid()) {
+            return result;
+        }
         if (canApply && !canApply()) {
             return result;
         }
@@ -595,6 +631,9 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
                 return result;
             }
             cr->removeEffect(effect);
+            if (receiverInvalid()) {
+                return result;
+            }
         }
     }
 
@@ -617,6 +656,9 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
     std::sort(orderedEffects.begin(), orderedEffects.end(),
               [](const auto &left, const auto &right) { return left.first < right.first; });
     for (const auto &entry : orderedEffects) {
+        if (receiverInvalid()) {
+            return result;
+        }
         if (canApply && !canApply()) {
             return result;
         }
@@ -626,7 +668,13 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
         if (canApply && !canApply()) {
             break;
         }
+        if (receiverInvalid()) {
+            return result;
+        }
         effect->apply(cr);
+        if (receiverInvalid()) {
+            return result;
+        }
         if (was_alive && !cr->isAlive()) {
             result.died = true;
             result.caster = effect->getCaster();
@@ -728,6 +776,7 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
     }
     CFightHandler::resetCombatHistory(encounterMap);
     const bool alliedEncounter = !allies.empty();
+    const bool factEncounter = encounterMap && encounterMap->getBoolProperty("nativeCombatFacts");
     std::weak_ptr<CGame> encounterGame = attacker->getGame();
     auto game = encounterGame.lock();
     std::weak_ptr<CGameContext> encounterContext = game ? game->getContext() : nullptr;
@@ -737,15 +786,26 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         if (nativeAdmission && !nativeAdmission->isCurrent()) {
             return false;
         }
-        if (!alliedEncounter) {
+        if (!alliedEncounter && !factEncounter) {
             return true;
         }
         auto owner = encounterGame.lock();
         auto context = encounterContext.lock();
-        return owner && context && context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
+        return owner && context &&
+               (!factEncounter || (context->isActive() && owner->getContext() == context &&
+                                   encounterMap->getBoolProperty("nativeCombatFacts"))) &&
+               context->isTransitionGenerationCurrent(generation) && owner->getMap() == encounterMap;
+    };
+    const auto factParticipantsRegistered = [&](const std::shared_ptr<CCreature> &actor,
+                                                const std::shared_ptr<CCreature> &target) {
+        auto owner = encounterGame.lock();
+        const auto registered = [&](const std::shared_ptr<CCreature> &participant) {
+            return participant && participant->getGame() == owner && is_registered_on_map(encounterMap, participant);
+        };
+        return owner && contextIsCurrent() && registered(attacker) && registered(actor) && registered(target);
     };
     std::function<bool()> effectContext;
-    if (nativeAdmission) {
+    if (nativeAdmission || factEncounter) {
         effectContext = contextIsCurrent;
     }
     const auto status = [&](const std::string &message, bool initiative = true) {
@@ -862,7 +922,8 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
         auto before = encounter_state(attacker, opponents, allies);
         const auto turnOrder = build_turn_order(encounterMap, attacker, opponents, allies);
 
-        for (const auto &actor : turnOrder) {
+        for (const auto &entry : turnOrder) {
+            const auto &actor = entry.creature;
             if (result.outcome != CFightOutcome::Invalid || !is_active_participant(encounterMap, attacker) ||
                 opponents.empty()) {
                 break;
@@ -885,6 +946,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 auto effect_result = apply_effects_with_result(attacker, effectContext);
+                if (effect_result.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                if (factEncounter && (!contextIsCurrent() || !is_active_participant(encounterMap, current))) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -904,6 +973,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                         co_return finish_result();
                     }
                     co_await attackerController->controlAsync(attacker, current);
+                    if (factEncounter && !factParticipantsRegistered(attacker, current)) {
+                        cancel_fight(result, attacker, current);
+                        co_return finish_result();
+                    }
                     if (!contextIsCurrent() || attackerController->isCancelled(attacker, current)) {
                         cancel_fight(result, attacker, current);
                         co_return finish_result();
@@ -952,6 +1025,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 const auto effects = apply_effects_with_result(actor, effectContext);
+                if (effects.interrupted) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
+                if (factEncounter && !factParticipantsRegistered(actor, actor)) {
+                    cancel_fight(result, attacker, current);
+                    co_return finish_result();
+                }
                 if (nativeAdmission && !contextIsCurrent()) {
                     cancel_fight(result, attacker, current);
                     co_return finish_result();
@@ -974,6 +1055,11 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 if (!controller || dynamic_cast<CPlayerFightController *>(controller.get()) || !target) {
                     continue;
                 }
+                if (factEncounter &&
+                    (!factParticipantsRegistered(actor, target) || !is_active_participant(encounterMap, attacker))) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 if (!is_active_participant(encounterMap, actor) || !is_active_participant(encounterMap, target)) {
                     continue;
                 }
@@ -983,6 +1069,10 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                     co_return finish_result();
                 }
                 co_await controller->controlAsync(actor, target);
+                if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                    cancel_fight(result, attacker, target);
+                    co_return finish_result();
+                }
                 if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                     cancel_fight(result, attacker, target);
                     co_return finish_result();
@@ -1043,6 +1133,14 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
                 co_return finish_result();
             }
             auto effect_result = apply_effects_with_result(actor, effectContext);
+            if (effect_result.interrupted) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
+            if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                cancel_fight(result, attacker, actor);
+                co_return finish_result();
+            }
             if (nativeAdmission && !contextIsCurrent()) {
                 cancel_fight(result, attacker, actor);
                 co_return finish_result();
@@ -1063,11 +1161,20 @@ vstd::task<CFightResult> resolveFightManyAsync(std::shared_ptr<CCreature> attack
             }
             if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
                 if (auto controller = actor->getFightController()) {
+                    if (factEncounter && (!is_active_participant(encounterMap, attacker) ||
+                                          !is_active_participant(encounterMap, target))) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     if (nativeAdmission && !contextIsCurrent()) {
                         cancel_fight(result, attacker, target);
                         co_return finish_result();
                     }
                     co_await controller->controlAsync(actor, target);
+                    if (factEncounter && !factParticipantsRegistered(actor, target)) {
+                        cancel_fight(result, attacker, target);
+                        co_return finish_result();
+                    }
                     if (!contextIsCurrent() || controller->isCancelled(actor, target)) {
                         cancel_fight(result, attacker, actor);
                         co_return finish_result();
@@ -1425,9 +1532,26 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
     requireDefeatCurrent();
     vstd::logger::debug(winnerDescription, a->getName(), "defeated", loserDescription);
     requireDefeatCurrent();
-    const auto rewardScale = b->getScale();
+    const bool sevenSunsReplacement =
+        CSevenSunsMerchantDialogue::isSettledReplacement(expectedGame.lock(), encounterMap, b, requireDefeatCurrent);
     requireDefeatCurrent();
-    a->addExpScaled(rewardScale);
+    if (sevenSunsReplacement) {
+        a->addExp(420);
+    } else {
+        const bool sourceKillXpPolicy = encounterMap->getBoolProperty("plugin_citySourceKillXp");
+        requireDefeatCurrent();
+        const bool hasSourceKillXp = sourceKillXpPolicy && !playerDefeat && b->hasProperty("sourceKillXp");
+        requireDefeatCurrent();
+        const int sourceKillXp = hasSourceKillXp ? b->getNumericProperty("sourceKillXp") : -1;
+        requireDefeatCurrent();
+        if (sourceKillXp >= 0) {
+            a->addExp(sourceKillXp);
+        } else {
+            const auto rewardScale = b->getScale();
+            requireDefeatCurrent();
+            a->addExpScaled(rewardScale);
+        }
+    }
     requireDefeatCurrent();
     const bool fixedLoot = encounterMap->getBoolProperty("plugin_cityFixedLoot");
     requireDefeatCurrent();
@@ -1658,3 +1782,11 @@ vstd::task<void> CFightHandler::resolveOwnedDefeatAsync(std::shared_ptr<CCreatur
 }
 
 void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) { apply_effects_with_result(cr); }
+
+namespace performance_guard {
+std::string combatInitiativeText(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &attacker,
+                                 const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                 const std::vector<std::shared_ptr<CCreature>> &allies) {
+    return format_turn_order(build_turn_order(map, attacker, opponents, allies));
+}
+} // namespace performance_guard

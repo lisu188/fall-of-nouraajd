@@ -1,4 +1,5 @@
 import ast
+import builtins
 import json
 from pathlib import Path
 import runpy
@@ -125,9 +126,16 @@ def loadQuestClasses(path):
     context = types.SimpleNamespace(getMap=lambda: None, post=queued_work.append)
     context.createWeakResolver = lambda: lambda: context
     installHookFlows(game_stub)
+
+    def resourceImport(name, globals=None, locals=None, fromlist=(), level=0):
+        if not level and name == "game":
+            return game_stub
+        return builtins.__import__(name, globals, locals, fromlist, level)
+
+    resource_globals = {"__builtins__": {**vars(builtins), "__import__": resourceImport}}
     with patch.dict(sys.modules, {"game": game_stub, "campaign": campaign_driver}):
         game_stub.narrative = types.SimpleNamespace(**runpy.run_path(str(REPO_ROOT / "res/narrative.py")))
-        runpy.run_path(str(path))["load"](None, context)
+        runpy.run_path(str(path), init_globals=resource_globals)["load"](None, context)
     return classes
 
 
@@ -192,6 +200,27 @@ CITY_QUEST_KEYS = (
 
 
 class MapQuestJournalTest(unittest.TestCase):
+    def testCityJournalFixtureUsesTheLoadedRealClockAndPersistentResourceApi(self):
+        path = REPO_ROOT / "res/maps/baldursGate/script.py"
+        classes = loadQuestClasses(path)
+        game, source, _destination, player = self.createSession("baldursGate")
+        with self.assertRaisesRegex(ValueError, "already-loaded real clock class"):
+            self.prepareSource("baldursGate", source, player)
+        self.prepareSource("baldursGate", source, player, classes)
+        clock = source.objects["cityClock"]
+        self.assertIs(type(clock), classes["BaldursGateClock"])
+        self.assertEqual(str(path), type(clock).poisonQuestPresentation.__code__.co_filename)
+        self.assertFalse(clock.getBoolProperty("plugin_cityPoisonSourceEnabled"))
+        resource_import = type(clock).poisonQuestPresentation.__globals__["__builtins__"]["__import__"]
+        api = resource_import("game")
+        with patch.dict(sys.modules, game=types.ModuleType("foreignGame")):
+            self.assertIs(api, resource_import("game"))
+            self.assertIsNone(clock.poisonQuestPresentation("marekPoison"))
+        clock.setBoolProperty("plugin_cityPoisonSourceEnabled", True)
+        with patch.object(clock, "poisonCapture", side_effect=RuntimeError("source branch reached")):
+            with self.assertRaisesRegex(RuntimeError, "source branch reached"):
+                clock.poisonQuestPresentation("marekPoison")
+
     def createSession(self, map_name="origin"):
         game = types.SimpleNamespace()
         game.getMap = lambda: game.map
@@ -419,10 +448,71 @@ class MapQuestJournalTest(unittest.TestCase):
         expected_city = {("baldursGate", "city" + key[:1].upper() + key[1:] + "Quest") for key in CITY_QUEST_KEYS}
         expected_city.add(("baldursGate", "cityCustodyQuest"))
         expected_city.update(("baldursGate", name) for name in CITY_INFORMATION_JOURNALS)
+        expected_city.add(("baldursGate", "citySevenSunsWarningLead"))
         self.assertEqual(expected_city, city)
-        self.assertEqual(60, len(city), "All declared city journal definitions must be covered")
+        self.assertEqual(61, len(city), "All declared city journal definitions must be covered")
         self.assertEqual(27, len(roster - candlekeep - city), "The original 27 authored quests must remain covered")
-        self.assertEqual(93, len(roster))
+        self.assertEqual(94, len(roster))
+
+    def assertOpenWarningLeadRoundTrip(self, game, source, destination, player, quest):
+        self.assertEqual("BaldursGateSevenSunsWarningLeadQuest", type(quest).__name__)
+        self.assertEqual("", quest.getStringProperty("questKey"))
+        before_player = player.properties.copy()
+        before_items = [(item, item.properties.copy()) for item in player.items]
+        before_source = source.properties.copy()
+        before_destination = destination.properties.copy()
+        quest.captureJournal(False)
+        expected = self.journalText(quest)
+        self.assertIn("shapechangers", expected[0])
+        self.assertIn("no gold, experience, or possessions", expected[1])
+        fresh_source = JournalObject(game)
+        fresh_source.mapName = "baldursGate"
+        fresh_source.player = player
+        for current_map in (source, destination, fresh_source):
+            with self.subTest(journalLocation=current_map.mapName):
+                game.map = current_map
+                before_current = current_map.properties.copy()
+                restored = type(quest)(game)
+                restored.properties = json.loads(json.dumps(quest.properties))
+                player.quests[:] = [restored]
+                restored.captureJournal(False)
+                self.assertFalse(restored.isCompleted())
+                self.assertFalse(restored.getBoolProperty("questJournalCompleted"))
+                self.assertEqual(1, restored.getNumericProperty("questJournalVersion"))
+                self.assertEqual("baldursGate", restored.getStringProperty("questJournalOrigin"))
+                self.assertEqual(expected, self.journalText(restored))
+                self.assertIsNone(restored.onComplete())
+                self.assertEqual(before_player, player.properties)
+                self.assertEqual([item for item, _properties in before_items], player.items)
+                for item, properties in before_items:
+                    self.assertEqual(properties, item.properties)
+                self.assertEqual([restored], player.quests)
+                self.assertEqual([], player.completed)
+                self.assertEqual(before_current, current_map.properties)
+                self.assertEqual([], game.messages)
+        self.assertEqual(before_source, source.properties)
+        self.assertEqual(before_destination, destination.properties)
+        self.assertEqual({}, fresh_source.properties)
+
+    def testSevenSunsWarningLeadStaysOpenAcrossRoundTripAndFreshSourceWithoutRewards(self):
+        classes = loadQuestClasses(REPO_ROOT / "res/maps/baldursGate/script.py")
+        config = json.loads((REPO_ROOT / "res/maps/baldursGate/config.json").read_text(encoding="utf-8"))
+        entry = config["citySevenSunsWarningLead"]
+        for scar_stage in ("", "active", "completed"):
+            with self.subTest(scarStage=scar_stage):
+                game, source, destination, player = self.createSession("baldursGate")
+                self.prepareSource("baldursGate", source, player, classes)
+                for key in ("scarSevenSuns", "scarDoppelgangers"):
+                    source.setStringProperty("plugin_cityQuest_" + key, scar_stage)
+                player.properties.update(gold=941, exp=207)
+                item = JournalObject(game)
+                item.properties.update(name="existingPossession", quantity=3)
+                player.items.append(item)
+                quest = classes[entry["class"]](game)
+                quest.properties.update(entry.get("properties", {}))
+                quest.properties.update(name="citySevenSunsWarningLead", typeId="citySevenSunsWarningLead")
+                player.quests.append(quest)
+                self.assertOpenWarningLeadRoundTrip(game, source, destination, player, quest)
 
     def test_authored_quest_matrix_keeps_all_33_journals_and_destination_state(self):
         roster = set()
@@ -443,7 +533,7 @@ class MapQuestJournalTest(unittest.TestCase):
                     quest.properties.update(entry.get("properties", {}))
                     quest.properties.update(name=quest_name, typeId=quest_name)
                     player.quests.append(quest)
-                    self.prepareSource(map_dir.name, source, player)
+                    self.prepareSource(map_dir.name, source, player, classes)
                     quest.captureJournal(False)
                     expected = self.journalText(quest)
                     if quest_name == "defendSiegeQuest":
@@ -467,6 +557,7 @@ class MapQuestJournalTest(unittest.TestCase):
 
     def test_all_33_completed_journals_survive_round_trip_and_fresh_source(self):
         roster = set()
+        completed_roster = set()
         plugin_classes = loadQuestClasses(REPO_ROOT / "res/plugins/castle_campaign.py")
         for map_dir in sorted((REPO_ROOT / "res/maps").iterdir()):
             if not (map_dir / "script.py").is_file():
@@ -484,7 +575,10 @@ class MapQuestJournalTest(unittest.TestCase):
                     quest.properties.update(entry.get("properties", {}))
                     quest.properties.update(name=quest_name, typeId=quest_name)
                     player.quests.append(quest)
-                    self.prepareSource(map_dir.name, source, player)
+                    self.prepareSource(map_dir.name, source, player, classes)
+                    if (map_dir.name, quest_name) == ("baldursGate", "citySevenSunsWarningLead"):
+                        self.assertOpenWarningLeadRoundTrip(game, source, destination, player, quest)
+                        continue
                     source.properties.update(
                         victory_reported=True,
                         voss_judged=True,
@@ -539,6 +633,8 @@ class MapQuestJournalTest(unittest.TestCase):
                     if scenario:
                         player.setBoolProperty("campaign_castleCompleted_" + scenario, True)
                     self.assertEqual(expected_completed, quest.isCompleted())
+                    if expected_completed:
+                        completed_roster.add((map_dir.name, quest_name))
                     quest.captureJournal(expected_completed)
                     expected = self.journalText(quest)
                     player.quests[:] = [] if expected_completed else [quest]
@@ -563,6 +659,13 @@ class MapQuestJournalTest(unittest.TestCase):
                     self.assertEqual({}, destination.properties)
                     self.assertEqual([], game.messages)
         self.assertAuthoredQuestRoster(roster)
+        self.assertEqual(
+            roster - {("baldursGate", name) for name in (*CITY_INFORMATION_JOURNALS, "citySevenSunsWarningLead")},
+            completed_roster,
+        )
+        self.assertEqual(
+            90, len(completed_roster), "Every previously completable journal must retain round-trip coverage"
+        )
 
     def testAllSixCandlekeepJournalsKeepActiveAndCompletedAuthoredTextAcrossPropertyRoundTrips(self):
         classes = loadQuestClasses(REPO_ROOT / "res/maps/candlekeep/script.py")
@@ -618,9 +721,11 @@ class MapQuestJournalTest(unittest.TestCase):
                 self.assertEqual(expected_completed, self.journalText(completed_copy))
                 self.assertEqual([], game.messages)
 
-    def prepareSource(self, map_name, source, player):
+    def prepareSource(self, map_name, source, player, classes=None):
         if map_name == "baldursGate":
-            city_clock = JournalObject(source.game)
+            if classes is None:
+                raise ValueError("The city journal fixture needs its already-loaded real clock class")
+            city_clock = classes["BaldursGateClock"](source.game)
             city_clock.setStringProperty(
                 "questDefinitions",
                 (REPO_ROOT / "tests/fixtures/baldurs_gate_city_quests.json").read_text(encoding="utf-8"),

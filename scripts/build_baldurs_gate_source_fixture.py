@@ -163,7 +163,7 @@ def dialogueSpawnFacts(parsed, action_ids, trigger_ids):
     return facts
 
 
-def buildCityFixture(game_root, language="en_US", encoding=None):
+def buildCityFixture(game_root, language="en_US", encoding=None, *, itemEffects=False):
     index = source.ResourceIndex(game_root)
     if not re.fullmatch(r"[A-Za-z]{2}_[A-Za-z]{2}", language):
         raise source.AuditError("language must be a locale such as en_US")
@@ -455,7 +455,7 @@ def buildCityFixture(game_root, language="en_US", encoding=None):
                 children[(name, ext)] = [(ref["name"], ref["type"]) for ref in refs if ref]
                 queue.extend(children[(name, ext)])
             elif ext == "ITM":
-                parsed, _, _ = source.parseItem(data)
+                parsed, _, _ = source.parseItem(data, itemEffects=True) if itemEffects else source.parseItem(data)
                 name_text = talk.get(parsed["identified_name_strref"])
                 row["displayName"] = name_text.get("text", "") if name_text else ""
                 unidentified = talk.get(parsed["name_strref"])
@@ -542,11 +542,15 @@ def main(argv=None):
     parser.add_argument("--language", default="en_US")
     parser.add_argument("--encoding", help="override the source TLK encoding")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--item-effects", action="store_true", help="decode bounded ITM V1 inline fields without following resources"
+    )
     args = parser.parse_args(argv)
     root, output = args.game_root.resolve(), args.output.resolve()
     if output == root or output.is_relative_to(root):
         parser.error("output must be outside the original game installation")
-    fixture = buildCityFixture(root, args.language, args.encoding)
+    item_options = {"itemEffects": True} if args.item_effects else {}
+    fixture = buildCityFixture(root, args.language, args.encoding, **item_options)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(fixture, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(

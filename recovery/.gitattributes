@@ -1,0 +1,8 @@
+# Recovery payloads are pinned by SHA-256 to their exact historical/upstream
+# bytes, including CRLF and mixed line endings. The repository-wide
+# "* text eol=lf" rule would rewrite them on commit and break those pins.
+upstream/** -text
+payloads/** -text
+
+# Verification evidence includes gzip logs and screenshots that must keep exact bytes.
+evidence/** -text
