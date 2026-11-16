@@ -21,8 +21,10 @@ ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 PREFIX = "maps/baldursGate/images/npc/"
 # The reviewed Seven Suns integration adds its stock, warning quest and dialogue metadata to the ff0b baseline.
+# Tamoko dc857585 + c735c1b7 were independently merged against c68f22b1 before extending this baseline.
+# That union changes three journal definitions, Tamoko options and two quest definitions only.
 # Restore reviewed environment paths and remove source actor artwork/assets; all gameplay fields remain frozen.
-GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
+GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c60eb657a34894c39a898444861db2ad28b16e77e0144b65b9f61c29ae9219e"
 
 
 def readJson(path):

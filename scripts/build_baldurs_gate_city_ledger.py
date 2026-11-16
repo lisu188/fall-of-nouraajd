@@ -9,6 +9,13 @@ from collections import Counter, defaultdict
 import hashlib
 import json
 from pathlib import Path
+import sys
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_baldurs_gate_tamoko_ledger import TAMOKO_PATH, TAMOKO_ROUTES_PATH, buildTamokoObligations
+else:
+    from .build_baldurs_gate_tamoko_ledger import TAMOKO_PATH, TAMOKO_ROUTES_PATH, buildTamokoObligations
 
 try:
     from scripts.build_baldurs_gate_poison_ledger import POISON_PATH, buildPoisonObligations
@@ -93,7 +100,19 @@ def dialogActions(value):
 
 
 def buildLedger(
-    source, quests, config, script, warning=None, dopmer=None, routes=None, stock=None, *, poison=None, followup=None
+    source,
+    quests,
+    config,
+    script,
+    warning=None,
+    dopmer=None,
+    routes=None,
+    stock=None,
+    *,
+    poison=None,
+    followup=None,
+    tamoko=None,
+    tamoko_routes="",
 ):
     """All obligations originate in source rows, never in the set of implemented objects."""
     entries = []
@@ -718,6 +737,8 @@ def buildLedger(
                 urls=row.get("sources", []),
             )
 
+    if tamoko is not None:
+        entries.extend(buildTamokoObligations(tamoko, config, script, tamoko_routes))
     if poison is not None:
         entries.extend(buildPoisonObligations(poison))
     if followup is not None:
@@ -744,6 +765,14 @@ def buildLedger(
             QUEST_PATH: fingerprint(quests),
             CONFIG_PATH: fingerprint(config),
             SCRIPT_PATH: hashlib.sha256(script.encode()).hexdigest(),
+            **(
+                {
+                    TAMOKO_PATH: fingerprint(tamoko),
+                    TAMOKO_ROUTES_PATH: hashlib.sha256(tamoko_routes.encode()).hexdigest(),
+                }
+                if tamoko is not None
+                else {}
+            ),
             **({POISON_PATH: fingerprint(poison)} if poison is not None else {}),
             **({FOLLOWUP_PATH: fingerprint(followup)} if followup is not None else {}),
             **({WARNING_PATH: fingerprint(warning)} if warning is not None else {}),
@@ -839,6 +868,7 @@ def validateLedger(ledger, expected=None, require_mapped=False, require_acceptan
             if not proof.get("pointer", "").startswith("/") or proof.get("fixture") not in {
                 SOURCE_PATH,
                 QUEST_PATH,
+                TAMOKO_PATH,
                 POISON_PATH,
                 FOLLOWUP_PATH,
                 WARNING_PATH,
@@ -890,6 +920,8 @@ def main(argv=None):
         readJson(ROOT / QUEST_PATH),
         readJson(ROOT / CONFIG_PATH),
         (ROOT / SCRIPT_PATH).read_text(encoding="utf-8"),
+        tamoko=readJson(ROOT / TAMOKO_PATH),
+        tamoko_routes=(ROOT / TAMOKO_ROUTES_PATH).read_text(encoding="utf-8"),
         poison=readJson(ROOT / POISON_PATH),
         followup=readJson(ROOT / FOLLOWUP_PATH),
         warning=readJson(ROOT / WARNING_PATH) if (ROOT / WARNING_PATH).is_file() else None,

@@ -2076,6 +2076,33 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
 
     def testInventorySelectionCallbacksHaveExplicitIsolatedNativePlans(self):
         cases = {case.id: case for case in routes.CASES if case.isolated_gui}
+        inventory_ids = {
+            "baldurs-gate-native-inventory",
+            "baldurs-gate-native-failed-theft",
+            "baldurs-gate-native-trading",
+            "baldurs-gate-native-companion-inventory",
+            "baldurs-gate-native-custody",
+        }
+        early_ids = {"baldurs-gate-native-early-tamoko-pair" + str(index) for index in range(1, 9)}
+        early_ids.add("baldurs-gate-native-early-tamoko-rescued")
+        final_ids = {
+            "baldurs-gate-native-tamoko-" + name
+            for name in (
+                "threaten",
+                "removeObstacle",
+                "unavoidableFight",
+                "forgivingFight",
+                "notEnemyFight",
+                "philosophyPeace",
+                "notEnemyPeace",
+                "philosophyFight",
+            )
+        }
+        generated_ids = {
+            "baldurs-gate-quest-cythandriaDiary-complete",
+            "baldurs-gate-quest-tamokoMercy-complete",
+            "baldurs-gate-quest-tamokoMercy-fight",
+        }
         self.assertEqual(
             {
                 "baldurs-gate-native-inventory",
@@ -2090,7 +2117,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             }
             | {case.id for case in routes.sevenSunsWarningCases()}
             | {case.id for case in routes.sevenSunsMerchantCases()}
-            | {case.id for case in routes.generatedQuestCases() if case.isolated_gui},
+            | {case.id for case in routes.generatedQuestCases() if case.isolated_gui}
+            | early_ids
+            | final_ids,
             set(cases),
         )
         covered = {branch for case in cases.values() for branch in case.branches}
@@ -2105,11 +2134,30 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             self.assertIn("d.chooseUi", source)
             self.assertIn("saveAndReload", source)
             self.assertIn("itemInstances", source)
+        tamoko_covered = {
+            branch for identity in early_ids | final_ids | generated_ids for branch in cases[identity].branches
+        }
+        for callback in (
+            "BaldursGateDialog.canTamokoFirstMeeting",
+            "BaldursGateDialog.discussTamokoFirstMeeting",
+            "BaldursGateDialog.canTamokoSecondMeeting",
+            "BaldursGateDialog.discussTamokoSecondMeeting",
+            "BaldursGateDialog.canDiscussTamokoFinalMeeting",
+            "BaldursGateDialog.discussTamokoFinalMeeting",
+            "BaldursGateTamokoJournalQuest.isCompleted",
+        ):
+            self.assertTrue(set(routes.SOURCE_BRANCHES["res/maps/baldursGate/script.py:" + callback]) <= tamoko_covered)
+        for identity in early_ids | final_ids:
+            self.assertEqual(1200, cases[identity].duration_seconds)
+        generated = routes.generatedQuestCases()
         self.assertEqual(
-            {case.run.keywords["key"] for case in routes.generatedQuestCases() if case.isolated_gui},
-            set(routes.sevenSunsUiQuestIds()),
+            generated_ids | {case.id for case in generated if case.run.keywords["key"] in routes.sevenSunsUiQuestIds()},
+            {case.id for case in generated if case.isolated_gui},
         )
-        self.assertFalse(any(case.isolated_gui for case in routes.generatedStoreCases()))
+        for case in generated:
+            self.assertIs(
+                case.id in generated_ids or case.run.keywords["key"] in routes.sevenSunsUiQuestIds(), case.isolated_gui
+            )
 
     def testCityHasNaturalRoutePlansForAllFiveExistingHeroClasses(self):
         self.assertEqual(set(PLAYER_CLASSES), {hero for case in routes.CASES for hero in case.classes})
