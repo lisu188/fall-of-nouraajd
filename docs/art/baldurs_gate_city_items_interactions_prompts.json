@@ -67,7 +67,7 @@
         {
           "fixture": "tests/fixtures/baldurs_gate_city_source.json",
           "pointer": "/areas/AR0111/doors/0",
-          "sourceIdentity": "AR0111:door1",
+          "sourceIdentity": "AR0111#door1",
           "areaSha256": "b443033c3ef7ea61a6f3dd1492f6c130b1f90e8e5916f3c34d49bdfe957f3d83"
         }
       ]
@@ -113,7 +113,7 @@
         {
           "fixture": "tests/fixtures/baldurs_gate_city_source.json",
           "pointer": "/areas/AR0004/containers/0",
-          "sourceIdentity": "AR0004:container1",
+          "sourceIdentity": "AR0004#container1",
           "areaSha256": "4548fb17eb24c6c434d850b5b76d2d8be8e0ddfeee9639101aaa134cc3952647"
         }
       ]
