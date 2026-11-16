@@ -1,0 +1,21 @@
+{
+  "blobApiProbes": [
+    {
+      "httpStatus": 404,
+      "originalBlob": "3f316734691ebbdb56729576bf2bbb8f35b5134c"
+    },
+    {
+      "httpStatus": 404,
+      "originalBlob": "30d834915bc5709c30abbf7f1d816b859694f955"
+    },
+    {
+      "httpStatus": 404,
+      "originalBlob": "2208d3050e09e8d8e00852ea8f61c035b435cc2f"
+    }
+  ],
+  "boundary": "Read-only GitHub recovery discovery; three sampled missing original blobs only. No claim that all absent blobs were queried.",
+  "date": "2026-11-15",
+  "forksFound": 0,
+  "repository": "lisu188/fall-of-nouraajd",
+  "schemaVersion": 1
+}

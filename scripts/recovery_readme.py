@@ -10,11 +10,18 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shlex
 
 try:
-    from scripts.verify_history import REQUIRED_CHECKS, VerificationError, validatePng
+    from scripts.verify_history import (
+        EDITOR_CHECKS,
+        REQUIRED_CHECKS,
+        VerificationError,
+        validatePng,
+        verifiedStartupMode,
+    )
 except ModuleNotFoundError:
-    from verify_history import REQUIRED_CHECKS, VerificationError, validatePng
+    from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
 
 
 def requireIdentity(value, length, name):
@@ -32,6 +39,87 @@ def successfulCommand(command, name):
         or not command["command"]
     ):
         raise VerificationError(f"Recovered README requires successful {name} evidence")
+
+
+def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
+    preparation = report.get("sourcePreparation", {})
+    if not preparation or preparation.get("status") == "not-required":
+        return {}
+    if preparation.get("status") != "success":
+        raise VerificationError("Recovered README requires successful source preparation")
+    steps = preparation.get("steps", [])
+    names = [step.get("name") for step in steps]
+    has_includes = "windowsIncludeSeparators" in names
+    has_generator = "generator" in names
+    expected_names = (["windowsIncludeSeparators"] if has_includes else []) + (
+        ["interpreter", "generator"] if has_generator else []
+    )
+    if not expected_names or names != expected_names:
+        raise VerificationError("Recovered README requires recorded source preparation execution evidence")
+    for step in steps:
+        successfulCommand(step, "source preparation " + step["name"])
+    identity = preparation.get("identity", {})
+    if has_generator and identity.get("interpreter") != "Python 2.7.18":
+        raise VerificationError("Recovered source preparation requires the locked Python 2.7.18 interpreter")
+    requireIdentity(identity.get("implementationSha256"), 64, "source preparation implementation")
+    inputs = identity.get("inputs", {})
+    if has_generator and not {"preprocessor.py", "classes.json"}.issubset(inputs):
+        raise VerificationError("Recovered source preparation lacks original generator input fingerprints")
+    if not has_generator and (inputs or "interpreter" in identity):
+        raise VerificationError("Include-only preparation cannot claim a historical Python generator")
+    include_files = {}
+    attachments = {}
+    if has_includes:
+        include_entries = identity.get("includeSeparators", [])
+        if not include_entries:
+            raise VerificationError("Recovered include preparation lacks literal source edits")
+        for entry in include_entries:
+            name = entry.get("path", "")
+            if Path(name).is_absolute() or ".." in Path(name).parts or "\\" in name or ":" in name:
+                raise VerificationError("Recovered include preparation path escapes the build copy")
+            if not entry.get("includes"):
+                raise VerificationError("Recovered include preparation lacks literal include changes")
+            for stage in ("beforeSha256", "afterSha256"):
+                requireIdentity(entry.get(stage), 64, "include preparation " + stage)
+            include_files[name] = entry
+        helper = Path(__file__).with_name("history_prepare_includes.py").read_bytes()
+        if hashlib.sha256(helper).hexdigest() != identity.get("includeReplaySha256"):
+            raise VerificationError("Portable include preparation helper differs from verified semantics")
+        attachments["recovery/prepare_build_sources.py"] = helper
+    outputs = preparation.get("outputs", [])
+    if outputs != identity.get("outputs"):
+        raise VerificationError("Recovered source preparation output fingerprints differ")
+    for name, metadata in inputs.items():
+        if name not in ("preprocessor.py", "classes.json", "macro.conf") or metadata.get("kind") != "file":
+            raise VerificationError("Recovered source preparation has unexpected generator inputs")
+        requireIdentity(metadata.get("sha256"), 64, "source preparation input fingerprint")
+    for output in outputs:
+        name = output.get("path", "")
+        path = Path(name)
+        if (
+            path.is_absolute()
+            or ".." in path.parts
+            or not (name == "gen/prop.h" or (name.startswith("src/") and name.endswith(".h")) or name in include_files)
+        ):
+            raise VerificationError("Recovered source preparation has unexpected derived output paths")
+        for stage in ("before", "after"):
+            metadata = output.get(stage)
+            if metadata is None and stage == "before":
+                continue
+            if not isinstance(metadata, dict) or metadata.get("kind") != "file":
+                raise VerificationError("Recovered source preparation lacks derived output fingerprints")
+            requireIdentity(metadata.get("sha256"), 64, "source preparation output fingerprint")
+    metadata_path = evidence_dir / "source-preparation.json"
+    log_path = evidence_dir / "source-preparation.log"
+    if not metadata_path.is_file() or json.loads(metadata_path.read_text(encoding="utf-8")) != preparation:
+        raise VerificationError("Copied source preparation report differs from recorded build preparation")
+    if not log_path.is_file() or not log_path.stat().st_size:
+        raise VerificationError("Recovered source preparation log is absent or empty")
+    return {
+        "recovery/source-preparation.json": metadata_path.read_bytes(),
+        "recovery/source-preparation.log": log_path.read_bytes(),
+        **attachments,
+    }
 
 
 def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
@@ -65,9 +153,16 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     startup = smoke.get("startup", {})
     if startup.get("schemaVersion") != 1 or startup.get("status") != "ready":
         raise VerificationError("Recovered README requires the game's readiness report")
+    mode = verifiedStartupMode(report)
+    editor = mode == "editor"
     checks = startup.get("checks", {})
-    if any(checks.get(name) is not True for name in REQUIRED_CHECKS):
-        raise VerificationError("Recovered screenshot lacks map/player/render readiness")
+    required = EDITOR_CHECKS if editor else REQUIRED_CHECKS
+    if (
+        not isinstance(checks, dict)
+        or any(checks.get(name) is not True for name in required)
+        or (editor and "player" in checks)
+    ):
+        raise VerificationError("Recovered screenshot lacks mode-specific map/render readiness")
     evidence_dir = Path(evidence_dir).resolve()
     frame_path = evidence_dir / "startup.png"
     width, height = validatePng(frame_path)
@@ -80,6 +175,29 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     startup_path = evidence_dir / "startup.json"
     if not startup_path.is_file() or json.loads(startup_path.read_text(encoding="utf-8")) != startup:
         raise VerificationError("Copied startup report differs from the recorded native game result")
+    preparation_files = sourcePreparationAttachments(report, evidence_dir)
+    generator_preparation = "generator" in [
+        step.get("name") for step in report.get("sourcePreparation", {}).get("steps", [])
+    ]
+    include_preparation = "recovery/prepare_build_sources.py" in preparation_files
+    runtime_preparation = report.get("runtimePreparation", {})
+    save_directory = bool(runtime_preparation)
+    if save_directory:
+        planned = runtime_preparation.get("identity", {}).get("directories", [])
+        actual = runtime_preparation.get("directories", [])
+        if (
+            runtime_preparation.get("status") != "ready"
+            or len(planned) != 1
+            or len(actual) != 1
+            or planned[0].get("path") != "save"
+            or actual[0].get("path") != "save"
+            or not planned[0].get("requiredBy")
+        ):
+            raise VerificationError("Recovered README requires recorded, contained runtime save-directory preparation")
+        for evidence in planned[0]["requiredBy"]:
+            requireIdentity(evidence.get("sha256"), 64, "runtime source prerequisite fingerprint")
+            if evidence.get("operation") != 'fopen("save/game.sav", "w+")':
+                raise VerificationError("Recovered runtime prerequisite lacks the genuine save-file writer")
 
     projects = [Path(argument).name for argument in report["configure"]["command"] if argument.endswith(".pro")]
     if len(projects) != 1 or any(character in projects[0] for character in "\n\r`$\\\"' "):
@@ -99,15 +217,21 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             description = str(entry.get("provenance", "Recorded reconstructed replacement")).replace("\n", " ")
             provenance.append(f"- `{path}`: {description}")
     compiler_flags = report.get("recipe", {}).get("qmakeArguments", [])
-    if any(not isinstance(flag, str) or not re.fullmatch(r"[A-Za-z0-9_+=./:-]+", flag) for flag in compiler_flags):
+    reviewed_flags = {"QMAKE_CXXFLAGS+=-include functional", "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"}
+    if any(
+        not isinstance(flag, str) or (flag not in reviewed_flags and not re.fullmatch(r"[A-Za-z0-9_+=./:-]+", flag))
+        for flag in compiler_flags
+    ):
         raise VerificationError("Historical compiler flags need an explicitly reviewed portable command")
-    qmake = " ".join(["qmake", projects[0], *compiler_flags, "-after TARGET=RecoveryGame DESTDIR=."])
+    qmake = shlex.join(["qmake", projects[0], *compiler_flags, "-after", "TARGET=RecoveryGame", "DESTDIR=."])
     abi = str(report.get("recipe", {}).get("pythonAbi", "none"))
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
         prerequisites += f", with CPython {abi} development files and its matching Boost.Python library"
+    if include_preparation:
+        prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
-        "# Recovered game snapshot",
+        f"# Recovered {mode} snapshot",
         "",
         f"Original commit: `{commit}`. Original tree: `{tree}`.",
         *(
@@ -116,10 +240,23 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             else []
         ),
         "",
-        "This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,",
-        "loaded its map and a healthy player, rendered the screenshot below, and exited normally.",
+        f"This recovered version compiled and linked on Linux, started the real {mode} on an isolated Xvfb display,",
+        (
+            "loaded its editor map, rendered the screenshot below, and exited normally."
+            if editor
+            else "loaded its map and a healthy player, rendered the screenshot below, and exited normally."
+        ),
+        *(
+            [
+                "Gameplay and player behavior were not verified. The surviving original `main.cpp` and",
+                "`config/init.json` selected the editor; their Git blob and SHA256 identities are recorded in",
+                "the attached verification metadata. The original entrypoint and configuration are preserved.",
+            ]
+            if editor
+            else []
+        ),
         "",
-        "![Actual startup of this recovered game](recovery/startup.png)",
+        f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
         "",
@@ -128,11 +265,34 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         f"- {compiler_version[0]}",
         *[f"- {line}" for line in qmake_version],
         "",
+        *(
+            [
+                "This version uses its original `preprocessor.py` and `classes.json` with CPython 2.7.18 to",
+                "generate `gen/prop.h` and refresh marked property blocks in headers before qmake. Run this",
+                "on a separate build copy: the original generator can modify existing source headers.",
+                "",
+            ]
+            if generator_preparation
+            else []
+        ),
+        *(
+            [
+                "Use a separate build copy for this version. Its original source contains Windows separators",
+                "in quoted includes. The attached helper changes only those recorded literals, verifies each",
+                "source file's original and prepared SHA256, and preserves the recovered snapshot's provenance.",
+                "",
+            ]
+            if include_preparation
+            else []
+        ),
         "Build from this snapshot's root directory:",
         "",
         "```sh",
+        *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
+        *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,
         'make -j"$(nproc)"',
+        *(["mkdir -p save"] if save_directory else []),
         "./RecoveryGame",
         "```",
         "",
@@ -147,12 +307,33 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         "",
         "## Recovery provenance",
         "",
+        *(
+            [
+                "The genuine scene writes `save/game.sav` during shutdown. Verification prepared its empty",
+                "parent directory before startup, without changing source files or replacing existing save data.",
+                "The source call, source hash and created/preserved directory are recorded in verification metadata.",
+                "",
+            ]
+            if save_directory
+            else []
+        ),
         ", ".join(f"{method}: {count}" for method, count in sorted(counts.items())) + ".",
         "",
         *provenance,
         "",
         f"Restored source fingerprint: `{restored_fingerprint}`.",
         "",
+        *(
+            [
+                "The restored source fingerprint identifies inputs before generation. The",
+                "[source preparation metadata](recovery/source-preparation.json) records the original inputs",
+                "and every generated or modified file's before/after hashes; the",
+                "[preparation log](recovery/source-preparation.log) retains the actual preparation steps.",
+                "",
+            ]
+            if preparation_files
+            else []
+        ),
         f"The actual {width} × {height} screenshot and [verification metadata](recovery/verification.json) belong to",
         "this source version. Reconstructed code and borrowed assets are identified in that metadata; they are",
         "not claimed to be the original deleted bytes. BFG removal-marker files are absent from this snapshot.",
@@ -163,8 +344,14 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     portable["smoke"]["startup"]["frame"]["path"] = "startup.png"
     portable["smoke"].pop("startupReport", None)
     portable["attachedScreenshot"] = {"path": "startup.png", "width": width, "height": height}
+    if preparation_files:
+        portable["attachedSourcePreparation"] = {
+            Path(name).name: {"path": Path(name).name, "sha256": hashlib.sha256(data).hexdigest()}
+            for name, data in preparation_files.items()
+        }
     return {
         "README.md": "\n".join(lines).encode(),
         "recovery/startup.png": frame_path.read_bytes(),
         "recovery/verification.json": (json.dumps(portable, indent=2, sort_keys=True) + "\n").encode(),
+        **preparation_files,
     }

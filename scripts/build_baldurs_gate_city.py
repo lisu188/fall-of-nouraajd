@@ -191,6 +191,112 @@ CITY_BODY_APPEARANCES = {
     "SIRINE": "sirine",
 }
 CITY_APPEARANCE_PREFIX = "maps/baldursGate/images/npc/"
+CITY_BUILDING_APPEARANCES = {
+    "timberHouse": (
+        "cityAr0100Portal4",
+        "cityAr0100Portal5",
+        "cityAr0100Portal9",
+        "cityAr0600Portal1",
+        "cityAr0600Portal9",
+        "cityAr0700Portal11",
+        "cityAr0800Portal9",
+        "cityAr1200Portal8",
+        "cityAr1200Portal11",
+        "cityAr1200Portal12",
+        "cityAr1300Portal2",
+        "cityAr1300Portal18",
+    ),
+    "stoneTownhouse": (
+        "cityAr0100Portal1",
+        "cityAr0100Portal8",
+        "cityAr0700Portal20",
+        "cityAr0700Portal5",
+        "cityAr0700Portal6",
+    ),
+    "merchantShop": (
+        "cityAr0800Portal8",
+        "cityAr0800Portal11",
+        "cityAr0800Portal12",
+        "cityAr1100Portal3",
+        "cityAr1100Portal6",
+        "cityAr1100Portal13",
+        "cityAr1100Portal14",
+        "cityAr1300Portal6",
+        "cityAr1300Portal8",
+        "cityAr1300Portal9",
+    ),
+    "innTavern": (
+        "cityAr0100Portal7",
+        "cityAr0200Portal9",
+        "cityAr0300Portal3",
+        "cityAr0300Portal4",
+        "cityAr0700Portal3",
+        "cityAr0700Portal4",
+        "cityAr0800Portal5",
+        "cityAr0800Portal10",
+        "cityAr1100Portal2",
+        "cityAr1100Portal8",
+        "cityAr1200Portal7",
+        "cityAr1300Portal1",
+    ),
+    "magicShop": ("cityAr0800Portal6",),
+    "temple": ("cityAr0200Portal1", "cityAr0600Portal7", "cityAr1200Portal5"),
+    "cityGate": ("cityAr0800Boundary18",),
+    "guardBarracks": ("cityAr1100Portal1",),
+    "ducalPalace": ("cityAr0200Portal13",),
+    "guildhall": ("cityAr1100Portal5", "cityAr1100Portal4", "cityAr0300Portal6"),
+    "dockWarehouse": ("cityAr1200Portal9", "cityAr1200Portal10", "cityAr1300Portal11", "cityAr0700Portal2"),
+}
+CITY_BUILDING_ASSETS = (*CITY_BUILDING_APPEARANCES, "ruinedTemple")
+CITY_TILE_ASSETS = (
+    "streetCobble",
+    "flagstonePaving",
+    "packedEarth",
+    "grassCourtyard",
+    "woodenFloor",
+    "marbleFloor",
+    "dungeonFlagstone",
+    "sewerWalkway",
+    "sewerWater",
+    "riverWater",
+    "stoneWall",
+    "rockWall",
+)
+CITY_TILE_APPEARANCES = {"cityStreetTile": "streetCobble", "cityWallTile": "stoneWall"}
+
+
+def applyCityEnvironmentAppearances(source, config):
+    assignments = {}
+    for appearance, names in CITY_BUILDING_APPEARANCES.items():
+        for name in names:
+            row = config.get(name, {})
+            properties = row.get("properties", {})
+            area = source["areas"].get(properties.get("sourceArea"), {})
+            destination = source["areas"].get(properties.get("destinationArea"), {})
+            gate = appearance == "cityGate"
+            if (
+                name in assignments
+                or row.get("class") != "BaldursGatePortal"
+                or area.get("classification") != "exterior"
+                or (not gate and destination.get("classification") != "interior")
+                or (
+                    gate
+                    and (properties.get("destinationArea") != "AR0900" or properties.get("sourceDirection") != "east")
+                )
+            ):
+                raise ValueError("Unreviewed City building appearance target: " + name)
+            assignments[name] = "maps/baldursGate/images/buildings/" + appearance
+    for name, appearance in CITY_TILE_APPEARANCES.items():
+        if config.get(name, {}).get("class") != "CTile":
+            raise ValueError("Unreviewed City tile appearance target: " + name)
+        assignments[name] = "maps/baldursGate/images/tiles/" + appearance
+    for name, animation in assignments.items():
+        config[name]["properties"]["animation"] = animation
+    return [
+        {"path": "images/" + directory + "/" + appearance + ".png", "kind": "file"}
+        for directory, appearances in (("buildings", CITY_BUILDING_ASSETS), ("tiles", CITY_TILE_ASSETS))
+        for appearance in appearances
+    ]
 
 
 def cityActorAppearance(properties, source, appearances):
@@ -1446,7 +1552,10 @@ def compileCity(source, quests=None):
         json.loads(POISON_TEXT.read_text(encoding="utf-8")),
         usablePosition,
     )
-    document["assets"] = applyCityAppearances(source, config)
+    document["assets"] = sorted(
+        applyCityAppearances(source, config) + applyCityEnvironmentAppearances(source, config),
+        key=lambda row: row["path"],
+    )
     protectCityDefinitions(config)
     return document, config, geometry
 

@@ -105,3 +105,7 @@ DEPENDPATH += /usr/include/python2.7 /usr/include
 
 FORMS += \
     src/mainwindow.ui
+
+# Header/class renames inside an unchanged missing module blob use surviving path facts.
+exists($$PWD/src/CTile.h):DEFINES += GAME_RECOVERY_PREFIXED_TILE
+exists($$PWD/src/CGameScene.h):DEFINES += GAME_RECOVERY_PREFIXED_SCENE_HEADER

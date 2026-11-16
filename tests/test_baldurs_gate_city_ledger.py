@@ -782,6 +782,202 @@ class BaldursGateCityLedgerUnitTest(unittest.TestCase):
         self.assertNotIn("SSDopple#selectedCityDeaths", {row["id"] for row in result["entries"]})
         self.assertNotIn("SSDopple#selectedCityDeaths", expectedIds(source, quests))
 
+    def tamokoInputs(self):
+        return readJson(ROOT / TAMOKO_PATH), (ROOT / TAMOKO_ROUTES_PATH).read_text(encoding="utf-8")
+
+    def testTamokoAddsExactlyAllStatesEdgesAndJournalsWithoutChangingPriorRows(self):
+        source, quests, config, script = minimalInputs()
+        supplement, routes = self.tamokoInputs()
+        before = buildLedger(source, quests, config, script)
+        after = buildLedger(source, quests, config, script, tamoko=supplement, tamoko_routes=routes)
+        old = {row["id"]: row for row in before["entries"]}
+        combined = {row["id"]: row for row in after["entries"]}
+        self.assertEqual(old, {key: combined[key] for key in old})
+        self.assertEqual(79, len(combined) - len(old))
+        self.assertEqual(expectedIds(source, quests, tamoko=supplement), set(combined))
+        self.assertEqual([], validateLedger(after))
+        self.assertIn(TAMOKO_PATH, after["inputs"])
+        self.assertIn(TAMOKO_ROUTES_PATH, after["inputs"])
+
+    def testTamokoEvidencePreservesEverySourceStateEdgeActionAndJournalOrder(self):
+        supplement, routes = self.tamokoInputs()
+        rows = {row["id"]: row for row in buildTamokoObligations(supplement, {}, "", routes)}
+        self.assertEqual(79, len(rows))
+        for state in supplement["states"]:
+            state_row = rows[f"TAMOKO.DLG:state{state['state']}"]
+            self.assertEqual(state["condition"], state_row["facts"]["condition"])
+            for edge in state["edges"]:
+                row = rows[f"TAMOKO.DLG:edge{edge['edge']}"]
+                self.assertEqual(edge["action"], row["effects"]["action"])
+                self.assertEqual(edge["condition"], row["facts"]["condition"])
+                self.assertEqual(edge.get("journalEraseStrrefs", []), row["effects"]["journalErase"])
+        for number, additions in ((27461, [14, 15]), (27462, [24]), (27463, [36, 37])):
+            row = rows[f"TAMOKO.DLG:journal{number}"]
+            self.assertEqual(additions, row["facts"]["addEdges"])
+            self.assertEqual([41, 48, 49], row["facts"]["eraseEdges"])
+            self.assertEqual(92, row["facts"]["rawAddFlags"])
+            self.assertEqual("none", row["ownership"]["reward"])
+            self.assertTrue(row["ownership"]["preserveUnrelatedActiveAndCompletedQuests"])
+        for row in rows.values():
+            value = supplement
+            for component in row["evidence"][0]["pointer"].strip("/").split("/"):
+                value = value[int(component)] if isinstance(value, list) else value[component]
+            self.assertIsNotNone(value)
+            self.assertEqual(supplement["dialogFingerprint"]["baseSha256"], row["evidence"][0]["sha256"])
+
+    def testTamokoPlanAssociationsUseExactLiteralPathsAndNeverBlanketCaseCredit(self):
+        supplement, routes = self.tamokoInputs()
+        rows = {row["id"]: row for row in buildTamokoObligations(supplement, {}, "", routes)}
+        rescue = "baldurs-gate-native-early-tamoko-rescued"
+        self.assertEqual([rescue], rows["TAMOKO.DLG:edge16"]["nativeConversion"]["plannedCaseIds"])
+        self.assertNotIn(rescue, rows["TAMOKO.DLG:edge17"]["nativeConversion"]["plannedCaseIds"])
+        unplanned = {row["id"]: row for row in buildTamokoObligations(supplement, {}, "")}
+        self.assertEqual([], unplanned["TAMOKO.DLG:edge47"]["nativeConversion"]["plannedCaseIds"])
+        self.assertEqual([], unplanned["TAMOKO.DLG:state24"]["nativeConversion"]["plannedCaseIds"])
+        self.assertEqual(
+            rows["TAMOKO.DLG:edge47"]["nativeConversion"]["plannedCaseIds"],
+            rows["TAMOKO.DLG:state24"]["nativeConversion"]["plannedCaseIds"],
+        )
+        self.assertEqual(
+            ["baldurs-gate-native-tamoko-threaten"],
+            rows["TAMOKO.DLG:edge39"]["nativeConversion"]["plannedCaseIds"],
+        )
+        incomplete = routes.replace('choices=("threaten",)', 'choices=("notAnAuditedChoice",)', 1)
+        self.assertNotEqual(routes, incomplete)
+        with self.assertRaises(ValueError):
+            buildTamokoObligations(supplement, {}, "", incomplete)
+
+    def testTamokoMissingDuplicateMalformedOrTruncatedFactsRefuseInventory(self):
+        supplement, _ = self.tamokoInputs()
+        mutations = (
+            lambda value: value["states"].pop(),
+            lambda value: value["states"][0]["edges"].pop(),
+            lambda value: value["states"][0]["edges"][1].update(edge=0),
+            lambda value: value["states"][0]["edges"][0].update(targetState=True),
+            lambda value: value["sourceJournalIds"].pop(),
+            lambda value: value.update(schemaVersion=True),
+            lambda value: value["states"].__setitem__(0, None),
+            lambda value: value["states"][0]["edges"].__setitem__(0, None),
+        )
+        for mutation in mutations:
+            value = copy.deepcopy(supplement)
+            mutation(value)
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                buildTamokoObligations(value, {}, "")
+
+    def testTamokoSourceOnlyMappingCannotAwardNativeOriginalOrOwnerAcceptance(self):
+        supplement, routes = self.tamokoInputs()
+        supplement["acceptance"] = {"native": True, "originalParity": True, "owner": True}
+        ledger = buildLedger(*minimalInputs(), tamoko=supplement, tamoko_routes=routes)
+        for row in ledger["entries"]:
+            if row["id"].startswith("TAMOKO.DLG:") and row["id"] != "TAMOKO.DLG:behavior":
+                self.assertEqual("planned", row["implementation"]["status"])
+                self.assertNotIn("scenarioChapters", row["phase"])
+                self.assertEqual("pending", row["testStatus"]["native"])
+                self.assertEqual("not established", row["testStatus"]["coverage"])
+                self.assertEqual("pending", row["testStatus"]["original"])
+                self.assertEqual("pending", row["testStatus"]["owner"])
+        self.assertTrue(validateLedger(ledger, require_mapped=True))
+        self.assertTrue(validateLedger(ledger, require_acceptance=True))
+
+    def testTamokoEveryGranularIdFlowsThroughActualRequiredCatalogPendingProducer(self):
+        supplement, routes = self.tamokoInputs()
+        ledger = buildLedger(*minimalInputs(), tamoko=supplement, tamoko_routes=routes)
+        assignment = next(
+            node
+            for node in ast.parse(routes).body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "PENDING_GAMEPLAY_OBLIGATIONS" for target in node.targets
+            )
+        )
+
+        class MemoryPath:
+            def __truediv__(self, _):
+                return self
+
+            def read_text(self, **_):
+                return json.dumps(ledger)
+
+        namespace = {"ROOT": MemoryPath(), "MAP": "baldursGate", "json": json}
+        exec(compile(ast.Module(body=[assignment], type_ignores=[]), "actual-pending-producer", "exec"), namespace)
+        pending = namespace["PENDING_GAMEPLAY_OBLIGATIONS"]
+        catalog_tree = ast.parse((ROOT / "tests/gameplay_branch_catalog.py").read_text(encoding="utf-8"))
+        catalog_pending = next(
+            node
+            for node in catalog_tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "pendingGameplayObligations"
+        )
+
+        class RouteModule:
+            AUTHORED_UNREACHABLE = {}
+            PENDING_GAMEPLAY_OBLIGATIONS = pending
+            CASES = ()
+
+        namespace.update(routeModules=lambda: (RouteModule,), sharedServiceObligations=lambda: {}, PLAYER_CLASSES=())
+        exec(compile(ast.Module(body=[catalog_pending], type_ignores=[]), "actual-required-catalog", "exec"), namespace)
+        self.assertEqual(pending, namespace["pendingGameplayObligations"]())
+        expected = {
+            "baldursGate.source." + key
+            for key in expectedIds(*minimalInputs()[:2], tamoko=supplement)
+            if key.startswith("TAMOKO.DLG:") and key != "TAMOKO.DLG:behavior"
+        }
+        self.assertEqual(79, len(expected))
+        self.assertLessEqual(expected, set(pending))
+        for key in expected:
+            self.assertEqual("planned", pending[key]["implementationStatus"])
+            self.assertEqual("tests/fixtures/baldurs_gate_city_ledger.json", pending[key]["ledger"])
+            self.assertIn("pending", pending[key]["reason"])
+            self.assertNotIn("branches", pending[key])
+            self.assertNotIn("contract", pending[key])
+
+    def testCanonicalCliRequiresTamokoInputsRatherThanSilentlyKeepingOldInventory(self):
+        source, quests, config, script = minimalInputs()
+        supplement, routes = self.tamokoInputs()
+        values = {
+            ledgerBuilder.SOURCE_PATH: json.dumps(source),
+            ledgerBuilder.QUEST_PATH: json.dumps(quests),
+            ledgerBuilder.CONFIG_PATH: json.dumps(config),
+            ledgerBuilder.SCRIPT_PATH: script,
+            TAMOKO_PATH: json.dumps(supplement),
+            POISON_PATH: json.dumps(readJson(ROOT / POISON_PATH)),
+            FOLLOWUP_PATH: json.dumps(readJson(ROOT / FOLLOWUP_PATH)),
+            TAMOKO_ROUTES_PATH: routes,
+        }
+        values[ledgerBuilder.OUTPUT_PATH] = json.dumps(
+            buildLedger(
+                source,
+                quests,
+                config,
+                script,
+                tamoko=supplement,
+                tamoko_routes=routes,
+                poison=readJson(ROOT / POISON_PATH),
+                followup=readJson(ROOT / FOLLOWUP_PATH),
+            )
+        )
+
+        class MemoryPath:
+            def __init__(self, key=""):
+                self.key = key
+
+            def __truediv__(self, key):
+                return MemoryPath(key)
+
+            def read_text(self, **_):
+                if self.key not in values:
+                    raise FileNotFoundError(self.key)
+                return values[self.key]
+
+            def is_file(self):
+                return self.key in values
+
+        with patch.object(ledgerBuilder, "ROOT", MemoryPath()), redirect_stdout(io.StringIO()):
+            self.assertEqual(0, ledgerBuilder.main(["--check"]))
+            del values[TAMOKO_PATH]
+            with self.assertRaises(FileNotFoundError):
+                ledgerBuilder.main(["--check"])
+
 
 class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
     """Factual source graph and mapping contracts only; no native or parity acceptance."""
@@ -1396,204 +1592,6 @@ class BaldursGateClock:
                     stock["originalParity"] = True
                 with self.assertRaises(ValueError):
                     buildLedger(source, self.full_quests, {}, "", stock=stock)
-
-
-class BaldursGateTamokoLedgerTest(unittest.TestCase):
-    def tamokoInputs(self):
-        return readJson(ROOT / TAMOKO_PATH), (ROOT / TAMOKO_ROUTES_PATH).read_text(encoding="utf-8")
-
-    def testTamokoAddsExactlyAllStatesEdgesAndJournalsWithoutChangingPriorRows(self):
-        source, quests, config, script = minimalInputs()
-        supplement, routes = self.tamokoInputs()
-        before = buildLedger(source, quests, config, script)
-        after = buildLedger(source, quests, config, script, tamoko=supplement, tamoko_routes=routes)
-        old = {row["id"]: row for row in before["entries"]}
-        combined = {row["id"]: row for row in after["entries"]}
-        self.assertEqual(old, {key: combined[key] for key in old})
-        self.assertEqual(79, len(combined) - len(old))
-        self.assertEqual(expectedIds(source, quests, tamoko=supplement), set(combined))
-        self.assertEqual([], validateLedger(after))
-        self.assertIn(TAMOKO_PATH, after["inputs"])
-        self.assertIn(TAMOKO_ROUTES_PATH, after["inputs"])
-
-    def testTamokoEvidencePreservesEverySourceStateEdgeActionAndJournalOrder(self):
-        supplement, routes = self.tamokoInputs()
-        rows = {row["id"]: row for row in buildTamokoObligations(supplement, {}, "", routes)}
-        self.assertEqual(79, len(rows))
-        for state in supplement["states"]:
-            state_row = rows[f"TAMOKO.DLG:state{state['state']}"]
-            self.assertEqual(state["condition"], state_row["facts"]["condition"])
-            for edge in state["edges"]:
-                row = rows[f"TAMOKO.DLG:edge{edge['edge']}"]
-                self.assertEqual(edge["action"], row["effects"]["action"])
-                self.assertEqual(edge["condition"], row["facts"]["condition"])
-                self.assertEqual(edge.get("journalEraseStrrefs", []), row["effects"]["journalErase"])
-        for number, additions in ((27461, [14, 15]), (27462, [24]), (27463, [36, 37])):
-            row = rows[f"TAMOKO.DLG:journal{number}"]
-            self.assertEqual(additions, row["facts"]["addEdges"])
-            self.assertEqual([41, 48, 49], row["facts"]["eraseEdges"])
-            self.assertEqual(92, row["facts"]["rawAddFlags"])
-            self.assertEqual("none", row["ownership"]["reward"])
-            self.assertTrue(row["ownership"]["preserveUnrelatedActiveAndCompletedQuests"])
-        for row in rows.values():
-            value = supplement
-            for component in row["evidence"][0]["pointer"].strip("/").split("/"):
-                value = value[int(component)] if isinstance(value, list) else value[component]
-            self.assertIsNotNone(value)
-            self.assertEqual(supplement["dialogFingerprint"]["baseSha256"], row["evidence"][0]["sha256"])
-
-    def testTamokoPlanAssociationsUseExactLiteralPathsAndNeverBlanketCaseCredit(self):
-        supplement, routes = self.tamokoInputs()
-        rows = {row["id"]: row for row in buildTamokoObligations(supplement, {}, "", routes)}
-        rescue = "baldurs-gate-native-early-tamoko-rescued"
-        self.assertEqual([rescue], rows["TAMOKO.DLG:edge16"]["nativeConversion"]["plannedCaseIds"])
-        self.assertNotIn(rescue, rows["TAMOKO.DLG:edge17"]["nativeConversion"]["plannedCaseIds"])
-        unplanned = {row["id"]: row for row in buildTamokoObligations(supplement, {}, "")}
-        self.assertEqual([], unplanned["TAMOKO.DLG:edge47"]["nativeConversion"]["plannedCaseIds"])
-        self.assertEqual([], unplanned["TAMOKO.DLG:state24"]["nativeConversion"]["plannedCaseIds"])
-        self.assertEqual(
-            rows["TAMOKO.DLG:edge47"]["nativeConversion"]["plannedCaseIds"],
-            rows["TAMOKO.DLG:state24"]["nativeConversion"]["plannedCaseIds"],
-        )
-        self.assertEqual(
-            ["baldurs-gate-native-tamoko-threaten"],
-            rows["TAMOKO.DLG:edge39"]["nativeConversion"]["plannedCaseIds"],
-        )
-        incomplete = routes.replace('choices=("threaten",)', 'choices=("notAnAuditedChoice",)', 1)
-        self.assertNotEqual(routes, incomplete)
-        with self.assertRaises(ValueError):
-            buildTamokoObligations(supplement, {}, "", incomplete)
-
-    def testTamokoMissingDuplicateMalformedOrTruncatedFactsRefuseInventory(self):
-        supplement, _ = self.tamokoInputs()
-        mutations = (
-            lambda value: value["states"].pop(),
-            lambda value: value["states"][0]["edges"].pop(),
-            lambda value: value["states"][0]["edges"][1].update(edge=0),
-            lambda value: value["states"][0]["edges"][0].update(targetState=True),
-            lambda value: value["sourceJournalIds"].pop(),
-            lambda value: value.update(schemaVersion=True),
-            lambda value: value["states"].__setitem__(0, None),
-            lambda value: value["states"][0]["edges"].__setitem__(0, None),
-        )
-        for mutation in mutations:
-            value = copy.deepcopy(supplement)
-            mutation(value)
-            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
-                buildTamokoObligations(value, {}, "")
-
-    def testTamokoSourceOnlyMappingCannotAwardNativeOriginalOrOwnerAcceptance(self):
-        supplement, routes = self.tamokoInputs()
-        supplement["acceptance"] = {"native": True, "originalParity": True, "owner": True}
-        ledger = buildLedger(*minimalInputs(), tamoko=supplement, tamoko_routes=routes)
-        for row in ledger["entries"]:
-            if row["id"].startswith("TAMOKO.DLG:") and row["id"] != "TAMOKO.DLG:behavior":
-                self.assertEqual("planned", row["implementation"]["status"])
-                self.assertNotIn("scenarioChapters", row["phase"])
-                self.assertEqual("pending", row["testStatus"]["native"])
-                self.assertEqual("not established", row["testStatus"]["coverage"])
-                self.assertEqual("pending", row["testStatus"]["original"])
-                self.assertEqual("pending", row["testStatus"]["owner"])
-        self.assertTrue(validateLedger(ledger, require_mapped=True))
-        self.assertTrue(validateLedger(ledger, require_acceptance=True))
-
-    def testTamokoEveryGranularIdFlowsThroughActualRequiredCatalogPendingProducer(self):
-        supplement, routes = self.tamokoInputs()
-        ledger = buildLedger(*minimalInputs(), tamoko=supplement, tamoko_routes=routes)
-        assignment = next(
-            node
-            for node in ast.parse(routes).body
-            if isinstance(node, ast.Assign)
-            and any(
-                isinstance(target, ast.Name) and target.id == "PENDING_GAMEPLAY_OBLIGATIONS" for target in node.targets
-            )
-        )
-
-        class MemoryPath:
-            def __truediv__(self, _):
-                return self
-
-            def read_text(self, **_):
-                return json.dumps(ledger)
-
-        namespace = {"ROOT": MemoryPath(), "MAP": "baldursGate", "json": json}
-        exec(compile(ast.Module(body=[assignment], type_ignores=[]), "actual-pending-producer", "exec"), namespace)
-        pending = namespace["PENDING_GAMEPLAY_OBLIGATIONS"]
-        catalog_tree = ast.parse((ROOT / "tests/gameplay_branch_catalog.py").read_text(encoding="utf-8"))
-        catalog_pending = next(
-            node
-            for node in catalog_tree.body
-            if isinstance(node, ast.FunctionDef) and node.name == "pendingGameplayObligations"
-        )
-
-        class RouteModule:
-            AUTHORED_UNREACHABLE = {}
-            PENDING_GAMEPLAY_OBLIGATIONS = pending
-            CASES = ()
-
-        namespace.update(routeModules=lambda: (RouteModule,), sharedServiceObligations=lambda: {}, PLAYER_CLASSES=())
-        exec(compile(ast.Module(body=[catalog_pending], type_ignores=[]), "actual-required-catalog", "exec"), namespace)
-        self.assertEqual(pending, namespace["pendingGameplayObligations"]())
-        expected = {
-            "baldursGate.source." + key
-            for key in expectedIds(*minimalInputs()[:2], tamoko=supplement)
-            if key.startswith("TAMOKO.DLG:") and key != "TAMOKO.DLG:behavior"
-        }
-        self.assertEqual(79, len(expected))
-        self.assertLessEqual(expected, set(pending))
-        for key in expected:
-            self.assertEqual("planned", pending[key]["implementationStatus"])
-            self.assertEqual("tests/fixtures/baldurs_gate_city_ledger.json", pending[key]["ledger"])
-            self.assertIn("pending", pending[key]["reason"])
-            self.assertNotIn("branches", pending[key])
-            self.assertNotIn("contract", pending[key])
-
-    def testCanonicalCliRequiresTamokoInputsRatherThanSilentlyKeepingOldInventory(self):
-        source, quests, config, script = minimalInputs()
-        supplement, routes = self.tamokoInputs()
-        values = {
-            ledgerBuilder.SOURCE_PATH: json.dumps(source),
-            ledgerBuilder.QUEST_PATH: json.dumps(quests),
-            ledgerBuilder.CONFIG_PATH: json.dumps(config),
-            ledgerBuilder.SCRIPT_PATH: script,
-            TAMOKO_PATH: json.dumps(supplement),
-            POISON_PATH: json.dumps(readJson(ROOT / POISON_PATH)),
-            FOLLOWUP_PATH: json.dumps(readJson(ROOT / FOLLOWUP_PATH)),
-            TAMOKO_ROUTES_PATH: routes,
-        }
-        values[ledgerBuilder.OUTPUT_PATH] = json.dumps(
-            buildLedger(
-                source,
-                quests,
-                config,
-                script,
-                tamoko=supplement,
-                tamoko_routes=routes,
-                poison=readJson(ROOT / POISON_PATH),
-                followup=readJson(ROOT / FOLLOWUP_PATH),
-            )
-        )
-
-        class MemoryPath:
-            def __init__(self, key=""):
-                self.key = key
-
-            def __truediv__(self, key):
-                return MemoryPath(key)
-
-            def read_text(self, **_):
-                if self.key not in values:
-                    raise FileNotFoundError(self.key)
-                return values[self.key]
-
-            def is_file(self):
-                return self.key in values
-
-        with patch.object(ledgerBuilder, "ROOT", MemoryPath()), redirect_stdout(io.StringIO()):
-            self.assertEqual(0, ledgerBuilder.main(["--check"]))
-            del values[TAMOKO_PATH]
-            with self.assertRaises(FileNotFoundError):
-                ledgerBuilder.main(["--check"])
 
 
 class BaldursGateCityLedgerFixtureTest(unittest.TestCase):

@@ -1,0 +1,89 @@
+{
+  "boundary": "Focused local tooling tests and static preservation audit; GitHub native/full-suite checks remain required and are not claimed as passed.",
+  "checks": [
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_history*.py"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/merge-validation/historical.log",
+      "logSha256": "051806c532734b0cfa63a0ff9825a632f615f28505486fb0531b39998382c80d",
+      "name": "historical",
+      "returnCode": 0,
+      "seconds": 2.568
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tests.test_recovery_workflow",
+        "tests.test_recovery_readme",
+        "tests.test_mcp_branch_workflow",
+        "test.TestRunnerSuiteTest.testCoverageTimingCacheSavesMeasurementsEvenWhenCoverageFails"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/merge-validation/readme-workflow.log",
+      "logSha256": "7365bb171f52f3b9933784d1e0a321e59887522b39cb83522dcfe9abc52c0f21",
+      "name": "readme-workflow",
+      "returnCode": 0,
+      "seconds": 1.617
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "/tmp/nouraajd-bfg-recovery/audit-current.py"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/merge-validation/source-audit.log",
+      "logSha256": "a3bc4221d5ca1087be03ebc5d06ff3be9c96a9ce8ff35c7b57bc1a1433b94361",
+      "name": "source-audit",
+      "returnCode": 0,
+      "seconds": 20.095
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        ".",
+        ":(glob,exclude)recovery/evidence/**/*.log",
+        ":(glob,exclude)recovery/upstream/**"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/merge-validation/whitespace.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "whitespace",
+      "returnCode": 0,
+      "seconds": 0.065
+    },
+    {
+      "command": [
+        "bash",
+        "-n",
+        "recovery/toolchains/build.sh"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/merge-validation/shell.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "shell",
+      "returnCode": 0,
+      "seconds": 0.002
+    }
+  ],
+  "nativeEvidence": {
+    "publishedCommitCount": 65,
+    "validatedCommitCount": 93,
+    "validatedEditorCommitCount": 4,
+    "validatedGameCommitCount": 89
+  },
+  "overridesSha256": "6ad53998c2c228ae72c51f29d20c81aaaabdf9dd18d4bac183f4322b72b50add",
+  "schemaVersion": 1,
+  "testCounts": {
+    "historical": 127,
+    "readmeWorkflowCache": 39
+  }
+}

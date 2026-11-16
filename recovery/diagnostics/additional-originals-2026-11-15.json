@@ -1,0 +1,404 @@
+{
+  "bytes": 11536,
+  "earliestAffectedCatalogPosition": 156,
+  "globalOverridesModified": false,
+  "matches": [
+    {
+      "bytes": 4996,
+      "catalogPositions": [
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        178,
+        179,
+        366
+      ],
+      "existingExactOverrideSources": [],
+      "occurrences": [
+        {
+          "commits": [
+            "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "089c528a35d35bd8552372f851b19db02097104f"
+        },
+        {
+          "commits": [
+            "a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
+        },
+        {
+          "commits": [
+            "c90b86c5098927c1f123ad050632d9a220aa4604"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
+        },
+        {
+          "commits": [
+            "78f01f818cc3d73e47af8af1b9946653eeb8b6bf"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
+        },
+        {
+          "commits": [
+            "a1102ac053605a68abd7f98eb8b714b5a00ac6ec"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
+        },
+        {
+          "commits": [
+            "c1b8045a931f2712030e918f9af13bee52a69b18"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
+        },
+        {
+          "commits": [
+            "b51715bf9de3a0138b49e1a28e81e914268fb49a"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
+        },
+        {
+          "commits": [
+            "b4d315b857f8df32b17422f64b381a36f3d90d1d"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
+        },
+        {
+          "commits": [
+            "8965c542530e1e58bb2917bf8d6b756735f57561"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
+        },
+        {
+          "commits": [
+            "0815aeac5f12dc58dd113d3fee1a837c06e39413"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
+        },
+        {
+          "commits": [
+            "71a3432e36b5649aabdd63c7807a78e9a8a3749a"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
+        },
+        {
+          "commits": [
+            "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
+        },
+        {
+          "commits": [
+            "cdc0be72f141da8414fa7c59baf24917a4897b75"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
+        },
+        {
+          "commits": [
+            "709535a6085c63fe1d26aebc3414ea2281529b3b"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15"
+        },
+        {
+          "commits": [
+            "f1be75d6ad474f4841acef0388b3c5f47dc06119"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
+        },
+        {
+          "commits": [
+            "8bb9add08cfde759541b3b35a5a2f9ad499654ed"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
+        },
+        {
+          "commits": [
+            "fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
+        },
+        {
+          "commits": [
+            "cf4715fa2d6daa0658443374e35b9890a81ac801"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
+        },
+        {
+          "commits": [
+            "ebf0a64b9759e8a74655159986b8dfb1e85a3686"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
+        },
+        {
+          "commits": [
+            "fde9faf210ad1f0ef12b1b09a98b163a7efa6672"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
+        },
+        {
+          "commits": [
+            "8e8064fc1aecdee89fe581c3e6f46876859082bf"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
+        },
+        {
+          "commits": [
+            "152007b28631784d3c5e17f2686eb6ef9ff30e46"
+          ],
+          "path": "tmx/TmxLayer.h",
+          "tree": "f9b16149815272e9ec71b4a69061479d1979e398"
+        }
+      ],
+      "originalBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+      "provenance": {
+        "archiveRawBytesVerified": true,
+        "discoveredAfter": "44 exact frozen-catalog commits fetched; causation not assumed",
+        "exactArchiveRepository": "/home/andrz/git/fall-of-nouraajd-pre-bfg",
+        "kind": "exact-git-object",
+        "physicalLooseObject": "/home/andrz/git/fall-of-nouraajd-pre-bfg/objects/18/a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+        "repository": "/tmp/nouraajd-bfg-recovery/source",
+        "verification": "Git SHA-1 object header+raw bytes, plus SHA256"
+      },
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "payloads/18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+      "trackedExactPayloads": []
+    },
+    {
+      "bytes": 6540,
+      "catalogPositions": [
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        178,
+        179,
+        366
+      ],
+      "existingExactOverrideSources": [],
+      "occurrences": [
+        {
+          "commits": [
+            "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "089c528a35d35bd8552372f851b19db02097104f"
+        },
+        {
+          "commits": [
+            "a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "15933f7c7d096db851eab42d42bf8dc3d177502f"
+        },
+        {
+          "commits": [
+            "c90b86c5098927c1f123ad050632d9a220aa4604"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "2098f8082af66db6a3be9a9cb112eef7a7a15402"
+        },
+        {
+          "commits": [
+            "78f01f818cc3d73e47af8af1b9946653eeb8b6bf"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "2934df35394ed0639015903c8b00c0f11d4936cf"
+        },
+        {
+          "commits": [
+            "a1102ac053605a68abd7f98eb8b714b5a00ac6ec"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca"
+        },
+        {
+          "commits": [
+            "c1b8045a931f2712030e918f9af13bee52a69b18"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "39dccf4fe874311456e84985830f374b31f7e4bc"
+        },
+        {
+          "commits": [
+            "b51715bf9de3a0138b49e1a28e81e914268fb49a"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "3bb524fa1791d87e8131c549c380e30d114a7d3e"
+        },
+        {
+          "commits": [
+            "b4d315b857f8df32b17422f64b381a36f3d90d1d"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f"
+        },
+        {
+          "commits": [
+            "8965c542530e1e58bb2917bf8d6b756735f57561"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "59255cf8032acdb16ec33381f48c61f89c8b02c5"
+        },
+        {
+          "commits": [
+            "0815aeac5f12dc58dd113d3fee1a837c06e39413"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865"
+        },
+        {
+          "commits": [
+            "71a3432e36b5649aabdd63c7807a78e9a8a3749a"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743"
+        },
+        {
+          "commits": [
+            "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b"
+        },
+        {
+          "commits": [
+            "cdc0be72f141da8414fa7c59baf24917a4897b75"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0"
+        },
+        {
+          "commits": [
+            "709535a6085c63fe1d26aebc3414ea2281529b3b"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15"
+        },
+        {
+          "commits": [
+            "f1be75d6ad474f4841acef0388b3c5f47dc06119"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "9b5e0a2459a4e1941087b609114063bd18b1aae8"
+        },
+        {
+          "commits": [
+            "8bb9add08cfde759541b3b35a5a2f9ad499654ed"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6"
+        },
+        {
+          "commits": [
+            "fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9"
+        },
+        {
+          "commits": [
+            "cf4715fa2d6daa0658443374e35b9890a81ac801"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723"
+        },
+        {
+          "commits": [
+            "ebf0a64b9759e8a74655159986b8dfb1e85a3686"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17"
+        },
+        {
+          "commits": [
+            "fde9faf210ad1f0ef12b1b09a98b163a7efa6672"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "c525dc0cee9323bb5e60ae83531fb312cceb2460"
+        },
+        {
+          "commits": [
+            "8e8064fc1aecdee89fe581c3e6f46876859082bf"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e"
+        },
+        {
+          "commits": [
+            "152007b28631784d3c5e17f2686eb6ef9ff30e46"
+          ],
+          "path": "tmx/TmxMap.h",
+          "tree": "f9b16149815272e9ec71b4a69061479d1979e398"
+        }
+      ],
+      "originalBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
+      "provenance": {
+        "archiveRawBytesVerified": true,
+        "discoveredAfter": "44 exact frozen-catalog commits fetched; causation not assumed",
+        "exactArchiveRepository": "/home/andrz/git/fall-of-nouraajd-pre-bfg",
+        "kind": "exact-git-object",
+        "physicalLooseObject": "/home/andrz/git/fall-of-nouraajd-pre-bfg/objects/a3/70874cccd93c210ee0b8c1e0b8d2b95059fee5",
+        "repository": "/tmp/nouraajd-bfg-recovery/source",
+        "verification": "Git SHA-1 object header+raw bytes, plus SHA256"
+      },
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "payloads/a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
+      "trackedExactPayloads": []
+    }
+  ],
+  "provenance": "Exact raw Git blobs physically retained as loose objects in pre-BFG archive",
+  "refsModified": false,
+  "schemaVersion": 1
+}

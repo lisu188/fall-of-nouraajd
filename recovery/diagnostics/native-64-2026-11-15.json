@@ -1,0 +1,37 @@
+{
+  "entries": [
+    {
+      "commit": "e1131adb2c47336c7dbe62dee0246216feb554eb",
+      "firstCatalogOrder": 64,
+      "originalBlob": "04640e43eda90a2ffa0a7018009d2c02a24ab690",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted #63 reconstruction to genuine #64 Map::show() and MapObject::setVisible(bool); reattach retained map actors and rebuild the tile cache on show, retaining the established hide behavior",
+      "sha256": "1494735d3c132d2b718b23030fd092f6ed4f03a02cf01441c7ea472a21d82bda",
+      "source": "recovery/payloads/reconstructions/04/04640e43eda90a2ffa0a7018009d2c02a24ab690-map.cpp"
+    },
+    {
+      "commit": "e1131adb2c47336c7dbe62dee0246216feb554eb",
+      "firstCatalogOrder": 64,
+      "originalBlob": "72c0030fed14daaec5a2d8713bb0bade7d6e03ba",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted #63 reconstruction to genuine #64 changeMap(x,y,z) and maps vector; retain per-depth maps and defer transitions beyond onEnter; placement follows arguments; unchanged dungeon seed carried as an explicitly inferred default",
+      "sha256": "0da3d1d9d27e2b06c716b42e4fc6c5d7198e49ac32cf08c5beec2e336627dc0f",
+      "source": "recovery/payloads/reconstructions/72/72c0030fed14daaec5a2d8713bb0bade7d6e03ba-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Startup proof does not establish historical gameplay equivalence of inferred dungeon defaults or map-transition behavior.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "3adca1cecd41b98dd51514457506e9a63a987107cf6339e5991238ddf03b73dd",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

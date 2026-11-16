@@ -1,0 +1,55 @@
+{
+  "entries": [
+    {
+      "commit": "e9c6660f050aabfb03ff0e745d451524d2dafd17",
+      "firstCatalogOrder": 87,
+      "originalBlob": "e0ba39db54d535309df94de0f933dd75a896b33f",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8b00e9e369f1112c28ba3835704d4a8252737949 (previous version of creatures/creature.cpp)",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
+      "source": "recovery/payloads/reconstructions/e0/e0ba39db54d535309df94de0f933dd75a896b33f-creature.cpp"
+    },
+    {
+      "commit": "e9c6660f050aabfb03ff0e745d451524d2dafd17",
+      "firstCatalogOrder": 87,
+      "originalBlob": "b9ce532beb021100bf34d60c1cd79fae14c5628a",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding Player reconstruction unchanged; genuine #87 Player header requires no additional method. Original internal delta unavailable.",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "recovery/payloads/reconstructions/b9/b9ce532beb021100bf34d60c1cd79fae14c5628a-player.cpp"
+    },
+    {
+      "commit": "e9c6660f050aabfb03ff0e745d451524d2dafd17",
+      "firstCatalogOrder": 87,
+      "originalBlob": "7827bdb46d936ee8b3bff9cc77f393629c55093b",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #85 Interaction reconstruction to genuine #87 ListItem deriving MapObject; use one-argument MapObject::setAnimation and provide newly declared onEnter/onMove/load/save/canSave. Pickup/coordinate persistence follows analogous intact same-commit Item::onEnter/saveToJson/canSave and actual Creature::addAction API; passive movement and original pickup details inferred. Synchronize the genuine duplicate Interaction/MapObject className fields for map persistence; original implementation unavailable.",
+      "sha256": "6a64f77947027d73148c6be8215fd54775f447b03bfc479ef305dde455e72d40",
+      "source": "recovery/payloads/reconstructions/78/7827bdb46d936ee8b3bff9cc77f393629c55093b-interaction.cpp"
+    },
+    {
+      "commit": "e9c6660f050aabfb03ff0e745d451524d2dafd17",
+      "firstCatalogOrder": 87,
+      "originalBlob": "669fa586f024267c725f11e4432a1855fad509d4",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #86 Map reconstruction to genuine #87 public Item/Interaction\u2192ListItem\u2192MapObject inheritance. Previously opaque Potion/Weapon/Armor/Interaction groups now create genuine factory objects; coordinate arrays follow intact Item::saveToJson. Discriminate genuine concrete classes on save, retain other unknown state opaque; nested schema still inferred from later #129 config donor.",
+      "sha256": "5bbc9c66428669ffaa109010fa7d193f9233421b9f6402c156998a6b8a8f2e9f",
+      "source": "recovery/payloads/reconstructions/66/669fa586f024267c725f11e4432a1855fad509d4-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay, original internal deltas and missing data schemas remain underdetermined; real compilation/startup proof only.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "d264b0e23b7721bcd4f8cb084bad38b0aaf72a409bc56915141fcd1faa10711c",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

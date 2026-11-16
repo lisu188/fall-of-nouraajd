@@ -1,5 +1,5 @@
 {
-  "count": 50,
+  "count": 52,
   "entries": [
     {
       "originalBlob": "025afb640bc05c35c08d6cc5754cfad08f22837b",
@@ -100,6 +100,16 @@
       "sha256": "7fb06b194f03fb7092c5142ef73044f14aa6f214dc7597be5e63a56ef1882fdf",
       "source": "174e755a0297b9379efad7d45f2063d803ee6340",
       "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:174e755a0297b9379efad7d45f2063d803ee6340/"
+    },
+    {
+      "originalBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+      "paths": [
+        "tmx/TmxLayer.h"
+      ],
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:18a62795338e2cc9516fb408ebe2f9a65ad5fcba/"
     },
     {
       "originalBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0",
@@ -350,6 +360,16 @@
       "sha256": "ddf488d8fb4b931286df75cd40c8244244e3070426ebcd850da389b7b5e016fd",
       "source": "a02c374a765d2692ecc2126a27470bf7edd71e90",
       "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:a02c374a765d2692ecc2126a27470bf7edd71e90/"
+    },
+    {
+      "originalBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
+      "paths": [
+        "tmx/TmxMap.h"
+      ],
+      "provenance": "Exact original retained in the local pre-BFG Git object archive; Git SHA-1 and SHA-256 verified on 2026-11-15 against the BFG pointer. Raw bytes preserved.",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
+      "url": "https://archive.softwareheritage.org/api/1/content/sha1_git:a370874cccd93c210ee0b8c1e0b8d2b95059fee5/"
     },
     {
       "originalBlob": "a427e3510ecaaa6dadeb2a4e957bb6d4880576c7",

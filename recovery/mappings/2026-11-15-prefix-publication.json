@@ -1,0 +1,17 @@
+{
+  "bundle": {
+    "bytes": 14437423,
+    "filename": "nouraajd-bfg-2026-11-15-prefix.bundle",
+    "sha256": "e5a86fa8f5d69a74fb2727ae8c49ba70a0eb18f1cb3bb9e2d590a6baac4d5ad6"
+  },
+  "completeDamagedHistory": false,
+  "mapping": "recovery/mappings/2026-11-15-prefix.json",
+  "mappingSha256": "505deb14361a0e40db3417fbdcfa4fec918c1632aa38d0effcff2840bda76263",
+  "method": "ordinary atomic non-force push followed by git ls-remote; existing refs preserved",
+  "publishedCommitCount": 65,
+  "remoteHeadsVerified": {
+    "refs/heads/recovery/bfg/2026-11-15/108bdcbeda04cefeba5e1895f91df023cea8487f": "c71ee387c03b31954c72ae1538ff075028aeca2d",
+    "refs/heads/recovery/bfg/2026-11-15/e1131adb2c47336c7dbe62dee0246216feb554eb": "21327410befc18aac2b3d10bae939e25ba3e0f3f"
+  },
+  "schemaVersion": 1
+}

@@ -219,6 +219,23 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     aliases = vh.prepareLibraryAliases(source, output)
     environment = ["env", *(name + "=" + str(value) for name, value in recipe.get("environment", {}).items())]
     commands = ["set -e"]
+    if vh.source_prep.preparationRequired(source):
+        commands.append(
+            shlex.join(
+                [
+                    hr.CONTROLLER,
+                    str(REPO / "scripts/history_source_prep.py"),
+                    "--source-root",
+                    str(source),
+                    "--output-dir",
+                    str(output / "preparation"),
+                    "--recipes",
+                    str(REPO / "recovery/toolchains/qt5.json"),
+                    "--recipe",
+                    recipe["id"],
+                ]
+            )
+        )
     for project in [*projects["dependencies"], projects["application"]]:
         build_root = output / project.relative_to(source).parent
         build_root.mkdir(parents=True, exist_ok=True)
@@ -419,7 +436,15 @@ def export() -> None:
                 continue
             target = REPO / "recovery/evidence" / commit
             target.mkdir(parents=True, exist_ok=True)
-            for name in ("verification.json", "startup.json", "startup.png", "configure.log", "startup.log"):
+            for name in (
+                "verification.json",
+                "startup.json",
+                "startup.png",
+                "configure.log",
+                "startup.log",
+                "source-preparation.json",
+                "source-preparation.log",
+            ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
             with gzip.GzipFile(target / "build.log.gz", "wb", mtime=0) as stream:
@@ -458,13 +483,25 @@ def progress() -> None:
                 continue
             if report.get("restoration", {}).get("restoredFilesFingerprint") != current:
                 continue
+            try:
+                startup_mode = vh.verifiedStartupMode(report)
+                startup = vh.validateSmokeReport(
+                    report_path.parent / "startup.json", report_path.parent, startup_mode, portable=True
+                )
+                if startup != report.get("smoke", {}).get("startup"):
+                    continue
+            except vh.VerificationError:
+                continue
             item = {
                 "originalCommit": commit,
                 "originalTree": report["sourceTree"],
                 "evidence": report_path.parent.relative_to(REPO).as_posix(),
                 "restoredFilesFingerprint": current,
                 "toolchainImage": image_id,
-                "validation": "build-and-startup-passed",
+                "startupMode": startup_mode,
+                "validation": (
+                    "build-and-editor-startup-passed" if startup_mode == "editor" else "build-and-startup-passed"
+                ),
                 "published": False,
             }
             old = published.get(commit)
@@ -486,6 +523,12 @@ def progress() -> None:
         "targetTreeCount": len(CATALOG["trees"]),
         "validatedCommitCount": len(snapshots),
         "validatedTreeCount": len(trees),
+        "validatedGameCommitCount": sum(item["startupMode"] == "game" for item in snapshots),
+        "validatedGameTreeCount": len({item["originalTree"] for item in snapshots if item["startupMode"] == "game"}),
+        "validatedEditorCommitCount": sum(item["startupMode"] == "editor" for item in snapshots),
+        "validatedEditorTreeCount": len(
+            {item["originalTree"] for item in snapshots if item["startupMode"] == "editor"}
+        ),
         "publishedCommitCount": sum(1 for item in snapshots if item["published"]),
         "snapshots": snapshots,
     }

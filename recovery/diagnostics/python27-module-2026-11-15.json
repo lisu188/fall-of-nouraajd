@@ -77,8 +77,8 @@
     {
       "originalBlob": "d59b1fb1b9c5d957efe4284a887026060ac53395",
       "path": "src/GameScript.cpp",
-      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback.",
-      "sha256": "c44ad3ff332fb217d7362175b851d0e4e4e58c7f1f4ea0eea669838d8b35413e",
+      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
+      "sha256": "41f2f4d9ff2cde3f00799d92d6dcc49f56a46ff292c69c25302067d3e048a117",
       "source": "recovery/payloads/reconstructions/d5/d59b1fb1b9c5d957efe4284a887026060ac53395-GameScript.cpp"
     }
   ],
@@ -89,6 +89,10 @@
     "Binding API equivalence is bounded by surviving header/caller evidence; containers, GUI panels, and later-only quest/event/trade APIs are not invented.",
     "CTile::onStep is nonvirtual in original headers and is exposed directly without a fake Python override.",
     "CScroll appears only in #264 within this unchanged original module blob and is not assumed by the reconstruction."
+  ],
+  "nativeModuleProofs": [
+    "/tmp/nouraajd-bfg-recovery/native-later/module-proof-260.json",
+    "/tmp/nouraajd-bfg-recovery/native-later/module-proof-266.json"
   ],
   "schemaVersion": 1,
   "sourceEvidence": [
