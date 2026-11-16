@@ -455,6 +455,33 @@ def export() -> None:
             print("exported", commit[:8])
 
 
+def stale() -> list[str]:
+    """Commits with exported success evidence whose current restoration no longer matches it."""
+    overrides = rh.loadOverrides(workbenchOverrides())
+    result = []
+    with rh.GitObjects(REPO) as objects:
+        for report_path in sorted((REPO / "recovery/evidence").glob("*/verification.json")):
+            report = json.loads(report_path.read_text())
+            commit = report.get("sourceCommit")
+            if report.get("status") != "success" or commit not in TREE_OF or report_path.parent.name != commit:
+                continue
+            try:
+                current = rh.prepareSnapshot(objects, CATALOG, commit, overrides)[1]["restoredFilesFingerprint"]
+            except rh.RecoveryError:
+                current = None
+            if report.get("restoration", {}).get("restoredFilesFingerprint") != current:
+                result.append(commit)
+    return result
+
+
+def revalidate() -> None:
+    """Re-verify every previously accepted commit whose restored inputs changed since its evidence."""
+    for commit in stale():
+        number = ORDER.index(commit) + 1
+        print(f"#{number} {commit[:8]}", end=" ", flush=True)
+        verify(commit)
+
+
 def progress() -> None:
     """Summarize committed evidence in recovery/progress.json."""
     path = REPO / "recovery/progress.json"
@@ -580,6 +607,7 @@ def main() -> None:
     commands.add_parser("save")
     commands.add_parser("export")
     commands.add_parser("progress")
+    commands.add_parser("revalidate", help="re-verify accepted commits whose restored inputs changed")
     args = parser.parse_args()
     if args.command == "missing":
         for entry in missing(resolve(args.ref)):
@@ -602,6 +630,8 @@ def main() -> None:
         save()
     elif args.command == "progress":
         progress()
+    elif args.command == "revalidate":
+        revalidate()
     else:
         export()
 

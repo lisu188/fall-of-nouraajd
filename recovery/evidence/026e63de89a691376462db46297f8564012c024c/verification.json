@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-s_obp9f9/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-8ayzhep2/observer/recovery_smoke_config.h",
     "configSha256": "9e5d3a791bc308327147ab07ef697533c391e9e97f00313c2250e2a217da007c",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-s_obp9f9/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-8ayzhep2/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-s_obp9f9/build.log",
+    "log": "/home/user/work2/verify/snapshot-8ayzhep2/build.log",
     "returnCode": 0,
-    "seconds": 14.041,
+    "seconds": 12.888,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-s_obp9f9/source/Game.pro",
+      "/home/user/work2/verify/snapshot-8ayzhep2/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-s_obp9f9/build/Makefile",
+      "/home/user/work2/verify/snapshot-8ayzhep2/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-s_obp9f9/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-s_obp9f9/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-8ayzhep2/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-8ayzhep2/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-s_obp9f9/configure.log",
+    "log": "/home/user/work2/verify/snapshot-8ayzhep2/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/cfd69e5ec285f755f958999a81eb2ee099442a8eabd367950cfcaab432a1c495",
+  "evidenceDir": "/home/user/work2/verify/evidence/c487c92467fd0bc1ec6866c5f41388e881296359c5958d5318b4284b2c2fe9eb",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-s_obp9f9/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-8ayzhep2/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-s_obp9f9/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-8ayzhep2/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.266,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "cfd69e5ec285f755f958999a81eb2ee099442a8eabd367950cfcaab432a1c495",
+  "fingerprint": "c487c92467fd0bc1ec6866c5f41388e881296359c5958d5318b4284b2c2fe9eb",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-s_obp9f9/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-8ayzhep2/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -219,7 +219,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-s_obp9f9/source",
+    "outputDir": "/home/user/work2/verify/snapshot-8ayzhep2/source",
     "restored": [
       {
         "markerPath": "compression/minizip.h.REMOVED.git-id",
@@ -250,7 +250,7 @@
         "method": "reconstruction",
         "originalBlob": "51cc3081ffb58fdf1b482488ebc31e6c8a14654b",
         "path": "creatures/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a773641d633236095a67164688d482c402ac87ca (previous version of creatures/creature.cpp)",
         "replacementBlob": "cb5fd8fb4856f1a6cd8c3384fb6ad42279a67d33"
       },
       {
@@ -761,7 +761,7 @@
         "method": "reconstruction",
         "originalBlob": "422070eaff81ebcab20d94eb117a782dbc78d85a",
         "path": "map/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b4a58e68d4c29bf64898559c5c0f2dd86f498412 (previous version of map/map.cpp)",
         "replacementBlob": "adf9da88b62f8995342362b56c5d11364e880450"
       },
       {
@@ -785,15 +785,15 @@
         "method": "reconstruction",
         "originalBlob": "8a3884eea3f1479e3ebbd252e0982dfc082e7f56",
         "path": "view/gameview.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "a244b587d745b71f88cb5a6395e92ad1f5830665"
+        "provenance": "content reconstruction of the BFG-removed original; from the previous gameview reconstruction: equipped items are slot-mapped and their surviving PlayerEquippedView is still a stub, so no list view is created for them",
+        "replacementBlob": "0939543080585b9fe9c0f72fb6541affb6f7fc8f"
       },
       {
         "markerPath": "view/mapview.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "7476f6bac498deb69ac2f9eb80963e8cab3c5705",
         "path": "view/mapview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; from the 6e75afae reconstruction plus loadTiles and the tiles list declared in the same-commit mapview.h: editor tiles come from config/tiles.json and the space key also cycles to them",
         "replacementBlob": "f75c86674a6b7b2c2beb3da4ebbccd3213e09544"
       },
       {
@@ -803,7 +803,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "f84b6921ca390654616bda81348f8fe0b9cd78ac245053cd5db8dc517e121749",
+    "restoredFilesFingerprint": "a77a671557e5f949d3cb834d962da69a8f44dd696b68ba0b3d44e676ab27bab6",
     "sourceCommit": "026e63de89a691376462db46297f8564012c024c",
     "sourceTree": "dd5aeb5dbca956517f1f91f718b6f6c9a29673e8",
     "status": "complete",
@@ -841,12 +841,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-s_obp9f9/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-s_obp9f9/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-8ayzhep2/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-8ayzhep2/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-s_obp9f9/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-8ayzhep2/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.365,
+    "seconds": 0.366,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -856,7 +856,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-s_obp9f9/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-8ayzhep2/smoke/startup.png",
         "sha256": "78b8e460b9922c2749fc648d1fcd13d1dfa6118b73b5c82d11421e9542293640",
         "width": 1278
       },
@@ -865,7 +865,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-s_obp9f9/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-8ayzhep2/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
@@ -928,7 +928,7 @@
           "history_source_prep.py",
           "normalize-quoted-includes"
         ],
-        "log": "/home/user/work2/verify/snapshot-s_obp9f9/preparation/include-separators.log",
+        "log": "/home/user/work2/verify/snapshot-8ayzhep2/preparation/include-separators.log",
         "name": "windowsIncludeSeparators",
         "returnCode": 0,
         "timedOut": false
