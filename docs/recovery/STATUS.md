@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **157 commits / 157 trees** against the
-restored inputs: **149 game startups and 8 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **167 commits / 167 trees** against the
+restored inputs: **157 game startups and 10 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -81,6 +81,11 @@ uses recorded Linux build-copy translations of surviving Windows include paths
 and an empty save-directory prerequisite where required. Reconstructions are derived from same-version headers,
 callers and configuration; underdetermined formulas, map transitions and layouts
 are labeled as inference. Compilation/startup do not prove historical gameplay parity.
+
+Catalog #128 (`856d7792`) is an original defect: it renamed `images/monsters/*/time.txt`
+to `time.json` but left the surviving `creatures.qrc` naming the old files, so `rcc`
+fails exactly as it would have originally; #129 restores the manifest. It needs an
+explicit build-only compatibility step before it can be accepted.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

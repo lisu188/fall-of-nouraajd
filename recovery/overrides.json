@@ -95759,6 +95759,90 @@
       "provenance": "content reconstruction of the BFG-removed original; from the 302c0add reconstruction plus the default MapObject constructor declared in the same-commit map.h (used by the surviving default Building constructor)",
       "sha256": "38a54fd8880d5a59d8b296f9672ac7ab34a1150d103558bd7ea055068e5d252d",
       "source": "payloads/reconstructions/cd/cde7c6280a57ea92707012bf06f612fc9f513cff-map.cpp"
+    },
+    {
+      "originalBlob": "422070eaff81ebcab20d94eb117a782dbc78d85a",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b4a58e68d4c29bf64898559c5c0f2dd86f498412 (previous version of map/map.cpp)",
+      "sha256": "9ebbe826c58e0cf6a96f11518f0984f4c51ab0670669559ee3e50bf68e76f8e8",
+      "source": "payloads/reconstructions/42/422070eaff81ebcab20d94eb117a782dbc78d85a-map.cpp"
+    },
+    {
+      "originalBlob": "51cc3081ffb58fdf1b482488ebc31e6c8a14654b",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a773641d633236095a67164688d482c402ac87ca (previous version of creatures/creature.cpp)",
+      "sha256": "4fe95574a0893be65c4c49580735a8c4ac004eee6f8d43219fc45db988294c0d",
+      "source": "payloads/reconstructions/51/51cc3081ffb58fdf1b482488ebc31e6c8a14654b-creature.cpp"
+    },
+    {
+      "originalBlob": "565eef804bccb8194a8a78169a7408136f573d70",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c7ef8ce757365618b6a8e6c6adf33cf2cc0710a5 (previous version of view/gameview.cpp)",
+      "sha256": "35817f4d3c0a11d71cc99f36ec029fe5e0360fe6631c4e1876a61b86fb469622",
+      "source": "payloads/reconstructions/56/565eef804bccb8194a8a78169a7408136f573d70-gameview.cpp"
+    },
+    {
+      "originalBlob": "7476f6bac498deb69ac2f9eb80963e8cab3c5705",
+      "path": "view/mapview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 6e75afae reconstruction plus loadTiles and the tiles list declared in the same-commit mapview.h: editor tiles come from config/tiles.json and the space key also cycles to them",
+      "sha256": "539dbfbe69530be242b9864451dc2933fff9bccd6a39f18c5a20e3c6e9582e4e",
+      "source": "payloads/reconstructions/74/7476f6bac498deb69ac2f9eb80963e8cab3c5705-mapview.cpp"
+    },
+    {
+      "originalBlob": "8a3884eea3f1479e3ebbd252e0982dfc082e7f56",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9bd50bb1511ccb54138110c475b9c3e1613a8f0e (previous version of view/gameview.cpp)",
+      "sha256": "35817f4d3c0a11d71cc99f36ec029fe5e0360fe6631c4e1876a61b86fb469622",
+      "source": "payloads/reconstructions/8a/8a3884eea3f1479e3ebbd252e0982dfc082e7f56-gameview.cpp"
+    },
+    {
+      "originalBlob": "915be7d54b67b686307ecc7945a6316ea5674210",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the b622147e reconstruction: default and copy constructors (copies rebuilt by name like the surviving Monster/Player ones) for the same-commit Qt metatype registration, plus Creature::onEnter/onMove and a concrete getLoot (same-commit creature.h)",
+      "sha256": "5473afd64e58c2f1c60003e178e941785f16ff9b622e5c0fed94071587f9a800",
+      "source": "payloads/reconstructions/91/915be7d54b67b686307ecc7945a6316ea5674210-creature.cpp"
+    },
+    {
+      "originalBlob": "9bd50bb1511ccb54138110c475b9c3e1613a8f0e",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 565eef804bccb8194a8a78169a7408136f573d70 (previous version of view/gameview.cpp)",
+      "sha256": "35817f4d3c0a11d71cc99f36ec029fe5e0360fe6631c4e1876a61b86fb469622",
+      "source": "payloads/reconstructions/9b/9bd50bb1511ccb54138110c475b9c3e1613a8f0e-gameview.cpp"
+    },
+    {
+      "originalBlob": "a70ddfe939a6fd91aec1a5a73050464f75b1688d",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 915be7d5 reconstruction: Creature no longer overrides hoverLeaveEvent (same-commit creature.h)",
+      "sha256": "4fe95574a0893be65c4c49580735a8c4ac004eee6f8d43219fc45db988294c0d",
+      "source": "payloads/reconstructions/a7/a70ddfe939a6fd91aec1a5a73050464f75b1688d-creature.cpp"
+    },
+    {
+      "originalBlob": "a773641d633236095a67164688d482c402ac87ca",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a70ddfe939a6fd91aec1a5a73050464f75b1688d (previous version of creatures/creature.cpp)",
+      "sha256": "4fe95574a0893be65c4c49580735a8c4ac004eee6f8d43219fc45db988294c0d",
+      "source": "payloads/reconstructions/a7/a773641d633236095a67164688d482c402ac87ca-creature.cpp"
+    },
+    {
+      "originalBlob": "b4a58e68d4c29bf64898559c5c0f2dd86f498412",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of eae9cd274b (previous version of map/map.cpp)",
+      "sha256": "9ebbe826c58e0cf6a96f11518f0984f4c51ab0670669559ee3e50bf68e76f8e8",
+      "source": "payloads/reconstructions/b4/b4a58e68d4c29bf64898559c5c0f2dd86f498412-map.cpp"
+    },
+    {
+      "originalBlob": "c7ef8ce757365618b6a8e6c6adf33cf2cc0710a5",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0f1d12502ec20d26023cc1d8a777880d473f1dcb (previous version of view/gameview.cpp)",
+      "sha256": "35817f4d3c0a11d71cc99f36ec029fe5e0360fe6631c4e1876a61b86fb469622",
+      "source": "payloads/reconstructions/c7/c7ef8ce757365618b6a8e6c6adf33cf2cc0710a5-gameview.cpp"
+    },
+    {
+      "originalBlob": "eae9cd274b5d4a9a3f170c150538fb57198c5870",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6d3dc7979db57f360f46edde7bc13ba319208e62 (previous version of map/map.cpp)",
+      "sha256": "9ebbe826c58e0cf6a96f11518f0984f4c51ab0670669559ee3e50bf68e76f8e8",
+      "source": "payloads/reconstructions/ea/eae9cd274b5d4a9a3f170c150538fb57198c5870-map.cpp"
     }
   ],
   "schemaVersion": 1
