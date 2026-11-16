@@ -1169,9 +1169,19 @@ class QuestRoute:
             before = resources(self.d)
             standing = self.d.number("plugin_cityStanding")
             action = "quest" + upperFirst(key) + upperFirst(outcome["id"])
+            delivery_before = (
+                eltanBodyHoldings(self.d, name) if key == "rescueEltan" and outcome["id"] == "complete" else None
+            )
+
             if key == "alatosTheft" and outcome["id"] == "complete":
                 self.alatos_betrayal = captureAlatosBetrayal(self.d, self, outcome)
             self.d.choose(name + "Dialog", action)
+            if delivery_before is not None:
+                self.d.test.assertEqual(
+                    (delivery_before[0] - 1, delivery_before[1]),
+                    eltanBodyHoldings(self.d, name),
+                    "Eltan delivery must consume one actual body without stocking it at the harbor",
+                )
             effects = outcome.get("effects", {})
             self.d.test.assertEqual(before[0] + effects.get("gold", 0), self.d.gold())
             self.d.test.assertEqual(before[1] + effects.get("xp", 0), resources(self.d)[1])
@@ -1186,6 +1196,17 @@ class QuestRoute:
             self.pending_outcomes.remove(goal)
             if not already_pending:
                 self.pending.remove(key)
+
+
+def eltanBodyHoldings(d, harbor_name):
+    return tuple(
+        sum(
+            max(1, d.call(item, "getNumericProperty", "plugin_cityQuantity"))
+            for item in d.call(owner, "getItems")
+            if d.call(item, "getStringProperty", "plugin_citySourceItem") == "MISC55"
+        )
+        for owner in (d.player, d.object(harbor_name))
+    )
 
 
 def questRoute(d, key, outcome_key, *, item_first=False):
@@ -1211,7 +1232,13 @@ def questRoute(d, key, outcome_key, *, item_first=False):
         betrayal = finishAlatosBetrayal(d, planner.alatos_betrayal)
     prefix = "baldursGate.quest." + key + "." + outcome_key
     before = resources(d)
+    delivery_after = eltanBodyHoldings(d, name) if key == "rescueEltan" and outcome_key == "complete" else None
     d.saveAndReload("city-quest-" + key + "-" + outcome_key)
+    if delivery_after is not None:
+        d.test.assertEqual(
+            delivery_after, eltanBodyHoldings(d, name), "Reload must preserve consumed Eltan body ownership"
+        )
+
     if betrayal:
         d.test.assertIsNone(d.object(betrayal["resarOpponent"], required=False))
         owned = alatosOwnedItems(d, d.player)
