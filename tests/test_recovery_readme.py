@@ -414,6 +414,74 @@ class RecoveryReadmeTest(unittest.TestCase):
         with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
             snapshotDocumentation(self.report, self.evidence)
 
+    def forwarderReport(self):
+        helper = history_source_prep.forwarders_prep
+        state = sorted(helper.STATES)[0]
+        names = helper.STATES[state]["forwarders"]
+        forwarders = {
+            name: {
+                "includes": list(helper.FORWARDERS[name]),
+                "sha256": hashlib.sha256(helper.forwarderBytes(name)).hexdigest(),
+            }
+            for name in names
+        }
+        recorded = {
+            "state": state,
+            "forwarders": forwarders,
+            "inputs": {**helper.INCLUDERS, **helper.STATES[state]["targets"]},
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {"path": name, "before": None, "after": {"kind": "file", "sha256": forwarders[name]["sha256"]}}
+            for name in names
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "forwardingHeaders",
+                    "command": ["prepare-forwarding-headers"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "forwardingHeaders": recorded, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "mergedHeaderForwarders"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Created forwarding headers\n")
+        return helper
+
+    def testForwarderCompatibilityHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.forwarderReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_forwarding_headers.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("Each forwarder only", readme)
+        self.assertIn("python3 recovery/prepare_forwarding_headers.py", readme)
+
+    def testForwarderCompatibilityRejectsChangedInputsOutputsAndState(self):
+        helper = self.forwarderReport()
+        recorded = self.report["sourcePreparation"]["identity"]["forwardingHeaders"]
+        original = recorded["inputs"]
+        recorded["inputs"] = {**original, "src/main.cpp": "0" * 64}
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        recorded["inputs"] = original
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        first = self.report["sourcePreparation"]["outputs"][0]["path"]
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = recorded["forwarders"][first]["sha256"]
+        recorded["state"] = "f" * 40
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def resourceReport(self):
         resource = (
             '<RCC>\n    <qresource prefix="/">\n'

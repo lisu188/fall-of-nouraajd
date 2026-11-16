@@ -587,6 +587,9 @@ def progress() -> None:
             if report.get("startupCompatibility") == "whitespaceConflictResolution":
                 item["startupCompatibility"] = "whitespaceConflictResolution"
                 item["validation"] = "build-and-startup-with-conflict-resolution-compatibility-passed"
+            if report.get("startupCompatibility") == "mergedHeaderForwarders":
+                item["startupCompatibility"] = "mergedHeaderForwarders"
+                item["validation"] = "build-and-startup-with-forwarding-header-compatibility-passed"
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])

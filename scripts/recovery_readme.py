@@ -226,6 +226,45 @@ def conflictResolutionAttachments(report: dict, preparation: dict) -> dict[str, 
     return {"recovery/prepare_conflict_resolution.py": replay}
 
 
+def forwarderAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.forwarders_prep
+    recorded = preparation.get("identity", {}).get("forwardingHeaders", {})
+    replay = Path(helper.__file__).read_bytes()
+    state = helper.STATES.get(recorded.get("state"), {})
+    forwarders = recorded.get("forwarders", {})
+    if (
+        not state
+        or {key: value for key, value in recorded.items() if key not in ("state", "forwarders")}
+        != {
+            "inputs": {**helper.INCLUDERS, **state["targets"]},
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "mergedHeaderForwarders"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+        or sorted(forwarders) != state["forwarders"]
+        or any(
+            forwarders[name]
+            != {
+                "includes": list(helper.FORWARDERS[name]),
+                "sha256": hashlib.sha256(helper.forwarderBytes(name)).hexdigest(),
+            }
+            for name in forwarders
+        )
+    ):
+        raise VerificationError("Forwarding headers differ from their reviewed original inputs or boundary")
+    outputs = {
+        entry.get("path"): entry.get("after")
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in helper.FORWARDERS
+    }
+    if outputs != {name: {"kind": "file", "sha256": forwarders[name]["sha256"]} for name in forwarders}:
+        raise VerificationError("Forwarding headers lack their exact preparation fingerprints")
+    return {"recovery/prepare_forwarding_headers.py": replay}
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -241,11 +280,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_coordinates = "coordinatesHash" in names
     has_aliases = "resourceAliases" in names
     has_conflicts = "conflictResolution" in names
+    has_forwarders = "forwardingHeaders" in names
     expected_names = (
         (["supplementalResources"] if has_resources else [])
         + (["reflectionRegistration"] if has_reflection else [])
         + (["coordinatesHash"] if has_coordinates else [])
         + (["resourceAliases"] if has_aliases else [])
+        + (["forwardingHeaders"] if has_forwarders else [])
         + (["conflictResolution"] if has_conflicts else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
@@ -273,6 +314,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         attachments.update(resourceAliasAttachments(report, preparation))
     if has_conflicts:
         attachments.update(conflictResolutionAttachments(report, preparation))
+    if has_forwarders:
+        attachments.update(forwarderAttachments(report, preparation))
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -316,6 +359,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                     has_conflicts
                     and name in preparation["identity"]["conflictResolution"].get("supplied", {})
                 )
+                or (has_forwarders and name in preparation["identity"]["forwardingHeaders"].get("forwarders", {}))
             )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
@@ -398,6 +442,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     coordinates_preparation = "recovery/prepare_coordinates_hash.py" in preparation_files
     alias_preparation = "recovery/prepare_resource_aliases.py" in preparation_files
     conflict_preparation = "recovery/prepare_conflict_resolution.py" in preparation_files
+    forwarder_preparation = "recovery/prepare_forwarding_headers.py" in preparation_files
     conflict_supplied = bool(
         report.get("sourcePreparation", {}).get("identity", {}).get("conflictResolution", {}).get("supplied")
     )
@@ -409,6 +454,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             (coordinates_preparation, "originalCoordinateHash"),
             (alias_preparation, "renamedResourceAliases"),
             (conflict_preparation, "whitespaceConflictResolution"),
+            (forwarder_preparation, "mergedHeaderForwarders"),
         )
         if enabled
     ]
@@ -486,6 +532,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         or coordinates_preparation
         or alias_preparation
         or conflict_preparation
+        or forwarder_preparation
     ):
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
@@ -586,6 +633,18 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             if conflict_preparation
             else []
         ),
+        *(
+            [
+                "Startup used explicit build-only forwarding headers. This commit merged several class headers",
+                "into one header per family while its unchanged original sources still include the old names,",
+                "so it cannot compile as committed; a later commit rewrites those includes. Each forwarder only",
+                "includes the header that now declares the same classes. Original sources remain unchanged.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if forwarder_preparation
+            else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -623,6 +682,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_coordinates_hash.py"] if coordinates_preparation else []),
         *(["python3 recovery/prepare_resource_aliases.py"] if alias_preparation else []),
         *(["python3 recovery/prepare_conflict_resolution.py"] if conflict_preparation else []),
+        *(["python3 recovery/prepare_forwarding_headers.py"] if forwarder_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

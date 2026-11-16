@@ -17,11 +17,13 @@ try:
     from scripts import history_prepare_coordinates as coordinates_prep
     from scripts import history_prepare_resource_aliases as aliases_prep
     from scripts import history_prepare_conflicts as conflicts_prep
+    from scripts import history_prepare_forwarders as forwarders_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
     import history_prepare_coordinates as coordinates_prep
     import history_prepare_resource_aliases as aliases_prep
     import history_prepare_conflicts as conflicts_prep
+    import history_prepare_forwarders as forwarders_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
@@ -242,6 +244,7 @@ def preparationRequired(source_root: Path) -> bool:
         or coordinates_prep.coordinateHashPlan(source_root) is not None
         or aliases_prep.resourceAliasPlan(source_root) is not None
         or conflicts_prep.conflictResolutionPlan(source_root) is not None
+        or forwarders_prep.forwarderPlan(source_root) is not None
     )
 
 
@@ -278,6 +281,7 @@ def prepareSources(
     coordinates = coordinates_prep.coordinateHashPlan(source_root)
     resource_aliases = aliases_prep.resourceAliasPlan(source_root)
     conflicts = conflicts_prep.conflictResolutionPlan(source_root)
+    forwarders = forwarders_prep.forwarderPlan(source_root)
     if conflicts and set(conflicts["files"]) & {overlay["path"] for overlay in include_overlays}:
         raise ValueError("Conflict resolution and include separator preparation overlap")
     if coordinates:
@@ -306,6 +310,7 @@ def prepareSources(
         and not coordinates
         and not resource_aliases
         and not conflicts
+        and not forwarders
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -371,6 +376,21 @@ def prepareSources(
             {
                 "name": "resourceAliases",
                 "command": ["history_source_prep.py", "prepare-resource-aliases"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if forwarders:
+        forwarders_prep.writeForwarders(source_root, forwarders["data"])
+        identity = {key: value for key, value in forwarders.items() if key != "data"}
+        result["identity"]["forwardingHeaders"] = identity
+        log = output_root / "forwarding-headers.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "forwardingHeaders",
+                "command": ["history_source_prep.py", "prepare-forwarding-headers"],
                 "returnCode": 0,
                 "timedOut": False,
                 "log": str(log),
@@ -453,7 +473,11 @@ def prepareSources(
                                     else (
                                         "following commit's omitted source supplied"
                                         if conflicts and name in conflicts["supplied"]
-                                        else "Windows include separators on an isolated build-source copy"
+                                        else (
+                                            "forwarding header for a merged-away original header"
+                                            if forwarders and name in forwarders["forwarders"]
+                                            else "Windows include separators on an isolated build-source copy"
+                                        )
                                     )
                                 )
                             )
