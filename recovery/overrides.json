@@ -95703,6 +95703,62 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 32c76f68b2 (previous version of map/map.cpp)",
       "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
       "source": "payloads/reconstructions/ec/ec097c57481272f5ed99b7e675a3ef6e8669ff5b-map.cpp"
+    },
+    {
+      "originalBlob": "27eb10ea230c1cf4b8bb45432fc6a83f81a74751",
+      "path": "view/mapview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; surviving 251c727c view/mapview.cpp plus loadCreatures and the creatures list declared in the same-commit mapview.h: editor creatures come from config/creatures.json like items from config/items.json, and the space key cycles items, buildings and creatures",
+      "sha256": "0dae3627778c15ebe25c0b59578dc897b9704ecd6c967dfb00adfcf9c8639168",
+      "source": "payloads/reconstructions/27/27eb10ea230c1cf4b8bb45432fc6a83f81a74751-mapview.cpp"
+    },
+    {
+      "originalBlob": "3554e240c210442f6eb1ffd50cad7687608df550",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0fa59fba8ca22ca6821f5c0df8f8f4daea80dde2 (previous version of interactions/interaction.cpp)",
+      "sha256": "4c0d5059e8b1ae235cea442136b39495f0c10fcc72fd53c943d87efd4b51ae36",
+      "source": "payloads/reconstructions/35/3554e240c210442f6eb1ffd50cad7687608df550-interaction.cpp"
+    },
+    {
+      "originalBlob": "59d5eac7f9b9aea005b57389eae9c06912fc98f7",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 0f75e9ef reconstruction: Creature derives from ListItem in the same-commit creature.h",
+      "sha256": "63d2d87dbd28920794f8e37ce911793b6ff5086e112fc419928ea8cb898596e8",
+      "source": "payloads/reconstructions/59/59d5eac7f9b9aea005b57389eae9c06912fc98f7-creature.cpp"
+    },
+    {
+      "originalBlob": "6d3dc7979db57f360f46edde7bc13ba319208e62",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 96690549 reconstruction: caves and dungeons are created with their default constructors and positioned through the surviving loadFromJson (same-commit cave.h/dungeon.h removed the coordinate constructors)",
+      "sha256": "9ebbe826c58e0cf6a96f11518f0984f4c51ab0670669559ee3e50bf68e76f8e8",
+      "source": "payloads/reconstructions/6d/6d3dc7979db57f360f46edde7bc13ba319208e62-map.cpp"
+    },
+    {
+      "originalBlob": "6e75afaeab0370015b8d4ec5bc0a6e29a714dbe3",
+      "path": "view/mapview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 27eb10ea230c1cf4b8bb45432fc6a83f81a74751 (previous version of view/mapview.cpp)",
+      "sha256": "0dae3627778c15ebe25c0b59578dc897b9704ecd6c967dfb00adfcf9c8639168",
+      "source": "payloads/reconstructions/6e/6e75afaeab0370015b8d4ec5bc0a6e29a714dbe3-mapview.cpp"
+    },
+    {
+      "originalBlob": "96690549347efb60c125951eb740b35f5b2bff6e",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cde7c6280a57ea92707012bf06f612fc9f513cff (previous version of map/map.cpp)",
+      "sha256": "38a54fd8880d5a59d8b296f9672ac7ab34a1150d103558bd7ea055068e5d252d",
+      "source": "payloads/reconstructions/96/96690549347efb60c125951eb740b35f5b2bff6e-map.cpp"
+    },
+    {
+      "originalBlob": "b622147e9329c1a0935674e0bd3a0ac647e400e8",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 59d5eac7f9b9aea005b57389eae9c06912fc98f7 (previous version of creatures/creature.cpp)",
+      "sha256": "63d2d87dbd28920794f8e37ce911793b6ff5086e112fc419928ea8cb898596e8",
+      "source": "payloads/reconstructions/b6/b622147e9329c1a0935674e0bd3a0ac647e400e8-creature.cpp"
+    },
+    {
+      "originalBlob": "cde7c6280a57ea92707012bf06f612fc9f513cff",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 302c0add reconstruction plus the default MapObject constructor declared in the same-commit map.h (used by the surviving default Building constructor)",
+      "sha256": "38a54fd8880d5a59d8b296f9672ac7ab34a1150d103558bd7ea055068e5d252d",
+      "source": "payloads/reconstructions/cd/cde7c6280a57ea92707012bf06f612fc9f513cff-map.cpp"
     }
   ],
   "schemaVersion": 1
