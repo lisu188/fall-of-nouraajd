@@ -1,0 +1,440 @@
+{
+  "schemaVersion": 1,
+  "scope": "Original BG1 city visual adaptations",
+  "generatedDate": "2026-11-16",
+  "generationMode": "Built-in image_gen.imagegen only; no CLI fallback or API key",
+  "originalParityEstablished": false,
+  "status": "Eight assets only. Consumer mappings, resource declarations, staging and native validation pending.",
+  "sourcePolicy": "Supporting EE identities only; colors, ornaments, materials and clothing are original adaptation choices, not extracted BG1 art.",
+  "nativePixelBudget": {
+    "source": "src/gui/CTextureCache.cpp",
+    "symbol": "MAX_ALPHA_MASK_PIXELS",
+    "value": 4000000
+  },
+  "styleReferences": [
+    {
+      "path": "res/images/items/quest/brassKey.png",
+      "sha256": "5f0943df1a366b935ef6a33f0c7a52bccfd338344c700da8248923a536d141ce"
+    },
+    {
+      "path": "res/images/items/potions/life.png",
+      "sha256": "82338ece824417962509803f7fa045a99ecd144e80d90d663c487377712ad183"
+    },
+    {
+      "path": "res/maps/baldursGate/images/buildings/innTavern.png",
+      "sha256": "9f28133386e4e4bb610f6cb19fd316e2f8671f5a4696727a0f54535feb670662"
+    }
+  ],
+  "assets": [
+    {
+      "id": "closedDoor",
+      "path": "res/maps/baldursGate/images/interactions/closedDoor.png",
+      "bytes": 1280454,
+      "sha256": "bb8eba391a7b6c1b2e8c080d04af0f1abf4380c01f9b6147b66ee6d2498fd3b5",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        12,
+        1240,
+        1226
+      ],
+      "alphaAtLeastTwoBounds": [
+        327,
+        95,
+        924,
+        1147
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.07575757575757576,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: One closed medieval city interior door seen almost front-on with a slight three-quarter angle: vertical weathered oak boards, two dark iron strap hinges, small iron ring handle, narrow simple stone jamb and shallow arch surrounding only the door. One compact interactable-door icon, closed and stable. Entire narrow doorway silhouette visible. No house facade, windows, open doorway, wall extending into scenery, floor, figures, writing, signs, glow or extra objects.",
+      "followupPrompts": [],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/areas/AR0111/doors/0",
+          "sourceIdentity": "AR0111:door1",
+          "areaSha256": "b443033c3ef7ea61a6f3dd1492f6c130b1f90e8e5916f3c34d49bdfe957f3d83"
+        }
+      ]
+    },
+    {
+      "id": "woodenChest",
+      "path": "res/maps/baldursGate/images/interactions/woodenChest.png",
+      "bytes": 1204506,
+      "sha256": "a0861834d67fb0451a3959727e077a70a540d2cb9e8891b704768dcf0b88793e",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        32,
+        1232,
+        1216
+      ],
+      "alphaAtLeastTwoBounds": [
+        179,
+        268,
+        1069,
+        1070
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.14274322169059012,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: One small closed medieval wooden storage chest in three-quarter view, sturdy weathered oak planks, dark iron straps and simple closed iron latch, slightly domed closed lid. Plain utilitarian city household container. Entire chest and feet visible, strong silhouette. No treasure spilling out, no coins, skulls, runes, glow, raised lid, surrounding objects or floor.",
+      "followupPrompts": [],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/areas/AR0004/containers/0",
+          "sourceIdentity": "AR0004:container1",
+          "areaSha256": "4548fb17eb24c6c434d850b5b76d2d8be8e0ddfeee9639101aaa134cc3952647"
+        }
+      ]
+    },
+    {
+      "id": "antidoteBottle",
+      "path": "res/maps/baldursGate/images/items/antidoteBottle.png",
+      "bytes": 747722,
+      "sha256": "f0b572e46c9b2fcbdfb606f3b7c025898702e4f6e7b91c94ff22553975b95abd",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        45,
+        23,
+        1184,
+        1214
+      ],
+      "alphaAtLeastTwoBounds": [
+        310,
+        156,
+        924,
+        1086
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.12440191387559808,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: One squat medieval green-glass antidote bottle, rounded body and short neck, dark cork firmly closed, a restrained iron neck band, visible muted amber-green liquid and a small clear highlight. Plain unlabelled vessel, entirely visible. No medical cross, lettering, runes, herbs, extra bottles, vapor, floating effect or scenery.",
+      "followupPrompts": [],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/POTN20",
+          "sourceIdentity": "POTN20.ITM",
+          "sha256": "cb6af766623bc3c6d00a0b35cfc23bc7a4912a4fd32888567eb409b280f6c193",
+          "displayName": "Antidote"
+        },
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/POTN47",
+          "sourceIdentity": "POTN47.ITM",
+          "sha256": "2c83039fd2433d23a829feb2efe189df9e1dd4df812146268cd47dfedf90ff7b",
+          "displayName": "Marek's Potion of Antidote"
+        }
+      ]
+    },
+    {
+      "id": "carriedDuke",
+      "path": "res/maps/baldursGate/images/items/carriedDuke.png",
+      "bytes": 1139511,
+      "sha256": "eeb3f02e707c46e5c4dba109af8e205b2d53f924218ce97555a45272e967a37b",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        33,
+        1251,
+        1254
+      ],
+      "alphaAtLeastTwoBounds": [
+        72,
+        185,
+        1178,
+        1108
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.05741626794258373,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: The portable body of Duke Eltan represented respectfully as one intact unconscious adult human nobleman lying diagonally on a tightly folded muted blue cloak. Eyes closed, clothed in worn medieval blue and brown garments, hands resting naturally, boots attached, head and all limbs fully visible within the padded silhouette. A single compact rescue-carry sprite, no carriers. He is alive and unconscious, not a skeleton or corpse. No blood, injuries, exposed flesh, gore, weapon, coffin, grave or scenery.",
+      "followupPrompts": [],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/MISC55",
+          "sourceIdentity": "MISC55.ITM",
+          "sha256": "95d73410ed70227967fa1ca6872ff2bf7ca76411a8bcfdbbfa428c581ab27ee4",
+          "displayName": "Duke Eltan's Body"
+        }
+      ]
+    },
+    {
+      "id": "ordinaryBook",
+      "path": "res/maps/baldursGate/images/items/ordinaryBook.png",
+      "bytes": 1033300,
+      "sha256": "6c606505aa7c52354a52a5beb7e2c6aa04c3ff494b5a79f4899e90088e79169b",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        49,
+        35,
+        1240,
+        1150
+      ],
+      "alphaAtLeastTwoBounds": [
+        186,
+        201,
+        1050,
+        1060
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.14832535885167464,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: A single closed ordinary medieval history book, brown worn leather over thick cream parchment pages, simple bronze corner pieces and plain undecorated cover, slightly diagonal three-quarter view. This is an ordinary book, no magical glow.",
+      "followupPrompts": [],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/BOOK10",
+          "sourceIdentity": "BOOK10.ITM",
+          "sha256": "8e46fa447b0736489567131e46575dd7536bca8d18e41d3b7a99b3cdced9cd6b",
+          "displayName": "History of Calimshan"
+        }
+      ]
+    },
+    {
+      "id": "questRing",
+      "path": "res/maps/baldursGate/images/items/questRing.png",
+      "bytes": 723344,
+      "sha256": "2f4a234bfe9e01f6fa082ca9273d03b67c49d6c992db5587d0a7eb6ea26c9136",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        35,
+        30,
+        1208,
+        1230
+      ],
+      "alphaAtLeastTwoBounds": [
+        268,
+        239,
+        971,
+        997
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.19059011164274323,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: One simple aged bronze finger ring, a thick circular band with a small plain flattened bezel, tilted three-quarter view so the opening is clearly visible. Worn medieval metal with restrained cool highlight. No gem, crest, letters, magical aura, key blade or other objects. This is an unidentified ring; do not invent a conventional key.",
+      "followupPrompts": [],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/MAGE04",
+          "sourceIdentity": "MAGE04.ITM",
+          "sha256": "3c71e1e8c87f30f3e152b2465a96aa5a878fe845ddfb863e58ade2e485b35488",
+          "displayName": "Ring"
+        },
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/areas/AR1100/doors/8/key",
+          "sourceIdentity": "MAGE04",
+          "note": "The audited door key field names an unidentified ring, not a conventional key."
+        }
+      ]
+    },
+    {
+      "id": "understandingTomeV2",
+      "path": "res/maps/baldursGate/images/items/understandingTomeV2.png",
+      "bytes": 882104,
+      "sha256": "5d3e020ab032287656c5825030eab427c802990919c2af1dc419a9ad0c499166",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        27,
+        87,
+        1188,
+        1198
+      ],
+      "alphaAtLeastTwoBounds": [
+        260,
+        253,
+        978,
+        1009
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.19537480063795853,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: One substantial closed Tome of Understanding, a thick old book in muted deep teal leather, aged bronze corner guards and clasp, cream parchment block, one simple embossed geometric diamond on its otherwise unlettered cover. Slightly diagonal three-quarter view. Restrained scholarly treasure, no glowing effects, no visible writing.",
+      "followupPrompts": [
+        "Use case: precise-object-edit. Edit the supplied image of the teal leather book. Preserve exactly its book identity, teal and bronze colors, unlettered diamond cover, closed clasp, hand-painted dark-fantasy style and complete silhouette. Change only framing and background alpha: center the book slightly smaller with at least 15% empty transparent margin on all four sides. Every background pixel throughout that outer margin, including all four corner pixels, must have alpha zero. Remove all stray alpha-one noise in the background. Keep genuine RGBA transparency; no opaque black or checkerboard. Square 1254 by 1254 pixels, below four million pixels. No text, letters, glow, scenery or extra objects."
+      ],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/BOOK08",
+          "sourceIdentity": "BOOK08.ITM",
+          "sha256": "d622d0ed5ea5a99e2f83a3be23b1b0b1e9096888204b3d4dfc90ea34e533c1f8",
+          "displayName": "Tome of Understanding"
+        }
+      ]
+    },
+    {
+      "id": "wrappedChildRemainsV2",
+      "path": "res/maps/baldursGate/images/items/wrappedChildRemainsV2.png",
+      "bytes": 676432,
+      "sha256": "96fb29c01e504b6e0bc6eb02d1794ede619f872c329d47802e55fe6b7baecb23",
+      "mode": "RGBA",
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBounds": [
+        0,
+        263,
+        1053,
+        1198
+      ],
+      "alphaAtLeastTwoBounds": [
+        221,
+        265,
+        1050,
+        1055
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "visiblePaddingMinimumFraction": 0.15869218500797447,
+      "sourceBytesEqual": true,
+      "nativePixelBudget": 4000000,
+      "generator": "built-in image_gen.imagegen",
+      "status": "asset only; consumers and staging pending",
+      "prompt": "Use case: stylized-concept. Asset type: one square native game icon for the Baldur's Gate city scenario in Fall of Nouraajd. Original hand-painted dark-fantasy art: strong dark ink contours, restrained angular brush shading, worn medieval materials, muted ochre/umber/steel tones with one readable color accent, consistent with the city's newly painted buildings and the game's bold outlined inventory items. Genuine transparent RGBA background; no opaque background, no black backdrop, no drawn checkerboard. Output about 1254 by 1254 pixels, always square and below four million pixels. A single isolated subject in three-quarter view, centered, complete silhouette wholly inside the central 72 percent of the canvas; generous fully transparent padding on all four sides, no clipping. Clear readable silhouette at small inventory size, restrained detail. No letters, numbers, runes, legible inscriptions, logos, watermark, UI border, frame, ground plane, scene, extra objects, collage or montage.\nSubject: One small solemn fully wrapped child's burial bundle, entirely enclosed in clean weathered cream linen with two simple brown ties, oblong shape lying diagonally. Non-graphic symbolic inventory representation of recovered remains. No face, skin, hands, feet, anatomical detail, blood, injury, gore, bones, coffin, grave, surrounding props or scenery. The only subject is the compact tied linen bundle.",
+      "followupPrompts": [
+        "Use case: precise-object-edit. Preserve the supplied single solemn, non-graphic, completely linen-wrapped small burial bundle, its two brown cloth ties, diagonal pose and hand-painted dark-fantasy style. Change only background alpha and framing. Keep the bundle centered in a square 1254 by 1254 canvas with at least 15 percent empty transparent padding on every side. All background pixels throughout the outer padding including all four corner pixels must be alpha zero; remove stray alpha-one noise. Genuine RGBA transparency, no opaque backdrop or checkerboard. No face, skin, limbs, blood, bones, anatomical detail, text, letters, extra objects or scenery."
+      ],
+      "sourceEvidence": [
+        {
+          "fixture": "tests/fixtures/baldurs_gate_city_source.json",
+          "pointer": "/items/MISC54",
+          "sourceIdentity": "MISC54.ITM",
+          "sha256": "1cc696092f08983ed08543137e0aa1f7757a3705ee8bdb8cb1b3fe6dc0033f15",
+          "displayName": "Child's Body"
+        }
+      ]
+    }
+  ],
+  "discardedGenerations": [
+    {
+      "id": "understandingTome",
+      "sha256": "284222e9d75494f1660ca3c3826ee7093d00041fda44d37af3bd57e8ba3b3616",
+      "reason": "A corner had alpha one; corrected through imagegen and the V2 image selected."
+    },
+    {
+      "id": "wrappedChildRemains",
+      "sha256": "d5a87c3093fefb1196a02c671a18a67a78aca0c8cabbbbd2b88db6fd04b4e958",
+      "reason": "A corner had alpha one; corrected through imagegen and the V2 image selected."
+    }
+  ],
+  "limitations": [
+    "Sparse alpha-one pixels remain beyond visible silhouettes; strict completely transparent padded borders are not certified. All selected corner alpha values are zero.",
+    "Visible padding is measured at alpha two or greater. Duke minimum padding is about 5.7 percent; door about 7.6 percent; the other six exceed 12 percent.",
+    "Representative container and door evidence identifies existing objects, not the material or form of every original container and door.",
+    "No map, config, builder, ledger, tests, item effects or gameplay changes accompany this asset batch.",
+    "Native rendering, save/reload, gameplay and owner visual acceptance remain pending."
+  ]
+}
