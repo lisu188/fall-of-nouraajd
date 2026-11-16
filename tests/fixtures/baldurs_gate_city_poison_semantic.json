@@ -1,0 +1,1632 @@
+{
+  "states": {
+    "MAREK.DLG:state0": {
+      "text": "May we have a brief word with you?",
+      "speaker": "Marek"
+    },
+    "MAREK.DLG:state1": {
+      "text": "This concerns your dealings with the Iron Throne. We insist on being heard.",
+      "speaker": "Marek"
+    },
+    "MAREK.DLG:state2": {
+      "text": "We gave you the chance to hear our warning.",
+      "speaker": "Marek"
+    },
+    "MAREK.DLG:state3": {
+      "text": "I am Marek, and this is Lothander. We serve the Iron Throne and know you've been working against it. This is your final warning: leave our employer's affairs alone. Ignore us and you will meet us again, and you will not survive.",
+      "speaker": "Marek"
+    },
+    "MAREK.DLG:state4": {
+      "text": "You've come for the antidote. Facing me will only bring your death closer, though I doubt that is your greatest worry just now.",
+      "speaker": "Marek"
+    },
+    "MAREK.DLG:state5": {
+      "text": "Good to see you, friends. Take this antidote; I have no use for it.",
+      "speaker": "Marek"
+    },
+    "MAREK.DLG:state6": {
+      "text": "For what you've done, I'll take your head!",
+      "speaker": "Marek"
+    },
+    "LOTHAN.DLG:state0": {
+      "text": "I'm Lothander, the assassin Marek's partner. I mean you no harm.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state1": {
+      "text": "Marek put a slow magical poison in your food while you slept. You have roughly ten days left. Ordinary priestly cures cannot save you; you need the antidote. I know how to find it, but first I need your help.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state2": {
+      "text": "Do you think me a fool? I do not carry the antidote. I only know where to find it.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state3": {
+      "text": "Then you have made a mistake that may cost you your lives.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state4": {
+      "text": "The Iron Throne has bound me with a geas. Disobeying Marek would make me waste away. A diviner in the market square may know how to free me, but I cannot pay his fee. Will you help me escape the spell?",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state5": {
+      "text": "Kill me, then. Helping you find the antidote would break Marek's orders, and the geas would kill me anyway.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state6": {
+      "text": "Please reconsider. I have already condemned myself by trying to break the geas. I need your help.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state7": {
+      "text": "The diviner's tent is here. Go inside.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state8": {
+      "text": "You promised to help. Please hurry; we have little time.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state9": {
+      "text": "He works here during daylight. I will wait while you speak with him.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state10": {
+      "text": "Fool! That was the wrong question. You've condemned us all.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state11": {
+      "text": "Go to the Water Queen's House, the temple of Umberlee. I'll wait at the Blade and Stars Inn. Find a way to lift the geas, then meet me there.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state12": {
+      "text": "Have you found the remedy that will free me from the geas?",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state13": {
+      "text": "Why are you still here? Find the remedy and return quickly; time is running out.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state14": {
+      "text": "Here is my half of the antidote. Marek has the other half. Look for him at the Blushing Mermaid Inn; there is nothing more I can do for you.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state15": {
+      "text": "You must find Marek at the Blushing Mermaid if you want the antidote.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state16": {
+      "text": "What have you done? How could you? Then perhaps... I am already dead.",
+      "speaker": "Lothander"
+    },
+    "LOTHAN.DLG:state17": {
+      "text": "So fate has found me. Take my half of the antidote; Marek holds the rest at the Blushing Mermaid Inn. I must leave. I need to see her once more, to say farewell.",
+      "speaker": "Lothander"
+    },
+    "DIVINE.DLG:state0": {
+      "text": "Haspur's hidden knowledge is available for fifty gold, however small your question. Pay the fee or go.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state1": {
+      "text": "My sight is no trick. Choose carefully: I have strength to answer only one question each day.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state2": {
+      "text": "Rieltar Anchev commands the Iron Throne.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state3": {
+      "text": "Sarevok Anchev is its leader now.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state4": {
+      "text": "Only Umberlee's high priestess Jalantha Mistmyr can lift Lothander's geas. Seek her at the Water Queen's House. Whether she will agree is hidden from me.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state5": {
+      "text": "Entar Silvershield is the city's richest man. His fortune is kept in the bedroom of his estate.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state6": {
+      "text": "His supposed healer is the one making him ill.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state7": {
+      "text": "Sarevok Anchev arranged the false accusation.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state8": {
+      "text": "That is all I can reveal. You must go.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state9": {
+      "text": "Profit has always been the Iron Throne's purpose.",
+      "speaker": "Diviner"
+    },
+    "DIVINE.DLG:state10": {
+      "text": "My powers need until tomorrow to recover. Return then for another reading.",
+      "speaker": "Diviner"
+    },
+    "PUMBERL.DLG:state0": {
+      "text": "Why have you come before the Bitch Queen?",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state1": {
+      "text": "The high priestess does not receive every passerby. Give me a reason to disturb her.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state2": {
+      "text": "You have wasted enough of my time. Leave.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state3": {
+      "text": "Neither you nor your foolish friends are entering on that excuse. Come back with a better reason.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state4": {
+      "text": "Follow me, as I told you. I will not warn you again.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state5": {
+      "text": "That paltry offering will not do. An audience with the high priestess requires at least a hundred gold.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state6": {
+      "text": "That tribute will do. Remain here; I will bring the high priestess.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state7": {
+      "text": "You seek Tenya? Stay here while I fetch her.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state8": {
+      "text": "Back already? Have you brought Jalantha's book?",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state9": {
+      "text": "Then come back once you have the book.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state10": {
+      "text": "Remain here. I will bring Jalantha to you.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state11": {
+      "text": "Friends, you may stay and honor Umberlee as long as you wish.",
+      "speaker": "Priestess of Umberlee"
+    },
+    "PUMBERL.DLG:state12": {
+      "text": "You have worn out your welcome!",
+      "speaker": "Priestess of Umberlee"
+    },
+    "JALANT.DLG:state0": {
+      "text": "I am High Priestess Jalantha Mistmyr. Explain why you sought this audience.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state1": {
+      "text": "You claim to worship here, yet none of you carries Umberlee's sacred symbols. I am Jalantha Mistmyr, her high priestess. Tell me your real purpose.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state2": {
+      "text": "Your devotion rings hollow. Return when you are ready to speak honestly.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state3": {
+      "text": "Umberlee's power is not granted freely. Earn this favor by serving her first.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state4": {
+      "text": "Gold cannot purchase my goddess's favor. Serve Umberlee before asking her to heal your friend.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state5": {
+      "text": "I will oversee the coming Storm Call for the first time. To make the rite flawless, I need the Book of Wisdom, held by Tymora's clergy at the Lady's Hall. Bring it to me and I will grant your request. Will you do it?",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state6": {
+      "text": "How you obtain it is your affair. Return to this temple once the book is yours.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state7": {
+      "text": "So you have returned with the Book of Wisdom. Let me inspect it.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state8": {
+      "text": "No book? Leave, and return only when you bring it.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state9": {
+      "text": "You question my word? Very well. This scroll holds the incantation that frees your friend from the geas. Now surrender the book.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state10": {
+      "text": "Accept this scroll. Its incantation will break your companion's geas.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state11": {
+      "text": "You will regret that insolence!",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state12": {
+      "text": "Our agreement is complete. I ask you to leave.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state13": {
+      "text": "The remains of an unbeliever fetch a high price. Two thousand gold, and the body is yours.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state14": {
+      "text": "You insult me under my own roof. You will answer for it.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state15": {
+      "text": "Your payment is received. Take the body.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "JALANT.DLG:state16": {
+      "text": "Leave me be, unless you wish to face the Bitch Queen's anger.",
+      "speaker": "Jalantha Mistmyr"
+    },
+    "CHANTH.DLG:state0": {
+      "text": "Welcome to the Lady's Hall. Tymora smiles on those willing to dare, and a modest offering will secure the aid you need.",
+      "speaker": "Chanthalas Ulbright"
+    },
+    "CHANTH.DLG:state1": {
+      "text": "May Tymora favor your courage. Go quickly; fortune may carry you through, though luck promises nothing.",
+      "speaker": "Chanthalas Ulbright"
+    },
+    "CHANTH.DLG:state2": {
+      "text": "The Book of Wisdom is sacred to us. Why should I entrust it to someone like you?",
+      "speaker": "Chanthalas Ulbright"
+    },
+    "CHANTH.DLG:state3": {
+      "text": "I believe your need is real. If the book can save your lives, you may take it.",
+      "speaker": "Chanthalas Ulbright"
+    },
+    "CHANTH.DLG:state4": {
+      "text": "I cannot surrender a sacred book on an unproven story. I am sorry, but I must refuse.",
+      "speaker": "Chanthalas Ulbright"
+    },
+    "CHANTH.DLG:state5": {
+      "text": "An offer that large shows how desperate you are. Take the book.",
+      "speaker": "Chanthalas Ulbright"
+    },
+    "TENYA2.DLG:state0": {
+      "text": "The Mother and I expected to see you again, though not so soon. Have you come to claim a reward for your service outside Baldur's Gate?",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state1": {
+      "text": "You served Umberlee in Beregost, yet now you trespass on her sacred ground. Explain why you have violated our temple.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state2": {
+      "text": "Quite a favor to demand. Very well: take the child and leave. If you raise him, death will still have changed him; I understand that lesson well. Return only if summoned.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state3": {
+      "text": "Umberlee never needed your aid; you were merely her amusement. Still, take the boy's body. Reach the front gate alive and you may leave with it. Fail, and you will share his fate. Do not return.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state4": {
+      "text": "Such insolence suits your bloodthirsty company. Take the body and raise him if you wish. He may already have met Umberlee; the lesson will stay with him. Never return without a summons.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state5": {
+      "text": "I will not have anyone think Umberlee depends on grovelers. Take the child's body and prove your worth: reach the front gate alive. Fail, and your worries end here. Leave us.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state6": {
+      "text": "You dare show yourself here after turning your back on Umberlee? The Mother's sight reveals who you are. Your refusal mattered little; she and I dealt with them. Now you will join them.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state7": {
+      "text": "Enough whining. Take the body and try to reach the front gate. My fellow waveservants will do all they can to stop you; your struggle will entertain the Sea Queen.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state8": {
+      "text": "A parent's grief must resemble a child's loss... Take him away. Do not expect such kindness again, and return only if summoned.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state9": {
+      "text": "You understand your place, and proper conduct earns its reward. Here is the boy's body. Raise him if you wish; the lesson has been taught. Return without a summons and your welcome will be colder.",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state10": {
+      "text": "You make demands in Umberlee's own domain? Waveservants, dispose of these intruders!",
+      "speaker": "Tenya"
+    },
+    "TENYA2.DLG:state11": {
+      "text": "You may take shelter here whenever you need it. Umberlee has no fondness for your cause, yet a god's return would sow chaos that pleases Talos. She wants that prevented. Use this protection discreetly.",
+      "speaker": "Tenya"
+    }
+  },
+  "edges": {
+    "MAREK.DLG:edge0": {
+      "label": "We have no time for this now."
+    },
+    "MAREK.DLG:edge1": {
+      "label": "What do you want to discuss?"
+    },
+    "MAREK.DLG:edge2": {
+      "label": "We have no interest in hearing you."
+    },
+    "MAREK.DLG:edge3": {
+      "label": "Very well. Tell us what you want."
+    },
+    "MAREK.DLG:edge4": {},
+    "MAREK.DLG:edge5": {
+      "label": "Threaten us all you like. Anyone foolish enough to stand in our way is the one who should fear death."
+    },
+    "MAREK.DLG:edge6": {
+      "label": "How thoughtful of you to warn us."
+    },
+    "MAREK.DLG:edge7": {},
+    "MAREK.DLG:edge8": {},
+    "MAREK.DLG:edge9": {},
+    "LOTHAN.DLG:edge0": {
+      "label": "We will not waste time listening to an Iron Throne assassin."
+    },
+    "LOTHAN.DLG:edge1": {
+      "label": "Speak quickly. We will hear you out."
+    },
+    "LOTHAN.DLG:edge2": {
+      "label": "Why should we not kill you and take the antidote?"
+    },
+    "LOTHAN.DLG:edge3": {
+      "label": "What help are you asking for?"
+    },
+    "LOTHAN.DLG:edge4": {
+      "label": "Do not lie to us, you wretch."
+    },
+    "LOTHAN.DLG:edge5": {
+      "label": "Very well. We will help you."
+    },
+    "LOTHAN.DLG:edge6": {
+      "label": "We want no help from you, assassin."
+    },
+    "LOTHAN.DLG:edge7": {},
+    "LOTHAN.DLG:edge8": {
+      "label": "We have neither the coin nor any wish to deal with an assassin."
+    },
+    "LOTHAN.DLG:edge9": {
+      "label": "Find another ally. We will locate the antidote without you."
+    },
+    "LOTHAN.DLG:edge10": {
+      "label": "We will help. Take us to the diviner."
+    },
+    "LOTHAN.DLG:edge11": {},
+    "LOTHAN.DLG:edge12": {
+      "label": "We cannot help you."
+    },
+    "LOTHAN.DLG:edge13": {
+      "label": "We have reconsidered. We will help; lead us to the diviner."
+    },
+    "LOTHAN.DLG:edge14": {},
+    "LOTHAN.DLG:edge15": {},
+    "LOTHAN.DLG:edge16": {},
+    "LOTHAN.DLG:edge17": {},
+    "LOTHAN.DLG:edge18": {},
+    "LOTHAN.DLG:edge19": {
+      "label": "We had an... encounter at Umberlee's temple. There may be no way to lift your geas now."
+    },
+    "LOTHAN.DLG:edge20": {
+      "label": "No, we have not found it yet."
+    },
+    "LOTHAN.DLG:edge21": {
+      "label": "We have your cure. Where is the antidote you promised?"
+    },
+    "LOTHAN.DLG:edge22": {},
+    "LOTHAN.DLG:edge23": {},
+    "LOTHAN.DLG:edge24": {},
+    "LOTHAN.DLG:edge25": {},
+    "LOTHAN.DLG:edge26": {},
+    "DIVINE.DLG:edge0": {
+      "label": "Fifty gold for a few words? Find someone else to fleece."
+    },
+    "DIVINE.DLG:edge1": {
+      "label": "Take the fifty gold. These answers had better be genuine."
+    },
+    "DIVINE.DLG:edge2": {
+      "label": "Who leads the Iron Throne?"
+    },
+    "DIVINE.DLG:edge3": {
+      "label": "What does the Iron Throne seek?"
+    },
+    "DIVINE.DLG:edge4": {
+      "label": "Who can free Lothander from his geas?"
+    },
+    "DIVINE.DLG:edge5": {
+      "label": "Which man in Baldur's Gate has the greatest fortune, and where does he keep it?"
+    },
+    "DIVINE.DLG:edge6": {
+      "label": "What is making Eltan ill?"
+    },
+    "DIVINE.DLG:edge7": {
+      "label": "Who arranged the false murder charges against us over the Iron Throne leaders?"
+    },
+    "DIVINE.DLG:edge8": {
+      "label": "Who leads the Iron Throne?"
+    },
+    "DIVINE.DLG:edge9": {},
+    "DIVINE.DLG:edge10": {},
+    "DIVINE.DLG:edge11": {},
+    "DIVINE.DLG:edge12": {},
+    "DIVINE.DLG:edge13": {},
+    "DIVINE.DLG:edge14": {},
+    "DIVINE.DLG:edge15": {},
+    "DIVINE.DLG:edge16": {},
+    "DIVINE.DLG:edge17": {},
+    "PUMBERL.DLG:edge0": {
+      "label": "We need an audience with High Priestess Jalantha Mistmyr."
+    },
+    "PUMBERL.DLG:edge1": {
+      "label": "We are visitors from, er, Cormyr. We would like to see inside a temple to an evil goddess."
+    },
+    "PUMBERL.DLG:edge2": {
+      "label": "We have come to honor the Queen of the Deeps."
+    },
+    "PUMBERL.DLG:edge3": {
+      "label": "We want to speak to Priestess Tenya."
+    },
+    "PUMBERL.DLG:edge4": {
+      "label": "Would an offering of twenty-five gold secure an audience?"
+    },
+    "PUMBERL.DLG:edge5": {
+      "label": "Would a fifty-gold donation buy us an audience?"
+    },
+    "PUMBERL.DLG:edge6": {},
+    "PUMBERL.DLG:edge7": {},
+    "PUMBERL.DLG:edge8": {},
+    "PUMBERL.DLG:edge9": {
+      "label": "A hundred gold? We cannot pay that. Find someone else to squeeze."
+    },
+    "PUMBERL.DLG:edge10": {
+      "label": "Here is the hundred gold. Let us see her."
+    },
+    "PUMBERL.DLG:edge11": {},
+    "PUMBERL.DLG:edge12": {},
+    "PUMBERL.DLG:edge13": {
+      "label": "We have not brought the book yet."
+    },
+    "PUMBERL.DLG:edge14": {
+      "label": "Yes. We have the book here."
+    },
+    "PUMBERL.DLG:edge15": {},
+    "PUMBERL.DLG:edge16": {},
+    "PUMBERL.DLG:edge17": {},
+    "PUMBERL.DLG:edge18": {},
+    "JALANT.DLG:edge0": {
+      "label": "We have come to honor Umberlee in her temple."
+    },
+    "JALANT.DLG:edge1": {
+      "label": "A companion is bound by a geas. We ask humbly that you release him."
+    },
+    "JALANT.DLG:edge2": {
+      "label": "Lift our companion's geas. Name any price you want."
+    },
+    "JALANT.DLG:edge3": {
+      "label": "I ask only for the dead intruder's body. Returning an unbeliever's remains should be fair payment for my service."
+    },
+    "JALANT.DLG:edge4": {
+      "label": "We are not lying. We came to show respect for Umberlee."
+    },
+    "JALANT.DLG:edge5": {
+      "label": "You are right; worship is not why we are here. Can you free our friend from a geas?"
+    },
+    "JALANT.DLG:edge6": {
+      "label": "We need a friend's geas lifted. Tell us what it will cost."
+    },
+    "JALANT.DLG:edge7": {},
+    "JALANT.DLG:edge8": {},
+    "JALANT.DLG:edge9": {},
+    "JALANT.DLG:edge10": {
+      "label": "We refuse that bargain. We will leave."
+    },
+    "JALANT.DLG:edge11": {
+      "label": "We see no better choice. We will bring you the book."
+    },
+    "JALANT.DLG:edge12": {},
+    "JALANT.DLG:edge13": {
+      "label": "Give us the remedy first. We will show you the book once we know you will keep your word."
+    },
+    "JALANT.DLG:edge14": {
+      "label": "Take the book. Now give us the geas cure you promised."
+    },
+    "JALANT.DLG:edge15": {
+      "label": "We have not got the book with us."
+    },
+    "JALANT.DLG:edge16": {},
+    "JALANT.DLG:edge17": {
+      "label": "Take the book, then."
+    },
+    "JALANT.DLG:edge18": {
+      "label": "There is no book. You were easy to fool."
+    },
+    "JALANT.DLG:edge19": {},
+    "JALANT.DLG:edge20": {},
+    "JALANT.DLG:edge21": {},
+    "JALANT.DLG:edge22": {
+      "label": "Two thousand gold? That is extortion!"
+    },
+    "JALANT.DLG:edge23": {
+      "label": "We will pay the two thousand gold. Hand over the body."
+    },
+    "JALANT.DLG:edge24": {
+      "label": "We do not have the money at present."
+    },
+    "JALANT.DLG:edge25": {},
+    "JALANT.DLG:edge26": {},
+    "JALANT.DLG:edge27": {},
+    "CHANTH.DLG:edge0": {
+      "label": "We need no temple services."
+    },
+    "CHANTH.DLG:edge1": {
+      "label": "What services can you offer?"
+    },
+    "CHANTH.DLG:edge2": {
+      "label": "We desperately need the Book of Wisdom. Please let us have it; we will do whatever you ask."
+    },
+    "CHANTH.DLG:edge3": {},
+    "CHANTH.DLG:edge4": {
+      "label": "We will give you five hundred gold for the book."
+    },
+    "CHANTH.DLG:edge5": {
+      "label": "Our lives depend on that book. Please believe us; would you let our deaths weigh on your conscience?"
+    },
+    "CHANTH.DLG:edge6": {
+      "label": "Our lives depend on that book. Please believe us; would you let our deaths weigh on your conscience?"
+    },
+    "CHANTH.DLG:edge7": {},
+    "CHANTH.DLG:edge8": {},
+    "CHANTH.DLG:edge9": {},
+    "TENYA2.DLG:edge0": {
+      "label": "I ask only for the body of the fool who trespassed here. An unbeliever's remains should be fair payment for my service."
+    },
+    "TENYA2.DLG:edge1": {
+      "label": "I ask only for the body of the fool who trespassed here. An unbeliever's remains should be fair payment for my service."
+    },
+    "TENYA2.DLG:edge2": {
+      "label": "Neither you nor Umberlee would have prevailed without me. You promised repayment; I demand it now."
+    },
+    "TENYA2.DLG:edge3": {
+      "label": "Neither you nor Umberlee would have prevailed without me. You promised repayment; I demand it now."
+    },
+    "TENYA2.DLG:edge4": {
+      "label": "Please, I ask only for the child's body. He died here; let me carry him away and I will leave you in peace."
+    },
+    "TENYA2.DLG:edge5": {
+      "label": "I ask only for the body of the fool who trespassed here. An unbeliever's remains should be fair payment for my service."
+    },
+    "TENYA2.DLG:edge6": {
+      "label": "I ask only for the body of the fool who trespassed here. An unbeliever's remains should be fair payment for my service."
+    },
+    "TENYA2.DLG:edge7": {
+      "label": "Neither you nor Umberlee would have prevailed without me. You promised repayment; I demand it now."
+    },
+    "TENYA2.DLG:edge8": {
+      "label": "Neither you nor Umberlee would have prevailed without me. You promised repayment; I demand it now."
+    },
+    "TENYA2.DLG:edge9": {
+      "label": "Please, I ask only for the child's body. He died here; let me carry him away and I will leave you in peace."
+    },
+    "TENYA2.DLG:edge10": {},
+    "TENYA2.DLG:edge11": {},
+    "TENYA2.DLG:edge12": {},
+    "TENYA2.DLG:edge13": {},
+    "TENYA2.DLG:edge14": {
+      "label": "I meant your temple no harm. This is an errand of mercy: please let me return the child's body to the grieving parent."
+    },
+    "TENYA2.DLG:edge15": {
+      "label": "I meant your temple no harm. This is an errand of mercy: please let me return the child's body to the grieving parent."
+    },
+    "TENYA2.DLG:edge16": {
+      "label": "That quarrel was not mine, and I would not obstruct your righteous anger. Your justice is done; I have come only to take the child's body home."
+    },
+    "TENYA2.DLG:edge17": {
+      "label": "That quarrel was not mine, and I would not obstruct your righteous anger. Your justice is done; I have come only to take the child's body home."
+    },
+    "TENYA2.DLG:edge18": {},
+    "TENYA2.DLG:edge19": {},
+    "TENYA2.DLG:edge20": {},
+    "TENYA2.DLG:edge21": {},
+    "TENYA2.DLG:edge22": {}
+  },
+  "notices": {
+    "cure": "Marek's poison has been neutralized."
+  },
+  "journals": {
+    "cureDead": {
+      "text": "Marek refused to surrender the antidote. I killed him and claimed it.",
+      "sourceStrref": 27253,
+      "basis": "capturedSupportingTlkMeaning"
+    },
+    "cureAlive": {
+      "text": "Deception got me the antidote. I should keep away from Marek before he discovers what happened.",
+      "sourceStrref": 31188,
+      "basis": "capturedSupportingTlkMeaning"
+    }
+  },
+  "metadata": {
+    "kind": "Newly authored semantic presentation; original TLK prose excluded",
+    "sourceEdition": "installedBg1eeSupporting",
+    "sourceReferences": {
+      "MAREK.DLG:state0": {
+        "strref": 1420,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:state1": {
+        "strref": 1421,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:state2": {
+        "strref": 1422,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:state3": {
+        "strref": 1423,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:state4": {
+        "strref": 1424,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:state5": {
+        "strref": 6296,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:state6": {
+        "strref": 9167,
+        "kind": "stateSpeech"
+      },
+      "MAREK.DLG:edge0": {
+        "strref": 1425,
+        "kind": "reply"
+      },
+      "MAREK.DLG:edge1": {
+        "strref": 1426,
+        "kind": "reply"
+      },
+      "MAREK.DLG:edge2": {
+        "strref": 1428,
+        "kind": "reply"
+      },
+      "MAREK.DLG:edge3": {
+        "strref": 1429,
+        "kind": "reply"
+      },
+      "MAREK.DLG:edge4": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "MAREK.DLG:edge5": {
+        "strref": 1427,
+        "kind": "reply"
+      },
+      "MAREK.DLG:edge6": {
+        "strref": 1430,
+        "kind": "reply"
+      },
+      "MAREK.DLG:edge7": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "MAREK.DLG:edge8": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "MAREK.DLG:edge9": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:state0": {
+        "strref": 1323,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state1": {
+        "strref": 1324,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state2": {
+        "strref": 1325,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state3": {
+        "strref": 1326,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state4": {
+        "strref": 1327,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state5": {
+        "strref": 1328,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state6": {
+        "strref": 1329,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state7": {
+        "strref": 1330,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state8": {
+        "strref": 1332,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state9": {
+        "strref": 1331,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state10": {
+        "strref": 1333,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state11": {
+        "strref": 1334,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state12": {
+        "strref": 1335,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state13": {
+        "strref": 1336,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state14": {
+        "strref": 1337,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state15": {
+        "strref": 6290,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state16": {
+        "strref": 26791,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:state17": {
+        "strref": 26792,
+        "kind": "stateSpeech"
+      },
+      "LOTHAN.DLG:edge0": {
+        "strref": 1338,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge1": {
+        "strref": 1339,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge2": {
+        "strref": 1340,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge3": {
+        "strref": 1341,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge4": {
+        "strref": 1342,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge5": {
+        "strref": 1343,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge6": {
+        "strref": 1344,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge7": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge8": {
+        "strref": 1345,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge9": {
+        "strref": 1346,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge10": {
+        "strref": 1347,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge11": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge12": {
+        "strref": 1348,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge13": {
+        "strref": 1349,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge14": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge15": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge16": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge17": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge18": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge19": {
+        "strref": 26790,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge20": {
+        "strref": 1350,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge21": {
+        "strref": 1351,
+        "kind": "reply"
+      },
+      "LOTHAN.DLG:edge22": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge23": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge24": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge25": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "LOTHAN.DLG:edge26": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:state0": {
+        "strref": 1352,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state1": {
+        "strref": 1353,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state2": {
+        "strref": 1354,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state3": {
+        "strref": 1355,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state4": {
+        "strref": 1356,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state5": {
+        "strref": 1357,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state6": {
+        "strref": 1358,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state7": {
+        "strref": 1359,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state8": {
+        "strref": 1360,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state9": {
+        "strref": 1361,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:state10": {
+        "strref": 6414,
+        "kind": "stateSpeech"
+      },
+      "DIVINE.DLG:edge0": {
+        "strref": 1362,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge1": {
+        "strref": 1363,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge2": {
+        "strref": 1364,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge3": {
+        "strref": 1365,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge4": {
+        "strref": 1367,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge5": {
+        "strref": 1366,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge6": {
+        "strref": 1368,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge7": {
+        "strref": 1369,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge8": {
+        "strref": 1370,
+        "kind": "reply"
+      },
+      "DIVINE.DLG:edge9": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge10": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge11": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge12": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge13": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge14": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge15": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge16": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "DIVINE.DLG:edge17": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:state0": {
+        "strref": 1398,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state1": {
+        "strref": 1399,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state2": {
+        "strref": 1400,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state3": {
+        "strref": 1401,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state4": {
+        "strref": 1402,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state5": {
+        "strref": 1403,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state6": {
+        "strref": 1404,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state7": {
+        "strref": 1405,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state8": {
+        "strref": 1406,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state9": {
+        "strref": 1407,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state10": {
+        "strref": 1408,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state11": {
+        "strref": 6366,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:state12": {
+        "strref": 9106,
+        "kind": "stateSpeech"
+      },
+      "PUMBERL.DLG:edge0": {
+        "strref": 1409,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge1": {
+        "strref": 1410,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge2": {
+        "strref": 1411,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge3": {
+        "strref": 1412,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge4": {
+        "strref": 1413,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge5": {
+        "strref": 1414,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge6": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge7": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge8": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge9": {
+        "strref": 1416,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge10": {
+        "strref": 1417,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge11": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge12": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge13": {
+        "strref": 1418,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge14": {
+        "strref": 1419,
+        "kind": "reply"
+      },
+      "PUMBERL.DLG:edge15": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge16": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge17": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "PUMBERL.DLG:edge18": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:state0": {
+        "strref": 1372,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state1": {
+        "strref": 1373,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state2": {
+        "strref": 1374,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state3": {
+        "strref": 1375,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state4": {
+        "strref": 1376,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state5": {
+        "strref": 1377,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state6": {
+        "strref": 1378,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state7": {
+        "strref": 1379,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state8": {
+        "strref": 1380,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state9": {
+        "strref": 1381,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state10": {
+        "strref": 1382,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state11": {
+        "strref": 1383,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state12": {
+        "strref": 1384,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state13": {
+        "strref": 16580,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state14": {
+        "strref": 16583,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state15": {
+        "strref": 16584,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:state16": {
+        "strref": 17323,
+        "kind": "stateSpeech"
+      },
+      "JALANT.DLG:edge0": {
+        "strref": 1385,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge1": {
+        "strref": 1386,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge2": {
+        "strref": 1387,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge3": {
+        "strref": 16579,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge4": {
+        "strref": 1388,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge5": {
+        "strref": 1389,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge6": {
+        "strref": 1390,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge7": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge8": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge9": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge10": {
+        "strref": 1391,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge11": {
+        "strref": 1392,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge12": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge13": {
+        "strref": 1393,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge14": {
+        "strref": 1394,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge15": {
+        "strref": 1395,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge16": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge17": {
+        "strref": 1396,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge18": {
+        "strref": 1397,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge19": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge20": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge21": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge22": {
+        "strref": 16581,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge23": {
+        "strref": 16582,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge24": {
+        "strref": 10696,
+        "kind": "reply"
+      },
+      "JALANT.DLG:edge25": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge26": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "JALANT.DLG:edge27": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "CHANTH.DLG:state0": {
+        "strref": 8523,
+        "kind": "stateSpeech"
+      },
+      "CHANTH.DLG:state1": {
+        "strref": 8524,
+        "kind": "stateSpeech"
+      },
+      "CHANTH.DLG:state2": {
+        "strref": 16642,
+        "kind": "stateSpeech"
+      },
+      "CHANTH.DLG:state3": {
+        "strref": 16647,
+        "kind": "stateSpeech"
+      },
+      "CHANTH.DLG:state4": {
+        "strref": 16648,
+        "kind": "stateSpeech"
+      },
+      "CHANTH.DLG:state5": {
+        "strref": 16649,
+        "kind": "stateSpeech"
+      },
+      "CHANTH.DLG:edge0": {
+        "strref": 16637,
+        "kind": "reply"
+      },
+      "CHANTH.DLG:edge1": {
+        "strref": 16638,
+        "kind": "reply"
+      },
+      "CHANTH.DLG:edge2": {
+        "strref": 16639,
+        "kind": "reply"
+      },
+      "CHANTH.DLG:edge3": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "CHANTH.DLG:edge4": {
+        "strref": 16643,
+        "kind": "reply"
+      },
+      "CHANTH.DLG:edge5": {
+        "strref": 16645,
+        "kind": "reply"
+      },
+      "CHANTH.DLG:edge6": {
+        "strref": 16646,
+        "kind": "reply"
+      },
+      "CHANTH.DLG:edge7": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "CHANTH.DLG:edge8": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "CHANTH.DLG:edge9": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:state0": {
+        "strref": 9933,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state1": {
+        "strref": 9935,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state2": {
+        "strref": 9936,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state3": {
+        "strref": 9937,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state4": {
+        "strref": 9938,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state5": {
+        "strref": 9939,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state6": {
+        "strref": 9940,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state7": {
+        "strref": 9941,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state8": {
+        "strref": 9942,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state9": {
+        "strref": 9943,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state10": {
+        "strref": 9944,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:state11": {
+        "strref": 9945,
+        "kind": "stateSpeech"
+      },
+      "TENYA2.DLG:edge0": {
+        "strref": 9946,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge1": {
+        "strref": 9947,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge2": {
+        "strref": 9948,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge3": {
+        "strref": 9952,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge4": {
+        "strref": 9953,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge5": {
+        "strref": 9954,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge6": {
+        "strref": 9955,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge7": {
+        "strref": 9956,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge8": {
+        "strref": 9957,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge9": {
+        "strref": 9960,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge10": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge11": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge12": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge13": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge14": {
+        "strref": 9961,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge15": {
+        "strref": 9962,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge16": {
+        "strref": 9964,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge17": {
+        "strref": 9965,
+        "kind": "reply"
+      },
+      "TENYA2.DLG:edge18": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge19": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge20": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge21": {
+        "strref": null,
+        "kind": "automatic"
+      },
+      "TENYA2.DLG:edge22": {
+        "strref": null,
+        "kind": "automatic"
+      }
+    },
+    "automaticEdgesHaveNoInventedPlayerLabel": [
+      "MAREK.DLG:edge4",
+      "MAREK.DLG:edge7",
+      "MAREK.DLG:edge8",
+      "MAREK.DLG:edge9",
+      "LOTHAN.DLG:edge7",
+      "LOTHAN.DLG:edge11",
+      "LOTHAN.DLG:edge14",
+      "LOTHAN.DLG:edge15",
+      "LOTHAN.DLG:edge16",
+      "LOTHAN.DLG:edge17",
+      "LOTHAN.DLG:edge18",
+      "LOTHAN.DLG:edge22",
+      "LOTHAN.DLG:edge23",
+      "LOTHAN.DLG:edge24",
+      "LOTHAN.DLG:edge25",
+      "LOTHAN.DLG:edge26",
+      "DIVINE.DLG:edge9",
+      "DIVINE.DLG:edge10",
+      "DIVINE.DLG:edge11",
+      "DIVINE.DLG:edge12",
+      "DIVINE.DLG:edge13",
+      "DIVINE.DLG:edge14",
+      "DIVINE.DLG:edge15",
+      "DIVINE.DLG:edge16",
+      "DIVINE.DLG:edge17",
+      "PUMBERL.DLG:edge6",
+      "PUMBERL.DLG:edge7",
+      "PUMBERL.DLG:edge8",
+      "PUMBERL.DLG:edge11",
+      "PUMBERL.DLG:edge12",
+      "PUMBERL.DLG:edge15",
+      "PUMBERL.DLG:edge16",
+      "PUMBERL.DLG:edge17",
+      "PUMBERL.DLG:edge18",
+      "JALANT.DLG:edge7",
+      "JALANT.DLG:edge8",
+      "JALANT.DLG:edge9",
+      "JALANT.DLG:edge12",
+      "JALANT.DLG:edge16",
+      "JALANT.DLG:edge19",
+      "JALANT.DLG:edge20",
+      "JALANT.DLG:edge21",
+      "JALANT.DLG:edge25",
+      "JALANT.DLG:edge26",
+      "JALANT.DLG:edge27",
+      "CHANTH.DLG:edge3",
+      "CHANTH.DLG:edge7",
+      "CHANTH.DLG:edge8",
+      "CHANTH.DLG:edge9",
+      "TENYA2.DLG:edge10",
+      "TENYA2.DLG:edge11",
+      "TENYA2.DLG:edge12",
+      "TENYA2.DLG:edge13",
+      "TENYA2.DLG:edge18",
+      "TENYA2.DLG:edge19",
+      "TENYA2.DLG:edge20",
+      "TENYA2.DLG:edge21",
+      "TENYA2.DLG:edge22"
+    ],
+    "stateCount": 84,
+    "edgeCount": 135,
+    "playerLabelCount": 77,
+    "noticeReferences": {
+      "cure": {
+        "strref": 20675,
+        "basis": "capturedSupportingTlkMeaning"
+      }
+    },
+    "originalNoticeMeaningPending": [],
+    "sourceInputs": {
+      "sixGraphs": {
+        "bytes": 205686,
+        "sha256": "50ffdb1d6456f4873acc3dc8685231edf59607e398a3fde4df20895582e19e0d"
+      },
+      "tenyaGraph": {
+        "bytes": 109155,
+        "sha256": "49baa15192a287ea135fe29047d9274b0041c0129af2f88475de8fea541ae491"
+      },
+      "privateSpeech": {
+        "bytes": 85029,
+        "sha256": "5d174652b1302a98da037c3275ef370de84fae5fc117845f846c077ea458378e"
+      },
+      "privateSpeechReceipt": {
+        "bytes": 44818,
+        "sha256": "c42a42aed2539a3858ecf312a4531c7a4ecf5ff8fe2a2860b6f90e5785dcc532"
+      },
+      "privateNotices": {
+        "bytes": 2884,
+        "sha256": "16629c38033fe5879b0d97e270b8fabb08ed9a978fdda366563b02dc2bbe896c"
+      },
+      "privateNoticesReceipt": {
+        "bytes": 3283,
+        "sha256": "db874f9c0b38a3f18ecf0ba383e3c1b011ca06522a1f54232b86252ca9722380"
+      }
+    },
+    "sourceIdsAndStrrefsAreMetadataOnly": true,
+    "newInstalledOrTlkReads": 0,
+    "nativeExecuted": false,
+    "originalParityOrOwnerAcceptanceCredit": false,
+    "classicNoticeMeaningVerified": false,
+    "capturedNoticeMeaningsEdition": "installedBg1eeSupporting",
+    "projectionReadsInstalledFiles": false,
+    "noticeAuditSelectedEntries": 3
+  }
+}

@@ -17,6 +17,1296 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+
+    def testCityTravelTargetAliasesPreservePlannerRoutesAndRejectDisagreement(self):
+        geometry = routes.documents()["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        args = (
+            (186, 51, 0),
+            "AR0300",
+            "AR0300",
+            geometry["connections"],
+            lambda _link: True,
+            geometry["atlas"],
+            walkable,
+            portals,
+        )
+        point = (161, 51, 0)
+        expected = routes.cityTravelPath(*args, destination_point=point)
+        self.assertEqual(["cityAr0300Portal12", "cityAr0226Portal5"], [row["object"] for row in expected])
+        for options in (
+            {"target": point},
+            {"destination_point": point},
+            {"target": point, "destination_point": list(point)},
+        ):
+            with self.subTest(options=options):
+                self.assertEqual(expected, routes.cityTravelPath(*args, **options))
+        self.assertEqual(expected, routes.cityTravelPath(*args, point))
+        self.assertEqual((), routes.cityTravelPath(*args))
+        with self.assertRaisesRegex(ValueError, "Conflicting city travel destination points"):
+            routes.cityTravelPath(*args, target=point, destination_point=(183, 48, 0))
+
+    def testCityTravelTargetAliasesForwardBothNamesAndKeepAreaOnlyDefaults(self):
+        from types import SimpleNamespace
+
+        driver = SimpleNamespace(test=self, number=lambda _key: 5, flag=lambda _key: False, coords=lambda: (186, 51, 0))
+        point = (161, 51, 0)
+        for options in (
+            {},
+            {"target": point},
+            {"destination_point": point},
+            {"target": point, "destination_point": point},
+        ):
+            with (
+                self.subTest(options=options),
+                mock.patch.object(routes, "currentArea", return_value="AR0300"),
+                mock.patch.object(routes, "cityTravelPath", return_value=()) as path,
+            ):
+                routes.travel(driver, "AR0300", **options)
+                self.assertEqual(options or {"target": None}, path.call_args.kwargs)
+        with (
+            mock.patch.object(routes, "currentArea", return_value="AR0300"),
+            self.assertRaisesRegex(ValueError, "Conflicting city travel destination points"),
+        ):
+            routes.travel(driver, "AR0300", target=point, destination_point=(183, 48, 0))
+
+    def testCordyrCompleteEarnsLowReputationThroughTheActualPetrineOutcomeWithoutReusingRewards(self):
+        from unittest.mock import patch
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        class SourcePrefixCompleted(Exception):
+            pass
+
+        for outcome_key in ("complete", "ordinary"):
+            with self.subTest(outcome=outcome_key):
+                model = CityModel()
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                petrine = model.actor("Petrine", "AR0200")
+                cordyr = model.actor("Cordyr", "AR1213", sourceCreature="CORDYR")
+                cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+                ring = model.item("RING16")
+                events, deaths = [], []
+                test = self
+
+                class SourcePlanner:
+                    quests = {row["id"]: row for row in routes.documents()["quests"]}
+                    tamoko_refuse = False
+
+                    def settle(self, key, outcome):
+                        events.append((key, outcome))
+                        owner = petrine if key == "petrineRing" else cordyr
+                        dialog = model.dialog(owner)
+                        test.assertTrue(dialog.acceptQuest(key))
+                        if key == "petrineRing":
+                            test.assertEqual("catKilled", outcome)
+                            test.assertTrue(cat.isAlive())
+                            test.assertTrue(model.dialog(cat).attack())
+                            model.kill(cat)
+                            deaths.append(cat)
+                            test.assertEqual(8, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            dialog = model.dialog(petrine)
+                            gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                            test.assertTrue(dialog.questPetrineRingCatKilled())
+                            test.assertEqual(7, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            test.assertEqual(
+                                (gold, xp), (model.player.getGold(), model.player.getNumericProperty("exp"))
+                            )
+                            test.assertIn(ring, model.player.items)
+                            test.assertNotIn(ring, petrine.items)
+                            test.assertFalse(dialog.questPetrineRingCatKilled())
+                            test.assertEqual(7, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            return owner.getName(), self.quests[key]["outcomes"][1]
+                        test.assertEqual("cordyrSirines", key)
+                        test.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_cordyrSirines"))
+                        test.assertFalse(dialog.canQuestOutcome(key, outcome))
+                        ticks = model.game_map.getNumericProperty("plugin_cityTicks")
+                        test.assertTrue(dialog.excursionSilKill())
+                        test.assertTrue(model.game_map.getBoolProperty("plugin_cityFlag_excursionSilResolved"))
+                        test.assertEqual(ticks + 2400, model.game_map.getNumericProperty("plugin_cityTicks"))
+                        test.assertTrue(dialog.canQuestOutcome(key, outcome))
+                        code = "SCRL1F" if outcome == "complete" else "SCRL1H"
+                        other_code = "SCRL1H" if outcome == "complete" else "SCRL1F"
+                        scroll = next(
+                            item for item in cordyr.items if item.getStringProperty("plugin_citySourceItem") == code
+                        )
+                        other_scroll = next(
+                            item
+                            for item in cordyr.items
+                            if item.getStringProperty("plugin_citySourceItem") == other_code
+                        )
+                        gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                        standing = model.game_map.getNumericProperty("plugin_cityStanding")
+                        reputation = model.game_map.getNumericProperty("plugin_cityReputation")
+                        test.assertEqual(7 if outcome == "complete" else 10, reputation)
+                        test.assertTrue(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(gold, model.player.getGold())
+                        test.assertEqual(
+                            xp + (1000 if outcome == "complete" else 0), model.player.getNumericProperty("exp")
+                        )
+                        delta = int(outcome == "complete")
+                        test.assertEqual(standing + delta, model.game_map.getNumericProperty("plugin_cityStanding"))
+                        test.assertEqual(reputation + delta, model.game_map.getNumericProperty("plugin_cityReputation"))
+                        test.assertIn(scroll, model.player.items)
+                        test.assertNotIn(scroll, cordyr.items)
+                        test.assertIn(other_scroll, cordyr.items)
+                        test.assertNotIn(other_scroll, model.player.items)
+                        test.assertIn(ring, model.player.items)
+                        test.assertNotIn(ring, petrine.items)
+                        snapshot = (
+                            model.player.getGold(),
+                            model.player.getNumericProperty("exp"),
+                            model.game_map.getNumericProperty("plugin_cityStanding"),
+                            model.game_map.getNumericProperty("plugin_cityReputation"),
+                            tuple(model.player.items),
+                            tuple(cordyr.items),
+                            tuple(petrine.items),
+                        )
+                        test.assertFalse(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(
+                            snapshot,
+                            (
+                                model.player.getGold(),
+                                model.player.getNumericProperty("exp"),
+                                model.game_map.getNumericProperty("plugin_cityStanding"),
+                                model.game_map.getNumericProperty("plugin_cityReputation"),
+                                tuple(model.player.items),
+                                tuple(cordyr.items),
+                                tuple(petrine.items),
+                            ),
+                        )
+                        raise SourcePrefixCompleted()
+
+                with (
+                    patch.object(routes, "start"),
+                    patch.object(routes, "QuestRoute", return_value=SourcePlanner()),
+                    self.assertRaises(SourcePrefixCompleted),
+                ):
+                    routes.questRoute(object(), "cordyrSirines", outcome_key)
+                self.assertEqual([cat] if outcome_key == "complete" else [], deaths)
+                self.assertEqual(
+                    (
+                        [("petrineRing", "catKilled"), ("cordyrSirines", "complete")]
+                        if outcome_key == "complete"
+                        else [("cordyrSirines", "ordinary")]
+                    ),
+                    events,
+                )
+                completed = {quest.getTypeId() for quest in model.player.getCompletedQuests()}
+                self.assertEqual(
+                    (
+                        {"cityPetrineRingQuest", "cityCordyrSirinesQuest"}
+                        if outcome_key == "complete"
+                        else {"cityCordyrSirinesQuest"}
+                    ),
+                    completed,
+                )
+                test.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_quinnDagger"))
+                test.assertIn("cityQuinnDaggerQuest", {quest.getTypeId() for quest in model.player.getQuests()})
+                test.assertEqual("", model.game_map.getStringProperty("plugin_cityQuest_bherenCat"))
+
+    def testSameDistrictTargetTravelUsesTheAuditedReachableSewerReentry(self):
+        from unittest.mock import patch
+
+        data = routes.documents()
+        geometry, config = data["geometry"], data["config"]
+        walkable, portals = routes.cityMovementCells()
+        origin, target = (186, 51, 0), (161, 51, 0)
+
+        def allowed(link):
+            properties = config[link["object"]]["properties"]
+            return (
+                properties.get("phaseMin", 5) <= 5 <= properties.get("phaseMax", 7)
+                and not properties.get("requiredFlag")
+                and link["to"] != "AR0108"
+            )
+
+        args = (origin, "AR0300", "AR0300", geometry["connections"], allowed, geometry["atlas"], walkable, portals)
+        self.assertEqual((), routes.cityTravelPath(*args), "Area-only callers must retain their existing behavior")
+        with self.assertRaisesRegex(AssertionError, "No portal-safe city approach"):
+            routes.cityApproachPath(origin, target, geometry["atlas"]["AR0300"]["bounds"], walkable, portals)
+        with patch.object(routes, "cityApproachParents", wraps=routes.cityApproachParents) as visits:
+            chosen = routes.cityTravelPath(*args, target=target)
+        self.assertEqual(["cityAr0300Portal12", "cityAr0226Portal5"], [row["object"] for row in chosen])
+        state_bound = 1 + len({(row["to"], tuple(row["target"])) for row in geometry["connections"]})
+        self.assertLessEqual(visits.call_count, state_bound)
+        states = [(tuple(call.args[0]), tuple(call.args[1])) for call in visits.call_args_list]
+        self.assertEqual(len(states), len(set(states)), "The existing search must not revisit an arrival state")
+        point = origin
+        for link in chosen:
+            properties = config[link["object"]]["properties"]
+            self.assertTrue(allowed(link))
+            self.assertFalse(properties.get("locked", False))
+            self.assertTrue(properties.get("sourceRegion"))
+            local = routes.cityApproachPath(
+                point, link["origin"], geometry["atlas"][link["from"]]["bounds"], walkable, portals
+            )
+            self.assertEqual(tuple(link["origin"]), local[-1])
+            self.assertFalse(set(local[:-1]) & portals)
+            for before, after in zip((point,) + local, local):
+                self.assertEqual(1, sum(abs(a - b) for a, b in zip(before, after)))
+            point = tuple(link["target"])
+        final = routes.cityApproachPath(point, target, geometry["atlas"]["AR0300"]["bounds"], walkable, portals)
+        self.assertEqual(target, final[-1])
+        self.assertFalse(set(final) & portals)
+
+    def testTargetTravelRejectsBlockedReentriesAndExhaustsCyclesWithinArrivalStates(self):
+        from unittest.mock import patch
+
+        atlas = {"A": {"bounds": [0, 0, 0, 4, 1]}, "B": {"bounds": [6, 0, 0, 2, 1]}}
+        walkable = frozenset({(0, 0, 0), (1, 0, 0), (3, 0, 0), (6, 0, 0), (7, 0, 0)})
+        portals = frozenset({(1, 0, 0), (7, 0, 0)})
+        links = [
+            {"object": "exit", "from": "A", "to": "B", "origin": [1, 0, 0], "target": [6, 0, 0]},
+            {"object": "return", "from": "B", "to": "A", "origin": [7, 0, 0], "target": [3, 0, 0]},
+            {"object": "cycle", "from": "B", "to": "B", "origin": [7, 0, 0], "target": [6, 0, 0]},
+        ]
+        args = ((0, 0, 0), "A", "A", links, lambda _link: True, atlas, walkable, portals)
+        self.assertEqual((), routes.cityTravelPath(*args))
+        chosen = routes.cityTravelPath(*args, target=(3, 0, 0))
+        self.assertEqual(["exit", "return"], [row["object"] for row in chosen])
+        for blocked in ("phase", "flag", "wrongArrival"):
+            with self.subTest(blocked=blocked):
+                changed = [dict(row) for row in links]
+                returning = changed[1]
+                if blocked == "phase":
+                    returning["phaseMin"] = 7
+                elif blocked == "flag":
+                    returning["requiredFlag"] = "unearnedAccess"
+                else:
+                    returning["target"] = [0, 0, 0]
+                calls = []
+
+                def allowed(link):
+                    calls.append(link["object"])
+                    return link.get("phaseMin", 5) <= 5 and not link.get("requiredFlag")
+
+                with patch.object(routes, "cityApproachParents", wraps=routes.cityApproachParents) as visits:
+                    with self.assertRaisesRegex(AssertionError, "No currently permitted source route"):
+                        routes.cityTravelPath(
+                            (0, 0, 0), "A", "A", changed, allowed, atlas, walkable, portals, target=(3, 0, 0)
+                        )
+                self.assertEqual([row["object"] for row in changed], calls)
+                bound = 1 + len({(row["to"], tuple(row["target"])) for row in changed})
+                self.assertLessEqual(visits.call_count, bound)
+
+    def testCityContactAndTravelForwardTheActualTargetWithoutChangingAreaOnlyCalls(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+
+        name, target = "cityAr0153Actor3", (161, 51, 0)
+        for present in (True, False):
+            with self.subTest(present=present):
+                actor = {"__handle__": "sameActualNarlen"} if present else None
+                driver = SimpleNamespace(object=Mock(return_value=actor), coords=Mock(return_value=target))
+                planner = routes.QuestRoute(driver)
+                with (
+                    patch.object(routes, "currentArea", return_value="AR0300"),
+                    patch.object(routes, "travel") as travel,
+                    patch.object(routes, "contactCityObject") as contact,
+                ):
+                    planner.contact(name)
+                travel.assert_called_once_with(
+                    driver, "AR0300" if present else "AR0153", target=target if present else None
+                )
+                contact.assert_called_once_with(driver, name)
+        driver = SimpleNamespace(test=self, number=lambda _key: 5, flag=lambda _key: False, coords=lambda: (186, 51, 0))
+        for point in (None, target):
+            with self.subTest(target=point):
+                with (
+                    patch.object(routes, "currentArea", return_value="AR0300"),
+                    patch.object(routes, "cityTravelPath", return_value=()) as path,
+                ):
+                    routes.travel(driver, "AR0300", target=point)
+                self.assertEqual({"target": point}, path.call_args.kwargs)
+
+    def testBherenLowStandingRouteReportsTheSameCatToPetrineBeforeClaimingItsCloak(self):
+        from unittest.mock import patch
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        class SourcePrefixCompleted(Exception):
+            pass
+
+        for outcome_key in ("complete", "lowStanding"):
+            with self.subTest(outcome=outcome_key):
+                model = CityModel()
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                petrine = model.actor("Petrine", "AR0200")
+                bheren = model.actor("Bheren", "AR0004", sourceCreature="BHEREN")
+                cat = model.actor("Angel the Cat", "AR0005", sourceCreature="CATP", sourceActor="AR0005#actor2")
+                events = []
+                combats = []
+                test = self
+
+                class SourcePlanner:
+                    quests = {row["id"]: row for row in routes.documents()["quests"]}
+
+                    def settle(self, key, outcome):
+                        events.append((key, outcome))
+                        owner = petrine if key == "petrineRing" else bheren
+                        dialog = model.dialog(owner)
+                        test.assertTrue(dialog.acceptQuest(key))
+                        if cat.isAlive():
+                            test.assertEqual(10, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            test.assertTrue(model.dialog(cat).attack())
+                            model.kill(cat)
+                            combats.append(cat)
+                            test.assertEqual(8, model.game_map.getNumericProperty("plugin_cityReputation"))
+                        dialog = model.dialog(owner)
+                        if key == "petrineRing":
+                            test.assertEqual("catKilled", outcome)
+                            test.assertEqual([cat], combats)
+                            gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                            test.assertTrue(dialog.questPetrineRingCatKilled())
+                            test.assertEqual(7, model.game_map.getNumericProperty("plugin_cityReputation"))
+                            test.assertEqual(
+                                (gold, xp), (model.player.getGold(), model.player.getNumericProperty("exp"))
+                            )
+                            return owner.getName(), self.quests[key]["outcomes"][1]
+                        test.assertEqual("bherenCat", key)
+                        test.assertTrue(dialog.canQuestOutcome(key, outcome))
+                        cloak = next(
+                            item for item in bheren.items if item.getStringProperty("plugin_citySourceItem") == "CLCK01"
+                        )
+                        gold, xp = model.player.getGold(), model.player.getNumericProperty("exp")
+                        test.assertTrue(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(gold, model.player.getGold())
+                        test.assertEqual(
+                            xp + (400 if outcome == "complete" else 0), model.player.getNumericProperty("exp")
+                        )
+                        if outcome == "lowStanding":
+                            test.assertIn(cloak, model.player.items)
+                            test.assertNotIn(cloak, bheren.items)
+                        else:
+                            test.assertNotIn(cloak, model.player.items)
+                            test.assertIn(cloak, bheren.items)
+                        before = (
+                            model.player.getGold(),
+                            model.player.getNumericProperty("exp"),
+                            tuple(model.player.items),
+                        )
+                        test.assertFalse(dialog.performQuestOutcome(key, outcome))
+                        test.assertEqual(
+                            before,
+                            (model.player.getGold(), model.player.getNumericProperty("exp"), tuple(model.player.items)),
+                        )
+                        raise SourcePrefixCompleted()
+
+                planner = SourcePlanner()
+                with (
+                    patch.object(routes, "start"),
+                    patch.object(routes, "QuestRoute", return_value=planner),
+                    self.assertRaises(SourcePrefixCompleted),
+                ):
+                    routes.questRoute(object(), "bherenCat", outcome_key)
+                self.assertEqual([cat], combats, "The same recorded cat death must not be fought again")
+                self.assertEqual(
+                    (
+                        [("petrineRing", "catKilled"), ("bherenCat", "lowStanding")]
+                        if outcome_key == "lowStanding"
+                        else [("bherenCat", "complete")]
+                    ),
+                    events,
+                )
+                completed = {quest.getTypeId() for quest in model.player.getCompletedQuests()}
+                self.assertEqual(
+                    (
+                        {"cityPetrineRingQuest", "cityBherenCatQuest"}
+                        if outcome_key == "lowStanding"
+                        else {"cityBherenCatQuest"}
+                    ),
+                    completed,
+                )
+                self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_quinnDagger"))
+                self.assertIn("cityQuinnDaggerQuest", {quest.getTypeId() for quest in model.player.getQuests()})
+
+    def testJalanthaQuestAcceptanceRequestsTheActualPaidAudienceAfterItsPrerequisite(self):
+        from types import SimpleNamespace
+        from tests.test_baldurs_gate_city_content import CityCreature, CityModel
+
+        def exercise(gold, prepaid=False):
+            model = CityModel()
+            model.player.addGold(gold - model.player.getGold())
+            config = routes.documents()["config"]
+            priest = "cityAr0609Actor1"
+            jalantha = "cityAr0609ScriptActorJalant"
+            lothander = next(
+                name
+                for name, entry in config.items()
+                if entry.get("class") in routes.ACTOR_CLASSES and entry["properties"].get("label") == "Lothander"
+            )
+            for name in (priest, lothander):
+                properties = {key: config[name]["properties"][key] for key in ("label", "sourceArea", "sourceCreature")}
+                model.game_map.addObject(CityCreature(model, name, **properties))
+            model.resources[jalantha] = {
+                "class": "CCreature",
+                "properties": {
+                    key: config[jalantha]["properties"][key]
+                    for key in ("label", "sourceArea", "sourceCreature", "sourceSpawnFact")
+                },
+            }
+            definition = next(
+                row
+                for row in decodeCityData(config["cityClock"]["properties"]["actorDefinitions"])
+                if row["id"] == jalantha
+            )
+            self.assertEqual("jalanthaSummoned", definition["requiresFlag"])
+            self.assertEqual("JALANT", definition["sourceCreature"])
+            model.clock.setStringProperty("actorDefinitions", json.dumps([definition]))
+            events = []
+
+            def objectByName(name, required=True):
+                actor = model.game_map.getObjectByName(name)
+                if required:
+                    self.assertIsNotNone(actor, name)
+                return actor
+
+            def contact(name):
+                events.append(("contact", name))
+                actor = objectByName(name)
+                model.player.moveTo(*vars(actor.getCoords()).values())
+
+            def choose(dialog_name, action):
+                name = dialog_name.removesuffix("Dialog")
+                self.assertEqual(("contact", name), events[-1])
+                events.append(("choose", name, action))
+                if action == "requestJalanthaAudience":
+                    self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_marekPoison"))
+                return getattr(model.dialog(objectByName(name)), action)()
+
+            driver = SimpleNamespace(
+                test=self,
+                player=model.player,
+                game_map=model.game_map,
+                object=objectByName,
+                string=model.game_map.getStringProperty,
+                number=model.game_map.getNumericProperty,
+                flag=model.game_map.getBoolProperty,
+                call=lambda owner, method, *args: getattr(owner, method)(*args),
+                gold=model.player.getGold,
+                choose=choose,
+                questNames=lambda: [quest.getTypeId() for quest in model.player.getQuests()],
+            )
+            planner = routes.QuestRoute(driver)
+            planner.contact = contact
+            if prepaid:
+                model.game_map.setStringProperty("plugin_cityQuest_marekPoison", "active")
+                contact(priest)
+                self.assertTrue(choose(priest + "Dialog", "requestJalanthaAudience"))
+                events.clear()
+            original_conditions = planner.conditions
+
+            def conditions(value):
+                events.append(("conditions", value))
+                return original_conditions(value)
+
+            planner.conditions = conditions
+            before = model.player.getGold()
+            if gold < 50:
+                with self.assertRaises(AssertionError):
+                    planner.accept("jalanthaBook")
+                self.assertEqual(before, model.player.getGold())
+                self.assertFalse(model.game_map.getBoolProperty("plugin_cityFlag_jalanthaSummoned"))
+                self.assertIsNone(model.game_map.getObjectByName(jalantha))
+                self.assertEqual("", model.game_map.getStringProperty("plugin_cityQuest_jalanthaBook"))
+            else:
+                planner.accept("jalanthaBook")
+                actual = objectByName(jalantha)
+                self.assertEqual("JALANT", actual.getStringProperty("sourceCreature"))
+                self.assertEqual("AR0609", actual.getStringProperty("sourceArea"))
+                self.assertEqual(before - (0 if prepaid else 50), model.player.getGold())
+                self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_jalanthaBook"))
+                snapshot = list(events)
+                planner.accept("jalanthaBook")
+                self.assertEqual(snapshot, events)
+                self.assertIs(actual, objectByName(jalantha))
+                self.assertEqual(before - (0 if prepaid else 50), model.player.getGold())
+            self.assertEqual(("conditions", {"questStages": {"marekPoison": "active"}}), events[0])
+            requests = [entry for entry in events if entry[:2] == ("choose", priest)]
+            self.assertEqual([] if prepaid else [("choose", priest, "requestJalanthaAudience")], requests)
+            if not prepaid:
+                self.assertLess(
+                    events.index(("choose", lothander, "acceptMarekPoison")),
+                    events.index(("choose", priest, "requestJalanthaAudience")),
+                )
+            if gold >= 50:
+                self.assertEqual(("choose", jalantha, "acceptJalanthaBook"), events[-1])
+
+        for gold, prepaid in ((100, False), (50, False), (49, False), (100, True)):
+            with self.subTest(gold=gold, prepaid=prepaid):
+                exercise(gold, prepaid)
+
+    def book08McpExports(self):
+        tree = ast.parse((ROOT / "mcp.py").read_text(encoding="utf-8"))
+        names = {}
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id in {
+                        "MCP_ALLOWED_HANDLE_METHODS",
+                        "MCP_ALLOWED_EXPORTS",
+                    }:
+                        names[target.id] = ast.literal_eval(node.value)
+        self.assertEqual({"MCP_ALLOWED_HANDLE_METHODS", "MCP_ALLOWED_EXPORTS"}, set(names))
+        return names
+
+    def testBook08PublicRouteUsesOnlyActuallyExportedMcpHandleAndModuleMethods(self):
+        import inspect
+
+        exports = self.book08McpExports()
+        methods = exports["MCP_ALLOWED_HANDLE_METHODS"]
+        base = methods["CGameObject"]
+        item = base | methods.get("CMapObject", set()) | methods.get("CItem", set())
+        creature = base | methods.get("CMapObject", set()) | methods["CCreature"]
+        self.assertNotIn("isDisposable", item, "An unexported disposal hook cannot serve as a public MCP assertion")
+        for name in ("book08StatsSnapshot", "book08DisabledSnapshot", "book08DisabledUse"):
+            with self.subTest(function=name):
+                tree = ast.parse(inspect.getsource(getattr(routes, name)))
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                        continue
+                    if node.func.attr == "properties":
+                        self.assertIn("jsonify", exports["MCP_ALLOWED_EXPORTS"])
+                    if node.func.attr != "call":
+                        continue
+                    self.assertGreaterEqual(len(node.args), 2)
+                    self.assertIsInstance(node.args[1], ast.Constant)
+                    method = node.args[1].value
+                    owner = node.args[0]
+                    if isinstance(owner, ast.Name) and owner.id in {"book", "item", "carried"}:
+                        allowed = item
+                    elif isinstance(owner, ast.Name) and owner.id in {"base", "clock"}:
+                        allowed = base
+                    else:
+                        allowed = creature
+                    self.assertIn(
+                        method, allowed, ("Public MCP method is not exported for this receiver", name, method)
+                    )
+
+    def testBook08ItemDoubleRejectsUnexportedHooksLikeTheRealMcpServer(self):
+        driver = self.book08DisabledDriver()
+        with self.assertRaisesRegex(AssertionError, "MCP item method is not exported"):
+            driver.call(driver.book, "isDisposable")
+        self.assertFalse(driver.call(driver.book, "getBoolProperty", "plugin_cityBook08Consumed"))
+
+    def book08DisabledDriver(self, mutation=None):
+        """Native-shaped source double; only the registered MCP route can provide gameplay evidence."""
+        from copy import deepcopy
+
+        test = self
+        methods = self.book08McpExports()["MCP_ALLOWED_HANDLE_METHODS"]
+        item_methods = methods["CGameObject"] | methods.get("CMapObject", set()) | methods.get("CItem", set())
+
+        class Driver:
+            game_map, player = "map", "player"
+            gold_value, base_int, composed_int, other_stat = 1000, 7, 9, 10
+
+            def __init__(self):
+                self.test, self.events, self.saves, self.records, self.uses = test, [], [], [], 0
+                self.flags = {
+                    "plugin_cityBook08NativeConversionEnabled": False,
+                    "plugin_cityPoisonSourceEnabled": False,
+                }
+                if mutation in self.flags:
+                    self.flags[mutation] = True
+                self.book = {
+                    "__handle__": "original-book",
+                    "name": "native-chanthalas-book3",
+                    "code": "BOOK08",
+                    "type": "cityItemBook08",
+                    "quantity": 1,
+                    "charges": [0, 0, 0],
+                    "consumed": False,
+                    "unidentified": True,
+                    "stolen": False,
+                }
+                if mutation == "wrongType":
+                    self.book["type"] = "cityOtherItem"
+                self.gear = {
+                    "__handle__": "gear",
+                    "name": "native-helmet",
+                    "code": "",
+                    "type": "CHelmet",
+                    "quantity": 1,
+                }
+                self.owner_items = [] if mutation == "missingBook" else [self.book]
+                self.player_items = [self.gear]
+                self.equipment = {"2": self.gear}
+                self.source_state = {}
+                self.gui_enabled, self.native_popup, self.use_gui_states = False, False, []
+
+            def startMap(self, map_name):
+                test.assertEqual("baldursGate", map_name)
+                self.events.append(("start", map_name))
+
+            def flag(self, key):
+                return key == "plugin_cityInitialized"
+
+            def number(self, key):
+                return {
+                    "plugin_cityStartingGoldGrant": 1000,
+                    "plugin_cityStartingExpGrant": 10000,
+                    "plugin_cityPhase": 5,
+                    "plugin_cityStanding": 0,
+                    "plugin_cityCrimes": 0,
+                }[key]
+
+            def properties(self, stats):
+                result = {
+                    key: 0
+                    for key in (
+                        "strength",
+                        "agility",
+                        "stamina",
+                        "intelligence",
+                        "armor",
+                        "block",
+                        "dmgMin",
+                        "dmgMax",
+                        "attack",
+                        "hit",
+                        "crit",
+                        "fireResist",
+                        "frostResist",
+                        "normalResist",
+                        "thunderResist",
+                        "shadowResist",
+                        "damage",
+                    )
+                }
+                result.update(
+                    strength=self.other_stat,
+                    intelligence=self.base_int if stats == "base" else self.composed_int,
+                    mainStat="agility",
+                )
+                return result
+
+            def gold(self):
+                return self.gold_value
+
+            def object(self, name, **_kwargs):
+                test.assertIn(name, ("cityClock", "cityAr0132Actor1"))
+                return name
+
+            def contact(self, name):
+                test.assertEqual("cityAr0132Actor1", name)
+                self.events.append(("contact", name))
+
+            def call(self, owner, method, *args):
+                if isinstance(owner, dict):
+                    test.assertIn(method, item_methods, "MCP item method is not exported")
+                if method == "getItems":
+                    return list(self.player_items if owner == self.player else self.owner_items)
+                if method == "getEquipped":
+                    return self.equipment
+                if method == "getObjectProperty":
+                    test.assertEqual("baseStats", args[0])
+                    return "base"
+                if method == "getStats":
+                    return "composed"
+                if method == "getName":
+                    return owner["name"]
+                if method == "getType":
+                    return "CItem" if mutation == "wrongNativeType" else "BaldursGateUnderstandingTome"
+                if method == "getTypeId":
+                    return owner["type"]
+                if method == "getBoolProperty":
+                    key = args[0]
+                    if owner == "cityClock":
+                        return self.flags[key]
+                    if key == "plugin_cityUnavoidableDetection":
+                        return mutation == "unavoidableDetection"
+                    if key in {"plugin_cityUnstealable", "plugin_cityUndroppable"}:
+                        return mutation == "unstealable" and key == "plugin_cityUnstealable"
+                    return owner[
+                        {
+                            "plugin_cityBook08Consumed": "consumed",
+                            "plugin_cityUnidentified": "unidentified",
+                            "plugin_cityStolen": "stolen",
+                        }[key]
+                    ]
+                if method == "getNumericProperty":
+                    key = args[0]
+                    if key == "exp":
+                        return 10000
+                    if key == "agility":
+                        return 15 if mutation == "lowAgility" else 18
+                    if key == "plugin_cityTheftAgility":
+                        return 16
+                    if key == "intelligence":
+                        return self.base_int if owner == "base" else self.composed_int
+                    return owner["quantity"]
+                if method == "getStringProperty":
+                    key = args[0]
+                    if key == "sourceCreature":
+                        return "CHANTH"
+                    if key == "plugin_citySourceItem":
+                        return owner["code"]
+                    if key == "plugin_cityCharges":
+                        return json.dumps(owner["charges"])
+                    if key == "plugin_cityPoisonSourceState":
+                        return json.dumps(self.source_state)
+                    if key == "plugin_cityHistory":
+                        return json.dumps({"aldeth": "unspecified", "tenya": "unspecified", "eldoth": "unspecified"})
+                if method == "useItem":
+                    test.assertEqual(self.player, owner)
+                    test.assertTrue(
+                        any(item is args[0] for item in self.player_items),
+                        "The native use needs the current owned instance",
+                    )
+                    self.use_gui_states.append(self.gui_enabled)
+                    self.uses += 1
+                    self.events.append(("useItem", args[0]["__handle__"]))
+                    if mutation == "defaultScrollPopup":
+                        self.native_popup = self.gui_enabled
+                    elif mutation == "baseMutation":
+                        self.base_int += 1
+                    elif mutation == "composedMutation":
+                        self.composed_int += 1
+                    elif mutation == "otherStatMutation":
+                        self.other_stat += 1
+                    elif mutation == "chargesMutation":
+                        self.book["charges"] = [1, 0, 0]
+                    elif mutation == "quantityMutation":
+                        self.book["quantity"] = 2
+                    elif mutation == "consumedMutation":
+                        self.book["consumed"] = True
+                    elif mutation == "receiptMutation":
+                        self.source_state = {"receipts": {"book08Use:" + self.book["name"]: {"status": "complete"}}}
+                    elif mutation == "goldMutation":
+                        self.gold_value += 1
+                    elif mutation == "equipmentMutation":
+                        self.equipment = {}
+                    elif mutation == "duplicateMutation":
+                        duplicate = deepcopy(self.book)
+                        duplicate.update(name="cloned-tome", __handle__="clone")
+                        self.player_items.append(duplicate)
+                    elif mutation == "flagMutation":
+                        self.flags["plugin_cityBook08NativeConversionEnabled"] = True
+                    return None
+                raise AssertionError((owner, method, args))
+
+            def chooseUi(self, dialog, action, *, selected_id):
+                test.assertEqual([("start", "baldursGate"), ("contact", "cityAr0132Actor1")], self.events)
+                test.assertEqual(
+                    ("cityAr0132Actor1Dialog", "pickPocket", self.book["name"]), (dialog, action, selected_id)
+                )
+                self.events.append(("chooseUi", action, selected_id))
+                transferred = self.book
+                if mutation == "clonedTransfer":
+                    transferred = deepcopy(self.book)
+                    transferred["__handle__"] = "cloned-transfer"
+                self.owner_items.remove(self.book)
+                self.player_items.append(transferred)
+                transferred["stolen"] = True
+                return {"nativeOptionSeq": 12, "kind": "nativeChoice", "action": action}
+
+            def questNames(self, completed=False):
+                return [] if completed else ["cityOptionalQuest"]
+
+            def enableIsolatedGui(self):
+                self.gui_enabled = True
+                return "current-reloaded-native-gui"
+
+            def nativePanel(self, panel_type, *, required):
+                test.assertFalse(required)
+                return (
+                    "default-native-text-panel"
+                    if self.gui_enabled and self.native_popup and panel_type == "CGameTextPanel"
+                    else None
+                )
+
+            def saveAndReload(self, label):
+                self.saves.append(label)
+                self.gui_enabled, self.native_popup = False, False
+                # Rebind the carried native item as a real save/reload does; stale handles must never drive use.
+                old = self.book
+                self.book = deepcopy(old)
+                self.book["__handle__"] = "reloaded-book-" + str(len(self.saves))
+                self.player_items = [self.book if item is old else item for item in self.player_items]
+                if mutation == "reloadMutation" and len(self.saves) == 2:
+                    self.base_int += 1
+
+            def pump(self):
+                self.events.append(("pump",))
+
+            def record(self, record, **_kwargs):
+                self.records.append(record)
+
+            def check(self, branch, condition, **evidence):
+                test.assertTrue(condition)
+                self.records.append({"branch": branch, **evidence})
+
+        return Driver()
+
+    def runBook08DisabledModel(self, mutation=None):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        callback = getattr(routes, "book08DisabledUse", None)
+        self.assertTrue(callable(callback), "An actual public native route is required for disabled Book08 use")
+        driver = self.book08DisabledDriver(mutation)
+        with (
+            patch.object(routes, "QuestRoute", lambda _driver: SimpleNamespace(contact=driver.contact)),
+            patch.object(routes, "currentArea", return_value="AR0132"),
+        ):
+            callback(driver)
+        return driver
+
+    def testBook08DisabledUseHasOnlyItsRealPublicDenialBranchAndKeepsPositiveHolds(self):
+        cases = [case for case in routes.CASES if case.id == "baldurs-gate-book08-disabled-use"]
+        self.assertEqual(1, len(cases), "Book08 needs its own public MCP case")
+        case = cases[0]
+        self.assertEqual(("Assasin",), case.classes)
+        self.assertEqual("wandererRace", case.race)
+        self.assertTrue(case.isolated_gui)
+        self.assertEqual(("baldursGate.book08.disabledUseNoMutation",), case.branches)
+        self.assertEqual(300, case.duration_seconds)
+        callback = "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse"
+        self.assertEqual(case.branches, routes.SOURCE_BRANCHES.get(callback))
+        self.assertNotIn(callback, routes.DEFENSIVE_SOURCE_BRANCHES)
+        self.assertEqual(
+            ("successfulUse", "handInBeforeUse", "useBeforeHandIn", "originalParity"), routes.BOOK08_PENDING_OUTCOMES
+        )
+        ledger = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_ledger.json").read_text())
+        books = [row for row in ledger["entries"] if row["id"].startswith("BOOK08")]
+        self.assertTrue(books)
+        self.assertTrue(all(row["implementation"]["status"] in {"partial", "planned"} for row in books))
+        self.assertFalse(ledger["acceptanceReady"])
+        self.assertFalse(ledger["originalParityEstablished"])
+
+    def testBook08DisabledRouteUsesOriginalOwnershipNativeChoiceAndFourPersistedNoOps(self):
+        driver = self.runBook08DisabledModel()
+        self.assertEqual(4, driver.uses)
+        self.assertEqual(["city-book08-disabled-before-use", "city-book08-disabled-after-use"], driver.saves)
+        use_handles = [row[1] for row in driver.events if row[0] == "useItem"]
+        self.assertEqual(["reloaded-book-1"] * 2 + ["reloaded-book-2"] * 2, use_handles)
+        witness = driver.records[-1]
+        self.assertEqual("baldursGate.book08.disabledUseNoMutation", witness["branch"])
+        self.assertFalse(witness["sourceFlagsEnabled"])
+        self.assertEqual(routes.BOOK08_PENDING_OUTCOMES, witness["pendingOutcomes"])
+        self.assertEqual((7, 9, 1000), (driver.base_int, driver.composed_int, driver.gold_value))
+        self.assertEqual({}, driver.source_state)
+
+    def testBook08DisabledRouteRejectsEnabledFlagsWithoutSelectingOrUsingAnything(self):
+        self.assertTrue(
+            callable(getattr(routes, "book08DisabledUse", None)),
+            "The public route must exist before rejection coverage can pass",
+        )
+        for flag in ("plugin_cityBook08NativeConversionEnabled", "plugin_cityPoisonSourceEnabled"):
+            with self.subTest(flag=flag), self.assertRaises(AssertionError):
+                self.runBook08DisabledModel(flag)
+
+    def testBook08DisabledRouteRejectsMissingWrongUnstealableOrClonedSourcePossessions(self):
+        self.assertTrue(
+            callable(getattr(routes, "book08DisabledUse", None)),
+            "The public route must exist before rejection coverage can pass",
+        )
+        for mutation in (
+            "missingBook",
+            "wrongType",
+            "wrongNativeType",
+            "unstealable",
+            "lowAgility",
+            "unavoidableDetection",
+            "clonedTransfer",
+        ):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.runBook08DisabledModel(mutation)
+
+    def testBook08DisabledRouteRejectsStatChargeOwnershipReceiptOrResourceMutations(self):
+        self.assertTrue(
+            callable(getattr(routes, "book08DisabledUse", None)),
+            "The public route must exist before rejection coverage can pass",
+        )
+        for mutation in (
+            "baseMutation",
+            "composedMutation",
+            "otherStatMutation",
+            "chargesMutation",
+            "quantityMutation",
+            "consumedMutation",
+            "receiptMutation",
+            "goldMutation",
+            "equipmentMutation",
+            "duplicateMutation",
+            "flagMutation",
+            "reloadMutation",
+        ):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                self.runBook08DisabledModel(mutation)
+
+    def testBook08DisabledPublicRouteCannotActivateFlagsCreateItemsOrCallPrivateHooks(self):
+        callback = getattr(routes, "book08DisabledUse", None)
+        self.assertTrue(callable(callback), "The route must exist before its native action surface can be reviewed")
+        import inspect
+
+        text = inspect.getsource(callback)
+        tree = ast.parse(text)
+        self.assertIn("QuestRoute(d).contact", text)
+        self.assertIn("d.chooseUi", text)
+        self.assertIn('d.call(d.player, "useItem", carried)', text)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                self.assertNotIn(
+                    node.func.attr,
+                    {
+                        "moveTo",
+                        "setBoolProperty",
+                        "setNumericProperty",
+                        "addItem",
+                        "createObject",
+                        "onUse",
+                        "poisonUseUnderstandingTome",
+                    },
+                )
+                if node.func.attr == "call" and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+                    self.assertNotIn(
+                        node.args[1].value,
+                        {
+                            "setBoolProperty",
+                            "setNumericProperty",
+                            "addItem",
+                            "createObject",
+                            "onUse",
+                            "poisonUseUnderstandingTome",
+                        },
+                    )
+
+    def testBook08DisabledUseRequiresReloadedNativeGuiAndRejectsDefaultScrollPopup(self):
+        self.assertTrue(callable(getattr(routes, "book08DisabledUse", None)), "The actual native route must exist")
+        driver = self.runBook08DisabledModel()
+        self.assertEqual([True] * 4, driver.use_gui_states, "Each use must retain the real reloaded GUI")
+        with self.assertRaisesRegex(AssertionError, "default native scroll text"):
+            self.runBook08DisabledModel("defaultScrollPopup")
+
+    def testInterludeMappingsSeparateUnavailableOffersFromSuccessfulReturn(self):
+        prefix = "res/maps/baldursGate/script.py:BaldursGateDialog."
+        for predicate in ("canCityInterlude", "canReturnFromInterlude"):
+            self.assertEqual(
+                ("baldursGate.interlude.earlyReturnRefused",), routes.SOURCE_BRANCHES.get(prefix + predicate)
+            )
+        for action in ("cityInterlude", "returnFromInterlude"):
+            self.assertEqual(
+                ("baldursGate.quest.cythandriaDiary.complete",), routes.SOURCE_BRANCHES.get(prefix + action)
+            )
+        positive = [case for case in routes.CASES if "baldursGate.quest.cythandriaDiary.complete" in case.branches]
+        self.assertEqual(1, len(positive), "Successful return needs its existing positive registered quest plan")
+        quest = next(row for row in routes.documents()["quests"] if row["id"] == "cythandriaDiary")
+        self.assertEqual(7, quest["phase"], "The positive plan must actually request the later city visit")
+        history = {
+            case.id: case
+            for case in routes.CASES
+            if case.id in {"baldurs-gate-history-helped", "baldurs-gate-history-killed"}
+        }
+        self.assertEqual(2, len(history))
+        self.assertTrue(all(case.isolated_gui for case in history.values()))
+        self.assertTrue(all("baldursGate.interlude.earlyReturnRefused" in case.branches for case in history.values()))
+
+    def testPositiveInterludePlanSettlesPrerequisitesThenChoosesBothAuthoredActions(self):
+        from types import SimpleNamespace
+
+        events = []
+        phase = [5]
+
+        def choose(dialog, action):
+            events.append(("choose", dialog, action))
+            if action == "returnFromInterlude":
+                phase[0] = 7
+
+        planner = routes.QuestRoute.__new__(routes.QuestRoute)
+        planner.d = SimpleNamespace(test=self, number=lambda _key: phase[0], choose=choose)
+        planner.settle = lambda key, choice: events.append(("settle", key, choice))
+        planner.contact = lambda actor: events.append(("contact", actor))
+        planner.ensurePhase(7)
+        self.assertEqual(
+            [
+                ("settle", "eltanIronThrone", "complete"),
+                ("contact", "cityStart"),
+                ("choose", "cityStartDialog", "cityInterlude"),
+                ("choose", "cityStartDialog", "returnFromInterlude"),
+            ],
+            events,
+        )
+        self.assertEqual(7, phase[0])
+        planner.ensurePhase(7)
+        self.assertEqual(4, len(events), "An existing later visit must not replay departure")
+
+    def historyUiDriver(self, mutation=None):
+        """A paged native-API double; this is source regression evidence only."""
+        from tempfile import TemporaryDirectory
+
+        home = TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        test = self
+
+        class Driver:
+            game, game_map, player = "game", "map", "player"
+            trace_path = Path(home.name) / "native.jsonl"
+            _combat_trace_seq = 0
+            position = (207, 85, 0)
+            history = None
+            frozen = False
+            panel_open = False
+            focused = -1
+            page = 0
+
+            def __init__(self):
+                self.test = test
+                self.history, self.records, self.choices, self.moves, self.saves = {}, [], [], [], []
+                self.trace_path.write_text("", encoding="utf-8")
+                actions = [
+                    "historyAldethHelped",
+                    "historyAldethKilled",
+                    "historyTenyaHelped",
+                    "historyTenyaKilled",
+                    "cityInterlude",
+                    "returnFromInterlude",
+                    "historyEldothAbsent",
+                    "finishHistoryChoices",
+                    "",
+                ]
+                self.rows = []
+                for number, action in enumerate(actions):
+                    row = {"number": number, "action": action, "text": "Reply " + (action or "Leave")}
+                    condition = {
+                        "cityInterlude": "canCityInterlude",
+                        "returnFromInterlude": "canReturnFromInterlude",
+                        "finishHistoryChoices": "canFinishHistoryChoices",
+                    }.get(action)
+                    if condition:
+                        row["condition"] = condition
+                    self.rows.append(row)
+
+            def available(self):
+                return [
+                    row
+                    for row in self.rows
+                    if not row.get("condition") or self.condition("cityStartDialog", row["condition"])
+                ]
+
+            def condition(self, _dialog_id, method):
+                if method == "canFinishHistoryChoices":
+                    return not self.frozen
+                return mutation == "unearnedOffer" and method == "canCityInterlude"
+
+            def apply(self, action):
+                self.choices.append(action)
+                if action.startswith("history"):
+                    key = next(key for key in ("aldeth", "tenya", "eldoth") if key in action.lower())
+                    if not self.frozen and key not in self.history:
+                        self.history[key] = next(
+                            value for value in ("helped", "killed", "absent") if value in action.lower()
+                        )
+                elif action == "finishHistoryChoices":
+                    self.frozen = True
+                    for key in ("aldeth", "tenya", "eldoth"):
+                        self.history.setdefault(key, "unspecified")
+
+            def call(self, owner, method, *args):
+                if method == "createObject":
+                    return "dialog"
+                if method == "invokeCondition":
+                    return self.condition("cityStartDialog", args[0])
+                if method == "getGuiHandler":
+                    return "handler"
+                if method == "openDialog":
+                    self.panel_open, self.focused, self.page = True, -1, 0
+                    return "panel"
+                if method == "getObjectProperty":
+                    return "dialog"
+                if method == "getTypeId":
+                    return "cityStartDialog"
+                if method == "getChildren":
+                    indexes = list(range(self.page, min(self.page + 2, len(self.available()))))
+                    if mutation == "missingPage":
+                        indexes = [index for index in indexes if index != len(self.available()) - 1]
+                    if mutation == "foreignButton":
+                        indexes.append(len(self.available()))
+                    return indexes
+                if method == "getType":
+                    return "CButton"
+                if method == "getParent":
+                    return "gui" if self.panel_open else None
+                if method == "getStringProperty" and isinstance(owner, int):
+                    if args[0] == "click":
+                        return "chooseReply" + str(owner)
+                    row = self.available()[owner]
+                    return str(owner + 1) + "  " + ("wrong native text" if mutation == "wrongText" else row["text"])
+                if method == "keyboardEvent":
+                    key = args[-1]
+                    if key == 1073741905:
+                        self.focused = min(self.focused + 1, len(self.available()) - 1)
+                        if not self.page <= self.focused < self.page + 2:
+                            self.page = self.focused
+                    elif key == 13:
+                        row = self.available()[self.focused]
+                        record = {
+                            "seq": len(self.choices) + 1,
+                            "event": "dialog_option_selected",
+                            "dialog": {"typeId": "cityStartDialog"},
+                            "stateId": "ENTRY",
+                            "action": row["action"],
+                            "optionNumber": row["number"],
+                        }
+                        if mutation == "wrongNumber":
+                            record["optionNumber"] += 1
+                        if mutation != "missingTrace":
+                            with self.trace_path.open("a", encoding="utf-8") as stream:
+                                stream.write(json.dumps(record) + "\n")
+                        self.apply(row["action"])
+                    elif key == 27:
+                        self.panel_open = False
+                    return True
+                if method == "getItems":
+                    return []
+                if method == "getNumericProperty":
+                    return 10000
+                if method == "getStringProperty":
+                    data = self.history if args[0] == "plugin_cityHistory" else {"history": self.history}
+                    return json.dumps(data)
+                raise AssertionError((owner, method, args))
+
+            def _dialogStates(self, _dialog_id):
+                return {"ENTRY": {"options": [{"properties": row} for row in self.rows]}}
+
+            def enableIsolatedGui(self):
+                return "gui"
+
+            def nativePanel(self, _type_name, *, required=True):
+                panel = "panel" if self.panel_open else None
+                if required:
+                    test.assertIsNotNone(panel)
+                return panel
+
+            def assertNativeCombatOutcomes(self):
+                if self.trace_path.read_text():
+                    self._combat_trace_seq = json.loads(self.trace_path.read_text().splitlines()[-1])["seq"]
+
+            def pump(self):
+                pass
+
+            def record(self, record, **_kwargs):
+                self.records.append(record)
+
+            def startMap(self, _name):
+                pass
+
+            def flag(self, key):
+                return self.frozen if key == "plugin_cityHistoryFrozen" else key == "plugin_cityInitialized"
+
+            def number(self, key):
+                return {
+                    "plugin_cityStartingGoldGrant": 1000,
+                    "plugin_cityStartingExpGrant": 10000,
+                    "plugin_cityPhase": 5,
+                }[key]
+
+            def coords(self):
+                return self.position
+
+            def navigateTo(self, _name):
+                self.position = (207, 85, 0)
+                self.moves.append(self.position)
+
+            def canStep(self, _point):
+                return True
+
+            def navigateCoords(self, point, *, limit):
+                self.position = point
+                self.moves.append(point)
+
+            def gold(self):
+                return 1000
+
+            def choose(self, _dialog_id, action):
+                test.assertNotIn(action, ("cityInterlude", "returnFromInterlude"), "Cannot select an unoffered reply")
+                self.apply(action)
+
+            def saveAndReload(self, label):
+                self.saves.append((label, dict(self.history), self.frozen))
+
+            def check(self, branch, condition, **evidence):
+                test.assertTrue(condition)
+                self.records.append({"branch": branch, **evidence})
+
+        return Driver()
+
+    def requireHistoryUiHelper(self):
+        helper = getattr(routes, "historyDialogUi", None)
+        self.assertTrue(callable(helper), "History routes must inspect the actual native filtered replies")
+        return helper
+
+    def testHistoryNativeInspectionVisitsAllFilteredPagesWithoutSelectingHiddenOffers(self):
+        driver = self.historyUiDriver()
+        witness = self.requireHistoryUiHelper()(driver)
+        self.assertEqual("nativeUnofferedHistoryInspection", witness["kind"])
+        self.assertEqual(7, len(witness["replies"]))
+        self.assertEqual([], driver.choices)
+        self.assertFalse(driver.panel_open)
+        self.assertFalse({"cityInterlude", "returnFromInterlude"} & {row["action"] for row in witness["replies"]})
+
+    def testHistoryNativeSelectionUsesFilteredIndexButOriginalResourceNumber(self):
+        driver = self.historyUiDriver()
+        witness = self.requireHistoryUiHelper()(driver, "finishHistoryChoices")
+        self.assertEqual(["finishHistoryChoices"], driver.choices)
+        self.assertEqual(1, witness["nativeOptionSeq"])
+        self.assertEqual({"aldeth": "unspecified", "tenya": "unspecified", "eldoth": "unspecified"}, driver.history)
+        self.assertFalse(driver.panel_open)
+
+    def testHistoryNativeInspectionRejectsForeignRepliesWrongTextAndMissingPages(self):
+        helper = self.requireHistoryUiHelper()
+        for mutation in ("foreignButton", "wrongText", "missingPage", "unearnedOffer"):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                helper(self.historyUiDriver(mutation))
+
+    def testHistoryNativeChoiceRequiresTheExactActualInputReceipt(self):
+        helper = self.requireHistoryUiHelper()
+        for mutation in ("missingTrace", "wrongNumber"):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                helper(self.historyUiDriver(mutation), "finishHistoryChoices")
+
+    def testHistoryRoutePreservesFreezeDefaultsAndUsesNativeChoicesAfterRealMovement(self):
+        from unittest.mock import patch
+
+        for outcome in ("Helped", "Killed"):
+            with self.subTest(outcome=outcome):
+                driver = self.historyUiDriver()
+                with patch.object(routes, "cityMovementCells", return_value=(frozenset({(208, 85, 0)}), frozenset())):
+                    routes.history(driver, outcome)
+                expected = {"aldeth": outcome.lower(), "tenya": outcome.lower(), "eldoth": "unspecified"}
+                self.assertEqual(expected, driver.history)
+                self.assertEqual(expected, driver.saves[0][1])
+                self.assertTrue(driver.saves[0][2])
+                self.assertIn((208, 85, 0), driver.moves)
+                self.assertEqual((207, 85, 0), driver.moves[-1])
+                selected = [
+                    row["nativeHistoryUi"]
+                    for row in driver.records
+                    if row.get("nativeHistoryUi", {}).get("kind") == "nativeHistoryChoice"
+                ]
+                self.assertEqual(6, len(selected), "Every history choice needs its actual native callback receipt")
+                early_return = next(
+                    row for row in driver.records if row.get("branch") == "baldursGate.interlude.earlyReturnRefused"
+                )
+                self.assertEqual("unavailable-unoffered", early_return["outcome"])
+                self.assertTrue(early_return["nativeInspection"])
+
+    def testHistoryRoutesDeclareIsolatedGuiPreserveClassesAndBudgets(self):
+        selected = {case.id: case for case in routes.CASES if case.id.startswith("baldurs-gate-history-")}
+        self.assertEqual({"baldurs-gate-history-helped", "baldurs-gate-history-killed"}, set(selected))
+        for identity, class_id in (
+            ("baldurs-gate-history-helped", "Wayfarer"),
+            ("baldurs-gate-history-killed", "Inquisitor"),
+        ):
+            with self.subTest(route=identity):
+                case = selected[identity]
+                self.assertTrue(case.isolated_gui, "Native history panels require the declared isolated GUI route")
+                self.assertEqual((class_id,), case.classes)
+                self.assertEqual(90, case.duration_seconds)
+                self.assertIn("baldursGate.interlude.earlyReturnRefused", case.branches)
+
     def jalanthaAudienceModel(self):
         from types import SimpleNamespace
 
@@ -401,8 +1691,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertIn(origin, walkable)
         self.assertIn(target, walkable)
         for forbidden in (portals, frozenset()):
-            with self.subTest(portal_safety=bool(forbidden)), self.assertRaisesRegex(
-                AssertionError, "No portal-safe city approach"
+            with (
+                self.subTest(portal_safety=bool(forbidden)),
+                self.assertRaisesRegex(AssertionError, "No portal-safe city approach"),
             ):
                 routes.cityApproachPath(origin, target, bounds, walkable, forbidden)
 
@@ -437,8 +1728,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         route = routes.cityTravelPath((0, 0, 0), "A", "C", links, lambda _link: True, atlas, walkable, portals)
         self.assertEqual(["aToB", "bToA", "aToC"], [row["object"] for row in route])
         for denied in ("aToB", "bToA", "aToC"):
-            with self.subTest(denied=denied), self.assertRaisesRegex(
-                AssertionError, "No currently permitted source route"
+            with (
+                self.subTest(denied=denied),
+                self.assertRaisesRegex(AssertionError, "No currently permitted source route"),
             ):
                 routes.cityTravelPath(
                     (0, 0, 0), "A", "C", links, lambda link: link["object"] != denied, atlas, walkable, portals
@@ -515,8 +1807,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertEqual(((0, 1, 0), (1, 1, 0), (2, 1, 0), (2, 0, 0)), path)
         self.assertEqual((), routes.cityApproachPath((0, 0, 0), (0, 0, 0), [0, 0, 0, 3, 2], cells, frozenset()))
         for target, bounds in (((1, 0, 0), [0, 0, 0, 3, 2]), ((2, 0, 0), [0, 0, 0, 2, 2])):
-            with self.subTest(target=target, bounds=bounds), self.assertRaisesRegex(
-                AssertionError, "No portal-safe city approach"
+            with (
+                self.subTest(target=target, bounds=bounds),
+                self.assertRaisesRegex(AssertionError, "No portal-safe city approach"),
             ):
                 routes.cityApproachPath((0, 0, 0), target, bounds, cells, frozenset())
 
@@ -655,8 +1948,11 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                         driver.position = (0, 1, 0)
 
                 driver.navigateCoords = navigate
-                with patch.object(routes, "cityMovementCells", return_value=(cells, frozenset())), patch.object(
-                    routes, "documents", return_value={"geometry": {"atlas": {"A": {"bounds": [0, 0, 0, 3, 2]}}}}
+                with (
+                    patch.object(routes, "cityMovementCells", return_value=(cells, frozenset())),
+                    patch.object(
+                        routes, "documents", return_value={"geometry": {"atlas": {"A": {"bounds": [0, 0, 0, 3, 2]}}}}
+                    ),
                 ):
                     if mutation:
                         with self.assertRaisesRegex(AssertionError, "City waypoint|City approach turn budget"):
@@ -763,8 +2059,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     return {"kind": "sourceModelOnly"}
 
                 driver.call, driver.choose, driver.chooseUi = call, buy, choose
-                with patch.object(routes, "start"), patch.object(
-                    routes, "QuestRoute", return_value=SimpleNamespace(contact=Mock())
+                with (
+                    patch.object(routes, "start"),
+                    patch.object(routes, "QuestRoute", return_value=SimpleNamespace(contact=Mock())),
                 ):
                     if mutation:
                         with self.assertRaises(AssertionError):
@@ -786,6 +2083,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
+                "baldurs-gate-book08-disabled-use",
+                "baldurs-gate-history-helped",
+                "baldurs-gate-history-killed",
                 "baldurs-gate-seven-suns-five-deaths",
             }
             | {case.id for case in routes.sevenSunsWarningCases()}
@@ -1065,13 +2365,109 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
 
         return Driver()
 
+    def testGenericContainerRevisitUsesActualTargetAndAvoidsTheRetainedCompulsorySewerLoop(self):
+        from unittest.mock import patch
+
+        data = routes.documents()
+        geometry = data["geometry"]
+        walkable, portals = routes.cityMovementCells()
+        name, target = "cityAr0800Container1", (176, 67, 0)
+        self.assertEqual("AR0800#container1", data["config"][name]["properties"]["sourceContainer"])
+        map_data = json.loads((ROOT / "res/maps/baldursGate/map.json").read_text(encoding="utf-8"))
+        authored = next(row for layer in map_data["layers"] for row in layer.get("objects", []) if row["name"] == name)
+        self.assertEqual(target[:2], (authored["x"] // map_data["tilewidth"], authored["y"] // map_data["tileheight"]))
+        links = {row["object"]: row for row in geometry["connections"]}
+        entrance, returning = links["cityAr0800Portal21"], links["cityAr0226Portal10"]
+        self.assertEqual(([171, 88, 0], [125, 26, 3]), (entrance["origin"], entrance["target"]))
+        self.assertEqual(([125, 25, 3], [172, 88, 0]), (returning["origin"], returning["target"]))
+        forced = {tuple(row["origin"]): tuple(row["target"]) for row in (entrance, returning)}
+
+        for origin, expected_steps in (((157, 111, 0), 67), ((172, 88, 0), 29)):
+            with self.subTest(origin=origin):
+                driver = self.ownershipDriver()
+                driver.position, driver.turns = origin, 0
+                driver.identity = {"__handle__": "sameAlreadyLootedContainer"}
+                driver.looted, driver.contents, driver.gold_value = True, [], 1017
+                ring = {"plugin_citySourceItem": "RING10", "plugin_cityQuantity": 1}
+                driver.items = {"originalSourceRing": ring}
+                driver.moves, driver.portal_entries, driver.native_contacts = [], [], []
+                original_call, original_choose = driver.call, driver.choose
+                driver.object = lambda actual, required=True: driver.identity if actual == name else None
+                driver.coords = lambda owner=None: target if owner is not None else driver.position
+                driver.number = lambda _key: 5
+                driver.flag = lambda _key: False
+                driver.call = lambda owner, method, *args: original_call(
+                    "chest" if isinstance(owner, dict) else owner, method, *args
+                )
+
+                def advance(point):
+                    point = tuple(point)
+                    self.assertIn(point, walkable)
+                    self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, point)))
+                    driver.moves.append((driver.position, point))
+                    driver.position = forced.get(point, point)
+                    if point in forced:
+                        driver.portal_entries.append(point)
+                    driver.turns += 1
+
+                def navigateCoords(point, *, limit):
+                    self.assertGreater(limit, 0)
+                    advance(point)
+
+                def navigateTo(actual, *, after_tick=None):
+                    self.assertEqual(name, actual)
+                    budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, target)) + 128)
+                    for _ in range(budget):
+                        if driver.position == target:
+                            driver.native_contacts.append(driver.identity)
+                            return
+                        area_id = routes.currentArea(driver)
+                        goal = target if area_id == "AR0800" else tuple(returning["origin"])
+                        # This source-geometry transport model exposes compulsory entrance effects; it is not native replay.
+                        path = routes.cityApproachPath(
+                            driver.position, goal, geometry["atlas"][area_id]["bounds"], walkable, frozenset()
+                        )
+                        advance(path[0])
+                        if after_tick:
+                            after_tick()
+                    raise AssertionError(("Authored route budget exhausted", actual, budget, driver.position))
+
+                def choose(dialog, action):
+                    self.assertEqual((name + "Dialog", "open"), (dialog, action))
+                    self.assertEqual(target, driver.position)
+                    self.assertTrue(driver.native_contacts)
+                    return original_choose(dialog, action)
+
+                driver.navigateCoords, driver.navigateTo, driver.choose = navigateCoords, navigateTo, choose
+                before = routes.resources(driver)
+                with patch.object(routes, "travel", wraps=routes.travel) as travel:
+                    self.assertIsNone(routes.visit(driver, name, "open"))
+                    self.assertIsNone(routes.visit(driver, name, "open"))
+                self.assertEqual(2, travel.call_count)
+                for call in travel.call_args_list:
+                    self.assertEqual((driver, "AR0800"), call.args)
+                    self.assertEqual({"target": target}, call.kwargs)
+                self.assertEqual(target, driver.position)
+                self.assertEqual(expected_steps, driver.turns)
+                self.assertLessEqual(driver.turns, max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128))
+                self.assertEqual([], driver.portal_entries)
+                self.assertEqual([driver.identity, driver.identity], driver.native_contacts)
+                self.assertEqual(before, routes.resources(driver))
+                self.assertIs(ring, driver.items["originalSourceRing"])
+                self.assertEqual([], driver.contents)
+                self.assertTrue(driver.looted)
+                self.assertEqual(2, sum(action[0] == "choice" for action in driver.actions))
+
     def testOwnershipRouteRequiresNaturalContactExactDeltasAndAnInertRepeatedOpen(self):
         from unittest.mock import patch
 
         driver = self.ownershipDriver()
-        with patch.object(routes, "travel") as travel, patch.object(
-            routes, "contactCityObject", side_effect=lambda owner, name: owner.navigateTo(name)
-        ) as contact:
+        with (
+            patch.object(routes, "travel") as travel,
+            patch.object(
+                routes, "contactCityObject", side_effect=lambda owner, name: owner.navigateTo(name)
+            ) as contact,
+        ):
             after = routes.openContainer(driver, "cityAr0800Container1")
         travel.assert_called_once_with(driver, "AR0800")
         contact.assert_called_once_with(driver, "cityAr0800Container1")
@@ -1079,8 +2475,10 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertEqual(("navigate", "cityAr0800Container1"), driver.actions[0])
         self.assertEqual(2, sum(action[0] == "choice" for action in driver.actions))
         for mutations in ({"duplicate": True}, {"wrong_gold": True}):
-            with self.subTest(mutations=mutations), patch.object(routes, "travel"), patch.object(
-                routes, "contactCityObject", side_effect=lambda owner, name: owner.navigateTo(name)
+            with (
+                self.subTest(mutations=mutations),
+                patch.object(routes, "travel"),
+                patch.object(routes, "contactCityObject", side_effect=lambda owner, name: owner.navigateTo(name)),
             ):
                 with self.assertRaises(AssertionError):
                     routes.openContainer(self.ownershipDriver(**mutations), "cityAr0800Container1")
@@ -1121,6 +2519,129 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         self.assertEqual(1, routes.sourceQuantity({"item": "WAND05", "charges": [20, 20, 0]}))
         self.assertEqual(17, routes.sourceQuantity({"item": "MISC07", "charges": [17, 0, 0]}))
         self.assertEqual(3, routes.sourceQuantity({"item": "BULL02", "quantity": 3, "charges": [20, 0, 0]}))
+
+    def vailAcceptanceModel(self, *, gold=1000, owned_scroll=False, restored=False, broken_restore=False):
+        from types import SimpleNamespace
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        model = CityModel()
+        model.player.addGold(gold - model.player.getGold())
+        config = routes.documents()["config"]
+        stores = decodeCityData(config["cityClock"]["properties"]["storeDefinitions"])
+        model.clock.setStringProperty("storeDefinitions", json.dumps(stores))
+        owner_name = next(
+            name
+            for name, entry in config.items()
+            if entry.get("class") in routes.ACTOR_CLASSES and entry["properties"].get("sourceStore") == "TEM0002"
+        )
+        vail_name = "cityAr0719Actor2"
+        for index, name in enumerate((vail_name, owner_name)):
+            model.resources[name] = config[name]
+            actor = model.createObject(name)
+            actor.setNumericProperty("posx", 10 + index * 10)
+            actor.setNumericProperty("posy", 10 + index * 10)
+            model.game_map.addObject(actor)
+            model.clock.initializeActor(actor)
+        vail = model.game_map.getObjectByName(vail_name)
+        dialogs = {**json.loads((ROOT / "res/maps/baldursGate/dialog.json").read_text(encoding="utf-8")), **config}
+        actions, contacts = [], []
+        driver = SimpleNamespace(
+            test=self,
+            player=model.player,
+            class_id="Warrior",
+            object=lambda name, required=False: model.game_map.getObjectByName(name),
+            call=lambda owner, method, *args: getattr(owner, method)(*args),
+            gold=model.player.getGold,
+            number=model.game_map.getNumericProperty,
+            string=model.game_map.getStringProperty,
+            questNames=lambda completed=False: [
+                quest.getName()
+                for quest in (model.player.getCompletedQuests() if completed else model.player.getQuests())
+            ],
+        )
+
+        def contact(name):
+            actor = driver.object(name)
+            self.assertIsNotNone(actor)
+            point = actor.getCoords()
+            model.player.moveTo(point.x, point.y, point.z)
+            contacts.append(name)
+
+        def choose(dialog_id, action):
+            actor_name = dialog_id.removesuffix("Dialog")
+            self.assertEqual(actor_name, contacts[-1], "Acquisition must return to the original speaker")
+            dialog = model.createObject("BaldursGateDialog")
+            dialog.setStringProperty("actorId", actor_name)
+            option = next(
+                option["properties"]
+                for state in dialogs[dialog_id]["properties"]["states"]
+                for option in state["properties"]["options"]
+                if option["properties"].get("action") == action
+            )
+            condition = option.get("condition")
+            self.assertTrue(not condition or getattr(dialog, condition)(), ("Authored option is unavailable", action))
+            actions.append((actor_name, action))
+            if action == "restoreStatue" and broken_restore:
+                return
+            result = getattr(dialog, action)()
+            self.assertIsNot(result, False, ("Authored action rejected", action))
+
+        driver.choose = choose
+        planner = routes.QuestRoute(driver)
+        planner.contact = contact
+        if owned_scroll or restored:
+            model.item("SCRLPET")
+        if restored:
+            contact(vail_name)
+            dialog = model.createObject("BaldursGateDialog")
+            dialog.setStringProperty("actorId", vail_name)
+            self.assertTrue(dialog.restoreStatue())
+        return model, planner, vail, owner_name, actions
+
+    def testVailQuestAcceptanceRestoresItsGiverUsingActualOwnedOrPurchasedScroll(self):
+        for owned, restored in ((False, False), (True, False), (False, True)):
+            with self.subTest(owned_scroll=owned, already_restored=restored):
+                model, planner, vail, merchant, actions = self.vailAcceptanceModel(
+                    owned_scroll=owned, restored=restored
+                )
+                self.assertEqual(restored, not vail.getBoolProperty("plugin_cityPetrified"))
+                clue = next(
+                    item for item in vail.getItems() if item.getStringProperty("plugin_citySourceItem") == "SCRLVAIL"
+                )
+                planner.accept("vailClue")
+                self.assertFalse(vail.getBoolProperty("plugin_cityPetrified"))
+                self.assertEqual("active", routes.state(planner.d, "vailClue"))
+                self.assertEqual(["cityVailClueQuest"], planner.d.questNames())
+                self.assertEqual(1000 if owned or restored else 775, model.player.getGold())
+                self.assertEqual(0 if owned or restored else 1, planner.d.number("plugin_cityStockSold_TEM0002_2"))
+                expected = []
+                if not owned and not restored:
+                    expected.append((merchant, "buyStoreTem00022"))
+                if not restored:
+                    expected.append((vail.getName(), "restoreStatue"))
+                expected.append((vail.getName(), "acceptVailClue"))
+                self.assertEqual(expected, actions)
+                self.assertNotIn("SCRLPET", routes.resources(planner.d)[2])
+                self.assertIs(clue, next(item for item in vail.getItems() if item is clue))
+                dialog = model.createObject("BaldursGateDialog")
+                dialog.setStringProperty("actorId", vail.getName())
+                self.assertTrue(dialog.questVailClueHear())
+                self.assertEqual(500, model.player.getNumericProperty("exp"))
+                self.assertIn(clue, model.player.getItems())
+                self.assertNotIn(clue, vail.getItems())
+                self.assertFalse(dialog.questVailClueHear())
+                before = (routes.resources(planner.d), list(actions))
+                planner.accept("vailClue")
+                self.assertEqual(before, (routes.resources(planner.d), actions))
+
+    def testVailQuestAcceptanceCannotBypassFailedStatueRestoration(self):
+        model, planner, vail, _merchant, actions = self.vailAcceptanceModel(broken_restore=True)
+        with self.assertRaises(AssertionError):
+            planner.accept("vailClue")
+        self.assertTrue(vail.getBoolProperty("plugin_cityPetrified"))
+        self.assertEqual("notStarted", routes.state(planner.d, "vailClue"))
+        self.assertEqual([], planner.d.questNames())
+        self.assertNotIn("acceptVailClue", [action for _actor, action in actions])
 
     def testActiveQuestDependenciesDoNotCompleteThePoisonQuestBeforeItsSubquests(self):
         from types import SimpleNamespace
@@ -1182,6 +2703,141 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     with self.assertRaises(AssertionError):
                         exercise(price, mutation)
 
+    def testNarlenRogueStoneReturnsToGuildThroughOrdinaryScheduleTicksBeforeTurnIn(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        for travel_ticks, unavailable in ((3, ""), (20, ""), (3, "dead"), (3, "missing")):
+            with self.subTest(travel_ticks=travel_ticks, unavailable=unavailable):
+                model = CityModel(agility=12)
+                narlen = model.canonical("NARLEN")
+                ring = model.item("RING16", narlen)
+                self.assertTrue(model.dialog(narlen).acceptNarlenLookout())
+                model.clock.advanceTicks(700)
+                model.installLookoutOfficer()
+                self.assertTrue(model.dialog(narlen).beginNarlenLookout())
+                model.clock.advanceTicks(20)
+                self.assertTrue(model.dialog(narlen).warnNarlen())
+                self.assertTrue(model.dialog(narlen).questNarlenLookoutComplete())
+                self.assertTrue(model.dialog(narlen).acceptNarlenRogueStone())
+                model.clock.advanceTicks(410)
+                self.assertEqual(1130, model.game_map.getNumericProperty("plugin_cityTicks"))
+                self.assertEqual("AR1300", narlen.getStringProperty("sourceArea"))
+                model.player.addQuest("cityQuinnDaggerQuest")
+                model.game_map.setStringProperty("plugin_cityQuest_quinnDagger", "active")
+                events, choices, stones = [], [], []
+                location = {"area": "AR0130", "waits": 0}
+                driver = SimpleNamespace(
+                    test=self,
+                    player=model.player,
+                    game_map=model.game_map,
+                    object=lambda name, required=False: model.game_map.getObjectByName(name),
+                    call=lambda owner, method, *args: getattr(owner, method)(*args),
+                    number=model.game_map.getNumericProperty,
+                    string=model.game_map.getStringProperty,
+                    gold=model.player.getGold,
+                    coords=lambda: tuple(vars(model.player.getCoords()).values()),
+                    snapshot=lambda: dict(location),
+                    questNames=lambda completed=False: [
+                        quest.getName()
+                        for quest in (model.player.getCompletedQuests() if completed else model.player.getQuests())
+                    ],
+                )
+
+                def tick():
+                    self.assertIn(stones[0], model.player.items, "The same stone must remain owned until handover")
+                    self.assertNotIn(stones[0], narlen.items)
+                    model.clock.advanceTicks(1)
+
+                def waitTurns(limit, predicate):
+                    self.assertEqual(25, limit)
+                    before = model.game_map.getNumericProperty("plugin_cityTicks")
+                    try:
+                        GameplayBranchDriver.waitTurns(driver, limit, predicate)
+                    finally:
+                        location["waits"] += model.game_map.getNumericProperty("plugin_cityTicks") - before
+
+                def hold(point):
+                    self.assertEqual(driver.coords(), point)
+                    events.append(("hold", location["area"]))
+
+                def travel(actual, area):
+                    self.assertIs(driver, actual)
+                    self.assertEqual("AR0153", area)
+                    self.assertEqual("AR1300", narlen.getStringProperty("sourceArea"))
+                    self.assertIn(stones[0], model.player.items)
+                    events.append(("travel", area))
+                    location["area"] = area
+                    for _ in range(travel_ticks):
+                        tick()
+
+                def acquire(requirement):
+                    self.assertEqual({"anyOf": ["MISC45"], "count": 1}, requirement)
+                    stones.append(model.item("MISC45"))
+                    if unavailable == "dead":
+                        model.kill(narlen)
+                    elif unavailable == "missing":
+                        model.game_map.removeObject(narlen)
+                        model.clock.setStringProperty("relocationDefinitions", "[]")
+
+                def contact(name):
+                    self.assertEqual(narlen.getName(), name)
+                    self.assertEqual("AR0153", location["area"])
+                    self.assertIs(narlen, driver.object(name))
+                    self.assertTrue(narlen.isAlive())
+                    self.assertEqual("AR0153", narlen.getStringProperty("sourceArea"))
+                    self.assertIn(stones[0], model.player.items)
+                    events.append(("contact", name))
+
+                def choose(dialog_id, action):
+                    self.assertEqual(
+                        (narlen.getName() + "Dialog", "questNarlenRogueStoneComplete"), (dialog_id, action)
+                    )
+                    self.assertEqual("AR0153", location["area"])
+                    choices.append((dialog_id, action))
+                    self.assertTrue(getattr(model.dialog(narlen), action)())
+
+                driver.tick, driver.waitTurns, driver.navigateCoords, driver.choose = tick, waitTurns, hold, choose
+                planner = routes.QuestRoute(driver)
+                planner.item, planner.contact = acquire, contact
+                with patch.object(routes, "travel", side_effect=travel):
+                    if unavailable:
+                        with self.assertRaisesRegex(AssertionError, "Turn budget exhausted.*25"):
+                            planner.settle("narlenRogueStone", "complete")
+                        self.assertEqual(25, location["waits"])
+                        self.assertFalse(choices)
+                        self.assertEqual("active", routes.state(driver, "narlenRogueStone"))
+                        self.assertIn(stones[0], model.player.items)
+                        self.assertNotIn(stones[0], narlen.items)
+                    else:
+                        name, outcome = planner.settle("narlenRogueStone", "complete")
+                        self.assertEqual((narlen.getName(), "complete"), (name, outcome["id"]))
+                        self.assertEqual(17 if travel_ticks == 3 else 0, location["waits"])
+                        self.assertIs(narlen, model.game_map.getObjectByName(name))
+                        self.assertIs(narlen, model.clock.getObjectProperty("plugin_cityRelocationActor_narlen"))
+                        self.assertIn(stones[0], narlen.items)
+                        self.assertNotIn(stones[0], model.player.items)
+                        self.assertIn(ring, narlen.items)
+                        pearls = [
+                            item
+                            for item in model.player.items
+                            if item.getStringProperty("plugin_citySourceItem") == "MISC36"
+                        ]
+                        self.assertEqual(1, len(pearls))
+                        self.assertEqual(3, pearls[0].getNumericProperty("plugin_cityQuantity"))
+                        before = routes.resources(driver), tuple(events), tuple(choices), tuple(narlen.items)
+                        self.assertIsNone(planner.settle("narlenRogueStone", "complete"))
+                        self.assertEqual(
+                            before, (routes.resources(driver), tuple(events), tuple(choices), tuple(narlen.items))
+                        )
+                self.assertEqual([("travel", "AR0153"), ("hold", "AR0153")], events[:2])
+                self.assertEqual("active", routes.state(driver, "quinnDagger"))
+                self.assertIn("cityQuinnDaggerQuest", driver.questNames())
+                self.assertFalse(planner.pending)
+                self.assertFalse(planner.pending_outcomes)
+
     def testNarlenWarningWaitsForActualSourceOfficerAfterBeginningTheNightLookout(self):
         from types import SimpleNamespace
         from unittest.mock import Mock, patch
@@ -1234,6 +2890,186 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             exercise("inventedOfficer")
 
+    def narlenOfficerReceptionModel(self, *, stall=False):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from tests.gameplay_branch_driver import GameplayBranchDriver
+
+        test = self
+        data = routes.documents()
+        walkable, portals = routes.cityMovementCells()
+        bounds = data["geometry"]["atlas"]["AR0300"]["bounds"]
+        hero = {"__handle__": "actualPlayer"}
+        officer = {"__handle__": "actualWatchman"}
+        state = SimpleNamespace(
+            test=test,
+            player=hero,
+            game_map={"__handle__": "map"},
+            map_name="baldursGate",
+            trace_path="modeled-native-trace",
+            _combat_trace_seq=0,
+            turns=0,
+            steps=0,
+            hero=(161, 51, 0),
+            officer=(155, 32, 0),
+            planned=None,
+            entry=None,
+            _coordinate_values={},
+            contact=False,
+            npc_entries=0,
+            waits=0,
+        )
+
+        def coords(owner=None):
+            return state.officer if owner is officer else state.hero
+
+        def call(owner, method, *args):
+            if method == "isAlive":
+                return True
+            if method == "getStringProperty":
+                test.assertEqual(("sourceSpawnFact",), args)
+                return "AR0300.BCS#spawn7"
+            if method == "getBoolProperty":
+                test.assertEqual(("npc",), args)
+                return True
+            if method == "getController":
+                return "playerController"
+            if method == "getCoords":
+                return {"__handle__": "officerPoint"}
+            if method == "setTarget":
+                point = args[-1]
+                state.planned = state.officer if isinstance(point, dict) else tuple(point)
+                return
+            if method == "getNavigationNeighbors":
+                x, y, z = args[0]
+                return [(x + dx, y + dy, z) for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))]
+            raise AssertionError(("Unexpected modeled call", method))
+
+        def nextStep(origin, target):
+            if origin == target:
+                return origin
+            return routes.cityApproachPath(origin, target, bounds, walkable, portals)[0]
+
+        def tick():
+            old_hero, old_officer = state.hero, state.officer
+            # Both controllers plan from start-of-turn positions; officer commits first.
+            officer_step = old_officer if stall else nextStep(old_officer, old_hero)
+            player_step = nextStep(old_hero, state.planned)
+            state.officer = officer_step
+            if officer_step != old_officer and officer_step == old_hero:
+                state.npc_entries += 1
+            state.hero = player_step
+            state.turns += 1
+            state._combat_trace_seq += 1
+            if player_step != old_hero and player_step == state.officer:
+                state.entry = {"seq": state._combat_trace_seq, "target": officer}
+
+        def remember(actor, identities, entry):
+            test.assertIs(actor, officer)
+            test.assertIs(entry, state.entry)
+            state.contact = True
+
+        state.object = lambda name, required=True: officer
+        state.coords, state.call, state.tick = coords, call, tick
+        state.assertNativeCombatOutcomes = lambda: None
+        state._nativeObjectIdentity = lambda owner: {"name": owner["__handle__"]}
+        state._playerEntryForTarget = lambda identities, after_seq: (
+            state.entry if state.entry and state.entry["seq"] > after_seq else None
+        )
+        state._rememberNpcContact = remember
+        state._continuedNpcContact = lambda *args: False
+        state._coordinateHandle = tuple
+        state._traversedTarget = lambda *args: False
+        state.snapshot = lambda: {"hero": state.hero, "officer": state.officer, "turn": state.turns}
+        state.canStep = lambda point: point in walkable and point not in portals
+        state.number = lambda key: 720 + state.turns if key == "plugin_cityTicks" else 0
+        state.flag = lambda key: key in {"plugin_cityFlag_narlenLookoutStarted", "plugin_cityFlag_narlenOfficerDue"}
+        state.assertSurvival = lambda: None
+        state.waitTurns = lambda limit, predicate: GameplayBranchDriver.waitTurns(state, limit, predicate)
+        state.navigateCoords = lambda point: GameplayBranchDriver.navigateCoords(state, point)
+        planner = routes.QuestRoute(state)
+        planner.accept = planner.contact = lambda *args: None
+        planner.actorName = lambda selectors: (
+            "actualWatchman" if selectors[0]["creature"] == "WATCHM" else "actualNarlen"
+        )
+        with patch.object(routes, "travel"):
+            test.assertEqual("actualWatchman", planner.narlenLookout(warn=False))
+        received = state.hero, state.officer, state.turns, state.entry
+        GameplayBranchDriver.navigateTo(state, "actualWatchman")
+        test.assertEqual(
+            ((161, 51, 0), (161, 49, 0), 23, None),
+            received,
+            "The real player-entry witness must still be absent at the authored reception checkpoint",
+        )
+        test.assertTrue(state.contact)
+        test.assertIsNotNone(state.entry)
+        test.assertEqual(24, state.turns)
+        test.assertEqual(0, state.npc_entries)
+        return state
+
+    def testNarlenOfficerReceptionPreservesTheNativePlayerEntryAndFailsIfPatrolStalls(self):
+        state = self.narlenOfficerReceptionModel()
+        self.assertEqual((161, 50, 0), state.hero)
+        self.assertEqual(state.hero, state.officer)
+        with self.assertRaisesRegex(AssertionError, "Turn budget exhausted.*23"):
+            self.narlenOfficerReceptionModel(stall=True)
+
+    def testGuardKillPrerequisiteUsesAnAuthoredHallGuardAndRequiresItsRecordedDeath(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        config = routes.documents()["config"]
+        guards = {
+            name: entry["properties"]
+            for name, entry in config.items()
+            if entry.get("class") in routes.ACTOR_CLASSES
+            and entry["properties"].get("sourceCreature") == "FLAM6"
+            and entry["properties"].get("sourceArea") == "AR0130"
+        }
+        self.assertEqual(3, len(guards))
+
+        def exercise(initial_kills, records_death):
+            counters = {"plugin_cityGuardKills": initial_kills, "plugin_cityReputation": 10}
+
+            def call(owner, method, *args):
+                if method == "getStats":
+                    return "stats"
+                if method == "getNumericProperty":
+                    return 12 if owner == "stats" else 5
+                if method == "getStringProperty":
+                    return guards[owner].get(args[0], "")
+                if method == "getBoolProperty":
+                    return False
+                self.fail(("Unexpected guard-prerequisite call", owner, method, args))
+
+            driver = SimpleNamespace(
+                test=self,
+                player="hero",
+                number=lambda key: counters.get(key, 0),
+                object=lambda name, required=False: name if name in guards else None,
+                call=call,
+            )
+
+            def victory(actual_driver, name):
+                self.assertIs(driver, actual_driver)
+                self.assertIn(name, guards)
+                self.assertIn("flaming fist", guards[name]["label"].casefold())
+                if records_death:
+                    counters["plugin_cityGuardKills"] += 1
+
+            with patch.object(routes, "nativeVictory", side_effect=victory) as fight:
+                if not initial_kills and not records_death:
+                    with self.assertRaisesRegex(AssertionError, "0 not greater than 0"):
+                        routes.QuestRoute(driver).conditions({"guardKills": True})
+                else:
+                    routes.QuestRoute(driver).conditions({"guardKills": True})
+            self.assertEqual(int(initial_kills == 0), fight.call_count)
+            self.assertEqual(initial_kills or int(records_death), counters["plugin_cityGuardKills"])
+
+        exercise(0, True)
+        exercise(2, False)
+        exercise(0, False)
+
     def testCanonicalRelocatedActorMatchesLaterAreaAlternativeWithoutCreatingAnotherActor(self):
         from types import SimpleNamespace
         from unittest.mock import patch
@@ -1276,10 +3112,12 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             events.append("travel")
             alive[0] = False
 
-        with patch.object(routes, "travel", side_effect=arrive), patch.object(
-            routes, "currentArea", return_value="AR0224"
-        ), patch.object(
-            routes, "documents", return_value={"config": {"opponent": {"properties": {"sourceArea": "AR0224"}}}}
+        with (
+            patch.object(routes, "travel", side_effect=arrive),
+            patch.object(routes, "currentArea", return_value="AR0224"),
+            patch.object(
+                routes, "documents", return_value={"config": {"opponent": {"properties": {"sourceArea": "AR0224"}}}}
+            ),
         ):
             routes.nativeVictory(driver, "opponent")
         self.assertEqual(["trace", "travel", "trace"], events)
@@ -1460,8 +3298,10 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 return "AR0162" if coords(actor)[2] == 2 else "AR0800"
             return "AR1100" if coords(actor)[0] < 71 else "AR1200"
 
-        def travel(owner, destination):
+        def travel(owner, destination, *, target=None):
             self.assertEqual(area_id, destination)
+            if target is not None:
+                self.assertEqual(driver.target_position, target)
             driver.travel_calls.append((driver.position, destination))
             if interior and mutation != "interiorMissingArrival":
                 driver.position = origin
@@ -1510,8 +3350,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
 
     def testCityContactRejectsIdentityReplacementDuringStreetAndFinalEntry(self):
         for mutation in ("streetReplacement", "finalReplacement"):
-            with self.subTest(mutation=mutation), self.assertRaisesRegex(
-                AssertionError, "identity changed|NPC identity changed"
+            with (
+                self.subTest(mutation=mutation),
+                self.assertRaisesRegex(AssertionError, "identity changed|NPC identity changed"),
             ):
                 self.cityContactModel(mutation)
 
@@ -1835,7 +3676,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         with ExitStack() as stack:
             stack.enter_context(patch.object(routes, "documents", return_value=data))
             stack.enter_context(patch.object(routes, "currentArea", return_value="AR0153"))
-            stack.enter_context(patch.object(routes, "travel", side_effect=lambda *_args: None))
+            stack.enter_context(patch.object(routes, "travel", side_effect=lambda *_args, target=None: None))
             stack.enter_context(
                 patch.object(routes, "contactCityObject", side_effect=lambda _driver, name: driver.contact(name))
             )

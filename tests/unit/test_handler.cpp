@@ -7880,6 +7880,9 @@ void testUnverifiedOrRejectedLoadsNeverDispatchResume() {
     std::printf("verified-load-resume rejected-or-disabled-paths=7 dispatches=%d expected=0\n", rejected_dispatches);
 }
 
+#include "native_combat_facts_regression.h"
+#include "native_combat_boundary_regression.h"
+#include "native_combat_effect_runner_regression.h"
 void testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives() {
     std::shared_ptr<CGame> livingGame;
     std::weak_ptr<CMap> dyingMap;
@@ -9445,6 +9448,31 @@ int main() {
     nativeTestProfile().run("testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime",
                             testScriptWaitCancellationAndMapBindingLossFreezeRemainingTime);
     nativeTestProfile().run("testSyncScriptWaitReleasesTheFinalGameOwner", testSyncScriptWaitReleasesTheFinalGameOwner);
+    nativeTestProfile().run("testCommittedOffensiveInteractionRetainsActualAggressor",
+                            testCommittedOffensiveInteractionRetainsActualAggressor);
+    nativeTestProfile().run("testNativeCombatRollDistinguishesZeroHitFromMissAndPreservesDice",
+                            testNativeCombatRollDistinguishesZeroHitFromMissAndPreservesDice);
+    nativeTestProfile().run("testNativeDamagePacketAndEffectCasterDoNotInferHitsFromHp",
+                            testNativeDamagePacketAndEffectCasterDoNotInferHitsFromHp);
+    nativeTestProfile().run("testNativeUseActionRetainsMissAndReversedArmorCause",
+                            testNativeUseActionRetainsMissAndReversedArmorCause);
+    nativeTestProfile().run("testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation",
+                            testCombatObserversRunAfterAllDamageAndProcsAndStopAfterInvalidation);
+    nativeTestProfile().run("testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies",
+                            testCombatObserverRegistrationUsesStableSnapshotAndImmutableFactCopies);
+    nativeTestProfile().run("testCombatBatchNestingAbandonmentAndFactCapacity",
+                            testCombatBatchNestingAbandonmentAndFactCapacity);
+    nativeTestProfile().run("testNativeEffectRunnerStopsAfterFirstPulseObserverInvalidatesReceiver",
+                            testNativeEffectRunnerStopsAfterFirstPulseObserverInvalidatesReceiver);
+    nativeTestProfile().run("testNativeEffectRunnerOptOutRetainsBothTicks",
+                            testNativeEffectRunnerOptOutRetainsBothTicks);
+    nativeTestProfile().run("testNativeEffectRunnerCancelsOpponentAndAllyActionTails",
+                            testNativeEffectRunnerCancelsOpponentAndAllyActionTails);
+    nativeTestProfile().run("testNativePublishingNestedActionsAreNonrecursiveBoundedAndRecoverable",
+                            testNativePublishingNestedActionsAreNonrecursiveBoundedAndRecoverable);
+    nativeTestProfile().run("testNativeCombatScopeDepthLimitAndThrowingObserverRecovery",
+                            testNativeCombatScopeDepthLimitAndThrowingObserverRecovery);
+
     nativeTestProfile().run("testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives",
                             testSevenSunsWarningRetiredActorEffectCycleEndsWithItsMapWhileGameLives);
     nativeTestProfile().run("testSevenSunsWarningRestoredWholeMapOwnsAndReleasesRetiredEffectCycles",
