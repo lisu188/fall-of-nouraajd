@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **195 commits / 195 trees** against the
-restored inputs: **184 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **204 commits / 204 trees** against the
+restored inputs: **193 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -95,6 +95,14 @@ reconstructed #156, #157 and #160 projects compile it, as the surviving #164
 `teleporter.cpp` requires. The surviving `map.h` declares `loadMapFromTmx` from #159
 and `config/map.tmx` is BFG-removed; as in the earlier donor, reconstructed `Map`
 bodies keep loading `config/map.json` and leave that path undefined (inference).
+
+Catalog #176 and #177 were committed with unresolved merge-conflict markers in seven
+files; every hunk's sides differ only in whitespace, and #178 resolves them. Only those
+pinned file states get a build-only resolution that keeps the origin/master side (at
+#176 byte-identical to the parent's file). #176 also omitted `pathfindercache.cpp`, which
+#177 adds unchanged two minutes later; where absent, the build copy receives #177's
+hash-pinned bytes. Evidence is labeled `whitespaceConflictResolution`. Single-file
+project edits with no surviving trace (#170, #172) are recorded as inference.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

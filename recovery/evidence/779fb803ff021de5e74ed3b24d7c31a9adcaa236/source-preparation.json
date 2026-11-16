@@ -1,0 +1,235 @@
+{
+  "identity": {
+    "conflictResolution": {
+      "files": {
+        "animation/animatedobject.h": {
+          "afterSha256": "88350cdd3a55e167d630f163d6d1cf3aacfba26d0328a6b2d5c42cec79819c05",
+          "beforeSha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
+        },
+        "animation/animationprovider.h": {
+          "afterSha256": "48d3b3dfbe92a65babd1382d27a19debbfe30cadc61f6ee1c0163a43cc6fa6f4",
+          "beforeSha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
+        },
+        "buildings/teleporter.cpp": {
+          "afterSha256": "d3a55cfb9105f65e1023fb00569e15b3580075657852a0169dbfb137408cea75",
+          "beforeSha256": "515e4087e4b9e43301c096ce0af4e271773604f6fbea60a5a8ed593e365e2258"
+        },
+        "config/tiles.json": {
+          "afterSha256": "912f7b190b964463d23128d188ea06148482fc6c0fc9da4c1ef6bf6bc7dfb571",
+          "beforeSha256": "6353c5dd320c88cda0dd685a1cdbeefed4ba9b2743788a030392549bf362011d"
+        },
+        "destroyer/destroyer.h": {
+          "afterSha256": "d3ab807c2501432f38b05e7edb9193202014c2c7073ac3a1142e7885a2d925d5",
+          "beforeSha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+        },
+        "items/belt.cpp": {
+          "afterSha256": "fc2d1fc71a7bd7ad0b626fefa1d678795184cdcd5cfaa3204fcea9e73e1ea8d2",
+          "beforeSha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
+        },
+        "tmx/TmxPropertySet.cpp": {
+          "afterSha256": "3861abac48120fac3eb950ca4c2736a3d6320ceb42109060024ed8dfa0471eef",
+          "beforeSha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
+        }
+      },
+      "provenance": {
+        "operation": "Keep the origin/master side of each committed conflict hunk; every hunk's sides differ only in whitespace, and at the first affected commit that side equals the parent commit's file",
+        "parentCommit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+        "resolutionCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33",
+        "sourceCommits": [
+          "7022f82ba68e4b740e85915b1710dd0502837efe",
+          "779fb803ff021de5e74ed3b24d7c31a9adcaa236"
+        ]
+      },
+      "replaySha256": "45f5b764c9fe233e5ea6f25256ec66f55fbe3f787b51208f2a5b83e523321fb6",
+      "side": "refs/remotes/origin/master",
+      "supplied": {},
+      "validationBoundary": "Game startup with build-only resolution of original whitespace-only merge-conflict hunks and, where the commit omitted it, the following commit's pathfindercache.cpp; original sources unchanged in the snapshot"
+    },
+    "implementationSha256": "df810c5006f128aef81ea8770bb261bb04091b1a8836cdfac0b4108fa6d0577c",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "88350cdd3a55e167d630f163d6d1cf3aacfba26d0328a6b2d5c42cec79819c05"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
+        },
+        "path": "animation/animatedobject.h",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "48d3b3dfbe92a65babd1382d27a19debbfe30cadc61f6ee1c0163a43cc6fa6f4"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
+        },
+        "path": "animation/animationprovider.h",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "d3a55cfb9105f65e1023fb00569e15b3580075657852a0169dbfb137408cea75"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "515e4087e4b9e43301c096ce0af4e271773604f6fbea60a5a8ed593e365e2258"
+        },
+        "path": "buildings/teleporter.cpp",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "912f7b190b964463d23128d188ea06148482fc6c0fc9da4c1ef6bf6bc7dfb571"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "6353c5dd320c88cda0dd685a1cdbeefed4ba9b2743788a030392549bf362011d"
+        },
+        "path": "config/tiles.json",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "d3ab807c2501432f38b05e7edb9193202014c2c7073ac3a1142e7885a2d925d5"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+        },
+        "path": "destroyer/destroyer.h",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "fc2d1fc71a7bd7ad0b626fefa1d678795184cdcd5cfaa3204fcea9e73e1ea8d2"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
+        },
+        "path": "items/belt.cpp",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "3861abac48120fac3eb950ca4c2736a3d6320ceb42109060024ed8dfa0471eef"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
+        },
+        "path": "tmx/TmxPropertySet.cpp",
+        "purpose": "original whitespace-only merge-conflict hunks resolved"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "88350cdd3a55e167d630f163d6d1cf3aacfba26d0328a6b2d5c42cec79819c05"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
+      },
+      "path": "animation/animatedobject.h",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "48d3b3dfbe92a65babd1382d27a19debbfe30cadc61f6ee1c0163a43cc6fa6f4"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
+      },
+      "path": "animation/animationprovider.h",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "d3a55cfb9105f65e1023fb00569e15b3580075657852a0169dbfb137408cea75"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "515e4087e4b9e43301c096ce0af4e271773604f6fbea60a5a8ed593e365e2258"
+      },
+      "path": "buildings/teleporter.cpp",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "912f7b190b964463d23128d188ea06148482fc6c0fc9da4c1ef6bf6bc7dfb571"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "6353c5dd320c88cda0dd685a1cdbeefed4ba9b2743788a030392549bf362011d"
+      },
+      "path": "config/tiles.json",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "d3ab807c2501432f38b05e7edb9193202014c2c7073ac3a1142e7885a2d925d5"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+      },
+      "path": "destroyer/destroyer.h",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "fc2d1fc71a7bd7ad0b626fefa1d678795184cdcd5cfaa3204fcea9e73e1ea8d2"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
+      },
+      "path": "items/belt.cpp",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "3861abac48120fac3eb950ca4c2736a3d6320ceb42109060024ed8dfa0471eef"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
+      },
+      "path": "tmx/TmxPropertySet.cpp",
+      "purpose": "original whitespace-only merge-conflict hunks resolved"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "resolve-whitespace-conflicts"
+      ],
+      "log": "/home/user/work2/verify/snapshot-u2z0jdqz/preparation/conflict-resolution.log",
+      "name": "conflictResolution",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

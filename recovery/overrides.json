@@ -95969,6 +95969,741 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e197feb3953c9c65e51587a60fc2fe66155a063e (previous version of map/map.cpp)",
       "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
       "source": "payloads/reconstructions/fa/fadffa17076c55f9bfc705548f355e69c7a56248-map.cpp"
+    },
+    {
+      "originalBlob": "01822911c75d4abb27e6d53b74ca053a6e3d3e94",
+      "path": "tinyxml/tinyxml.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of dc536bfa5c65f8fe057411f364c4e86c8e385d46 (previous version of tinyxml/tinyxml.h)",
+      "sha256": "8c5ed61d3964170dc5d0fbfffcf99e5eda2b283d62584837426720e6beb2f587",
+      "source": "payloads/reconstructions/01/01822911c75d4abb27e6d53b74ca053a6e3d3e94-tinyxml.h"
+    },
+    {
+      "originalBlob": "01f48f3bccc54ff4baecb47eb89283f77ce2ff95",
+      "path": "json/json_batchallocator.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "0b64b404862480c6c5687bf525c6eab5ad3e1a1b6d8d3c91d9aff690ebfe1e9d",
+      "source": "payloads/reconstructions/01/01f48f3bccc54ff4baecb47eb89283f77ce2ff95-json_batchallocator.h"
+    },
+    {
+      "originalBlob": "02ce56c4313b7e7490c0416ed52bfd9c65694553",
+      "path": "zlib/zconf.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0831ac7f0278d1bb315da4d91e40e562d4288529 (previous version of zlib/zconf.h)",
+      "sha256": "78eede3c265117bc8a1b0cb042e2ba8333fdbba6b78eb25094eb52b1fdc04bed",
+      "source": "payloads/reconstructions/02/02ce56c4313b7e7490c0416ed52bfd9c65694553-zconf.h"
+    },
+    {
+      "originalBlob": "0323f4ae887196084c02f96525010860055454db",
+      "path": "json/json_reader.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "443f3b657c14477434368c2104bdb64dcf8dc1181ea2d793870050e413444868",
+      "source": "payloads/reconstructions/03/0323f4ae887196084c02f96525010860055454db-json_reader.cpp"
+    },
+    {
+      "originalBlob": "03ef4f3ce375e9a0a0bcc5991935d9a94b108d78",
+      "path": "json/value.h",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "e869fc46de462bc3594681a0eb6f69f3e69d906feb23ea68beb8ef87726e13aa",
+      "source": "payloads/reconstructions/03/03ef4f3ce375e9a0a0bcc5991935d9a94b108d78-value.h"
+    },
+    {
+      "originalBlob": "03f8b557ce8844bb38d604f3d0c08d881d2136d0",
+      "path": "zlib/zlib.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "payloads/reconstructions/03/03f8b557ce8844bb38d604f3d0c08d881d2136d0-zlib.h"
+    },
+    {
+      "originalBlob": "0831ac7f0278d1bb315da4d91e40e562d4288529",
+      "path": "zlib/zconf.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "78eede3c265117bc8a1b0cb042e2ba8333fdbba6b78eb25094eb52b1fdc04bed",
+      "source": "payloads/reconstructions/08/0831ac7f0278d1bb315da4d91e40e562d4288529-zconf.h"
+    },
+    {
+      "originalBlob": "0b638bf81ea0eabcd156c125a9ce620d1f09529f",
+      "path": "json/value.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "e869fc46de462bc3594681a0eb6f69f3e69d906feb23ea68beb8ef87726e13aa",
+      "source": "payloads/reconstructions/0b/0b638bf81ea0eabcd156c125a9ce620d1f09529f-value.h"
+    },
+    {
+      "originalBlob": "0f8fb79f87d4f65e7f5667129c763e3a361199f2",
+      "path": "zlib/gzguts.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6de9ebae9f3a3952ff310a6310d78fc06eee05d5 (previous version of zlib/gzguts.h)",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "payloads/reconstructions/0f/0f8fb79f87d4f65e7f5667129c763e3a361199f2-gzguts.h"
+    },
+    {
+      "originalBlob": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5",
+      "path": "zlib/inftrees.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8f1e4e08d786739153e2692ff06427895feff871 (previous version of zlib/inftrees.c)",
+      "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
+      "source": "payloads/reconstructions/11/11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5-inftrees.c"
+    },
+    {
+      "originalBlob": "161e2ff066c7bb30a3af77d4848d9c21bfad5361",
+      "path": "tmx/TmxMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 513bd09c15cf3146da6d8572f7d03f8b402c1ec2 (previous version of tmx/TmxMap.cpp)",
+      "sha256": "a7ee60094717d73da9c7dfbaa6bb08e06ed9d44b1a30d7e398cd3eab525a35d8",
+      "source": "payloads/reconstructions/16/161e2ff066c7bb30a3af77d4848d9c21bfad5361-TmxMap.cpp"
+    },
+    {
+      "originalBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+      "path": "tmx/TmxLayer.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7ca362de5654fed786e70e92644380f343183ccb (previous version of tmx/TmxLayer.h)",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "payloads/reconstructions/18/18a62795338e2cc9516fb408ebe2f9a65ad5fcba-TmxLayer.h"
+    },
+    {
+      "originalBlob": "1cc108ec73db7e06d8798c8563b9eaf978665552",
+      "path": "zlib/inflate.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "payloads/reconstructions/1c/1cc108ec73db7e06d8798c8563b9eaf978665552-inflate.h"
+    },
+    {
+      "originalBlob": "1e915bbeb635f5cae348e89c34bc8034497edc83",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 4500f0f5f0d2177da49c640db7bd17ae785186b2 (previous version of view/gameview.cpp)",
+      "sha256": "f2e125ca03d055fb7a1dd0079ff4a98ee7132f4dfe8e5442cf7ed2dcde72e236",
+      "source": "payloads/reconstructions/1e/1e915bbeb635f5cae348e89c34bc8034497edc83-gameview.cpp"
+    },
+    {
+      "originalBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0",
+      "path": "zlib/zutil.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 937dbb85cd5b5aedfd49dcae0ce30988041b31af (previous version of zlib/zutil.h)",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "payloads/reconstructions/25/258fa88799ad1d97e44fe1ac9df77948e82ea5c0-zutil.h"
+    },
+    {
+      "originalBlob": "29f09f14d0ca16253ccedfd3fff1d287b0ea72a9",
+      "path": "json/json_writer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "e7ed1796a07b6589370aa933e7bbf9c14b30168d524d0ce34b109c80344d8bed",
+      "source": "payloads/reconstructions/29/29f09f14d0ca16253ccedfd3fff1d287b0ea72a9-json_writer.cpp"
+    },
+    {
+      "originalBlob": "2c0a3b0079300f8b2e0e303a33127b0d7e8d049c",
+      "path": "tmx/TmxMap.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "payloads/reconstructions/2c/2c0a3b0079300f8b2e0e303a33127b0d7e8d049c-TmxMap.h"
+    },
+    {
+      "originalBlob": "2dc6c061b755dc9b315049a10c3a28145960a4d5",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e18254b9bf0b4774ead0d6df3ad36139bd5562dd (previous version of creatures/creature.cpp)",
+      "sha256": "ed9e1bc1401e2c6dcb98cc025f4773e6d5277f674ce9dc808bf1c9d04c1296d1",
+      "source": "payloads/reconstructions/2d/2dc6c061b755dc9b315049a10c3a28145960a4d5-creature.cpp"
+    },
+    {
+      "originalBlob": "2e8bb0148763ac006b3dcb005c7a351093873c3c",
+      "path": "zlib/deflate.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
+      "source": "payloads/reconstructions/2e/2e8bb0148763ac006b3dcb005c7a351093873c3c-deflate.c"
+    },
+    {
+      "originalBlob": "2f1d60b43b8a9deacf22bb5526a979dcc219a68f",
+      "path": "zlib/inffast.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 66d70d59796abb847009bf50d37c3a563a1a00b5 (previous version of zlib/inffast.c)",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "payloads/reconstructions/2f/2f1d60b43b8a9deacf22bb5526a979dcc219a68f-inffast.c"
+    },
+    {
+      "originalBlob": "31d93d430a64c7dac29bce51a7a4c1b025ae6bd0",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of ec45d6c6ea8a63a9aa3ad66a938c2d777bee71f0 (previous version of stats/stats.cpp)",
+      "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd",
+      "source": "payloads/reconstructions/31/31d93d430a64c7dac29bce51a7a4c1b025ae6bd0-stats.cpp"
+    },
+    {
+      "originalBlob": "325f185b880f1a621c3b4136b3d36c878aaf2d4b",
+      "path": "tmx/TmxTileset.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "4b424b1c24e9f68271f8947ad8f946ce05c62b6c74eee5558eb4a44bd9ae0357",
+      "source": "payloads/reconstructions/32/325f185b880f1a621c3b4136b3d36c878aaf2d4b-TmxTileset.cpp"
+    },
+    {
+      "originalBlob": "4116f85eb06c6aa2dff8d1446fcf34cbadd24f54",
+      "path": "zlib/adler32.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
+      "source": "payloads/reconstructions/41/4116f85eb06c6aa2dff8d1446fcf34cbadd24f54-adler32.c"
+    },
+    {
+      "originalBlob": "420e2c3fe738f995dda8681d82886d3f37547007",
+      "path": "tinyxml/tinystr.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "25cef0d734c2575898950b96c2cfe8987bf05f30951d9f1db15124ed9bd7381f",
+      "source": "payloads/reconstructions/42/420e2c3fe738f995dda8681d82886d3f37547007-tinystr.h"
+    },
+    {
+      "originalBlob": "42508f11c1246bc11a430fe3122a608b3dd565fc",
+      "path": "json/json_batchallocator.h",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "0b64b404862480c6c5687bf525c6eab5ad3e1a1b6d8d3c91d9aff690ebfe1e9d",
+      "source": "payloads/reconstructions/42/42508f11c1246bc11a430fe3122a608b3dd565fc-json_batchallocator.h"
+    },
+    {
+      "originalBlob": "4500f0f5f0d2177da49c640db7bd17ae785186b2",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176: the native-verified #175 reconstruction carried unchanged; this commit's surviving headers differ from #175 only in whitespace apart from the new pathfindercache.h",
+      "sha256": "f2e125ca03d055fb7a1dd0079ff4a98ee7132f4dfe8e5442cf7ed2dcde72e236",
+      "source": "payloads/reconstructions/45/4500f0f5f0d2177da49c640db7bd17ae785186b2-gameview.cpp"
+    },
+    {
+      "originalBlob": "4ac65b4fa8932bcd62d9ea368cb9db5557508def",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 reconstruction carried unchanged; this commit reformats sources (surviving headers differ only in whitespace), and that formatting is not reproduced",
+      "sha256": "3f4cc660da482ee41ac326986a0f5c115c3141d03c9d185a302d3e57baa3119e",
+      "source": "payloads/reconstructions/4a/4ac65b4fa8932bcd62d9ea368cb9db5557508def-gamescene.cpp"
+    },
+    {
+      "originalBlob": "4cc43311cb53094c515ed78d63f9aac6de653e9e",
+      "path": "zlib/zutil.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
+      "source": "payloads/reconstructions/4c/4cc43311cb53094c515ed78d63f9aac6de653e9e-zutil.c"
+    },
+    {
+      "originalBlob": "4de2fd40684d00a908bd03aa16a7e7e8c79efbd3",
+      "path": "tmx/TmxTileset.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 325f185b880f1a621c3b4136b3d36c878aaf2d4b (previous version of tmx/TmxTileset.cpp)",
+      "sha256": "4b424b1c24e9f68271f8947ad8f946ce05c62b6c74eee5558eb4a44bd9ae0357",
+      "source": "payloads/reconstructions/4d/4de2fd40684d00a908bd03aa16a7e7e8c79efbd3-TmxTileset.cpp"
+    },
+    {
+      "originalBlob": "4e9febdaeecdae22e84141df72b76832da4a5d90",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 reconstruction carried unchanged; this commit reformats sources (surviving headers differ only in whitespace), and that formatting is not reproduced",
+      "sha256": "16532fdff5d7e323aa7193f35c831935d7728711c09ba2209a906ad206e208a0",
+      "source": "payloads/reconstructions/4e/4e9febdaeecdae22e84141df72b76832da4a5d90-map.cpp"
+    },
+    {
+      "originalBlob": "505c83cd030ea813067aad1b8edae31fd4d2e6ac",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #174 GameScene body: the native-verified earlier reconstruction plus the 'performance' input gate implied by the surviving Player: a move is ignored while the player cannot move, clears canMove, and posts QEvent::User to the player after Map::move so the original handler re-enables input once pending non-input events are processed (inference)",
+      "sha256": "3f4cc660da482ee41ac326986a0f5c115c3141d03c9d185a302d3e57baa3119e",
+      "source": "payloads/reconstructions/50/505c83cd030ea813067aad1b8edae31fd4d2e6ac-gamescene.cpp"
+    },
+    {
+      "originalBlob": "50acc91a1023e2f85b1e43af099fe448c21c6e8c",
+      "path": "zlib/infback.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
+      "source": "payloads/reconstructions/50/50acc91a1023e2f85b1e43af099fe448c21c6e8c-infback.c"
+    },
+    {
+      "originalBlob": "513bd09c15cf3146da6d8572f7d03f8b402c1ec2",
+      "path": "tmx/TmxMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "a7ee60094717d73da9c7dfbaa6bb08e06ed9d44b1a30d7e398cd3eab525a35d8",
+      "source": "payloads/reconstructions/51/513bd09c15cf3146da6d8572f7d03f8b402c1ec2-TmxMap.cpp"
+    },
+    {
+      "originalBlob": "548201ab0099b51556da32c4873d1dbb2d211b5a",
+      "path": "zlib/gzread.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 5c1404362cf971997102a11955ab86bf33c14c57 (previous version of zlib/gzread.c)",
+      "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
+      "source": "payloads/reconstructions/54/548201ab0099b51556da32c4873d1dbb2d211b5a-gzread.c"
+    },
+    {
+      "originalBlob": "55cf392154670da51be8c6cee2c7bffa2dc4d606",
+      "path": "pathfinder/smartpathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176-#177 SmartPathFinder: the exact surviving #175 file with its function-local Cell/CellCompare classes replaced by the shared declarations this commit adds in pathfinder/pathfindercache.h (#177's pathfindercache.cpp defines them identically). How the PathFinderCache singleton was used is unknown and is not invented (inference)",
+      "sha256": "73ef9ca950dbd210f024cc10503e0cac6ff717d981c2a04b4d4e00a9714c27ca",
+      "source": "payloads/reconstructions/55/55cf392154670da51be8c6cee2c7bffa2dc4d606-smartpathfinder.cpp"
+    },
+    {
+      "originalBlob": "56e9bb1c115e81082f58a89b003b766760e12a12",
+      "path": "zlib/trees.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a1aa1d8382f03a846400b832a1ae404cdbffa388 (previous version of zlib/trees.c)",
+      "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
+      "source": "payloads/reconstructions/56/56e9bb1c115e81082f58a89b003b766760e12a12-trees.c"
+    },
+    {
+      "originalBlob": "57e65278e453bd68826ff53160af36c6ba3400ed",
+      "path": "zlib/trees.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "payloads/reconstructions/57/57e65278e453bd68826ff53160af36c6ba3400ed-trees.h"
+    },
+    {
+      "originalBlob": "5c1404362cf971997102a11955ab86bf33c14c57",
+      "path": "zlib/gzread.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
+      "source": "payloads/reconstructions/5c/5c1404362cf971997102a11955ab86bf33c14c57-gzread.c"
+    },
+    {
+      "originalBlob": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec",
+      "path": "zlib/deflate.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 2e8bb0148763ac006b3dcb005c7a351093873c3c (previous version of zlib/deflate.c)",
+      "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
+      "source": "payloads/reconstructions/5c/5c4022f3d4774b98bb22104890b04a7d3f7f4aec-deflate.c"
+    },
+    {
+      "originalBlob": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf",
+      "path": "zlib/gzlib.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f7426f062de89a07c138bcafff755c431358d5ce (previous version of zlib/gzlib.c)",
+      "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
+      "source": "payloads/reconstructions/60/603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf-gzlib.c"
+    },
+    {
+      "originalBlob": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b",
+      "path": "zlib/adler32.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 4116f85eb06c6aa2dff8d1446fcf34cbadd24f54 (previous version of zlib/adler32.c)",
+      "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
+      "source": "payloads/reconstructions/65/65ad6a5adc44c00428b35eb15ff26d16f9ef209b-adler32.c"
+    },
+    {
+      "originalBlob": "666a4f757c4040247444d5fc3f3231d2efea7e21",
+      "path": "tinyxml/tinyxmlparser.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6bee3f2c370a18c5e30646ab7ba3f33c5228b448 (previous version of tinyxml/tinyxmlparser.cpp)",
+      "sha256": "672312a50ccb11ad7d99845091d6621769519b77a6fd314d350428c5b787c5e9",
+      "source": "payloads/reconstructions/66/666a4f757c4040247444d5fc3f3231d2efea7e21-tinyxmlparser.cpp"
+    },
+    {
+      "originalBlob": "66cb117a2777beb98242c62e3e2251fe32be7b21",
+      "path": "json/json_batchallocator.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 42508f11c1246bc11a430fe3122a608b3dd565fc (previous version of json/json_batchallocator.h)",
+      "sha256": "0b64b404862480c6c5687bf525c6eab5ad3e1a1b6d8d3c91d9aff690ebfe1e9d",
+      "source": "payloads/reconstructions/66/66cb117a2777beb98242c62e3e2251fe32be7b21-json_batchallocator.h"
+    },
+    {
+      "originalBlob": "66d70d59796abb847009bf50d37c3a563a1a00b5",
+      "path": "zlib/inffast.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "payloads/reconstructions/66/66d70d59796abb847009bf50d37c3a563a1a00b5-inffast.c"
+    },
+    {
+      "originalBlob": "6bee3f2c370a18c5e30646ab7ba3f33c5228b448",
+      "path": "tinyxml/tinyxmlparser.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "672312a50ccb11ad7d99845091d6621769519b77a6fd314d350428c5b787c5e9",
+      "source": "payloads/reconstructions/6b/6bee3f2c370a18c5e30646ab7ba3f33c5228b448-tinyxmlparser.cpp"
+    },
+    {
+      "originalBlob": "6de9ebae9f3a3952ff310a6310d78fc06eee05d5",
+      "path": "zlib/gzguts.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "payloads/reconstructions/6d/6de9ebae9f3a3952ff310a6310d78fc06eee05d5-gzguts.h"
+    },
+    {
+      "originalBlob": "747ff61ca4584f1f590e1b53cde7d8c76f7c233b",
+      "path": "json/json_reader.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0323f4ae887196084c02f96525010860055454db (previous version of json/json_reader.cpp)",
+      "sha256": "443f3b657c14477434368c2104bdb64dcf8dc1181ea2d793870050e413444868",
+      "source": "payloads/reconstructions/74/747ff61ca4584f1f590e1b53cde7d8c76f7c233b-json_reader.cpp"
+    },
+    {
+      "originalBlob": "74b6b7e8150d6cd516a1b1450f3f66333e70bcc1",
+      "path": "tinyxml/tinystr.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cbc6aaddf5af3f60fe908fb2c68d04a1b57ef56a (previous version of tinyxml/tinystr.h)",
+      "sha256": "25cef0d734c2575898950b96c2cfe8987bf05f30951d9f1db15124ed9bd7381f",
+      "source": "payloads/reconstructions/74/74b6b7e8150d6cd516a1b1450f3f66333e70bcc1-tinystr.h"
+    },
+    {
+      "originalBlob": "75ed4b5978de4be3c44ad48a060b75500f17a0a2",
+      "path": "zlib/inffixed.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a5ca43e840160670ffdad89c8f9d1cbd792e2c66 (previous version of zlib/inffixed.h)",
+      "sha256": "88a340c8e628d56682a99c3a9a38e44fafeb8b4c609e0df85ea17c66011e0f42",
+      "source": "payloads/reconstructions/75/75ed4b5978de4be3c44ad48a060b75500f17a0a2-inffixed.h"
+    },
+    {
+      "originalBlob": "764261ab77886a275a2cbf7bf3a622d13355d97e",
+      "path": "json/json_writer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 29f09f14d0ca16253ccedfd3fff1d287b0ea72a9 (previous version of json/json_writer.cpp)",
+      "sha256": "e7ed1796a07b6589370aa933e7bbf9c14b30168d524d0ce34b109c80344d8bed",
+      "source": "payloads/reconstructions/76/764261ab77886a275a2cbf7bf3a622d13355d97e-json_writer.cpp"
+    },
+    {
+      "originalBlob": "7ba2df8788b29183cd197cbe7f6e72eed6b7d6ee",
+      "path": "tmx/TmxLayer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of df73dd6d63043aa624c684c40a344823764dcd22 (previous version of tmx/TmxLayer.cpp)",
+      "sha256": "08b7008aa98f3135a1b05c940ccb70361b31b20ab2a132fb543ea068e8695d18",
+      "source": "payloads/reconstructions/7b/7ba2df8788b29183cd197cbe7f6e72eed6b7d6ee-TmxLayer.cpp"
+    },
+    {
+      "originalBlob": "7ca362de5654fed786e70e92644380f343183ccb",
+      "path": "tmx/TmxLayer.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "payloads/reconstructions/7c/7ca362de5654fed786e70e92644380f343183ccb-TmxLayer.h"
+    },
+    {
+      "originalBlob": "7d0f8490a8e5373b35a12ad2f7753af0c293b7a9",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176: the native-verified #175 reconstruction carried unchanged; this commit's surviving headers differ from #175 only in whitespace apart from the new pathfindercache.h",
+      "sha256": "3f4cc660da482ee41ac326986a0f5c115c3141d03c9d185a302d3e57baa3119e",
+      "source": "payloads/reconstructions/7d/7d0f8490a8e5373b35a12ad2f7753af0c293b7a9-gamescene.cpp"
+    },
+    {
+      "originalBlob": "8053b6117c023f64554ea783b23fa06985acff7b",
+      "path": "zlib/crc32.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c5abd900fff26dbe06467767173744f8dce89a77 (previous version of zlib/crc32.h)",
+      "sha256": "b8252ca25db989e06910c09b031a328a18ab9c32fb3ab6e6f5c98c0e2b0089cb",
+      "source": "payloads/reconstructions/80/8053b6117c023f64554ea783b23fa06985acff7b-crc32.h"
+    },
+    {
+      "originalBlob": "807dcb8726e7a77d9eb74bdca46366d1cc2faab5",
+      "path": "json/json_writer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "e7ed1796a07b6589370aa933e7bbf9c14b30168d524d0ce34b109c80344d8bed",
+      "source": "payloads/reconstructions/80/807dcb8726e7a77d9eb74bdca46366d1cc2faab5-json_writer.cpp"
+    },
+    {
+      "originalBlob": "80c31d99f6c21212ac5856b7d98c5ba6200b5420",
+      "path": "json/reader.h",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "14354957e989cc054c23c9bcbac04a15ac6b6d38f28c55e592c1e1e2c857e6f4",
+      "source": "payloads/reconstructions/80/80c31d99f6c21212ac5856b7d98c5ba6200b5420-reader.h"
+    },
+    {
+      "originalBlob": "881d5d699628fe80f23fd11dea3acbfe74ef5ca5",
+      "path": "json/json_reader.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "443f3b657c14477434368c2104bdb64dcf8dc1181ea2d793870050e413444868",
+      "source": "payloads/reconstructions/88/881d5d699628fe80f23fd11dea3acbfe74ef5ca5-json_reader.cpp"
+    },
+    {
+      "originalBlob": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1",
+      "path": "zlib/zutil.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 4cc43311cb53094c515ed78d63f9aac6de653e9e (previous version of zlib/zutil.c)",
+      "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
+      "source": "payloads/reconstructions/89/898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1-zutil.c"
+    },
+    {
+      "originalBlob": "8b18e00a22ac26942631d1e5d7c750a64ec8ac8e",
+      "path": "json/writer.h",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "038770d3e372e83fc03c078aaa36cdefbc5729d77dc285dd770fe577ca7dacf2",
+      "source": "payloads/reconstructions/8b/8b18e00a22ac26942631d1e5d7c750a64ec8ac8e-writer.h"
+    },
+    {
+      "originalBlob": "8f1e4e08d786739153e2692ff06427895feff871",
+      "path": "zlib/inftrees.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
+      "source": "payloads/reconstructions/8f/8f1e4e08d786739153e2692ff06427895feff871-inftrees.c"
+    },
+    {
+      "originalBlob": "8f459eef119f171fa6c15cfd75d599c3c6ead038",
+      "path": "json/json_value.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4",
+      "source": "payloads/reconstructions/8f/8f459eef119f171fa6c15cfd75d599c3c6ead038-json_value.cpp"
+    },
+    {
+      "originalBlob": "91be372d224da6833c03bd24d7158ff622ece35f",
+      "path": "zlib/crc32.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 95181809996076cf7af987a303f8a9e2b96c3d45 (previous version of zlib/crc32.c)",
+      "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
+      "source": "payloads/reconstructions/91/91be372d224da6833c03bd24d7158ff622ece35f-crc32.c"
+    },
+    {
+      "originalBlob": "91ca6d2109710d7b1ad45e45832ca112a54844e5",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #171 project ('optimization + removed multithreading'): the native-verified #160-#169 project, i.e. #170's without the -pthread flags, since this commit removes the std::thread pathfinding from the surviving Monster. Inference: any other edit (for example optimization flags) is unknown",
+      "sha256": "5ecb173bdc85d41c509e4719e01fe515ba258daa09ef767e04e357b4a43ae287",
+      "source": "payloads/reconstructions/91/91ca6d2109710d7b1ad45e45832ca112a54844e5-Game.pro"
+    },
+    {
+      "originalBlob": "9207a011bb8ada3e031334ccb4e5d854e9003fca",
+      "path": "pathfinder/smartpathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #179 SmartPathFinder: the exact surviving #178 search (breadth-first costs from the goal, expanding the open cell nearest the start, stepping to the cheapest neighbour, DumbPathFinder fallback) split into the members this commit's smartpathfinder.h declares (values, getCost, getNearCells, getNearestCell, processNode, canStep), following the developer's own later intact decomposition in CPathFinder.cpp (c64edced). The next cell is stored in, and first read from, the surviving thread-safe SmartPathFinderCache, whose checkMove returns the start when nothing is cached (inference)",
+      "sha256": "61c18422fad70d1063198d19d30c7124f693db48fcbe4d57e0114e4226e27ef8",
+      "source": "payloads/reconstructions/92/9207a011bb8ada3e031334ccb4e5d854e9003fca-smartpathfinder.cpp"
+    },
+    {
+      "originalBlob": "937dbb85cd5b5aedfd49dcae0ce30988041b31af",
+      "path": "zlib/zutil.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "payloads/reconstructions/93/937dbb85cd5b5aedfd49dcae0ce30988041b31af-zutil.h"
+    },
+    {
+      "originalBlob": "95181809996076cf7af987a303f8a9e2b96c3d45",
+      "path": "zlib/crc32.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
+      "source": "payloads/reconstructions/95/95181809996076cf7af987a303f8a9e2b96c3d45-crc32.c"
+    },
+    {
+      "originalBlob": "95f4986d400223bad542e5b34a7e6284a039425e",
+      "path": "zlib/inflate.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1cc108ec73db7e06d8798c8563b9eaf978665552 (previous version of zlib/inflate.h)",
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "payloads/reconstructions/95/95f4986d400223bad542e5b34a7e6284a039425e-inflate.h"
+    },
+    {
+      "originalBlob": "98c613957f29174649c620f16c67fa001989a613",
+      "path": "json/writer.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8b18e00a22ac26942631d1e5d7c750a64ec8ac8e (previous version of json/writer.h)",
+      "sha256": "038770d3e372e83fc03c078aaa36cdefbc5729d77dc285dd770fe577ca7dacf2",
+      "source": "payloads/reconstructions/98/98c613957f29174649c620f16c67fa001989a613-writer.h"
+    },
+    {
+      "originalBlob": "9b0dfbaa8fa749b21bf55bb5b19242f32fdd1d2f",
+      "path": "view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 GameView reconstruction; the surviving #175 player.cpp no longer defines Player::update, so the resize handler refreshes through the surviving Player::updateViews instead (inference). Formatting is not reproduced",
+      "sha256": "f2e125ca03d055fb7a1dd0079ff4a98ee7132f4dfe8e5442cf7ed2dcde72e236",
+      "source": "payloads/reconstructions/9b/9b0dfbaa8fa749b21bf55bb5b19242f32fdd1d2f-gameview.cpp"
+    },
+    {
+      "originalBlob": "9be6c6a66c3e357784c10541eca82ba64a715f28",
+      "path": "tinyxml/tinyxml.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9df321b0d9863d406e31a632c5e2c26e794db6d4 (previous version of tinyxml/tinyxml.cpp)",
+      "sha256": "aea6de89017d22ef8be7129667612b0844a1c96c4395323b75088c4a4a887d11",
+      "source": "payloads/reconstructions/9b/9be6c6a66c3e357784c10541eca82ba64a715f28-tinyxml.cpp"
+    },
+    {
+      "originalBlob": "9df321b0d9863d406e31a632c5e2c26e794db6d4",
+      "path": "tinyxml/tinyxml.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "aea6de89017d22ef8be7129667612b0844a1c96c4395323b75088c4a4a887d11",
+      "source": "payloads/reconstructions/9d/9df321b0d9863d406e31a632c5e2c26e794db6d4-tinyxml.cpp"
+    },
+    {
+      "originalBlob": "9f8f35763618c76bb647e63c047b76712fee89b8",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #176-#177 project: the native-verified #175 project plus pathfinder/pathfindercache.cpp/.h; #177 adds the omitted .cpp without changing the project",
+      "sha256": "85c975c319e5a302728ef0819cb592fbdda822582e0653720b1d09e2a8ef4ac8",
+      "source": "payloads/reconstructions/9f/9f8f35763618c76bb647e63c047b76712fee89b8-Game.pro"
+    },
+    {
+      "originalBlob": "a1aa1d8382f03a846400b832a1ae404cdbffa388",
+      "path": "zlib/trees.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
+      "source": "payloads/reconstructions/a1/a1aa1d8382f03a846400b832a1ae404cdbffa388-trees.c"
+    },
+    {
+      "originalBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
+      "path": "tmx/TmxMap.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 2c0a3b0079300f8b2e0e303a33127b0d7e8d049c (previous version of tmx/TmxMap.h)",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "payloads/reconstructions/a3/a370874cccd93c210ee0b8c1e0b8d2b95059fee5-TmxMap.h"
+    },
+    {
+      "originalBlob": "a4d8a073ec7f9740f34934d641d03dad185f1116",
+      "path": "json/json_value.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of fbcc3fd9782b105b30b7c18e42793c5c9ebb2f52 (previous version of json/json_value.cpp)",
+      "sha256": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4",
+      "source": "payloads/reconstructions/a4/a4d8a073ec7f9740f34934d641d03dad185f1116-json_value.cpp"
+    },
+    {
+      "originalBlob": "a5ca43e840160670ffdad89c8f9d1cbd792e2c66",
+      "path": "zlib/inffixed.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "88a340c8e628d56682a99c3a9a38e44fafeb8b4c609e0df85ea17c66011e0f42",
+      "source": "payloads/reconstructions/a5/a5ca43e840160670ffdad89c8f9d1cbd792e2c66-inffixed.h"
+    },
+    {
+      "originalBlob": "a8431abeacffd97e5028a9e54135a5f173528960",
+      "path": "zlib/inflate.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of bc6246d9bad95561f4f72507be04f02cbea5f4c5 (previous version of zlib/inflate.c)",
+      "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
+      "source": "payloads/reconstructions/a8/a8431abeacffd97e5028a9e54135a5f173528960-inflate.c"
+    },
+    {
+      "originalBlob": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1",
+      "path": "zlib/infback.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 50acc91a1023e2f85b1e43af099fe448c21c6e8c (previous version of zlib/infback.c)",
+      "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
+      "source": "payloads/reconstructions/af/af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1-infback.c"
+    },
+    {
+      "originalBlob": "b22bff56ea750f3577ad8f73a9e7418583c5e5e8",
+      "path": "json/reader.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "14354957e989cc054c23c9bcbac04a15ac6b6d38f28c55e592c1e1e2c857e6f4",
+      "source": "payloads/reconstructions/b2/b22bff56ea750f3577ad8f73a9e7418583c5e5e8-reader.h"
+    },
+    {
+      "originalBlob": "b6b590e2dad89f2932d998627961256a7fe0e3a5",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #179 project: the native-verified #178 project plus the pathfinder/pathfindercache and pathfinder/smartpathfindercache sources this commit adds",
+      "sha256": "33c5864ce2ebf4af3738bf99e55624363510cee024bf80629f95c8ddf8b27d78",
+      "source": "payloads/reconstructions/b6/b6b590e2dad89f2932d998627961256a7fe0e3a5-Game.pro"
+    },
+    {
+      "originalBlob": "bc6246d9bad95561f4f72507be04f02cbea5f4c5",
+      "path": "zlib/inflate.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
+      "source": "payloads/reconstructions/bc/bc6246d9bad95561f4f72507be04f02cbea5f4c5-inflate.c"
+    },
+    {
+      "originalBlob": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69",
+      "path": "zlib/zlib.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 03f8b557ce8844bb38d604f3d0c08d881d2136d0 (previous version of zlib/zlib.h)",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "payloads/reconstructions/bf/bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69-zlib.h"
+    },
+    {
+      "originalBlob": "c0a19fcda196818247b2dd6934a4427ccc77644c",
+      "path": "tmx/TmxLayer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "08b7008aa98f3135a1b05c940ccb70361b31b20ab2a132fb543ea068e8695d18",
+      "source": "payloads/reconstructions/c0/c0a19fcda196818247b2dd6934a4427ccc77644c-TmxLayer.cpp"
+    },
+    {
+      "originalBlob": "c548ce5f125c54267f1484b032cc96d30efb5cf1",
+      "path": "creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #174 Player body: the exact surviving #175 (fb2bcb07) creatures/player.cpp, whose commit only reformats this class (player.h differs only in whitespace); it supplies the canMove accessors and QEvent::User handler this commit's player.h declares. Pre-formatting whitespace is unknown. The update() definition from the earlier #150 reconstruction is retained because this tree's unchanged gameview.cpp reconstruction still calls it",
+      "sha256": "4aa9d9f01a8f6b27f889fd37d941da0eceaf1933e69123cfe9266ea8516794cf",
+      "source": "payloads/reconstructions/c5/c548ce5f125c54267f1484b032cc96d30efb5cf1-player.cpp"
+    },
+    {
+      "originalBlob": "c5abd900fff26dbe06467767173744f8dce89a77",
+      "path": "zlib/crc32.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "b8252ca25db989e06910c09b031a328a18ab9c32fb3ab6e6f5c98c0e2b0089cb",
+      "source": "payloads/reconstructions/c5/c5abd900fff26dbe06467767173744f8dce89a77-crc32.h"
+    },
+    {
+      "originalBlob": "ca33fb5631a7c6e900c514d01ef7fe9155f35efb",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 reconstruction carried unchanged; this commit reformats sources (surviving headers differ only in whitespace), and that formatting is not reproduced",
+      "sha256": "58c845dc10998af9d2593755795e2cbfce4f8fdd9e05369db918e2212cc511ec",
+      "source": "payloads/reconstructions/ca/ca33fb5631a7c6e900c514d01ef7fe9155f35efb-interaction.cpp"
+    },
+    {
+      "originalBlob": "cbc6aaddf5af3f60fe908fb2c68d04a1b57ef56a",
+      "path": "tinyxml/tinystr.h",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "25cef0d734c2575898950b96c2cfe8987bf05f30951d9f1db15124ed9bd7381f",
+      "source": "payloads/reconstructions/cb/cbc6aaddf5af3f60fe908fb2c68d04a1b57ef56a-tinystr.h"
+    },
+    {
+      "originalBlob": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169",
+      "path": "zlib/deflate.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f69bb1d95c102f288498717b97282870e87b4f14 (previous version of zlib/deflate.h)",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "payloads/reconstructions/cb/cbf0d1ea5d966e572c4d3ae24d334c1ff1789169-deflate.h"
+    },
+    {
+      "originalBlob": "d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #171 Map body carried unchanged from the native-verified #166-#170 reconstruction: map.h is unchanged, and with the surviving Monster now synchronous no object reports isAsync, so the onMoveEnd pass is idle (inference; this commit's 'optimization' changes are unknown)",
+      "sha256": "16532fdff5d7e323aa7193f35c831935d7728711c09ba2209a906ad206e208a0",
+      "source": "payloads/reconstructions/d0/d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524-map.cpp"
+    },
+    {
+      "originalBlob": "d35639d82a27807e49ea35c334f8bbcf64720f82",
+      "path": "zlib/trees.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 57e65278e453bd68826ff53160af36c6ba3400ed (previous version of zlib/trees.h)",
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "payloads/reconstructions/d3/d35639d82a27807e49ea35c334f8bbcf64720f82-trees.h"
+    },
+    {
+      "originalBlob": "d80b32eb48705bff6f4c2b91ecd107c729235689",
+      "path": "json/writer.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "038770d3e372e83fc03c078aaa36cdefbc5729d77dc285dd770fe577ca7dacf2",
+      "source": "payloads/reconstructions/d8/d80b32eb48705bff6f4c2b91ecd107c729235689-writer.h"
+    },
+    {
+      "originalBlob": "dc536bfa5c65f8fe057411f364c4e86c8e385d46",
+      "path": "tinyxml/tinyxml.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted this vendored library source; restored with the same upstream content the native-verified #174 tree uses. The astyle whitespace is not reproduced",
+      "sha256": "8c5ed61d3964170dc5d0fbfffcf99e5eda2b283d62584837426720e6beb2f587",
+      "source": "payloads/reconstructions/dc/dc536bfa5c65f8fe057411f364c4e86c8e385d46-tinyxml.h"
+    },
+    {
+      "originalBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818",
+      "path": "json/reader.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 80c31d99f6c21212ac5856b7d98c5ba6200b5420 (previous version of json/reader.h)",
+      "sha256": "14354957e989cc054c23c9bcbac04a15ac6b6d38f28c55e592c1e1e2c857e6f4",
+      "source": "payloads/reconstructions/de/dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818-reader.h"
+    },
+    {
+      "originalBlob": "df73dd6d63043aa624c684c40a344823764dcd22",
+      "path": "tmx/TmxLayer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "08b7008aa98f3135a1b05c940ccb70361b31b20ab2a132fb543ea068e8695d18",
+      "source": "payloads/reconstructions/df/df73dd6d63043aa624c684c40a344823764dcd22-TmxLayer.cpp"
+    },
+    {
+      "originalBlob": "e18254b9bf0b4774ead0d6df3ad36139bd5562dd",
+      "path": "creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 reconstruction carried unchanged; this commit reformats sources (surviving headers differ only in whitespace), and that formatting is not reproduced",
+      "sha256": "ed9e1bc1401e2c6dcb98cc025f4773e6d5277f674ce9dc808bf1c9d04c1296d1",
+      "source": "payloads/reconstructions/e1/e18254b9bf0b4774ead0d6df3ad36139bd5562dd-creature.cpp"
+    },
+    {
+      "originalBlob": "e68747958a819c2970e08a08a025e8818bca5f13",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #174 Map body carried unchanged from the native-verified #171 reconstruction; this commit's 'performance' changes to it are unknown (inference)",
+      "sha256": "16532fdff5d7e323aa7193f35c831935d7728711c09ba2209a906ad206e208a0",
+      "source": "payloads/reconstructions/e6/e68747958a819c2970e08a08a025e8818bca5f13-map.cpp"
+    },
+    {
+      "originalBlob": "e7502246c05f13dc3707a19c6b8ae564f62dcfa1",
+      "path": "interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of ca33fb5631a7c6e900c514d01ef7fe9155f35efb (previous version of interactions/interaction.cpp)",
+      "sha256": "58c845dc10998af9d2593755795e2cbfce4f8fdd9e05369db918e2212cc511ec",
+      "source": "payloads/reconstructions/e7/e7502246c05f13dc3707a19c6b8ae564f62dcfa1-interaction.cpp"
+    },
+    {
+      "originalBlob": "e8defc6887a186055f17597968c4fc5791332811",
+      "path": "zlib/gzwrite.c",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1 (previous version of zlib/gzwrite.c)",
+      "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
+      "source": "payloads/reconstructions/e8/e8defc6887a186055f17597968c4fc5791332811-gzwrite.c"
+    },
+    {
+      "originalBlob": "ec45d6c6ea8a63a9aa3ad66a938c2d777bee71f0",
+      "path": "stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 reconstruction carried unchanged; this commit reformats sources (surviving headers differ only in whitespace), and that formatting is not reproduced",
+      "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd",
+      "source": "payloads/reconstructions/ec/ec45d6c6ea8a63a9aa3ad66a938c2d777bee71f0-stats.cpp"
+    },
+    {
+      "originalBlob": "ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1",
+      "path": "zlib/gzwrite.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
+      "source": "payloads/reconstructions/ef/ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1-gzwrite.c"
+    },
+    {
+      "originalBlob": "f06f96f36581bf03a51550e23149d1fb1a47afa6",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting'): the native-verified #174 reconstruction carried unchanged; this commit reformats sources (surviving headers differ only in whitespace), and that formatting is not reproduced",
+      "sha256": "5ecb173bdc85d41c509e4719e01fe515ba258daa09ef767e04e357b4a43ae287",
+      "source": "payloads/reconstructions/f0/f06f96f36581bf03a51550e23149d1fb1a47afa6-Game.pro"
+    },
+    {
+      "originalBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5",
+      "path": "json/value.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 03ef4f3ce375e9a0a0bcc5991935d9a94b108d78 (previous version of json/value.h)",
+      "sha256": "e869fc46de462bc3594681a0eb6f69f3e69d906feb23ea68beb8ef87726e13aa",
+      "source": "payloads/reconstructions/f1/f1726ae68dff3dc215acfae830c2643ce26af1b5-value.h"
+    },
+    {
+      "originalBlob": "f69bb1d95c102f288498717b97282870e87b4f14",
+      "path": "zlib/deflate.h",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "payloads/reconstructions/f6/f69bb1d95c102f288498717b97282870e87b4f14-deflate.h"
+    },
+    {
+      "originalBlob": "f7426f062de89a07c138bcafff755c431358d5ce",
+      "path": "zlib/gzlib.c",
+      "provenance": "content reconstruction of the BFG-removed original; #175 ('formatting') reformatted the vendored zlib; restored with the identical zlib 1.2.5 upstream content that the native-verified #156-#174 trees use, which matches this tree's surviving reformatted zlib files (inftrees.h 1995-2005, 2010). The astyle whitespace is not reproduced",
+      "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
+      "source": "payloads/reconstructions/f7/f7426f062de89a07c138bcafff755c431358d5ce-gzlib.c"
+    },
+    {
+      "originalBlob": "fbcc3fd9782b105b30b7c18e42793c5c9ebb2f52",
+      "path": "json/json_value.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
+      "sha256": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4",
+      "source": "payloads/reconstructions/fb/fbcc3fd9782b105b30b7c18e42793c5c9ebb2f52-json_value.cpp"
     }
   ],
   "schemaVersion": 1
