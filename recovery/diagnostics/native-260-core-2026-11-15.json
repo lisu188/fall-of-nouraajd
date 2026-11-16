@@ -1,0 +1,140 @@
+{
+  "donors": [
+    {
+      "blob": "59313fea33fd5dfb1ca76dcd2cc1222ffb620008",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/creature.h"
+    },
+    {
+      "blob": "b18c9ab09ac9225e896e0b8d98a184d7104cd8c8",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/player.cpp"
+    },
+    {
+      "blob": "937191f31ed36369792a5a8f7c2b1a2ef1005c42",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/player.h"
+    },
+    {
+      "blob": "cf3f3ceaf75dba3b8bd9ec980aad7785071bd03c",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/monster.cpp"
+    },
+    {
+      "blob": "ae2289cd0362a445c0aafdf21d1d4556fc835178",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/monster.h"
+    },
+    {
+      "blob": "6776325d5546af8c14a14c3433c5021eeac82566",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/item.cpp"
+    },
+    {
+      "blob": "3372be73c434e7f691ae191d87f312445f0bca2c",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/item.h"
+    },
+    {
+      "blob": "465840edb9a59f0e82e7b72fd12cd109f0da9e13",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/potion.cpp"
+    },
+    {
+      "blob": "4e05bd4809357267c16024e569502794f5ab7358",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/potion.h"
+    },
+    {
+      "blob": "39275e1d4eed339642be5f6b7ce5043842a96ac7",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/playerequippedview.cpp"
+    },
+    {
+      "blob": "ac183bc64f73bef8dfdfa58a0ecf047c6bc2a886",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/playerequippedview.h"
+    },
+    {
+      "blob": "d5e1df2cd394c28aed90d1a1ecb05247d7ec887b",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/playerlistview.cpp"
+    },
+    {
+      "blob": "427deebc86b0b70a949d4ce6a40f782cdfe1630e",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/playerlistview.h"
+    },
+    {
+      "blob": "367033e333f7c2d6c70e112b61768bad3019b9e2",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/playerstatsview.cpp"
+    },
+    {
+      "blob": "e5b5327ad40496033bd64abf7b048ebb323c55ea",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/playerstatsview.h"
+    },
+    {
+      "blob": "961745b35584fb8d2c87a74299a11c80a21670c3",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/scrollobject.cpp"
+    },
+    {
+      "blob": "2ba24524d7e49f49156ee578c9f8592c06d0b277",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/scrollobject.h"
+    },
+    {
+      "blob": "ea51743f013923ac64108290af8974d3560e0669",
+      "commit": "5fe60e7c6947844088efc763b596a88546dcdb4f",
+      "path": "src/util.h"
+    }
+  ],
+  "entries": [
+    {
+      "nativeValidation": {
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/Stats.o+CPlayerView.o+CGamePanel.o+GameScript.o.json",
+        "proofSha256": "48faff3a6c79c03ed01bf4f74abe64b547f910d2b346743be83fe644967fa550",
+        "scope": "Stats, PlayerView, Panel and GameScript objects compiled together; whole-game linking/startup still blocked by other missing implementations",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "2fb6d3f750cb02eab89f696962666606246db62d",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Content reconstruction from intact #247 5fe60e7c playerlistview.cpp, playerequippedview.cpp, playerstatsview.cpp and scrollobject.cpp; merge into original #260 CPlayerView.h combined classes, apply same-commit C-prefix names and templated Comparer<CMapObject>. Replace removed Map::getTileSize with genuine same-commit 50-pixel scale from untouched CItemSlot.cpp and CTile.cpp. Preserve actual inventory/equipment/health/mana/experience rendering and scrolling behavior; no stand-in UI.",
+      "sha256": "7304c93e3318b882d512b2fce3b341d68f2974e323d941651f0d81ef547dbf4b",
+      "source": "recovery/payloads/reconstructions/2f/2fb6d3f750cb02eab89f696962666606246db62d-CPlayerView.cpp"
+    },
+    {
+      "donor": "55e6516eb91b739e899df1ef8d72116da44fec49:Stats.h",
+      "donorBlob": "b58516d941a4d39dbc556b216ea60cbede4f6534",
+      "nativeValidation": {
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/Stats.o+CPlayerView.o+CGamePanel.o+GameScript.o.json",
+        "proofSha256": "48faff3a6c79c03ed01bf4f74abe64b547f910d2b346743be83fe644967fa550",
+        "scope": "Stats, PlayerView, Panel and GameScript objects compiled together; whole-game linking/startup still blocked by other missing implementations",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "e1bea3909cf0eee7e9747634da4aeca6f130903c",
+      "path": "src/Stats.h",
+      "provenance": "Content reconstruction matching exact original #260 Stats.cpp e9d15a08d8073b9ec1462a7e542db131edd1314f: const numeric getter declarations, out-of-line setters, QString main/getMainValue. Use intact55e6516e:Stats.h property/declaration layout and zero initialized fields, retain era-correct QObject base and original257 PROPERTY_ACCESSOR semantics. Include QVariant/cmath explicitly for complete genuine APIs and Util::Coords::getDist. Metatype declarations remain owned by exact same-commit ReflectTypes.cpp; no surviving source modified.",
+      "sha256": "f0b8effb872377549c52e993c0729d9cad3afb1efdd44f3d0029c541a63eb941",
+      "source": "recovery/payloads/reconstructions/e1/e1bea3909cf0eee7e9747634da4aeca6f130903c-Stats.h"
+    },
+    {
+      "nativeValidation": {
+        "proof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/Stats.o+CPlayerView.o+CGamePanel.o+GameScript.o.json",
+        "proofSha256": "48faff3a6c79c03ed01bf4f74abe64b547f910d2b346743be83fe644967fa550",
+        "scope": "Stats, PlayerView, Panel and GameScript objects compiled together; whole-game linking/startup still blocked by other missing implementations",
+        "status": "object-compilation-passed"
+      },
+      "originalBlob": "e52ab4920c06937715d534bd9ff3b963bde70879",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Generated content reconstruction from genuine260 CGamePanel.h/CGameView.h/CPlayerView.h, intact247 inventory/equipped/skills views and player fight-list callers. Implements actual character inventory/equipment and selected-enemy/skill display, real signal updates, Qt scene ownership and visibility controls. Historical container bridges follow intact247 Player::getLoot casting pattern. Panel placement/background geometry is reconstructed from declared view dimensions, not recovered original bytes. No whole-game acceptance yet.",
+      "sha256": "7c52d209378effb47b70b5972ef025d08e33111e4bac464c1d1fb7529ceb89a4",
+      "source": "recovery/payloads/reconstructions/e5/e52ab4920c06937715d534bd9ff3b963bde70879-CGamePanel.cpp"
+    }
+  ],
+  "nativeProof": "/tmp/nouraajd-bfg-recovery/native-later/object-build/260/Stats.o+CPlayerView.o+CGamePanel.o+GameScript.o.json",
+  "preservedExactOriginalStatsCpp": "e9d15a08d8073b9ec1462a7e542db131edd1314f",
+  "scope": "Three content-keyed missing-input candidates with native object-level proof; whole-game260 remains unverified"
+}

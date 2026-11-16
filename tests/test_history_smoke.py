@@ -32,13 +32,20 @@ def pngBytes():
 
 
 class HistoricalSmokeTest(unittest.TestCase):
-    def runFixture(self, code, timeout=2):
+    def runFixture(self, code, timeout=2, startup_mode="game"):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         fixture = root / "fixture.py"
         fixture.write_text(code, encoding="utf-8")
-        return verify.runSmoke([sys.executable, str(fixture)], root, root / "artifacts", timeout=timeout, isolate=False)
+        return verify.runSmoke(
+            [sys.executable, str(fixture)],
+            root,
+            root / "artifacts",
+            timeout=timeout,
+            isolate=False,
+            startup_mode=startup_mode,
+        )
 
     def producer(self, *, checks=None, image=None):
         checks = {name: True for name in verify.REQUIRED_CHECKS} if checks is None else checks
@@ -85,6 +92,140 @@ class HistoricalSmokeTest(unittest.TestCase):
         self.assertEqual("failed", result["status"])
         self.assertTrue(result["timedOut"])
         self.assertIn("watchdog", result["reason"])
+
+    def editorProducer(self, missing=None):
+        code = self.producer(checks={name: name != missing for name in verify.EDITOR_CHECKS})
+        return code + (
+            "value = json.loads(report.read_text())\n"
+            "value['mode'] = 'editor'\n"
+            "report.write_text(json.dumps(value))\n"
+        )
+
+    def testEditorReportCannotSatisfyGamePlayerRequirements(self):
+        result = self.runFixture(self.editorProducer())
+        self.assertEqual("failed", result["status"])
+        self.assertIn("mode differs", result["reason"])
+
+    def testExplicitEditorRequiresItsOwnMapFrameAndEventLoop(self):
+        result = self.runFixture(self.editorProducer(), startup_mode="editor")
+        self.assertEqual("success", result["status"], result)
+        self.assertNotIn("player", result["startup"]["checks"])
+        for missing in verify.EDITOR_CHECKS:
+            with self.subTest(missing=missing):
+                result = self.runFixture(self.editorProducer(missing), startup_mode="editor")
+                self.assertEqual("failed", result["status"])
+                self.assertIn("evidence", result["reason"])
+
+    def testGameReportCannotSatisfyAnEditorEntrypoint(self):
+        result = self.runFixture(self.producer(), startup_mode="editor")
+        self.assertEqual("failed", result["status"])
+        self.assertIn("mode differs", result["reason"])
+
+    def testEditorCannotClaimPlayerEvidence(self):
+        code = self.editorProducer() + (
+            "value = json.loads(report.read_text())\n"
+            "value['checks']['player'] = True\n"
+            "report.write_text(json.dumps(value))\n"
+        )
+        result = self.runFixture(code, startup_mode="editor")
+        self.assertEqual("failed", result["status"])
+        self.assertIn("cannot claim player", result["reason"])
+
+    def editorFixture(self, root, *, editor=True, extra_statement=""):
+        repo = root / "original"
+        (repo / "config").mkdir(parents=True)
+        (repo / "main.cpp").write_text(
+            '#include "view/mapview.h"\n'
+            "int main(int argc, char *argv[]) { QApplication a(argc,argv); QGraphicsView *view;"
+            'bool editor=(*ConfigurationProvider::getConfig("config/init.json")).get("editor",false).asBool();'
+            "if(editor) { view=new MapView(); } else { view=new GameView(); }"
+            + extra_statement
+            + "int ret=a.exec(); delete view; return ret; }\n"
+        )
+        (repo / "config/init.json").write_text(json.dumps({"editor": editor}))
+        subprocess.run(["git", "init", "-q", "-b", "recovery-test", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "add", "main.cpp", "config/init.json"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=Recovery Test",
+                "-c",
+                "user.email=recovery@example.invalid",
+                "commit",
+                "-qm",
+                "Original editor entrypoint",
+            ],
+            check=True,
+        )
+        commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+        source = root / "source"
+        (source / "config").mkdir(parents=True)
+        for name in ("main.cpp", "config/init.json"):
+            shutil.copyfile(repo / name, source / name)
+        return repo, source, commit
+
+    def testEditorSelectionPinsSurvivingMainAndConfigurationBytes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, source, commit = self.editorFixture(Path(temporary))
+            original = (source / "main.cpp").read_bytes(), (source / "config/init.json").read_bytes()
+            selection = verify.selectStartupMode(repo, commit, source)
+            self.assertEqual("editor", selection["mode"])
+            self.assertEqual(["main.cpp", "config/init.json"], [item["path"] for item in selection["originalInputs"]])
+            self.assertTrue(
+                all(len(item["blob"]) == 40 and len(item["sha256"]) == 64 for item in selection["originalInputs"])
+            )
+            self.assertEqual(original, ((source / "main.cpp").read_bytes(), (source / "config/init.json").read_bytes()))
+
+    def testDonorEditorFlagCannotReplaceTheSurvivingGameConfiguration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, source, commit = self.editorFixture(Path(temporary), editor=False)
+            self.assertEqual("game", verify.selectStartupMode(repo, commit, source)["mode"])
+            (source / "config/init.json").write_text(json.dumps({"editor": True}))
+            with self.assertRaisesRegex(verify.VerificationError, "differs from surviving original config/init.json"):
+                verify.selectStartupMode(repo, commit, source)
+
+    def testDonorGameFlagCannotChangeTheSurvivingEditorRoute(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, source, commit = self.editorFixture(Path(temporary))
+            (source / "config/init.json").write_text(json.dumps({"editor": False}))
+            with self.assertRaisesRegex(verify.VerificationError, "differs from surviving original config/init.json"):
+                verify.selectStartupMode(repo, commit, source)
+
+    def testReconstructedMainCannotSelectTheEditorObserver(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, source, commit = self.editorFixture(Path(temporary))
+            with (source / "main.cpp").open("a") as stream:
+                stream.write("// reconstructed donor\n")
+            with self.assertRaisesRegex(verify.VerificationError, "differs from surviving original main.cpp"):
+                verify.selectStartupMode(repo, commit, source)
+
+    def testUnreviewedOriginalEditorRouteFailsClosed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, source, commit = self.editorFixture(Path(temporary), extra_statement="view->hide();")
+            with self.assertRaisesRegex(verify.VerificationError, "explicitly reviewed startup route"):
+                verify.selectStartupMode(repo, commit, source)
+
+    def testEditorAdapterUsesTheRealEditorWithoutAnyPlayerDefinition(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            (source / "mapscene.h").write_text("class MapScene : public QGraphicsScene { Map *getMap(); };\n")
+            (source / "mapview.h").write_text("class MapView : public QGraphicsView {};\n")
+            (source / "map.h").write_text(
+                "class Map : public std::unordered_map<Coords,std::string> { "
+                "bool contains(int x,int y,int z); QGraphicsScene *getScene(); int getTileSize(); };\n"
+            )
+            adapter = verify.prepareSmokeAdapter(source, root / "observer", "editor")
+            config = Path(adapter["config"]).read_text()
+            self.assertEqual("classic-editor", adapter["id"])
+            self.assertIn("GAME_RECOVERY_EDITOR 1", config)
+            self.assertIn("GAME_RECOVERY_SCENE_TYPE MapScene", config)
+            self.assertIn("GAME_RECOVERY_VIEW_TYPE MapView", config)
+            self.assertNotIn("GAME_RECOVERY_PLAYER_HEADER", config)
 
     @unittest.skipUnless(shutil.which("g++") and sys.platform.startswith("linux"), "needs a Linux C++ compiler")
     def testWindowsFileLookupResolvesOnlyMissingPathsCaseInsensitively(self):

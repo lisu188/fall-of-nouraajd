@@ -1,0 +1,82 @@
+{
+  "entries": [
+    {
+      "commit": "2468b0ee1b703b24a4151eb79410165e66e3c588",
+      "firstCatalogOrder": 71,
+      "originalBlob": "8b00e9e369f1112c28ba3835704d4a8252737949",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted #71 four-argument MapObject reconstruction; corrected reconstructed Creature::saveToJson to serialize base initStats by subtracting exact config/items.json equipped bonuses. Surviving Item::loadFromJson and onEquip show those bonuses are applied during load; a real #79 save/reload regression proved prior serializer doubled them. No original historical bytes changed; exact original serializer remains unavailable.",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
+      "source": "recovery/payloads/reconstructions/8b/8b00e9e369f1112c28ba3835704d4a8252737949-creature.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "proofs": [
+      {
+        "fingerprint": "0aed21bd2254f22a2a205a2ce00bb712245b01501d08c74be80b3e0330c2b9cd",
+        "sourceCommit": "2468b0ee1b703b24a4151eb79410165e66e3c588",
+        "sourceTree": "72b9eebcc11a24a6d6d89f760bb807fce26c9572",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "b19a8ecc34ff830bf3de5b0eeb112a816d372aead9a94800b8f2e7c80faec468",
+        "sourceCommit": "20ed81eb0a586b57b5448d09e6d9ae4b6276f402",
+        "sourceTree": "b7c6c9ec37996347a8ff0666fcc14d4ab23f420e",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "bcc9eb45396fada989ee44904661ba843bdf3b67da174698ad9817139c826a30",
+        "sourceCommit": "9fa206079a5750c5b43ac0168f3e48c9e0d738aa",
+        "sourceTree": "bd5f00c7d9f98c783adaf855772e1c9611b56a39",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "9ea58522e2f501b0cf7fb5de7fe2ac0d98aa33754940dc7dafaf7659896032f9",
+        "sourceCommit": "2e3be1ab489eb4d62156adf63296c0be80aced02",
+        "sourceTree": "5188a0a2607cfea0b500de4052dafe34e48e5eb0",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "55892a6d14168d0f110a0d6d37cf95ab811fc764d5f0f670f7a6b00d0ae34228",
+        "sourceCommit": "25a25733afccb1fb4ad76840bb99dcb6e8798252",
+        "sourceTree": "46f6130e2cf50eb90c670c44aa73590220b74bb2",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "53e68318a8251bd4758fcaeac7b3d761c24a3727dfb52ccba0ead484a330923a",
+        "sourceCommit": "e8a1b61a3368362508693275b990c748aa19957f",
+        "sourceTree": "826ee789cd3962272ddbeaefa743db9d3e39adcd",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "65cc632e96f083465a8d204e138748e93ef5e67356c15b1699afae9a30bebdde",
+        "sourceCommit": "8771a58cabd47a1c713e4a380b73529c50104e56",
+        "sourceTree": "d6acd13e01d2a9ecee8899f530afe8fe37532716",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "a70d7bdfaeb28f803ed77b0865734315c617967c5fdfdba2f58d3cf170b722f3",
+        "sourceCommit": "7e7241ec50535484682d7426658d516e46c22100",
+        "sourceTree": "1a7dd2bea693bb9d637311626d095838cc79870d",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "dcf71d930648c23256c9a5d9cf834601c4c2bbf40ffd25ccd4c18b39223c10b5",
+        "sourceCommit": "4a877c5583d007e2a6ca5be2fc86db9cd6c3a6f8",
+        "sourceTree": "d32509080b0ef4ddf0b6bdca084c288cdc35a2c0",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "entries": [
+    {
+      "commit": "a38eeef4f17603c79b9b64a88bf87ff36b79d926",
+      "firstCatalogOrder": 66,
+      "originalBlob": "57a616e97d5488aa659e0c64b361cedbb77fa9a9",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #64 reconstruction to genuine #66 three-dimensional Coords, tile-cache storage, map/state JSON split, getPosZ and moveTo; retain active-depth object visibility. Constructor third argument remains graphical layer, as intact Building uses layer1; logical posz starts0. JSON containers follow the prior reconstruction, since original schemas are missing",
+      "sha256": "0b6d99502a764a2311aa668daf39cd0b5874e0d0746f508259b7279c1bdd7946",
+      "source": "recovery/payloads/reconstructions/57/57a616e97d5488aa659e0c64b361cedbb77fa9a9-map.cpp"
+    },
+    {
+      "commit": "a38eeef4f17603c79b9b64a88bf87ff36b79d926",
+      "firstCatalogOrder": 66,
+      "originalBlob": "04dd60f289264b4c5c53a0705ae2c71768251ee0",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; adapted validated #64 reconstruction to genuine #66 single3D Map, removing the deleted changeMap and maps vector; pass initial depth0 to road/river generation and player depth to tile lookup; surviving scene header/callers only",
+      "sha256": "dce86b7ab5947c956a06981817e5eef65c783ec70674e7f1a83c48b226e97267",
+      "source": "recovery/payloads/reconstructions/04/04dd60f289264b4c5c53a0705ae2c71768251ee0-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay and missing JSON schemas remain underdetermined; proven compile/startup only.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "fingerprint": "63a3481280442c2671b9abd04a1e4d64dac392e6a45cf93173d7b7e8acd86c59",
+    "status": "success",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

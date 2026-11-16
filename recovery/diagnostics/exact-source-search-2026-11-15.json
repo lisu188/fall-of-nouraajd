@@ -1,0 +1,82 @@
+{
+  "alreadyTrackedExactPayloads": 63,
+  "globalOverridesModified": false,
+  "newExactOriginals": [
+    {
+      "bytes": 4996,
+      "catalogPositions": [
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        178,
+        179,
+        366
+      ],
+      "originalBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "payloads/18a62795338e2cc9516fb408ebe2f9a65ad5fcba"
+    },
+    {
+      "bytes": 6540,
+      "catalogPositions": [
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        178,
+        179,
+        366
+      ],
+      "originalBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "payloads/a370874cccd93c210ee0b8c1e0b8d2b95059fee5"
+    }
+  ],
+  "newExactProvenance": "Exact raw Git blobs physically retained as loose objects in pre-BFG archive",
+  "progressModified": false,
+  "readableExactBlobs": 65,
+  "readableExactBytes": 1598634,
+  "refsModified": false,
+  "remoteScope": {
+    "antiBotResponsesObserved": 0,
+    "finalGithubBlobNotFound": 8,
+    "finalSoftwareHeritageApiNotFound": 8,
+    "githubBlobRequests": 8,
+    "initialAcceptNegotiationErrors": 8,
+    "softwareHeritageRawRequests": 16,
+    "unavailableCoreHashes": 8
+  },
+  "requiredOriginalHashesChecked": 1250,
+  "schemaVersion": 1
+}

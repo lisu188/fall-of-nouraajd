@@ -1,0 +1,160 @@
+{
+  "boundary": "Three content-keyed missing map-header reconstructions, not exact originals. Static restoration/adapter checks only; no compile/runtime acceptance.",
+  "entries": [
+    {
+      "bytes": 3760,
+      "commits": [
+        "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9"
+      ],
+      "compileAssumptions": [
+        "Comparer originally lived in one of the missing CMap.h/CCreature.h headers; its exact location and bytes are unavailable. Its null ordering and compare delegation are adapted from the genuine subsequent template, avoiding an unrelated ordering policy.",
+        "The rest of the intact #253 map header is carried as the nearest surviving declaration. Unobserved original header changes and missing CMap.cpp behavior remain unresolved."
+      ],
+      "evidence": [
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CMap.h"
+          ],
+          "role": "intact nearest subsequent full map declaration and factory template bodies"
+        },
+        {
+          "commit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+          "paths": [
+            "src/gamescene.h",
+            "src/scriptmanager.h",
+            "src/tile.h",
+            "src/playerlistview.h",
+            "src/CMapObject.h",
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "genuine same-commit class names, includes, Player return type and fixed Comparer use"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/Util.h"
+          ],
+          "role": "intact nearest subsequent Comparer template body; narrowed to CMapObject as required by genuine transitional player-list header"
+        }
+      ],
+      "firstCatalogOrder": 248,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "113b26e2759a004a20050f4801e3230168443adb",
+      "path": "src/CMap.h",
+      "positions": [
+        248
+      ],
+      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
+      "sha256": "7fb625c65abfc6de5f50854aac4155c5497658cea16f8354c9228dea5c16fda3",
+      "source": "recovery/payloads/reconstructions/11/113b26e2759a004a20050f4801e3230168443adb-CMap.h",
+      "stagedSha256": "e87f23733daaef1846ac8ffd57e5629a71ae438d6ad80e5f657ffd834ef4c32f"
+    },
+    {
+      "bytes": 3762,
+      "commits": [
+        "f873badeef24b84b8940982d21a2a9b87545fb30",
+        "eb8276b2fc795f3af5f36370c209db85c1fb818d",
+        "7c79af080a5bd21526ff5af890cb3f9559f689ac"
+      ],
+      "compileAssumptions": [
+        "Comparer originally lived in one of the missing CMap.h/CCreature.h headers; its exact location and bytes are unavailable. Its null ordering and compare delegation are adapted from the genuine subsequent template, avoiding an unrelated ordering policy.",
+        "The rest of the intact #253 map header is carried as the nearest surviving declaration. Unobserved original header changes and missing CMap.cpp behavior remain unresolved."
+      ],
+      "evidence": [
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CMap.h"
+          ],
+          "role": "intact nearest subsequent full map declaration and factory template bodies"
+        },
+        {
+          "commit": "f873badeef24b84b8940982d21a2a9b87545fb30",
+          "paths": [
+            "src/CGameScene.h",
+            "src/CScriptEngine.h",
+            "src/tile.h",
+            "src/playerlistview.h",
+            "src/CMapObject.h",
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "genuine same-commit class names, includes, Player return type and fixed Comparer use"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/Util.h"
+          ],
+          "role": "intact nearest subsequent Comparer template body; narrowed to CMapObject as required by genuine transitional player-list header"
+        }
+      ],
+      "firstCatalogOrder": 249,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c",
+      "path": "src/CMap.h",
+      "positions": [
+        249,
+        250,
+        251
+      ],
+      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
+      "sha256": "3092413a62ad8da53774d01d9274af0a0fdbfb6b3756dd04d56e53c5f17a7dcc",
+      "source": "recovery/payloads/reconstructions/85/8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c-CMap.h",
+      "stagedSha256": "3dfb88c98690e6364b570c28eb79d121b1f96bbc01f07239d10646ae3922328e"
+    },
+    {
+      "bytes": 3764,
+      "commits": [
+        "44fe765077f6eb320afd672dd222d0a46c033157"
+      ],
+      "compileAssumptions": [
+        "Comparer originally lived in one of the missing CMap.h/CCreature.h headers; its exact location and bytes are unavailable. Its null ordering and compare delegation are adapted from the genuine subsequent template, avoiding an unrelated ordering policy.",
+        "The rest of the intact #253 map header is carried as the nearest surviving declaration. Unobserved original header changes and missing CMap.cpp behavior remain unresolved."
+      ],
+      "evidence": [
+        {
+          "commit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+          "paths": [
+            "src/CMap.h"
+          ],
+          "role": "intact nearest subsequent full map declaration and factory template bodies"
+        },
+        {
+          "commit": "44fe765077f6eb320afd672dd222d0a46c033157",
+          "paths": [
+            "src/CGameScene.h",
+            "src/CScriptEngine.h",
+            "src/CTile.h",
+            "src/playerlistview.h",
+            "src/CMapObject.h",
+            "src/ReflectTypes.cpp"
+          ],
+          "role": "genuine same-commit class names, includes, Player return type and fixed Comparer use"
+        },
+        {
+          "commit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
+          "paths": [
+            "src/Util.h"
+          ],
+          "role": "intact nearest subsequent Comparer template body; narrowed to CMapObject as required by genuine transitional player-list header"
+        }
+      ],
+      "firstCatalogOrder": 252,
+      "importFormatting": "Repository .clang-format; declarations and behavior unchanged",
+      "method": "reconstruction",
+      "originalBlob": "64d8991a94cb6878a704c1e574f75bffb4792270",
+      "path": "src/CMap.h",
+      "positions": [
+        252
+      ],
+      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
+      "sha256": "a416c8c29b299c0d2b026dbb4a7459dd9de53d9a1e9524b2c651e25d961a50c8",
+      "source": "recovery/payloads/reconstructions/64/64d8991a94cb6878a704c1e574f75bffb4792270-CMap.h",
+      "stagedSha256": "02a1bb00501b5e5f9908ca7e0bf0c4a5ef335b09b2cd5c8827d3519679a749d9"
+    }
+  ],
+  "schemaVersion": 1
+}

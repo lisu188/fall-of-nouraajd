@@ -3,7 +3,9 @@
 """Focused checks for the compile-only historical workbench."""
 
 import contextlib
+import hashlib
 import io
+import json
 from pathlib import Path
 import shlex
 import subprocess
@@ -12,6 +14,7 @@ import unittest
 from unittest import mock
 
 from scripts import history_workbench as workbench
+from tests.test_history_smoke import pngBytes
 
 
 class HistoricalWorkbenchBuildTest(unittest.TestCase):
@@ -77,6 +80,109 @@ class HistoricalWorkbenchBuildTest(unittest.TestCase):
 
         with mock.patch.object(workbench, "docker", side_effect=run):
             self.assertFalse(workbench.build(self.commit))
+
+    def testBuildRunsTheSharedSourcePreparationBeforeQmake(self):
+        (self.source / "game.pro").write_text("LIBS += -lpython2.7\n")
+        (self.source / "preprocessor.py").write_text("# original property generator\n")
+        result = subprocess.CompletedProcess([], 0, "rc=0", "")
+        with mock.patch.object(workbench, "docker", return_value=result) as run:
+            self.assertTrue(workbench.build(self.commit))
+        command = run.call_args.args[0]
+        self.assertLess(command.index("history_source_prep.py"), command.index("QMAKE_CXX=test-compiler"))
+        self.assertIn("--source-root " + str(self.source), command)
+        self.assertIn("--recipe test-python27", command)
+
+    def testExportRetainsOriginalGeneratorPreparationProof(self):
+        fingerprint = "b" * 64
+        evidence = self.root / "verify/evidence" / fingerprint
+        evidence.mkdir(parents=True)
+        report = {
+            "status": "success",
+            "sourceCommit": self.commit,
+            "restoration": {"restoredFilesFingerprint": fingerprint},
+        }
+        (evidence / "verification.json").write_text(json.dumps(report))
+        (evidence / "build.log").write_bytes(b"real build log\n")
+        files = {"source-preparation.json": b'{"status":"success"}\n', "source-preparation.log": b"generator log\n"}
+        for name, data in files.items():
+            (evidence / name).write_bytes(data)
+        repository = self.root / "repository"
+        with (
+            mock.patch.object(workbench, "REPO", repository),
+            mock.patch.object(workbench, "workbenchOverrides", return_value=self.root / "overrides.json"),
+            mock.patch.object(workbench.rh, "loadOverrides", return_value={}),
+            mock.patch.object(workbench.rh, "GitObjects"),
+            mock.patch.object(workbench.rh, "prepareSnapshot", return_value=({}, report["restoration"])),
+        ):
+            workbench.export()
+        for name, data in files.items():
+            self.assertEqual(data, (repository / "recovery/evidence" / self.commit / name).read_bytes())
+
+    def testProgressSeparatesEditorAndGameEvidenceAndRejectsMissingPlayer(self):
+        repository = self.root / "repository"
+        image = "sha256:" + "d" * 64
+        fingerprint = "f" * 64
+        commits = [character * 40 for character in "abc"]
+        trees = {commit: {"tree": character * 40} for commit, character in zip(commits, "def")}
+        for commit, mode in zip(commits, ("game", "editor", "game")):
+            evidence = repository / "recovery/evidence" / commit
+            evidence.mkdir(parents=True)
+            checks = workbench.vh.EDITOR_CHECKS if mode == "editor" else workbench.vh.REQUIRED_CHECKS
+            startup = {
+                "schemaVersion": 1,
+                "status": "ready",
+                "mode": mode,
+                "checks": {name: True for name in checks},
+                "frame": {
+                    "path": "startup.png",
+                    "width": 2,
+                    "height": 1,
+                    "sha256": hashlib.sha256(pngBytes()).hexdigest(),
+                },
+            }
+            if commit == commits[-1]:
+                startup["checks"].pop("player")
+            report = {
+                "status": "success",
+                "sourceCommit": commit,
+                "sourceTree": trees[commit]["tree"],
+                "toolchainImage": image,
+                "startupMode": mode,
+                "smoke": {"startup": startup},
+                "restoration": {"restoredFilesFingerprint": fingerprint},
+            }
+            if mode == "editor":
+                report["startupSelection"] = {
+                    "mode": mode,
+                    "originalInputs": [
+                        {"path": name, "blob": "e" * 40, "sha256": "f" * 64}
+                        for name in ("main.cpp", "config/init.json")
+                    ],
+                }
+            (evidence / "verification.json").write_text(json.dumps(report))
+            (evidence / "startup.json").write_text(json.dumps(startup))
+            (evidence / "startup.png").write_bytes(pngBytes())
+        with (
+            mock.patch.object(workbench, "REPO", repository),
+            mock.patch.object(workbench, "ROOTFS", None),
+            mock.patch.object(workbench, "TREE_OF", trees),
+            mock.patch.object(workbench, "ORDER", commits),
+            mock.patch.object(workbench, "CATALOG", {"trees": list(trees.values())}),
+            mock.patch.dict(workbench.os.environ, {"HISTORY_TOOLCHAIN_IMAGE_ID": image}),
+            mock.patch.object(workbench.rh, "loadOverrides", return_value={}),
+            mock.patch.object(workbench.rh, "GitObjects"),
+            mock.patch.object(
+                workbench.rh, "prepareSnapshot", return_value=(None, {"restoredFilesFingerprint": fingerprint})
+            ),
+        ):
+            workbench.progress()
+        result = json.loads((repository / "recovery/progress.json").read_text())
+        self.assertEqual(2, result["validatedCommitCount"])
+        self.assertEqual(1, result["validatedGameCommitCount"])
+        self.assertEqual(1, result["validatedGameTreeCount"])
+        self.assertEqual(1, result["validatedEditorCommitCount"])
+        self.assertEqual(1, result["validatedEditorTreeCount"])
+        self.assertEqual("build-and-editor-startup-passed", result["snapshots"][1]["validation"])
 
 
 if __name__ == "__main__":

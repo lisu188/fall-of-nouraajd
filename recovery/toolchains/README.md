@@ -78,6 +78,17 @@ assigned snapshot must restore, compile, link and pass startup; missing files,
 missing tools, timeouts and failed readiness checks fail the shard. Logs and partial
 results remain available as artifacts.
 
+Startup evidence records the authored mode. Game snapshots still require a live
+player, a loaded map, an event loop, a rendered frame, and clean process exit.
+The early editor route is selected only when the restored `main.cpp` and
+`config/init.json` exactly match surviving Git blobs and the reviewed original
+branch selects `MapView`. Its proof records those blob/SHA-256 identities and
+requires the real `MapView`/`MapScene`, an owned nonempty map, a rendered frame,
+an event loop, and clean exit. Editor reports carry `mode: editor` and make no
+player or gameplay claim; they cannot satisfy a game-mode verification. The
+original editor configuration and entrypoint are preserved. Unknown entrypoint
+shapes or reconstructed editor flags fail rather than selecting a weaker check.
+
 The image digest and critical compiler/Qt packages are fixed. Transitive Ubuntu
 packages come from the archived repository and their resolved versions are recorded
 in `/opt/recovery-installed-packages.txt`; the workflow shares the identical built

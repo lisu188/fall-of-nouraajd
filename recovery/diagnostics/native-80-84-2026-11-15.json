@@ -1,0 +1,85 @@
+{
+  "entries": [
+    {
+      "commit": "b5cb3758b3f864dde7d6baeb57a64b2e4bc2b7a8",
+      "firstCatalogOrder": 81,
+      "originalBlob": "e0ba39db54d535309df94de0f933dd75a896b33f",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8b00e9e369f1112c28ba3835704d4a8252737949 (previous version of creatures/creature.cpp)",
+      "sha256": "64bd2cee19b4c4e9478665d1a26444a013349da40fea72009567d1175afe049b",
+      "source": "recovery/payloads/reconstructions/e0/e0ba39db54d535309df94de0f933dd75a896b33f-creature.cpp"
+    },
+    {
+      "commit": "b5cb3758b3f864dde7d6baeb57a64b2e4bc2b7a8",
+      "firstCatalogOrder": 81,
+      "originalBlob": "d12fe87c85dd40fe6a3f8c3614c8f58306d7174e",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f62fc33eb7bd904e4d6b653769986003fb0d7888 (previous version of interactions/interaction.cpp)",
+      "sha256": "a71cd31bd59d60f14b71ed81b4de9604c3087284659ef210d595d9c9d9c1360c",
+      "source": "recovery/payloads/reconstructions/d1/d12fe87c85dd40fe6a3f8c3614c8f58306d7174e-interaction.cpp"
+    },
+    {
+      "commit": "e22a3a89543878620178ba23c15e0f6d2ac509df",
+      "firstCatalogOrder": 82,
+      "originalBlob": "72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e58ae54a1d02acb723dec18d772b0a17339b913 (previous version of creatures/player.cpp)",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "recovery/payloads/reconstructions/72/72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8-player.cpp"
+    },
+    {
+      "commit": "c3a6974a7408c845cc8086c43d412cd6a83d2d31",
+      "firstCatalogOrder": 84,
+      "originalBlob": "8c0fa30b3d8316ef5358362c9dc69976d08e304a",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 72642f182c96c1876d4d6fdd6b4af3cfc9b2e2e8 (previous version of creatures/player.cpp)",
+      "sha256": "e32ee4485039c8b8f03b5e0270caddefda46186cc09ec4ae374fd72664680257",
+      "source": "recovery/payloads/reconstructions/8c/8c0fa30b3d8316ef5358362c9dc69976d08e304a-player.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "player",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "proofs": [
+      {
+        "fingerprint": "8a2b783d0f2b7ea1a0ced28b27d96da66f79bfc02b31d6155d3c3e5046968180",
+        "sourceCommit": "a2af8392c91594acefcd0d812e2d86f354d93746",
+        "sourceTree": "b39f6a503f850f98021ba0d235a8f3af45705f08",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "39be6351718b72c0f2a612dd72ab8acb40b6cdf0ab5d911a6353b4dcba25d79b",
+        "sourceCommit": "b5cb3758b3f864dde7d6baeb57a64b2e4bc2b7a8",
+        "sourceTree": "abfc3fe9413f581dfb9029d5e077d14311dbd5f1",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "f9bc482b427bd7067da6b8d476f90932d7e4e64bb19830518680f4cab24c2e9e",
+        "sourceCommit": "e22a3a89543878620178ba23c15e0f6d2ac509df",
+        "sourceTree": "a3577b481a6de7135dd1fa8bbca4252f3b940a39",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "616de233bb3c886fcaf0d42a408ca3aec3f5b5ea656c425e717e86f7dff1b70b",
+        "sourceCommit": "f4dc52d5b64b5d8255d31f820fc30ed7b4112ef3",
+        "sourceTree": "02cea0a89aadd0b8c948bb810d30b28524423b2f",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "fingerprint": "2f6299ce9cb90c5e7fc4d1fbfddf1902a9799a960da4f4c5955af60173e4436f",
+        "sourceCommit": "c3a6974a7408c845cc8086c43d412cd6a83d2d31",
+        "sourceTree": "240abec4457a804990815bfa5a3875a3feb8f7e6",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}
