@@ -168,6 +168,10 @@ class BaldursGatePoisonFollowupTest(unittest.TestCase):
                 ledger_builder.OUTPUT_PATH,
                 POISON_PATH,
                 FOLLOWUP_PATH,
+                ledger_builder.WARNING_PATH,
+                ledger_builder.DOPMER_PATH,
+                ledger_builder.STOCK_PATH,
+                ledger_builder.ROUTES_PATH,
             ):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -178,6 +182,16 @@ class BaldursGatePoisonFollowupTest(unittest.TestCase):
                 self.assertEqual(0, ledger_builder.main(["--check"]))
                 self.assertEqual(1, producer.call_count)
                 self.assertEqual(self.document, producer.call_args.kwargs["followup"])
+                for keyword, relative in (
+                    ("warning", ledger_builder.WARNING_PATH),
+                    ("dopmer", ledger_builder.DOPMER_PATH),
+                    ("stock", ledger_builder.STOCK_PATH),
+                ):
+                    self.assertEqual(read(relative), producer.call_args.kwargs[keyword])
+                self.assertEqual(
+                    (ROOT / ledger_builder.ROUTES_PATH).read_text(encoding="utf-8"),
+                    producer.call_args.kwargs["routes"],
+                )
                 (root / FOLLOWUP_PATH).unlink()
                 with self.assertRaises(FileNotFoundError):
                     ledger_builder.main(["--check"])

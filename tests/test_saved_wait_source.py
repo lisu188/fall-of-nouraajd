@@ -6,6 +6,7 @@ import ast
 from pathlib import Path
 import re
 import unittest
+from unittest.mock import patch
 
 from tests.cpp_bindings import CPP_TOKENS
 
@@ -156,12 +157,18 @@ class SavedWaitSourceTest(unittest.TestCase):
     def testSixNativeCasesAreRegisteredOnceAndSnapshotUsesTypedJson(self):
         source = self.read("tests/unit/test_handler.cpp")
         profile = self.read("tests/test_native_test_profile.py")
+        registrations = next(
+            ast.literal_eval(node.value)["handler"]
+            for node in ast.parse(profile).body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "ADDITIONAL_CASES" for target in node.targets)
+        )
+        self.assertEqual({name: 1 for name in WAIT_CASES}, {name: registrations.count(name) for name in WAIT_CASES})
         self.assertTrue(all("void " + name + "()" in source for name in WAIT_CASES), "Missing native wait cases")
         for name in WAIT_CASES:
             with self.subTest(case=name):
                 self.assertEqual(1, source.count("void " + name + "()"))
                 self.assertEqual(1, source.count('nativeTestProfile().run("' + name + '"'))
-                self.assertEqual(1, profile.count('"' + name + '"'))
         snapshot = functionBody(source, "void " + WAIT_CASES[0] + "()")
         self.assertIn('properties.at("remainingMilliseconds").is_number_integer()', snapshot)
         self.assertIn('properties.at("remainingMilliseconds").get<int>() == 2500', snapshot)
@@ -174,6 +181,29 @@ class SavedWaitSourceTest(unittest.TestCase):
         self.assertIn("variant == 3", cancellation)
         self.assertIn("game->setMap(original);", cancellation)
         self.assertIn("state->getRemainingMilliseconds() == 58766", cancellation)
+
+    def testProfileRegistrationCheckIgnoresHelperReferencesAndRejectsMissingOrDuplicateCases(self):
+        actual_read = self.read
+        profile = actual_read("tests/test_native_test_profile.py")
+        name = WAIT_CASES[-1]
+        registration = '        "' + name + '",\n'
+        self.assertEqual(1, profile.count(registration))
+        variants = (
+            (profile + '\nhelper_reference = "' + name + '"\n', True),
+            (profile.replace(registration, "", 1), False),
+            (profile.replace(registration, registration * 2, 1), False),
+        )
+        for prepared, valid in variants:
+            with self.subTest(valid=valid), patch.object(
+                self,
+                "read",
+                side_effect=lambda path: prepared if path == "tests/test_native_test_profile.py" else actual_read(path),
+            ):
+                if valid:
+                    self.testSixNativeCasesAreRegisteredOnceAndSnapshotUsesTypedJson()
+                else:
+                    with self.assertRaises(AssertionError):
+                        self.testSixNativeCasesAreRegisteredOnceAndSnapshotUsesTypedJson()
 
     def testSerializationPerformanceGuardHasFiniteActualCodecAndClockBudgets(self):
         source = self.read("tests/unit/test_serialization_performance.cpp")
