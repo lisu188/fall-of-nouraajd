@@ -94888,14 +94888,14 @@
     {
       "originalBlob": "125ff2b5f893bc42739f3d165731f8d400745df7",
       "path": "lib/zlib/crc32.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
       "source": "payloads/reconstructions/12/125ff2b5f893bc42739f3d165731f8d400745df7-crc32.c"
     },
     {
       "originalBlob": "221faa7f05440b2bc0fac2cbf753d9cc43576c52",
       "path": "lib/zlib/adler32.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
       "source": "payloads/reconstructions/22/221faa7f05440b2bc0fac2cbf753d9cc43576c52-adler32.c"
     },
@@ -94909,21 +94909,21 @@
     {
       "originalBlob": "4811377b743c73a86d64b8fb755c76a7394fe4f4",
       "path": "lib/zlib/infback.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
       "source": "payloads/reconstructions/48/4811377b743c73a86d64b8fb755c76a7394fe4f4-infback.c"
     },
     {
       "originalBlob": "4af03ef7d47ecfa80f7165227f173056b0748be2",
       "path": "lib/zlib/deflate.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
       "source": "payloads/reconstructions/4a/4af03ef7d47ecfa80f7165227f173056b0748be2-deflate.c"
     },
     {
       "originalBlob": "4b267038746863b42c3f5bac514ab6e41a905396",
       "path": "lib/zlib/inftrees.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
       "source": "payloads/reconstructions/4b/4b267038746863b42c3f5bac514ab6e41a905396-inftrees.c"
     },
@@ -94944,14 +94944,14 @@
     {
       "originalBlob": "5b2aa6e7d8061e22ba8af1406d3587d772e75143",
       "path": "lib/zlib/zutil.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
       "source": "payloads/reconstructions/5b/5b2aa6e7d8061e22ba8af1406d3587d772e75143-zutil.c"
     },
     {
       "originalBlob": "5ede1d8b5b260796db8fc7ea95dba13586f34e4f",
       "path": "lib/zlib/inflate.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
       "source": "payloads/reconstructions/5e/5ede1d8b5b260796db8fc7ea95dba13586f34e4f-inflate.c"
     },
@@ -94986,28 +94986,28 @@
     {
       "originalBlob": "906fd04f04f4cea091f6b4a933cdd1832d532c7b",
       "path": "lib/zlib/gzread.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
       "source": "payloads/reconstructions/90/906fd04f04f4cea091f6b4a933cdd1832d532c7b-gzread.c"
     },
     {
       "originalBlob": "b4cae5f9af95ab738df1f14196305790009abb33",
       "path": "lib/zlib/inffast.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
       "source": "payloads/reconstructions/b4/b4cae5f9af95ab738df1f14196305790009abb33-inffast.c"
     },
     {
       "originalBlob": "b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8",
       "path": "lib/zlib/gzlib.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
       "source": "payloads/reconstructions/b5/b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8-gzlib.c"
     },
     {
       "originalBlob": "d0c918100d6534de11bfc3511da72af5e15db5fc",
       "path": "lib/zlib/gzwrite.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
       "source": "payloads/reconstructions/d0/d0c918100d6534de11bfc3511da72af5e15db5fc-gzwrite.c"
     },
@@ -95028,7 +95028,7 @@
     {
       "originalBlob": "f0e1d5e28e028b93033a5a084fd0e778910cd0e2",
       "path": "lib/zlib/trees.c",
-      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
       "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
       "source": "payloads/reconstructions/f0/f0e1d5e28e028b93033a5a084fd0e778910cd0e2-trees.c"
     },
@@ -96704,6 +96704,384 @@
       "provenance": "content reconstruction of the BFG-removed original; #176: another formatting of this vendored library source (this commit's surviving headers differ from #175 only in whitespace apart from pathfindercache.h); restored with the same upstream content the native-verified #175 tree uses. Whitespace is not reproduced",
       "sha256": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4",
       "source": "payloads/reconstructions/fb/fbcc3fd9782b105b30b7c18e42793c5c9ebb2f52-json_value.cpp"
+    },
+    {
+      "originalBlob": "081a326445af070ceb0925f9c3e5622e18c1c910",
+      "path": "lib/zlib/zlib.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "payloads/reconstructions/08/081a326445af070ceb0925f9c3e5622e18c1c910-zlib.h"
+    },
+    {
+      "originalBlob": "0887384a9e011c293daad2893176af5d952e3c9b",
+      "path": "lib/zlib/zconf.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "78eede3c265117bc8a1b0cb042e2ba8333fdbba6b78eb25094eb52b1fdc04bed",
+      "source": "payloads/reconstructions/08/0887384a9e011c293daad2893176af5d952e3c9b-zconf.h"
+    },
+    {
+      "originalBlob": "09ca56f5dc5f07894d1d716d4b0643e94d7cb513",
+      "path": "src/creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moves Player under src/; the native-verified #179 player.cpp (the surviving #175 body) with includes rewritten to <src/...>, plus an explicit interaction.h include that the merged-away item headers previously supplied",
+      "sha256": "3c3c5a8d92caef394d68a8820b5183339e0cd9a32fbc3a33c1066bf6ac7d7b37",
+      "source": "payloads/reconstructions/09/09ca56f5dc5f07894d1d716d4b0643e94d7cb513-player.cpp"
+    },
+    {
+      "originalBlob": "0c45984cfe838c4252e6bac450b4d7961fc24bc3",
+      "path": "src/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 reconstruction moved to src/, includes rewritten to the flattened <src/...> headers, and className renamed to typeName for MapObject-derived objects as every surviving source of this commit does",
+      "sha256": "c24b2a16d37bcf4c57cc345c278887b877b932dc7253c19e470192bbc32293d8",
+      "source": "payloads/reconstructions/0c/0c45984cfe838c4252e6bac450b4d7961fc24bc3-player.cpp"
+    },
+    {
+      "originalBlob": "0f40a613a006e72cd85f2316beaab3823dc4b5d5",
+      "path": "src/view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moves GameScene under src/; the native-verified #179 reconstruction with includes rewritten to <src/...> (including the former Windows-separated playerlistview include) and the include of the compression module this commit deletes removed (nothing in the scene used it)",
+      "sha256": "9328ce0da4fc9e8e904293f02fc0dbfd9c3e038281a70b4c7ab394e0f492b940",
+      "source": "payloads/reconstructions/0f/0f40a613a006e72cd85f2316beaab3823dc4b5d5-gamescene.cpp"
+    },
+    {
+      "originalBlob": "128c9c3660e252f936471b322c96f154bfcbca81",
+      "path": "lib/tinyxml/tinystr.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "c58bb1f55a421cbd5032b9fa189f68c5315dbf677990904f64107198aa224d3f",
+      "source": "payloads/reconstructions/12/128c9c3660e252f936471b322c96f154bfcbca81-tinystr.h"
+    },
+    {
+      "originalBlob": "14e4eb8ad61882fe7b5aa0005901bcfea811904e",
+      "path": "src/items/item.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 consolidates the item classes into item.h: the native-verified #179 item.cpp followed by the exact surviving #179 armor, belt, boots, gloves, helmet, smallweapon and weapon .cpp bodies (which this commit deletes), with includes merged and rewritten; Item::onMove is the former inline empty body and Item::loadFromProps loads the 'type' property's items.json entry like the surviving Monster::loadFromProps (inference)",
+      "sha256": "af3a696efa2dcb4c9b5ecbac6a6eb9fea42cf196f342510ca7739c236b7cc552",
+      "source": "payloads/reconstructions/14/14e4eb8ad61882fe7b5aa0005901bcfea811904e-item.cpp"
+    },
+    {
+      "originalBlob": "1f3ca121d4c0093f1cc3487e9e18fdd043c5130a",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/: the native-verified #181 GameScene reconstruction with includes flattened; the surviving Destroyer is now a static instance that cleans up at program exit and no longer has terminate(), so the scene destructor no longer calls it",
+      "sha256": "d8d5a6868e57fe287f7d732869d6daba95c3b272694459496830bc54131248f1",
+      "source": "payloads/reconstructions/1f/1f3ca121d4c0093f1cc3487e9e18fdd043c5130a-gamescene.cpp"
+    },
+    {
+      "originalBlob": "26fe417cd979cab018ea99ebfd138bbb4a60bacb",
+      "path": "src/building.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 reconstruction moved to src/, includes rewritten to the flattened <src/...> headers, and className renamed to typeName for MapObject-derived objects as every surviving source of this commit does",
+      "sha256": "3830fd3a0d615077df639d6e540a2b242315f8ad2eb34763c7571521cc922c3e",
+      "source": "payloads/reconstructions/26/26fe417cd979cab018ea99ebfd138bbb4a60bacb-building.cpp"
+    },
+    {
+      "originalBlob": "2aec4097a94cc4f377c8857dfbacc2c46cde252d",
+      "path": "src/item.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 reconstruction moved to src/, includes rewritten to the flattened <src/...> headers, and className renamed to typeName for MapObject-derived objects as every surviving source of this commit does",
+      "sha256": "724fb0b606001cdc0ce015d5739d2b3e38afb8e33bbe01ac7a9a94dfa8b345cb",
+      "source": "payloads/reconstructions/2a/2aec4097a94cc4f377c8857dfbacc2c46cde252d-item.cpp"
+    },
+    {
+      "originalBlob": "2b3e1f42f7d997ead176d13ff5f50be463945e0c",
+      "path": "lib/json/json_writer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "fb1d30e61df6c0ce1bffb7482caf7329fef0efbb74c7a62980d3700bf7c662e3",
+      "source": "payloads/reconstructions/2b/2b3e1f42f7d997ead176d13ff5f50be463945e0c-json_writer.cpp"
+    },
+    {
+      "originalBlob": "2f0ef54467871c888bf16774f48f0f58912dcf2f",
+      "path": "lib/json/json_value.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved jsoncpp to lib/json and deleted its json_*.inl files; restored with the native-verified #179 upstream json_value.cpp with json_valueiterator.inl inlined at its include point (the internal-map .inl includes stay behind the undefined JSON_VALUE_USE_INTERNAL_MAP), includes rewritten to lib/ (inference)",
+      "sha256": "65b7c8bebc3005c354ad65c641f0eb0a8f1266a3901884c709a62858fd21c467",
+      "source": "payloads/reconstructions/2f/2f0ef54467871c888bf16774f48f0f58912dcf2f-json_value.cpp"
+    },
+    {
+      "originalBlob": "30ff25cc62d2dd6c3c3d06a6e126688c4a9775ca",
+      "path": "lib/json/reader.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "14354957e989cc054c23c9bcbac04a15ac6b6d38f28c55e592c1e1e2c857e6f4",
+      "source": "payloads/reconstructions/30/30ff25cc62d2dd6c3c3d06a6e126688c4a9775ca-reader.h"
+    },
+    {
+      "originalBlob": "31a94b4301a510fee5e7606ce66b2a5f4913d42f",
+      "path": "src/stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 ('refactor') moves this file under src/; the native-verified #179 reconstruction with includes rewritten to the <src/...> and <lib/...> form the surviving sources of this commit use; the moved headers are otherwise unchanged apart from whitespace",
+      "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd",
+      "source": "payloads/reconstructions/31/31a94b4301a510fee5e7606ce66b2a5f4913d42f-stats.cpp"
+    },
+    {
+      "originalBlob": "32ee50935909169facb4e0fa525c79c750e74946",
+      "path": "lib/tmx/TmxMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "943302465e37f4e70f2cd160cf496057e33766b9ab10ba190596d3851740676d",
+      "source": "payloads/reconstructions/32/32ee50935909169facb4e0fa525c79c750e74946-TmxMap.cpp"
+    },
+    {
+      "originalBlob": "41448b96d7c0a16fe6d3a6ed356849010bf07996",
+      "path": "lib/tmx/TmxObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "619b2ac18c4e26d1f9114919e68aa4f3ddbb48827450a60ba85ef8fe2e19882b",
+      "source": "payloads/reconstructions/41/41448b96d7c0a16fe6d3a6ed356849010bf07996-TmxObject.cpp"
+    },
+    {
+      "originalBlob": "41a50c87bd079c82680581fb517b23a993bcdab7",
+      "path": "lib/base64/base64.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "2fc39e9c6e23014cf62c7a6ee94999509f42432ffd1f4f857347aa8aa981920e",
+      "source": "payloads/reconstructions/41/41a50c87bd079c82680581fb517b23a993bcdab7-base64.cpp"
+    },
+    {
+      "originalBlob": "43b946a46394e80dddc4af9fe853eb87e8824dd8",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 reconstruction moved to src/, includes rewritten to the flattened <src/...> headers, and className renamed to typeName for MapObject-derived objects as every surviving source of this commit does",
+      "sha256": "0d3940436634150141d91bea97ae60f156c1a0746290094cef43109f62bdf9aa",
+      "source": "payloads/reconstructions/43/43b946a46394e80dddc4af9fe853eb87e8824dd8-creature.cpp"
+    },
+    {
+      "originalBlob": "44ac5f0a9fb0ba3225b3d6532460882c071ba779",
+      "path": "lib/zlib/deflate.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "payloads/reconstructions/44/44ac5f0a9fb0ba3225b3d6532460882c071ba779-deflate.h"
+    },
+    {
+      "originalBlob": "461080b5ce84d104c3df3ad553aaa99d5b5044de",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 reconstruction moved to src/, includes rewritten to the flattened <src/...> headers, and className renamed to typeName for MapObject-derived objects as every surviving source of this commit does",
+      "sha256": "d041859afbe688c2709bedc1f0572d74ce4b34237fd418772b8de042219ef462",
+      "source": "payloads/reconstructions/46/461080b5ce84d104c3df3ad553aaa99d5b5044de-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "466a85646e640b0180f36161024f3fa37fb87ece",
+      "path": "lib/tmx/TmxLayer.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "a0d7eb3f13bbbf225d76b40e55b6d288ef63d8bc30574ee170fe11b8b5383d23",
+      "source": "payloads/reconstructions/46/466a85646e640b0180f36161024f3fa37fb87ece-TmxLayer.cpp"
+    },
+    {
+      "originalBlob": "5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #181-#182 Stats body (one original blob, moved to src/stats.cpp at #182): #181 merges Damage into stats.h and deletes damage.cpp, so this is the native-verified #180 Stats reconstruction followed by the exact surviving #180 damage.cpp body",
+      "sha256": "293a9a6075d283a696f8435d8dc94cafb4b6c70991de0786a271ca0615a4f2ea",
+      "source": "payloads/reconstructions/51/5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029-stats.cpp"
+    },
+    {
+      "originalBlob": "52ac7f41ad62b4a904abe3a44ffec73ee0841031",
+      "path": "lib/json/value.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "e869fc46de462bc3594681a0eb6f69f3e69d906feb23ea68beb8ef87726e13aa",
+      "source": "payloads/reconstructions/52/52ac7f41ad62b4a904abe3a44ffec73ee0841031-value.h"
+    },
+    {
+      "originalBlob": "53004ed2b3a5d1935de3fcf883287ff257dc6841",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 Map reconstruction with that rename, the entry getters moved out of line as map.h now declares, Map::removeTile removing an existing tile from the scene and the tile index, and Map::getObjectByName searching objects by the new MapObject::name (inference)",
+      "sha256": "0566a6fea09303748ab42b5a5b8bea65802235760bb543e1bfa5c843bfd38570",
+      "source": "payloads/reconstructions/53/53004ed2b3a5d1935de3fcf883287ff257dc6841-map.cpp"
+    },
+    {
+      "originalBlob": "585498d4381893b5f1f1f1f0b33f357df0444623",
+      "path": "src/interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 ('refactor') moves this file under src/; the native-verified #179 reconstruction with includes rewritten to the <src/...> and <lib/...> form the surviving sources of this commit use; the moved headers are otherwise unchanged apart from whitespace",
+      "sha256": "a8617c13c5c0f891001548eb17837a5525cb31068a540160c4323ba248930a2f",
+      "source": "payloads/reconstructions/58/585498d4381893b5f1f1f1f0b33f357df0444623-interaction.cpp"
+    },
+    {
+      "originalBlob": "5b6a0bf8babff3f266b322c77e9dafec5951e7fe",
+      "path": "lib/tmx/TmxMap.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "d8843aef5613005033d66b3b5d1a5052e2eaf27b82e22f3bccff2c5aa617c4e2",
+      "source": "payloads/reconstructions/5b/5b6a0bf8babff3f266b322c77e9dafec5951e7fe-TmxMap.h"
+    },
+    {
+      "originalBlob": "5de428fdd451fc31d49759edeea7ea1bbf8a556d",
+      "path": "lib/json/writer.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "038770d3e372e83fc03c078aaa36cdefbc5729d77dc285dd770fe577ca7dacf2",
+      "source": "payloads/reconstructions/5d/5de428fdd451fc31d49759edeea7ea1bbf8a556d-writer.h"
+    },
+    {
+      "originalBlob": "5faf5dbadf0355642db78521a837700c31c65973",
+      "path": "lib/zlib/crc32.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "b8252ca25db989e06910c09b031a328a18ab9c32fb3ab6e6f5c98c0e2b0089cb",
+      "source": "payloads/reconstructions/5f/5faf5dbadf0355642db78521a837700c31c65973-crc32.h"
+    },
+    {
+      "originalBlob": "678ad4bf0df4cfa0e9b0d9cf475d754ef08c5dbe",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #180 project: the native-verified #179 project settings and resources with SOURCES/HEADERS listing every src/ and lib/ source and header of this tree in path order (the refactor moves all code there; qmake's default project include path serves the new <src/...> and <lib/...> includes). Entry order is inferred",
+      "sha256": "cee0526c6dda1a8b5d2671d24071477f4d6aab0556c52719bb2a36470d5dd2f3",
+      "source": "payloads/reconstructions/67/678ad4bf0df4cfa0e9b0d9cf475d754ef08c5dbe-Game.pro"
+    },
+    {
+      "originalBlob": "6911196c1f1aa2d36cbff3cbf7eb9577c076e25b",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 53004ed2b3a5d1935de3fcf883287ff257dc6841 (previous version of src/map.cpp)",
+      "sha256": "0566a6fea09303748ab42b5a5b8bea65802235760bb543e1bfa5c843bfd38570",
+      "source": "payloads/reconstructions/69/6911196c1f1aa2d36cbff3cbf7eb9577c076e25b-map.cpp"
+    },
+    {
+      "originalBlob": "6b37e7a600dbf205575b09580259e6999bf124e2",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 reconstruction moved to src/, includes rewritten to the flattened <src/...> headers, and className renamed to typeName for MapObject-derived objects as every surviving source of this commit does",
+      "sha256": "b954e077b2a5b3109df1f6757c2249c30d062cb93bf73a56bfedeec10f7d1a91",
+      "source": "payloads/reconstructions/6b/6b37e7a600dbf205575b09580259e6999bf124e2-gameview.cpp"
+    },
+    {
+      "originalBlob": "6cf08a9efddb72851fdebb3a181ffce5717e37ac",
+      "path": "src/pathfinder/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 consolidates the pathfinders into pathfinder.h: the exact surviving #179 pathfinder, dumbpathfinder and randompathfinder .cpp bodies plus the native-verified #179 SmartPathFinder without the SmartPathFinderCache this commit deletes",
+      "sha256": "7c1ab180b42cd066e634e1cec1a388d8979dbffa1204151455d9d94ab476e5ae",
+      "source": "payloads/reconstructions/6c/6cf08a9efddb72851fdebb3a181ffce5717e37ac-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "761c80d541795423f1461f53c69019c0471767b0",
+      "path": "lib/tmx/TmxLayer.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "1e19c6efc1bc52e89e08318e0ad4ed1170b256da1d8a1fb2951ec5a6a8496f3e",
+      "source": "payloads/reconstructions/76/761c80d541795423f1461f53c69019c0471767b0-TmxLayer.h"
+    },
+    {
+      "originalBlob": "76887ebcfefb59aee2559c858f6335fbb2700818",
+      "path": "src/map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moves Map under src/; the native-verified #179 reconstruction adapted to the same-commit map.h, which drops MapObject::onMoveEnd/isAsync (the turn loop calls onMove only, as before #166) and renames MapObject::animation to dynamicAnimation; includes rewritten to <src/...>",
+      "sha256": "8bec75ad71a29f5e3a7a2b8b80dfcda893537ece45229573cc40ac0a4ac911d6",
+      "source": "payloads/reconstructions/76/76887ebcfefb59aee2559c858f6335fbb2700818-map.cpp"
+    },
+    {
+      "originalBlob": "7c53fae0f0dd52ad8075423fcdb3884bb9e307cf",
+      "path": "lib/zlib/gzguts.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "payloads/reconstructions/7c/7c53fae0f0dd52ad8075423fcdb3884bb9e307cf-gzguts.h"
+    },
+    {
+      "originalBlob": "7cfd17d7b40fe21126f7c0a24a1de0750516fce3",
+      "path": "lib/json/json_reader.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "6bedc2cf0327fc54c2a127b4ebcd72f76441414d28d355bc85bfc4d061b2ed55",
+      "source": "payloads/reconstructions/7c/7cfd17d7b40fe21126f7c0a24a1de0750516fce3-json_reader.cpp"
+    },
+    {
+      "originalBlob": "81e7aadd693847c3e26c6b150a1b644329cd0b2d",
+      "path": "lib/zlib/inflate.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "payloads/reconstructions/81/81e7aadd693847c3e26c6b150a1b644329cd0b2d-inflate.h"
+    },
+    {
+      "originalBlob": "9bb700ac866acc7a994ecd4a2bba0e9dcd566398",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #181 project: the native-verified #180 project without the coords, playeranimation and damage sources this commit merges into map.h and stats.h and deletes",
+      "sha256": "11fffa0364e381ef2c47e86d254fc47778a98c0c65db6729e3ae3e0ef51a092c",
+      "source": "payloads/reconstructions/9b/9bb700ac866acc7a994ecd4a2bba0e9dcd566398-Game.pro"
+    },
+    {
+      "originalBlob": "a02c374a765d2692ecc2126a27470bf7edd71e90",
+      "path": "lib/zlib/trees.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "payloads/reconstructions/a0/a02c374a765d2692ecc2126a27470bf7edd71e90-trees.h"
+    },
+    {
+      "originalBlob": "a0e9a5a5177614d8b0db293de2390162444c9ce3",
+      "path": "lib/tinyxml/tinyxml.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "8c5ed61d3964170dc5d0fbfffcf99e5eda2b283d62584837426720e6beb2f587",
+      "source": "payloads/reconstructions/a0/a0e9a5a5177614d8b0db293de2390162444c9ce3-tinyxml.h"
+    },
+    {
+      "originalBlob": "aa055479c833b2cc29f72b90fcc8daab2bfe3ffd",
+      "path": "lib/zlib/inffixed.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "88a340c8e628d56682a99c3a9a38e44fafeb8b4c609e0df85ea17c66011e0f42",
+      "source": "payloads/reconstructions/aa/aa055479c833b2cc29f72b90fcc8daab2bfe3ffd-inffixed.h"
+    },
+    {
+      "originalBlob": "b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420",
+      "path": "src/buildings/building.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 consolidates the buildings into building.h: the exact surviving #179 building, cave, dungeon and teleporter .cpp bodies (Tower and Town are deleted with no successor). Cave gains the monster and chance members this header adds: it spawns its 'monster' around itself on entry and with 'chance' percent per turn, reads both from Tiled properties, and keeps its position-array JSON form with both appended as elements 3 and 4 (inference)",
+      "sha256": "c4fee5fcbf4a194b02171d6c4da0a24c9e39836e799bee5ccc96eab4358d6845",
+      "source": "payloads/reconstructions/b4/b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420-building.cpp"
+    },
+    {
+      "originalBlob": "c2e32b9143d6b396973f1c43b810f28c4fd0957c",
+      "path": "lib/json/json_batchallocator.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "0b64b404862480c6c5687bf525c6eab5ad3e1a1b6d8d3c91d9aff690ebfe1e9d",
+      "source": "payloads/reconstructions/c2/c2e32b9143d6b396973f1c43b810f28c4fd0957c-json_batchallocator.h"
+    },
+    {
+      "originalBlob": "c6fc86ef0c3cbdaba6ee8a02c51820a30725150a",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #185 GameScene body: the native-verified #182-#184 reconstruction adapted to the same-commit gamescene.h, which makes the map and getMap static and drops addRandomTile/addTile/addObject (objects are added through Map::addObject, as the scene already did)",
+      "sha256": "2d9e53973eb2f0e255794387712ca696010a51cc6aa8b455cb923f19854a1782",
+      "source": "payloads/reconstructions/c6/c6fc86ef0c3cbdaba6ee8a02c51820a30725150a-gamescene.cpp"
+    },
+    {
+      "originalBlob": "d034fb80b68479356bb4327b9e3314423b59a607",
+      "path": "lib/zlib/zutil.h",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "payloads/reconstructions/d0/d034fb80b68479356bb4327b9e3314423b59a607-zutil.h"
+    },
+    {
+      "originalBlob": "d19dbcf7f0bc3ceaf42d15963e254f9450b9c4b9",
+      "path": "src/map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #181 merges Coords and PlayerAnimation into map.h and deletes their sources: the native-verified #180 Map reconstruction followed by the exact surviving #180 coords.cpp and playeranimation.cpp bodies, with includes merged",
+      "sha256": "8987666f4a57226ddf28ba391137d719604ecbe70c7a319487e114d6f610d831",
+      "source": "payloads/reconstructions/d1/d19dbcf7f0bc3ceaf42d15963e254f9450b9c4b9-map.cpp"
+    },
+    {
+      "originalBlob": "dd6a6b6abf936c6153b3ceb53097347942155d2a",
+      "path": "lib/tmx/TmxTileset.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "3ae7da96e141f4bbf18a1eda7d291d622150aee8d86ae6b2a114bdc534018565",
+      "source": "payloads/reconstructions/dd/dd6a6b6abf936c6153b3ceb53097347942155d2a-TmxTileset.cpp"
+    },
+    {
+      "originalBlob": "e53eac1625cfdc41a4406407100b5ed4b8bc2d59",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #182 project: the native-verified #181 project settings and resources with SOURCES/HEADERS listing every src/ and lib/ file of this flattened tree in path order (entry order inferred)",
+      "sha256": "366ff51cba6b1577789e0cdb95302283adb3ce62ba506ca9e9c918f4956a8cab",
+      "source": "payloads/reconstructions/e5/e53eac1625cfdc41a4406407100b5ed4b8bc2d59-Game.pro"
+    },
+    {
+      "originalBlob": "e74ab282971aef03da2770d13feb5f6dd5bb6972",
+      "path": "lib/tinyxml/tinyxmlparser.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "672312a50ccb11ad7d99845091d6621769519b77a6fd314d350428c5b787c5e9",
+      "source": "payloads/reconstructions/e7/e74ab282971aef03da2770d13feb5f6dd5bb6972-tinyxmlparser.cpp"
+    },
+    {
+      "originalBlob": "e9351fed3dc2c1677fb6f0a917b13f4b67785e1d",
+      "path": "lib/tinyxml/tinyxml.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+      "sha256": "aea6de89017d22ef8be7129667612b0844a1c96c4395323b75088c4a4a887d11",
+      "source": "payloads/reconstructions/e9/e9351fed3dc2c1677fb6f0a917b13f4b67785e1d-tinyxml.cpp"
+    },
+    {
+      "originalBlob": "ea60e543b7ef9d6710f68a46335f11046d1f3a3d",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #185 Map body carried unchanged from the native-verified #184 reconstruction; map.h is unchanged and this commit's edit to it is unknown (inference)",
+      "sha256": "0566a6fea09303748ab42b5a5b8bea65802235760bb543e1bfa5c843bfd38570",
+      "source": "payloads/reconstructions/ea/ea60e543b7ef9d6710f68a46335f11046d1f3a3d-map.cpp"
+    },
+    {
+      "originalBlob": "f59e788e08acb9e22ca1f4e0e7c98dcaaaa39f9c",
+      "path": "src/view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 ('refactor') moves this file under src/; the native-verified #179 reconstruction with includes rewritten to the <src/...> and <lib/...> form the surviving sources of this commit use; the moved headers are otherwise unchanged apart from whitespace",
+      "sha256": "481c85378a948500c31183c16fbf6658b4a7ba7c18611666c0407474a71a9236",
+      "source": "payloads/reconstructions/f5/f59e788e08acb9e22ca1f4e0e7c98dcaaaa39f9c-gameview.cpp"
+    },
+    {
+      "originalBlob": "fd3967eaae84a1021dbd387790ef6198dbeb2195",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #182 flattens src/ and renames MapObject::className to typeName: the native-verified #181 Interaction reconstruction with includes flattened and the rename applied to Interaction (a MapObject); Effect keeps its own className member as this commit's interaction.h declares",
+      "sha256": "18abb1ea9262a54c5ac677bdbffac01135b650855d69097cb4aa6fbaef658be9",
+      "source": "payloads/reconstructions/fd/fd3967eaae84a1021dbd387790ef6198dbeb2195-interaction.cpp"
+    },
+    {
+      "originalBlob": "fffd50650ef8a19a9b23b080045f915b2a03b664",
+      "path": "src/creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 ('refactor') moves this file under src/; the native-verified #179 reconstruction with includes rewritten to the <src/...> and <lib/...> form the surviving sources of this commit use; the moved headers are otherwise unchanged apart from whitespace",
+      "sha256": "41bfc1e26c5b42f80923659069d3dbf1413b68e3224652d628d6e00e7a89156d",
+      "source": "payloads/reconstructions/ff/fffd50650ef8a19a9b23b080045f915b2a03b664-creature.cpp"
     }
   ],
   "schemaVersion": 1

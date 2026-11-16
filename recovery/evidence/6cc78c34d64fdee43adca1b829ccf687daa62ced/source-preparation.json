@@ -1,0 +1,358 @@
+{
+  "identity": {
+    "forwardingHeaders": {
+      "forwarders": {
+        "src/buildings/cave.h": {
+          "includes": [
+            "src/buildings/building.h"
+          ],
+          "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+        },
+        "src/buildings/dungeon.h": {
+          "includes": [
+            "src/buildings/building.h"
+          ],
+          "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+        },
+        "src/buildings/teleporter.h": {
+          "includes": [
+            "src/buildings/building.h"
+          ],
+          "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+        },
+        "src/items/armor.h": {
+          "includes": [
+            "src/items/item.h",
+            "src/interactions/interaction.h"
+          ],
+          "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+        },
+        "src/items/belt.h": {
+          "includes": [
+            "src/items/item.h"
+          ],
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "src/items/boots.h": {
+          "includes": [
+            "src/items/item.h"
+          ],
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "src/items/gloves.h": {
+          "includes": [
+            "src/items/item.h"
+          ],
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "src/items/helmet.h": {
+          "includes": [
+            "src/items/item.h"
+          ],
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "src/items/smallweapon.h": {
+          "includes": [
+            "src/items/item.h",
+            "src/interactions/interaction.h"
+          ],
+          "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+        },
+        "src/items/weapon.h": {
+          "includes": [
+            "src/items/item.h",
+            "src/interactions/interaction.h"
+          ],
+          "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+        },
+        "src/pathfinder/dumbpathfinder.h": {
+          "includes": [
+            "src/pathfinder/pathfinder.h"
+          ],
+          "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+        },
+        "src/pathfinder/randompathfinder.h": {
+          "includes": [
+            "src/pathfinder/pathfinder.h"
+          ],
+          "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+        },
+        "src/pathfinder/smartpathfinder.h": {
+          "includes": [
+            "src/pathfinder/pathfinder.h"
+          ],
+          "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+        }
+      },
+      "inputs": {
+        "src/buildings/building.h": "102b07e24a3f7d4be7fbf31ab900ad7dd886838d6bd20c7f134c496220a07967",
+        "src/creatures/creature.h": "30d92e586109a7a5c29bb11310b634b5123e41391d41a2afbf06660a39f827c5",
+        "src/creatures/monster.cpp": "18742dbfecd4e6988fba3195b6cb7afb29abbd9e8e5194d53d3783589582da70",
+        "src/interactions/interaction.h": "19085596af03c3fd9f6399dc57b43b41d5e627bdca6ba803116a5a77e283c0e7",
+        "src/items/item.h": "9c8004f44df254caf6df774149dcd7062c1ef015fd5a0147ef14ad42a092c3db",
+        "src/main.cpp": "43c3b43b1ce639f8aba3c524230058b212f85bcef60fcadbb22b2bc2e6a017ff",
+        "src/pathfinder/pathfinder.h": "15d65f217389f8961857e43c6ac3f4b28d3f37e66ef76014a3d0617e3deadf64",
+        "src/view/playerstatsview.cpp": "65063f51e5ab546d0c60c5d176435f7cfb6d9273a98912b9baaa43e19cda1fd5"
+      },
+      "provenance": {
+        "includeFixCommit": "09df518e2037d12f912da6c774635a91c886c097",
+        "operation": "Supply each header the unchanged original sources still include as a forwarder to the header that now declares the same classes, carrying the include set of the #179 header it replaces"
+      },
+      "replaySha256": "deaad6b6505d1a4098fb07380d7cd943b740cf62d2adc5e03564b1ac1d067b20",
+      "state": "6cc78c34d64fdee43adca1b829ccf687daa62ced",
+      "validationBoundary": "Game startup with build-only forwarding headers for headers an original refactor merged away while its unchanged sources still include them; original sources unchanged"
+    },
+    "implementationSha256": "627e2240a4245bff328618c36685c75ad2ba7b767971a2553a18d62c2ee705f5",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+        },
+        "before": null,
+        "path": "src/buildings/cave.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+        },
+        "before": null,
+        "path": "src/buildings/dungeon.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+        },
+        "before": null,
+        "path": "src/buildings/teleporter.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+        },
+        "before": null,
+        "path": "src/items/armor.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "before": null,
+        "path": "src/items/belt.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "before": null,
+        "path": "src/items/boots.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "before": null,
+        "path": "src/items/gloves.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+        },
+        "before": null,
+        "path": "src/items/helmet.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+        },
+        "before": null,
+        "path": "src/items/smallweapon.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+        },
+        "before": null,
+        "path": "src/items/weapon.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+        },
+        "before": null,
+        "path": "src/pathfinder/dumbpathfinder.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+        },
+        "before": null,
+        "path": "src/pathfinder/randompathfinder.h",
+        "purpose": "forwarding header for a merged-away original header"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+        },
+        "before": null,
+        "path": "src/pathfinder/smartpathfinder.h",
+        "purpose": "forwarding header for a merged-away original header"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+      },
+      "before": null,
+      "path": "src/buildings/cave.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+      },
+      "before": null,
+      "path": "src/buildings/dungeon.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+      },
+      "before": null,
+      "path": "src/buildings/teleporter.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+      },
+      "before": null,
+      "path": "src/items/armor.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+      },
+      "before": null,
+      "path": "src/items/belt.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+      },
+      "before": null,
+      "path": "src/items/boots.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+      },
+      "before": null,
+      "path": "src/items/gloves.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+      },
+      "before": null,
+      "path": "src/items/helmet.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+      },
+      "before": null,
+      "path": "src/items/smallweapon.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+      },
+      "before": null,
+      "path": "src/items/weapon.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+      },
+      "before": null,
+      "path": "src/pathfinder/dumbpathfinder.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+      },
+      "before": null,
+      "path": "src/pathfinder/randompathfinder.h",
+      "purpose": "forwarding header for a merged-away original header"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+      },
+      "before": null,
+      "path": "src/pathfinder/smartpathfinder.h",
+      "purpose": "forwarding header for a merged-away original header"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-forwarding-headers"
+      ],
+      "log": "/home/user/work2/verify/snapshot-sp83v3pt/preparation/forwarding-headers.log",
+      "name": "forwardingHeaders",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

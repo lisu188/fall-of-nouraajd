@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **204 commits / 204 trees** against the
-restored inputs: **193 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **210 commits / 210 trees** against the
+restored inputs: **199 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -103,6 +103,13 @@ pinned file states get a build-only resolution that keeps the origin/master side
 #177 adds unchanged two minutes later; where absent, the build copy receives #177's
 hash-pinned bytes. Evidence is labeled `whitespaceConflictResolution`. Single-file
 project edits with no surviving trace (#170, #172) are recorded as inference.
+
+Catalog #180-#182 move the game under `src/` and `lib/` and then flatten `src/`. #180 and
+#181 merge each item, building and pathfinder class family (and at #181 `Damage`) into one
+header while their unchanged `main.cpp`, `monster.cpp`, `playerstatsview.cpp` and
+`creature.h` still include the old names; #182 rewrites those includes. Only those pinned
+states get build-only forwarding headers (`mergedHeaderForwarders`). The merged
+implementations are assembled from the exact per-class sources the refactor deletes.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`
