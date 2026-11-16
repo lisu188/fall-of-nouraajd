@@ -12,6 +12,13 @@ import os
 from pathlib import Path
 import re
 
+try:
+    from scripts import history_prepare_reflection as reflection_prep
+    from scripts import history_prepare_coordinates as coordinates_prep
+except ModuleNotFoundError:
+    import history_prepare_reflection as reflection_prep
+    import history_prepare_coordinates as coordinates_prep
+
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
 CPP_TOKENS = re.compile(
@@ -103,7 +110,12 @@ def supplementalResourcePlan(source_root: Path) -> dict | None:
 
 def preparationArguments(source_root: Path) -> list[str]:
     """Use the same explicit resource argument in workbench and observer builds."""
-    return [SUPPLEMENTAL_QMAKE_ARGUMENT] if supplementalResourcePlan(source_root) else []
+    arguments = [SUPPLEMENTAL_QMAKE_ARGUMENT] if supplementalResourcePlan(source_root) else []
+    if reflection_prep.reflectionPlan(source_root):
+        arguments.append(reflection_prep.ARGUMENT)
+    if coordinates_prep.coordinateHashPlan(source_root):
+        arguments.append(coordinates_prep.ARGUMENT)
+    return arguments
 
 
 def runtimeDirectoryPlan(source_root: Path) -> list[dict]:
@@ -222,6 +234,8 @@ def preparationRequired(source_root: Path) -> bool:
         (source_root / "preprocessor.py").is_file()
         or bool(includeOverlays(source_root))
         or supplementalResourcePlan(source_root) is not None
+        or reflection_prep.reflectionPlan(source_root) is not None
+        or coordinates_prep.coordinateHashPlan(source_root) is not None
     )
 
 
@@ -254,13 +268,27 @@ def prepareSources(
     generator = source_root / "preprocessor.py"
     include_overlays = includeOverlays(source_root)
     supplement = supplementalResourcePlan(source_root)
+    reflection = reflection_prep.reflectionPlan(source_root)
+    coordinates = coordinates_prep.coordinateHashPlan(source_root)
+    if coordinates:
+        target = source_root / coordinates["path"]
+        if target.is_symlink() or (
+            target.exists() and (not target.is_file() or target.read_bytes() != coordinates["data"])
+        ):
+            raise ValueError("Coordinate hash compatibility output is symlinked or already differs")
+    if reflection:
+        target = source_root / reflection["path"]
+        if target.is_symlink() or (
+            target.exists() and (not target.is_file() or target.read_bytes() != reflection["data"])
+        ):
+            raise ValueError("Reflection compatibility output is symlinked or already differs")
     if supplement:
         target = source_root / supplement["path"]
         if target.is_symlink():
             raise ValueError("Supplemental Qt resource output is symlinked")
         if target.exists() and (not target.is_file() or target.read_bytes() != supplement["data"]):
             raise ValueError("Supplemental Qt resource output already exists with different bytes")
-    if not generator.is_file() and not include_overlays and not supplement:
+    if not generator.is_file() and not include_overlays and not supplement and not reflection and not coordinates:
         return result
     output_root.mkdir(parents=True, exist_ok=True)
     before = sourceManifest(source_root)
@@ -278,6 +306,38 @@ def prepareSources(
             {
                 "name": "supplementalResources",
                 "command": ["history_source_prep.py", "generate-supplemental-qrc"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if reflection:
+        reflection_prep.writeHeader(source_root, reflection["data"])
+        identity = {key: value for key, value in reflection.items() if key != "data"}
+        result["identity"]["reflectionRegistration"] = identity
+        result.setdefault("qmakeArguments", []).append(reflection["qmakeArgument"])
+        log = output_root / "reflection-registration.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "reflectionRegistration",
+                "command": ["history_source_prep.py", "prepare-reflection-registration"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if coordinates:
+        coordinates_prep.writeHeader(source_root, coordinates["data"])
+        identity = {key: value for key, value in coordinates.items() if key != "data"}
+        result["identity"]["coordinatesHash"] = identity
+        result.setdefault("qmakeArguments", []).append(coordinates["qmakeArgument"])
+        log = output_root / "coordinates-hash.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "coordinatesHash",
+                "command": ["history_source_prep.py", "prepare-coordinates-hash"],
                 "returnCode": 0,
                 "timedOut": False,
                 "log": str(log),
@@ -330,11 +390,24 @@ def prepareSources(
                 "purpose": (
                     "supplemental Qt resources"
                     if name == SUPPLEMENTAL_QRC
-                    else "Windows include separators on an isolated build-source copy"
+                    else (
+                        "immediate-parent reflection registration compatibility"
+                        if name == reflection_prep.TARGET
+                        else (
+                            "coordinate hashing delegated to original CoordsHasher"
+                            if name == coordinates_prep.TARGET
+                            else "Windows include separators on an isolated build-source copy"
+                        )
+                    )
                 ),
             }
             for name in sorted(set(before) | set(after))
-            if before.get(name) != after.get(name) or (supplement and name == SUPPLEMENTAL_QRC)
+            if (
+                before.get(name) != after.get(name)
+                or (supplement and name == SUPPLEMENTAL_QRC)
+                or (reflection and name == reflection_prep.TARGET)
+                or (coordinates and name == coordinates_prep.TARGET)
+            )
         ]
         result.update({"status": "success", "outputs": outputs})
         result["identity"]["outputs"] = outputs
@@ -404,6 +477,8 @@ def prepareSources(
                 or (entry["path"].startswith("src/") and entry["path"].endswith(".h"))
                 or entry["path"] in {overlay["path"] for overlay in include_overlays}
                 or (supplement and entry["path"] == SUPPLEMENTAL_QRC)
+                or (reflection and entry["path"] == reflection_prep.TARGET)
+                or (coordinates and entry["path"] == coordinates_prep.TARGET)
             )
         )
     ]

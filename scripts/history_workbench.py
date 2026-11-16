@@ -445,6 +445,8 @@ def export() -> None:
                 "source-preparation.json",
                 "source-preparation.log",
                 "supplemental_images.qrc",
+                "reflection_registration.h",
+                "coordinates_hash.h",
             ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
@@ -493,6 +495,13 @@ def progress() -> None:
                     continue
             except vh.VerificationError:
                 continue
+            if report.get("startupCompatibility") in ("parentReflectionRegistration", "originalCoordinateHash"):
+                from recovery_readme import VerificationError as DocumentationError, snapshotDocumentation
+
+                try:
+                    snapshotDocumentation(report, report_path.parent)
+                except DocumentationError:
+                    continue
             item = {
                 "originalCommit": commit,
                 "originalTree": report["sourceTree"],
@@ -508,6 +517,12 @@ def progress() -> None:
             if report.get("startupCompatibility") == "supplementalQtResources":
                 item["startupCompatibility"] = "supplementalQtResources"
                 item["validation"] = "build-and-startup-with-resource-compatibility-passed"
+            if report.get("startupCompatibility") == "parentReflectionRegistration":
+                item["startupCompatibility"] = "parentReflectionRegistration"
+                item["validation"] = "build-and-startup-with-reflection-compatibility-passed"
+            if report.get("startupCompatibility") == "originalCoordinateHash":
+                item["startupCompatibility"] = "originalCoordinateHash"
+                item["validation"] = "build-and-startup-with-coordinate-hash-compatibility-passed"
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])

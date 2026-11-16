@@ -1,14 +1,14 @@
 {
   "ci": {
     "previousDeliveryWaiverApplies": false,
-    "status": "not-run-for-current-head-yet"
+    "status": "queued-at-published-head-81858ccb9a2dc796a140f2435e11f5239ae9d7af"
   },
   "date": "2026-11-16",
   "focusedValidation": {
-    "command": "python3 unittest discovery: test_history*.py, test_recovery_readme.py, test_recovery_workflow.py",
-    "seconds": 8.144,
+    "command": "unittest discovery: test_history*.py, test_recovery_readme.py, test_recovery_workflow.py",
+    "seconds": 3.918,
     "status": "passed",
-    "testCount": 165
+    "testCount": 182
   },
   "mainAncestryConnectedCommitCount": 65,
   "mainAncestryPendingAdditionalCommitCount": 44,
@@ -18,11 +18,11 @@
   },
   "nativeValidation": {
     "boundary": "Full historical compilation plus real isolated game/editor startup and rendered frame; historical gameplay parity is unverified.",
-    "compatibilityTreeCount": 1,
-    "editorTreeCount": 4,
-    "gameTreeCount": 116,
+    "compatibilityTreeCount": 3,
+    "editorTreeCount": 6,
+    "gameTreeCount": 144,
     "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-    "treeCount": 120
+    "treeCount": 150
   },
   "publishedCommitCount": 109,
   "schemaVersion": 1

@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **120 commits / 120 trees** against the
-restored inputs: **116 game startups and 4 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **150 commits / 150 trees** against the
+restored inputs: **144 game startups and 6 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -45,6 +45,14 @@ from its unchanged manifest. A hash-pinned supplemental qrc is generated only in
 isolated build copy. Its evidence and README explicitly identify this compatibility
 boundary; it must not be reported as unmodified authored startup. Compilation and
 startup evidence do not establish historical gameplay parity.
+
+Revision #151 needs a hash-pinned build-only `std::hash<Coords>` specialization
+that delegates to its genuine `CoordsHasher`; #152 supplies the authored fix.
+Revision #340 needs the genuine parent reflection registration macro because its
+unchanged macro calls a nonexistent constructor. Both compatibility paths retain
+original bytes and export their exact generated headers and replay checks.
+The reconstructed #114 project force-includes its genuine CharView header for a
+missing declaration; #115 retains that redundant include and its newer original header.
 
 **109 verified commits (#1–#108 plus #367) are published** under new refs:
 
@@ -175,11 +183,12 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  Continue from #80 using the recorded #79 include and save-directory prerequisites.
+  Continue beyond the verified early prefix and the middle/later accepted snapshots;
+  `recovery/progress.json` records the exact accepted set.
 - Replace later donor implementations that conflict with surviving APIs, including
-  the whole-game blockers at #260/#266. Object compilation and generator preparation
+  the remaining whole-game blockers around #257/#266. Object compilation and generator preparation
   are supporting evidence only.
-- Extend verified replay/publication beyond the 65-commit prefix and verify another
+- Extend verified replay/publication beyond the 109-commit publication and verify another
   independent portable bundle when ready. Preserve prior recovery publications.
 - Obtain successful current-head GitHub build, full-suite and coverage evidence;
   the current queued jobs have supplied none yet. Keep the PR draft while acceptance

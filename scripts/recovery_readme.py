@@ -88,6 +88,70 @@ def supplementalResourceAttachments(report: dict, preparation: dict, evidence_di
     return {"recovery/supplemental_images.qrc": data, "recovery/prepare_supplemental_resources.py": helper}
 
 
+def reflectionRegistrationAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    helper = source_prep.reflection_prep
+    compatibility = preparation.get("identity", {}).get("reflectionRegistration", {})
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "path": helper.TARGET,
+        "sha256": hashlib.sha256(helper.HEADER).hexdigest(),
+        "inputs": helper.INPUTS,
+        "qmakeArgument": helper.ARGUMENT,
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        compatibility != expected
+        or preparation.get("qmakeArguments") != [helper.ARGUMENT]
+        or report.get("startupCompatibility") != "parentReflectionRegistration"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Reflection compatibility differs from its reviewed inputs, macro or boundary")
+    header = evidence_dir / helper.ATTACHMENT
+    if header.is_symlink() or not header.is_file() or header.read_bytes() != helper.HEADER:
+        raise VerificationError("Reflection compatibility attachment differs from the reviewed header bytes")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if len(outputs) != 1 or outputs[0].get("after") != {"kind": "file", "sha256": expected["sha256"]}:
+        raise VerificationError("Reflection compatibility output lacks its exact preparation fingerprint")
+    return {
+        "recovery/" + helper.ATTACHMENT: helper.HEADER,
+        "recovery/prepare_reflection_registration.py": replay,
+    }
+
+
+def coordinateHashAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    helper = source_prep.coordinates_prep
+    compatibility = preparation.get("identity", {}).get("coordinatesHash", {})
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "path": helper.TARGET,
+        "sha256": hashlib.sha256(helper.HEADER).hexdigest(),
+        "inputs": helper.INPUTS,
+        "qmakeArgument": helper.ARGUMENT,
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        compatibility != expected
+        or preparation.get("qmakeArguments") != [helper.ARGUMENT]
+        or report.get("startupCompatibility") != "originalCoordinateHash"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Coordinate hash compatibility differs from its reviewed inputs, macro or boundary")
+    header = evidence_dir / helper.ATTACHMENT
+    if header.is_symlink() or not header.is_file() or header.read_bytes() != helper.HEADER:
+        raise VerificationError("Coordinate hash compatibility attachment differs from the reviewed header bytes")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if len(outputs) != 1 or outputs[0].get("after") != {"kind": "file", "sha256": expected["sha256"]}:
+        raise VerificationError("Coordinate hash compatibility output lacks its exact preparation fingerprint")
+    return {
+        "recovery/" + helper.ATTACHMENT: helper.HEADER,
+        "recovery/prepare_coordinates_hash.py": replay,
+    }
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -99,8 +163,12 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_includes = "windowsIncludeSeparators" in names
     has_generator = "generator" in names
     has_resources = "supplementalResources" in names
+    has_reflection = "reflectionRegistration" in names
+    has_coordinates = "coordinatesHash" in names
     expected_names = (
         (["supplementalResources"] if has_resources else [])
+        + (["reflectionRegistration"] if has_reflection else [])
+        + (["coordinatesHash"] if has_coordinates else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -119,6 +187,10 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         raise VerificationError("Include-only preparation cannot claim a historical Python generator")
     include_files = {}
     attachments = supplementalResourceAttachments(report, preparation, evidence_dir) if has_resources else {}
+    if has_reflection:
+        attachments.update(reflectionRegistrationAttachments(report, preparation, evidence_dir))
+    if has_coordinates:
+        attachments.update(coordinateHashAttachments(report, preparation, evidence_dir))
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -154,6 +226,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (name.startswith("src/") and name.endswith(".h"))
                 or name in include_files
                 or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
+                or (has_reflection and name == source_prep.reflection_prep.TARGET)
+                or (has_coordinates and name == source_prep.coordinates_prep.TARGET)
             )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
@@ -232,8 +306,20 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         raise VerificationError("Copied startup report differs from the recorded native game result")
     preparation_files = sourcePreparationAttachments(report, evidence_dir)
     resource_preparation = "recovery/supplemental_images.qrc" in preparation_files
-    if bool(report.get("startupCompatibility")) != resource_preparation:
-        raise VerificationError("Recovered startup compatibility lacks its explicit resource preparation evidence")
+    reflection_preparation = "recovery/prepare_reflection_registration.py" in preparation_files
+    coordinates_preparation = "recovery/prepare_coordinates_hash.py" in preparation_files
+    compatibility_modes = [
+        name
+        for enabled, name in (
+            (resource_preparation, "supplementalQtResources"),
+            (reflection_preparation, "parentReflectionRegistration"),
+            (coordinates_preparation, "originalCoordinateHash"),
+        )
+        if enabled
+    ]
+    expected_compatibility = compatibility_modes[0] if compatibility_modes else None
+    if len(compatibility_modes) > 1 or report.get("startupCompatibility") != expected_compatibility:
+        raise VerificationError("Recovered startup compatibility lacks its explicit preparation evidence")
     generator_preparation = "generator" in [
         step.get("name") for step in report.get("sourcePreparation", {}).get("steps", [])
     ]
@@ -279,9 +365,15 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         "QMAKE_CXXFLAGS+=-include functional",
         "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider",
         source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT,
+        source_prep.reflection_prep.ARGUMENT,
+        source_prep.coordinates_prep.ARGUMENT,
     }
     if resource_preparation != (source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT in compiler_flags):
         raise VerificationError("Supplemental resource qmake argument and attached preparation differ")
+    if reflection_preparation != (source_prep.reflection_prep.ARGUMENT in compiler_flags):
+        raise VerificationError("Reflection compatibility qmake argument and attached preparation differ")
+    if coordinates_preparation != (source_prep.coordinates_prep.ARGUMENT in compiler_flags):
+        raise VerificationError("Coordinate hash compatibility qmake argument and attached preparation differ")
     if any(
         not isinstance(flag, str) or (flag not in reviewed_flags and not re.fullmatch(r"[A-Za-z0-9_+=./:-]+", flag))
         for flag in compiler_flags
@@ -292,7 +384,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
         prerequisites += f", with CPython {abi} development files and its matching Boost.Python library"
-    if include_preparation or resource_preparation:
+    if include_preparation or resource_preparation or reflection_preparation or coordinates_preparation:
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
         f"# Recovered {mode} snapshot",
@@ -333,6 +425,32 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             if resource_preparation
             else []
         ),
+        *(
+            [
+                "Startup used an explicit build-only reflection registration compatibility header. The original",
+                "registration macro passes a class name to a constructor that accepts no arguments and omits",
+                "the Qt metatype declarations needed by its original factory. The forced include restores only",
+                "the immediate parent's registration macro. Every original source file and translation unit is",
+                "preserved. Exact input/header hashes and donor provenance are attached in the preparation proof.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if reflection_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used an explicit build-only coordinate hashing compatibility header. The original",
+                "pathfinder instantiates std::unordered_map<Coords, int> without a std::hash<Coords> specialization.",
+                "The forced include delegates that standard interface to the existing original CoordsHasher;",
+                "the original hash algorithm and all original source files remain unchanged. Exact input/header",
+                "hashes and the compatibility boundary are attached in the preparation proof. This establishes",
+                "startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if coordinates_preparation
+            else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -366,6 +484,8 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         "",
         "```sh",
         *(["python3 recovery/prepare_supplemental_resources.py"] if resource_preparation else []),
+        *(["python3 recovery/prepare_reflection_registration.py"] if reflection_preparation else []),
+        *(["python3 recovery/prepare_coordinates_hash.py"] if coordinates_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

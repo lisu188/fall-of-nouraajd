@@ -1,0 +1,43 @@
+{
+  "entries": [
+    {
+      "originalBlob": "7ce52b63ae9306fd7d49f7592235f7413413d2c0",
+      "path": "CMap.cpp",
+      "provenance": "Missing #350 reconstruction, not exact original. Prior real JSON loader/map body updates only canStep(Coords&) to genuine #350 const Coords& declaration; surviving original CPathFinder.cpp now supplies the authored pathfinder. Pending native verification; all surviving originals retained.",
+      "sha256": "708c37cd9c5a797fe29b1bec68d3560a0b6598d473359111caca643c77220ce6",
+      "source": "recovery/payloads/reconstructions/7c/7ce52b63ae9306fd7d49f7592235f7413413d2c0-CMap.cpp",
+      "validatedByOriginalCommit": "c64edced37f5abe8e2ea19a16cbabf0bd45051a3"
+    },
+    {
+      "originalBlob": "5feb2920b13b4818c48523536a9e3a84fe9f19d4",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #350 reconstruction, not exact original. Uses complete intact55e6516 CQuestWrapper including newly authored same-commit CQuest::onComplete, plus the corresponding real binding; original CPlayer::checkQuests drives completion/removal. Pending native verification; all surviving originals retained.",
+      "sha256": "606e53fd6fb9e133820ee069b98cc7339201ef154552636606b7e5ecd2c18f5a",
+      "source": "recovery/payloads/reconstructions/5f/5feb2920b13b4818c48523536a9e3a84fe9f19d4-GameScript.cpp",
+      "validatedByOriginalCommit": "c64edced37f5abe8e2ea19a16cbabf0bd45051a3"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 146,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 350,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "c64edced37f5abe8e2ea19a16cbabf0bd45051a3",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/a460d5a905967eaf1124f72c5c513854df2fea4e0306d111ac5c2eba2d6b9a0a",
+    "fingerprint": "a460d5a905967eaf1124f72c5c513854df2fea4e0306d111ac5c2eba2d6b9a0a",
+    "sourceCommit": "c64edced37f5abe8e2ea19a16cbabf0bd45051a3",
+    "sourceTree": "843519adea2ad6ba5ccdb8e7bc97af9044d37e5e",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

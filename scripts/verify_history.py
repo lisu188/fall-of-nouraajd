@@ -33,6 +33,17 @@ WINDOWS_PATHS_SOURCE = REPO_ROOT / "recovery/smoke/windows_paths.cpp"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 REQUIRED_CHECKS = ("map", "player", "eventLoop", "renderedFrame")
 EDITOR_CHECKS = ("map", "editor", "eventLoop", "renderedFrame")
+# Reviewed original editor routes with Qt metatype registration before view selection.
+REVIEWED_EDITOR_MAIN_SHA256 = frozenset(
+    {
+        "035bc5e41119a494f0abca5007dfd2783d94f758f1e1d557d0dee718c96b2b62",  # #122
+        "2d6e34b472015545231ca4c1c0dcb775ca2eb77e00eb13135244ac64bff9f129",  # #124
+        "25c1c0d44c34b2f6299c730d4321040c9628e09d7af71dce1a21d8f92a9186a4",  # #134
+        "c9a6650318801e75253b0c54ffb4d5b2b4d344fd794694bd37f0951b5776f936",  # #135
+        "82d28c2df4fb35f1453ef25e2d8fb30c04bba2a6875710b04f9cfea9a3491d3e",  # #141
+        "fa471718f3119672baf3b78564ccb3215351e4c69c637d4ca895b6513a98c5e1",  # #155
+    }
+)
 
 
 class VerificationError(ValueError):
@@ -283,7 +294,9 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
         config = json.loads(config_path.read_text())
     except (OSError, ValueError) as error:
         raise VerificationError(f"Cannot inspect historical startup configuration: {error}") from error
-    compact = re.sub(r"\s+", "", (source_root / "main.cpp").read_text()) if (source_root / "main.cpp").is_file() else ""
+    main_path = source_root / "main.cpp"
+    main_data = main_path.read_bytes() if main_path.is_file() else b""
+    compact = re.sub(r"\s+", "", main_data.decode())
     start = compact.find("intmain(")
     expected = (
         "intmain(intargc,char*argv[]){QApplicationa(argc,argv);QGraphicsView*view;"
@@ -291,7 +304,9 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
         "if(editor){view=newMapView();}else{view=newGameView();}"
         "intret=a.exec();deleteview;returnret;}"
     )
-    reviewed = start >= 0 and compact[start:] == expected
+    reviewed = (start >= 0 and compact[start:] == expected) or (
+        hashlib.sha256(main_data).hexdigest() in REVIEWED_EDITOR_MAIN_SHA256
+    )
     editor = isinstance(config, dict) and config.get("editor") is True
     if not editor and not reviewed:
         return {"mode": "game"}
@@ -704,6 +719,24 @@ def exportEvidence(result: dict, output_root: Path) -> None:
         if hashlib.sha256(resource.read_bytes()).hexdigest() != supplemental.get("sha256"):
             raise VerificationError("Supplemental Qt resource output differs from its preparation proof")
         shutil.copyfile(resource, evidence_dir / "supplemental_images.qrc")
+    reflection = result.get("sourcePreparation", {}).get("identity", {}).get("reflectionRegistration")
+    if reflection:
+        helper = source_prep.reflection_prep
+        header = Path(result["restoration"]["outputDir"]) / helper.TARGET
+        if reflection.get("path") != helper.TARGET or header.is_symlink() or header.read_bytes() != helper.HEADER:
+            raise VerificationError("Reflection compatibility header differs from its reviewed bytes")
+        if hashlib.sha256(header.read_bytes()).hexdigest() != reflection.get("sha256"):
+            raise VerificationError("Reflection compatibility header differs from its preparation proof")
+        shutil.copyfile(header, evidence_dir / helper.ATTACHMENT)
+    coordinates = result.get("sourcePreparation", {}).get("identity", {}).get("coordinatesHash")
+    if coordinates:
+        helper = source_prep.coordinates_prep
+        header = Path(result["restoration"]["outputDir"]) / helper.TARGET
+        if coordinates.get("path") != helper.TARGET or header.is_symlink() or header.read_bytes() != helper.HEADER:
+            raise VerificationError("Coordinate hash compatibility header differs from its reviewed bytes")
+        if hashlib.sha256(header.read_bytes()).hexdigest() != coordinates.get("sha256"):
+            raise VerificationError("Coordinate hash compatibility header differs from its preparation proof")
+        shutil.copyfile(header, evidence_dir / helper.ATTACHMENT)
     frame_path = Path(startup["frame"]["path"])
     if not frame_path.is_absolute():
         frame_path = artifact_root / frame_path
@@ -774,6 +807,18 @@ def verifySnapshot(
         if supplemental:
             startup["boundary"] = supplemental["validationBoundary"]
             result["startupCompatibility"] = "supplementalQtResources"
+        reflection = preparation["identity"].get("reflectionRegistration")
+        if reflection:
+            if supplemental:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = reflection["validationBoundary"]
+            result["startupCompatibility"] = "parentReflectionRegistration"
+        coordinates = preparation["identity"].get("coordinatesHash")
+        if coordinates:
+            if supplemental or reflection:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = coordinates["validationBoundary"]
+            result["startupCompatibility"] = "originalCoordinateHash"
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")

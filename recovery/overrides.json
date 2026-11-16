@@ -94209,8 +94209,8 @@
     {
       "originalBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
       "path": "src/GameScript.cpp",
-      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #258 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
-      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "provenance": "Retain reconstructed missing #258\u2013259 Boost.Python module and exact init_game/Python2.7 ABI. Actual target script imports Interaction and calls Stats.getDamage; expose real CInteraction alias and genuine generated Stats getter, as native-proven #260 does. No stand-in or no-op binding.",
+      "sha256": "0c201fdcd291f6ab907524c9010dcf955a6487567edad02a44e53d813b94c7fc",
       "source": "payloads/reconstructions/8c/8c99e7b9d7a511b8314e43202e7aa430460f1cbc-GameScript.cpp"
     },
     {
@@ -95206,6 +95206,447 @@
       "provenance": "Missing map body inferred from earlier recovered donor; adapted to exact #150 intact Map/MapObject declarations: no later TMX/entry-coordinate API, original JSON map/state and declared ownership preserved. Not exact original content; gameplay parity unverified. Missing ensureSize background generation is inferred as GrassTile (declared in original tiles.json) when the original default string is empty; preserves every explicitly authored road/mountain and player coordinate. Before this missing-body repair native observer reported real healthy player but no terrain at authored spawn (0,0,0). Historical terrain parity is unverified.",
       "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
       "source": "payloads/reconstructions/a8/a8de3873c648161f0ab8c80b2f9c67fabde5193b-map.cpp"
+    },
+    {
+      "originalBlob": "1852ba9d4689f6cebcce47680c86b0b579748f89",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CPlayerView.h is byte-identical; actual PNG paths and initialized stats-view pointer retained. The actual #259 arrow assets are directory/0.png, unlike #260 flat PNGs; retain directory-slash paths after the native startup failure exposed this boundary.",
+      "sha256": "9cd69112a7a81ef2db049acbbfaa2b61d34ebb57b4c9f11c93bbc119d808d32e",
+      "source": "payloads/reconstructions/18/1852ba9d4689f6cebcce47680c86b0b579748f89-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "25e5e0271690584dff5aeaa1f00de5e7535a28cf",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CPathFinder.h is byte-identical; cardinal/random/cost-field behavior and performance remain unverified.",
+      "sha256": "5b2ac46cc066dfa55c481777dff162ffd9c039052a887ce541f5ff2e5be3c7da",
+      "source": "payloads/reconstructions/25/25e5e0271690584dff5aeaa1f00de5e7535a28cf-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "2b9ab73b866e9b6c8f6252dcea6bb2d86a618ba5",
+      "path": "src/Stats.h",
+      "provenance": "Infer missing #258\u2013259 Stats.h from nearest pre-deletion Stats header plus all22 exact fields emitted by genuine #257 generator/descriptors (retained generated-prop.h). Inline actual PROP rows using same-commit original Util.h macro; gen/ was genuinely deleted in #258, so no missing generated include remains. Preserve older int getMain/pointer-main Stats API, unlike #260 QString getMain/getMainValue. Not exact original source.",
+      "sha256": "ada9d5ff7f657ebd03350f6bc83d04e6409d2b16143682f6fd480bdec1b9acaa",
+      "source": "payloads/reconstructions/2b/2b9ab73b866e9b6c8f6252dcea6bb2d86a618ba5-Stats.h"
+    },
+    {
+      "originalBlob": "8d5b72a24089899954852a9ace26217a7c95d8e4",
+      "path": "src/CMapObject.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original #259 CMapObject.h lacks the #260 explicit destructor declaration; omit that definition. Preserve genuine four-argument moveTo/no-argument callbacks/Tmx property APIs.",
+      "sha256": "4747ca05f88b4466c56f4007ead98ec589e20baa03021006469cc8bdf5f18008",
+      "source": "payloads/reconstructions/8d/8d5b72a24089899954852a9ace26217a7c95d8e4-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "961203efe5c083e5d4ca2a29f0dad37071fd5192",
+      "path": "src/CCreature.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Reconstructed combined header differs only by genuine CPlayer(CMap*,QString) constructor; implement delegation/map/load behavior. Use original int Stats::getMain rather than future getMainValue and apply actual main-stat selector explicitly. Keep declared null equipment slots.",
+      "sha256": "8a77b93ea5ff217ca44aef908f1ddfbc162b2dfde79b9e085bdc7f47d13d7643",
+      "source": "payloads/reconstructions/96/961203efe5c083e5d4ca2a29f0dad37071fd5192-CCreature.cpp"
+    },
+    {
+      "originalBlob": "9631c0f070eec913f47a3b5b8f0404a0a42a321f",
+      "path": "src/CObjectHandler.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CObjectHandler/CTypeHandler APIs are byte-identical; support actual flat and nested object descriptors, no stand-in types. Native #259 clean-exit regression and diagnostic backtrace exposed QWidget destruction through an invalid non-widget QObject parent. Actual CAnimatedObject inherits QWidget, so give it the genuine owning CGameView QWidget; graphics ownership remains in original scene/item hierarchy.",
+      "sha256": "382c6fb7e97ebf142cb4bb64e067afad8d0403b424b99c5dcae7092df1678515",
+      "source": "payloads/reconstructions/96/9631c0f070eec913f47a3b5b8f0404a0a42a321f-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "9aff389e56348a5c38f96e25d6a6c01b98f651d3",
+      "path": "src/CMap.cpp",
+      "provenance": "Infer missing #258 monolithic CMap.cpp from native-verified adjacent #259 generated reconstruction. All original CMap/CMapObject/PlayerView/GameView/PathFinder/ObjectHandler headers are byte-identical between these trees; original commit message is tiles then tile visible. Preserve actual Tmx/scene/set-of-objects interface, missing-property guards and unchanged geometry data. Procedural/pathfinding behavior and exact missing original map implementation remain unverified.",
+      "sha256": "91f1aa2add767fd56ee3506235e30ba5ab22e8712df1f043a34af26e2e40b588",
+      "source": "payloads/reconstructions/9a/9aff389e56348a5c38f96e25d6a6c01b98f651d3-CMap.cpp"
+    },
+    {
+      "originalBlob": "a5bd0c343ccedc175855b76239bd468010a470c2",
+      "path": "src/CGameView.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CGameView API is unchanged apart from virtual destructor annotation. Original #258\u2013259 CGameScene has no explicit map-owning destructor (introduced in #260). Destroy its owned map before graphics-scene clearing so CMap mapObjects cannot contain already-deleted graphics items during QObject child cleanup.",
+      "sha256": "ef33bcda0346938dbb034aacd500513d5b8c2d34c6dd1ee1172b7194e00a7b0c",
+      "source": "payloads/reconstructions/a5/a5bd0c343ccedc175855b76239bd468010a470c2-CGameView.cpp"
+    },
+    {
+      "originalBlob": "b2b8e3310ec27589e5a6878be9919bb815942b88",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CGamePanel.h is byte-identical; actual panel interfaces retained.",
+      "sha256": "17806b756b02289e1f732cd9aeedce54a77ac0dd5a8cab691fbe97fd0b42ce89",
+      "source": "payloads/reconstructions/b2/b2b8e3310ec27589e5a6878be9919bb815942b88-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "b6ca211b1ba2c5a6a02491f90af4fa427c4e2971",
+      "path": "src/CMap.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CMap API is unchanged apart from virtual destructor annotation. Actual Tmx property guard and bounded layer/object semantics retained; procedural behavior remains inferred.",
+      "sha256": "91f1aa2add767fd56ee3506235e30ba5ab22e8712df1f043a34af26e2e40b588",
+      "source": "payloads/reconstructions/b6/b6ca211b1ba2c5a6a02491f90af4fa427c4e2971-CMap.cpp"
+    },
+    {
+      "originalBlob": "4dd0e79fc7bf66d54511947f49ca70786d44c306",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; qmake project regenerated with 39 sources from object_script.Game.Debug; settings from intact ae187ade:Game.pro",
+      "sha256": "9207b696b3fd17c82e2f0f7bb8b26d35d5587a45f8f871628272895c2e71ab52",
+      "source": "payloads/reconstructions/4d/4dd0e79fc7bf66d54511947f49ca70786d44c306-Game.pro"
+    },
+    {
+      "originalBlob": "94827741b8c51768e1d2fc76b30655f60337dfdb",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 49ce48b5b1b1d941cf3e648b6abc0371a1683ccf (previous version of creatures/creature.cpp)",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "payloads/reconstructions/94/94827741b8c51768e1d2fc76b30655f60337dfdb-creature.cpp"
+    },
+    {
+      "originalBlob": "166868328131edab82b0c1a8bcba62a9d5807383",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of d8eebeb95fdc4734ed2094dc13c298671c8b0529 (previous version of interactions/interaction.cpp)",
+      "sha256": "6a64f77947027d73148c6be8215fd54775f447b03bfc479ef305dde455e72d40",
+      "source": "payloads/reconstructions/16/166868328131edab82b0c1a8bcba62a9d5807383-interaction.cpp"
+    },
+    {
+      "originalBlob": "1d26cac14d50c8d88afa6f256db58df5b41458b3",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project regenerated from genuine same-tree object_script.Game.Debug object list and nearest intact #109 Game.pro settings; retains original source/header/resource selection with no unmatched objects.",
+      "sha256": "9207b696b3fd17c82e2f0f7bb8b26d35d5587a45f8f871628272895c2e71ab52",
+      "source": "payloads/reconstructions/1d/1d26cac14d50c8d88afa6f256db58df5b41458b3-Game.pro"
+    },
+    {
+      "originalBlob": "f6c7917cea6bf8831e4546072a676979eda5a560",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; #111 surviving declarations require no further body changes (Creature::applyEffects only becomes public). Original internal delta unavailable; prior provenance retained.",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "payloads/reconstructions/f6/f6c7917cea6bf8831e4546072a676979eda5a560-creature.cpp"
+    },
+    {
+      "originalBlob": "00509e4451f6babbff847689d5736a04f4ac1efd",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; #111 surviving declarations require no further body changes (Creature::applyEffects only becomes public). Original internal delta unavailable; prior provenance retained.",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "payloads/reconstructions/00/00509e4451f6babbff847689d5736a04f4ac1efd-map.cpp"
+    },
+    {
+      "originalBlob": "382404a3259a4094aa00d3fc4de2e0ba4d38881b",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #108 reconstruction from genuine #107 Scene to genuine #111 Q_OBJECT, mouse event overrides, adjustStepTimer, clickMove and StepTimer direction getters/setters. Repeated left-click movement calls the actual surviving playerMove/map API; original Tile::mousePressEvent rejects non-editor tile clicks while original inventory controls consume their own events, so base dispatch runs first and accepted controls are preserved. Direction uses the dominant cardinal axis relative to the player tile center (same center convention as original GameView); repeat interval2*getStep clears the surviving1.5*getStep input throttle. Exact original direction/interval policy is inferred, not recovered. Original headers and all surviving files unchanged.",
+      "sha256": "27bb90a40b3a2a1da6577f5b722979c8ed9aeada400aa407280e6a360a9213d6",
+      "source": "payloads/reconstructions/38/382404a3259a4094aa00d3fc4de2e0ba4d38881b-gamescene.cpp"
+    },
+    {
+      "originalBlob": "308a191c2034cf447d07568dee37ff91fb7461b4",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f6c7917cea6bf8831e4546072a676979eda5a560 (previous version of creatures/creature.cpp)",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "payloads/reconstructions/30/308a191c2034cf447d07568dee37ff91fb7461b4-creature.cpp"
+    },
+    {
+      "originalBlob": "743f120075798d070062f756216332bafde33636",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 00509e4451f6babbff847689d5736a04f4ac1efd (previous version of map/map.cpp)",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "payloads/reconstructions/74/743f120075798d070062f756216332bafde33636-map.cpp"
+    },
+    {
+      "originalBlob": "7ea20e7fe24da32b81173142137a39cf01f7790a",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 382404a3259a4094aa00d3fc4de2e0ba4d38881b (previous version of view/gamescene.cpp)",
+      "sha256": "27bb90a40b3a2a1da6577f5b722979c8ed9aeada400aa407280e6a360a9213d6",
+      "source": "payloads/reconstructions/7e/7ea20e7fe24da32b81173142137a39cf01f7790a-gamescene.cpp"
+    },
+    {
+      "originalBlob": "19901b8249b3f06c3b5089e97dd6166a41b68b91",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; qmake project regenerated with 39 sources from object_script.Game.Debug; settings from intact 84017c91:Game.pro",
+      "sha256": "f9a51887a5b1054e47c7b123137f09ec501a34c3f363b8aa587cc0f8e03d87de",
+      "source": "payloads/reconstructions/19/19901b8249b3f06c3b5089e97dd6166a41b68b91-Game.pro"
+    },
+    {
+      "originalBlob": "3968c09b12382444650ad9713871a9e86728ca7e",
+      "path": "CMap.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior staged map plus actual same-commit CMap.h lazy getMouseHandler() using genuine CMouseHandler(CMap*) constructor. Pending native verification; original bytes preserved.",
+      "sha256": "c957de989d21516ef391cb322d593e9f1881980823bc6fe0e54fd4e34de172a1",
+      "source": "payloads/reconstructions/39/3968c09b12382444650ad9713871a9e86728ca7e-CMap.cpp"
+    },
+    {
+      "originalBlob": "71b1304e8d51e21d427cfafd57b55242bff69b1a",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Preserves prior real config/property loading and CTypeHandler/PyTypeHandler instances; genuine CTypeHandler.cpp now owns its explicit native constructor registry instead of old Qt reflection. Pending native verification; original bytes preserved.",
+      "sha256": "f96f940562b62725deeb8582dced4615a880bd66ad3c36ebb85bd5d876f53eed",
+      "source": "payloads/reconstructions/71/71b1304e8d51e21d427cfafd57b55242bff69b1a-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "f66ce18162e34a082260dd41a7f9370fa69e83f2",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior staged actual inventory/combat/loot/factory bodies preserved against unchanged creature header and genuine newly restored Stats.h; no invented gameplay mechanics. Pending native verification; original bytes preserved.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "payloads/reconstructions/f6/f66ce18162e34a082260dd41a7f9370fa69e83f2-CCreature.cpp"
+    },
+    {
+      "originalBlob": "93f2b270b116a4f949ae106b2fec56a0ae2bc285",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior fight rendering plus genuine intact55e6516 onClickAction body selects real CInteraction after checking real player mana; genuine same-donor empty panel mousePressEvent override retained. Matches actual same-commit CClickAction(CGameObject*) interface. Pending native verification; original bytes preserved.",
+      "sha256": "5b52a2a18af6c8d8727b1cf8958d27967587bcd6f038c46c4c221689c9f95636",
+      "source": "payloads/reconstructions/93/93f2b270b116a4f949ae106b2fec56a0ae2bc285-CFightPanel.cpp"
+    },
+    {
+      "originalBlob": "e0aa328ce54cf3f590714b0645b3708318005de1",
+      "path": "game.pro",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior project removes only CReflection.cpp/.h and ReflectTypes.cpp paths because those genuine files are deleted in this commit; no surviving original translation unit is excluded. Pending native verification; original bytes preserved.",
+      "sha256": "543eabd78ee3bce17321f06602c14b984dd8077d6c5dd994768ce0e1e0b10708",
+      "source": "payloads/reconstructions/e0/e0aa328ce54cf3f590714b0645b3708318005de1-game.pro"
+    },
+    {
+      "originalBlob": "7ae532045937fe2e4c67b8e3b908f8948f0959d0",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #342 reconstruction, not exact original. Prior verified #339 view implementation with only setDraggable definition removed because genuine #342 CPlayerView.h removes that declaration; #344 shares the same missing originalBlob. Pending native verification; all surviving original bytes retained.",
+      "sha256": "5af9bfbbdc4e753f7944942c94196446cf7f0826e2fdfca1bfb0ff94b7501501",
+      "source": "payloads/reconstructions/7a/7ae532045937fe2e4c67b8e3b908f8948f0959d0-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "bc789dea83f80c2465dc4ce0ae56a29ef6a5dcb1",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #345 reconstruction, not exact original. Actual #345 CPlayerView.h changes view ownership from CGameView to AGamePanel and adds base CPlayerView::dropEvent; constructor/drop bodies come from intact55e6516 CPlayerView.cpp and dispatch to genuine same-commit AGamePanel::handleDrop. Other real inventory/equipment/interaction bodies preserved; scene access uses genuine AGamePanel::getView(). Pending native verification; all surviving original bytes retained.",
+      "sha256": "48db811391a8313f3dbca27f4292b9587909fb23e027b9c194040dde1eb309c8",
+      "source": "payloads/reconstructions/bc/bc789dea83f80c2465dc4ce0ae56a29ef6a5dcb1-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "73b2bf2457f354f7712bd9182ab4f0f8bbbc3817",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "Missing #345 reconstruction, not exact original. Prior fight rendering/action implementation changes only player skills view constructor to genuine #345 AGamePanel owner, matching actual CCharPanel/CTradePanel callers. Pending native verification; all surviving original bytes retained.",
+      "sha256": "030c71d0a80e6400b632899148fbbf719d52339d27f8ca66576632a90c5e4a2e",
+      "source": "payloads/reconstructions/73/73b2bf2457f354f7712bd9182ab4f0f8bbbc3817-CFightPanel.cpp"
+    },
+    {
+      "originalBlob": "0d79d3dec229b93544ef643cac8e3ceeb6506c90",
+      "path": "game.pro",
+      "provenance": "Missing #345 reconstruction, not exact original. Prior project adds only genuine #345 newly split Util.cpp and panel/CGamePanel.cpp translation units; no surviving original file is excluded. Pending native verification; all surviving original bytes retained.",
+      "sha256": "9602dc2c1a099d088be9eba1eab30b02787f50eaacb195752bd5e712f1748b18",
+      "source": "payloads/reconstructions/0d/0d79d3dec229b93544ef643cac8e3ceeb6506c90-game.pro"
+    },
+    {
+      "originalBlob": "6f0d957ff87d37a8b522950ace21d73d05c8a518",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #346 reconstruction, not exact original. Prior verified panel-owned view replaces only trade inventory getter with genuine intact55e6516 method using actual same-commit CPlayer::getMarket/CMarket::getTradeItems; original CTradePanel no longer owns its own item set. Pending native verification; surviving original source retained.",
+      "sha256": "694f58c018fb1736300a379a45fbea29f7ec397ada8687079a2b9554a29b0af8",
+      "source": "payloads/reconstructions/6f/6f0d957ff87d37a8b522950ace21d73d05c8a518-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "f9572f59e59fe81622d18cecb433e13fda7960f9",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #346 reconstruction, not exact original. Preserves verified native/script bindings; existing CCreature.trade binding matches genuine new CPlayer override and original Python Market onEnter caller. Pending native verification; surviving original source retained.",
+      "sha256": "0c0398251247a74491b28f9ad5f33eaaef647a86cdac89c17721662702b3f263",
+      "source": "payloads/reconstructions/f9/f9572f59e59fe81622d18cecb433e13fda7960f9-GameScript.cpp"
+    },
+    {
+      "originalBlob": "cd0832f2650635ed1666f11c7f82d36c1d778ac7",
+      "path": "game.pro",
+      "provenance": "Missing #346 reconstruction, not exact original. Prior project adds only genuine newly authored native CMarket translation unit/header. Pending native verification; surviving original source retained.",
+      "sha256": "d994bbe2b3b9ff5772354dbfce76a8b33f9dee90b9816c2c9e52cf326ceea32f",
+      "source": "payloads/reconstructions/cd/cd0832f2650635ed1666f11c7f82d36c1d778ac7-game.pro"
+    },
+    {
+      "originalBlob": "f4d31793c3bef781c0ad7229587f5786e77f2b97",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing #346 reconstruction, not exact original. Preserves previously staged intact55e6516 donor map including Market object with market=exampleMarket, matching genuine new same-commit market template and Python caller. Donor map is not exact original. Pending native verification; surviving original source retained.",
+      "sha256": "c30adeeb2c1192a4378512e0e7630547c29e52d2e693bc33ada9b8bb6b0e9ad4",
+      "source": "payloads/reconstructions/f4/f4d31793c3bef781c0ad7229587f5786e77f2b97-map.json"
+    },
+    {
+      "originalBlob": "c8dba2c378da43ff4c78e6e62e669b80f4a2f265",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #346 reconstruction, not exact original. Preserves real previous creature inventory/combat/loot bodies; getLoot already matches intact55e6516 body now inherited by genuine CMonster after it removes its own override. Pending native verification; surviving original source retained.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "payloads/reconstructions/c8/c8dba2c378da43ff4c78e6e62e669b80f4a2f265-CCreature.cpp"
+    },
+    {
+      "originalBlob": "60c71d28811d1706c1322cb38e96d8e497ab8055",
+      "path": "object/CCreature.h",
+      "provenance": "Missing #346 reconstruction, not exact original. Intact55e6516 same-era header donor, not recovered original; declarations include real virtual trade/getLoot needed by genuine CPlayer and CMonster sources. All other declarations/members match prior staged header ignoring formatting. Pending native verification; surviving original source retained.",
+      "sha256": "e0bc02e3272515774ac858f63c09144f615ad72e9aba9eea040e35d3e2bcb536",
+      "source": "payloads/reconstructions/60/60c71d28811d1706c1322cb38e96d8e497ab8055-CCreature.h"
+    },
+    {
+      "originalBlob": "f1d5cfeb0588d217c7bc6590e0224e72a0c1870f",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #347 reconstruction, not exact original. Adds intact55e6516 CQuestWrapper::isCompleted fallback + CQuest base/wrapper registration and real CPlayer.addQuest binding now required by genuine map1/script.py. Future donor onComplete omitted because actual #347 CQuest.h has no such member. Pending native verification; surviving originals unchanged.",
+      "sha256": "feba30219cf6f009a81a99ad029f4a04aff1b9f5bddc8a3e800f706d930a17cb",
+      "source": "payloads/reconstructions/f1/f1d5cfeb0588d217c7bc6590e0224e72a0c1870f-GameScript.cpp"
+    },
+    {
+      "originalBlob": "449b34403c89a5ce4d968cb2e0babe1d65d997cc",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #347 reconstruction, not exact original. Prior real creature implementation retained against unchanged same-era header; native/script quest mechanics are genuine original CPlayer/CQuest translation units, not implemented as substitutes. Pending native verification; surviving originals unchanged.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "payloads/reconstructions/44/449b34403c89a5ce4d968cb2e0babe1d65d997cc-CCreature.cpp"
+    },
+    {
+      "originalBlob": "8bdd5bff7533ea36bd971a9373f2575f43b242a1",
+      "path": "CPathFinder.cpp",
+      "provenance": "Missing #348 reconstruction, not exact original. Genuine #348 CPathFinder.h removes old smart-finder member helpers/state. Backports intact surviving #350 CPathFinder.cpp free-helper search algorithm to actual older creature-pointer findPath ABI, with original callers requiring a relative next-step delta. Prior random/dumb algorithms retained. Exact missing #348/#349 algorithms are unknown; this is a documented donor-based implementation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "195c2bbe2bf9bdac842391604cf8da581486fdfbb8676e7290ec5311ccce4116",
+      "source": "payloads/reconstructions/8b/8bdd5bff7533ea36bd971a9373f2575f43b242a1-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "5b45427029f5d10b4a44a21056986ad67d6c5218",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #348 reconstruction, not exact original. Preserves prior creature implementation/header donor and actual existing callbacks; same-commit genuine Monster changes only smart-finder selection. Exact missing changes unknown; native compilation/startup provides bounded validation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "payloads/reconstructions/5b/5b45427029f5d10b4a44a21056986ad67d6c5218-CCreature.cpp"
+    },
+    {
+      "originalBlob": "f338285e3b3947e1e20f8dd1a49a7c8be92d054c",
+      "path": "object/CCreature.h",
+      "provenance": "Missing #348 reconstruction, not exact original. Preserves prior creature implementation/header donor and actual existing callbacks; same-commit genuine Monster changes only smart-finder selection. Exact missing changes unknown; native compilation/startup provides bounded validation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "e0bc02e3272515774ac858f63c09144f615ad72e9aba9eea040e35d3e2bcb536",
+      "source": "payloads/reconstructions/f3/f338285e3b3947e1e20f8dd1a49a7c8be92d054c-CCreature.h"
+    },
+    {
+      "originalBlob": "2b2f2fb5ddff600b35b7cd4f2876877359c9a19f",
+      "path": "CPathFinder.cpp",
+      "provenance": "Missing #349 reconstruction, not exact original. Genuine #348 CPathFinder.h removes old smart-finder member helpers/state. Backports intact surviving #350 CPathFinder.cpp free-helper search algorithm to actual older creature-pointer findPath ABI, with original callers requiring a relative next-step delta. Prior random/dumb algorithms retained. Exact missing #348/#349 algorithms are unknown; this is a documented donor-based implementation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "195c2bbe2bf9bdac842391604cf8da581486fdfbb8676e7290ec5311ccce4116",
+      "source": "payloads/reconstructions/2b/2b2f2fb5ddff600b35b7cd4f2876877359c9a19f-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "841fb7d442db3ed84e5e83cbd103336c4d8a52d0",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #340 CItem body carried from #339 reconstructed real inventory/use/drag/click behavior because same-commit genuine CItem.h and mouse-action contracts are unchanged. This does not repair or conceal the separate surviving CReflection.h constructor/metatype mismatch; native verification must expose that issue. Not exact original; pending native verification.",
+      "sha256": "cf4d0b76fa1569ef2364dda336385e06b02b5aa143f115168d5fc8cd4ad06c6a",
+      "source": "payloads/reconstructions/84/841fb7d442db3ed84e5e83cbd103336c4d8a52d0-CItem.cpp"
+    },
+    {
+      "originalBlob": "dd8e45132dbf21ef72603e2a0bfddcffb84b4977",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing Game.pro reconstructed from the same-tree object_script.Game.Debug compiled object list and the nearest intact 84017c91 Game.pro settings. Native GCC first failed in unchanged view/gameview.h:26 because its CharView pointer has no declaration. Inferred project-only build compatibility force-includes the same-commit surviving view/charview.h (SHA-256 3a46107f0f2fa4248ee3ae3bd84044c797fde799859d617eccff8a0eb2628d18) with QMAKE_CXXFLAGS += -include $$PWD/view/charview.h. No surviving header, implementation, configuration or resource bytes are changed. Acceptance is compilation and genuine game startup with this reconstructed-project include repair; unchanged authored build/startup and historical gameplay equivalence remain unverified. First failure and original input hashes retained in native-early/failures/114-first-build/diagnostic.json. The same missing project blob also covers #115; includes genuine view/charview.cpp, which its original GameView now constructs even though the retained older object_script omits that source. At #114 the extra real empty constructor is unused; no original implementation is synthesized. This repaired project is build compatibility in both trees. Clarification: the cited CharView header SHA is the genuine #114 header. #115 has a newer genuine header and already includes it; the force-include is redundant there, while adding the genuine CharView.cpp remains required.",
+      "sha256": "9f999842fd25e02acf2f46ce4598811f304c447624f50005ed1a673fc9d78389",
+      "source": "payloads/reconstructions/dd/dd8e45132dbf21ef72603e2a0bfddcffb84b4977-Game.pro"
+    },
+    {
+      "originalBlob": "d69a34617bc5de3e9d83601c3a8e76fb2ef4b1fc",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted the validated #114 Creature reconstruction to genuine #115 set-based inventory/equipment/actions/effects and loot declarations, matching original Monster::getLoot, PlayerListView and item callers. Set insertion/erase replace list mutation; adding a loot container transfers its elements as the previous merge did. Implements actual declared getEquipped/getExp accessors. Earlier inferred combat/stat formulas and save schema retained; original internal delta unavailable.",
+      "sha256": "92e8cd504a41d309120e4b366b4346fcbe2fea132c396d1d0e79cf81f6078523",
+      "source": "payloads/reconstructions/d6/d69a34617bc5de3e9d83601c3a8e76fb2ef4b1fc-creature.cpp"
+    },
+    {
+      "originalBlob": "24e7b877bed88d78f4fda15df1bfaa7e78d487d4",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted the validated #114 Player reconstruction to genuine #115 std::set loot/inventory/actions/equipment and original PlayerListView(std::set<ListItem*>*). Uses per-player sets of actual base-class pointers for view collections, avoiding reinterpretation of incompatible standard container types. Populates view sets from real owned items/actions before original panels update. The exact original layout/refresh policy remains inferred; no fake items or player objects.",
+      "sha256": "0238001692c1109aac7cbf16ce7f96111cd1d998c74430ac12cdacd8d680b8cd",
+      "source": "payloads/reconstructions/24/24e7b877bed88d78f4fda15df1bfaa7e78d487d4-player.cpp"
+    },
+    {
+      "originalBlob": "8460dd5f7a70bce05e7add86fda814232bfb45a4",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #114 Map reconstruction to genuine #115 header removal of Map::show and cacheSize member. Removed obsolete show body; retains the immediately preceding original cache radius25 as a local ensureSize policy because the missing body gives no evidence for a new viewport/radius rule. Rendering, map state and object traversal remain real. Radius policy and prior unknown implementation deltas are explicitly inferred.",
+      "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
+      "source": "payloads/reconstructions/84/8460dd5f7a70bce05e7add86fda814232bfb45a4-map.cpp"
+    },
+    {
+      "originalBlob": "df89ff055df427f5fed56b631a812c62a42a40ab",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #114 Scene reconstruction to genuine #115 getStep/getMap declarations moved out of line. Returns the immediately preceding original inline step100 and actual owned map; real inherited mouse movement/save/startup behavior unchanged. Original internal delta unavailable.",
+      "sha256": "f4f4df8be4cd540a4a7062c32cf730d2e6d3ab901ee7d0fbf1b6dcc50effa2f1",
+      "source": "payloads/reconstructions/df/df89ff055df427f5fed56b631a812c62a42a40ab-gamescene.cpp"
+    },
+    {
+      "originalBlob": "6ae1a8de2c8e6d1d2c89e03f1ad6cb9bb8bf703b",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #115 set-based Player to genuine #116 Player::BackPackObject declaration, original images.qrc backpack.png and original GameView::showCharView public slot. The actual icon child belongs to the real Player, and left-click calls the existing character panel toggle, consuming that UI event. Ownership uses a QGraphicsItem child to preserve value-member lifetime. View anchoring at top center and exact original connection/layout policy are inferred because the body is missing; no neighboring surviving backpack implementation exists through149. getStep/containers/save/combat retain prior provenance; startup does not prove click behavior or gameplay equivalence.",
+      "sha256": "6e92174580f62cb1e54e407b5f5b320690f7ab7572c67123f2205c4472695fdf",
+      "source": "payloads/reconstructions/6a/6ae1a8de2c8e6d1d2c89e03f1ad6cb9bb8bf703b-player.cpp"
+    },
+    {
+      "originalBlob": "32c76f68b27dd5a1c61724e2cb1a41fafb83dbb6",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #115 Map reconstruction unchanged; same surviving Map API at #116. Prior explicitly inferred cache radius and unknown original implementation deltas retained.",
+      "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
+      "source": "payloads/reconstructions/32/32c76f68b27dd5a1c61724e2cb1a41fafb83dbb6-map.cpp"
+    },
+    {
+      "originalBlob": "5cbd4115d0db676b3a82e26a9f6937fb15ff7017",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Copied genuine surviving immediately preceding #115 6d8b6688d0808565029e6b96e9a52549e80c19aa:view/gameview.cpp; #116 original GameView header only moves the already existing showCharView method into Qt public slots, requiring no implementation change. Missing-source copy formatted to repository style only. Unknown original #116 implementation delta remains unverified; this avoids the generic future donor currently selected for the missing source.",
+      "sha256": "cd5b7358cecdb0fd1a6f1a70a60b7644b792acb67a4f37a1062693655309e90e",
+      "source": "payloads/reconstructions/5c/5cbd4115d0db676b3a82e26a9f6937fb15ff7017-gameview.cpp"
+    },
+    {
+      "originalBlob": "7ce52b63ae9306fd7d49f7592235f7413413d2c0",
+      "path": "CMap.cpp",
+      "provenance": "Missing #350 reconstruction, not exact original. Prior real JSON loader/map body updates only canStep(Coords&) to genuine #350 const Coords& declaration; surviving original CPathFinder.cpp now supplies the authored pathfinder. Pending native verification; all surviving originals retained.",
+      "sha256": "708c37cd9c5a797fe29b1bec68d3560a0b6598d473359111caca643c77220ce6",
+      "source": "payloads/reconstructions/7c/7ce52b63ae9306fd7d49f7592235f7413413d2c0-CMap.cpp"
+    },
+    {
+      "originalBlob": "5feb2920b13b4818c48523536a9e3a84fe9f19d4",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #350 reconstruction, not exact original. Uses complete intact55e6516 CQuestWrapper including newly authored same-commit CQuest::onComplete, plus the corresponding real binding; original CPlayer::checkQuests drives completion/removal. Pending native verification; all surviving originals retained.",
+      "sha256": "606e53fd6fb9e133820ee069b98cc7339201ef154552636606b7e5ecd2c18f5a",
+      "source": "payloads/reconstructions/5f/5feb2920b13b4818c48523536a9e3a84fe9f19d4-GameScript.cpp"
+    },
+    {
+      "originalBlob": "75a0d46aa2ada95db722db0e3882e522aae1ccc2",
+      "path": "CMap.cpp",
+      "provenance": "Missing #351 reconstruction, not exact original. Actual #351 CMap.h moves player ownership from scene to map; getPlayer/setPlayer bodies are unchanged intact55e6516 donor methods matching the genuine CGameScene::startGame call. Other verified loader/map bodies preserved. Pending native verification; surviving original bytes retained.",
+      "sha256": "e017f6194aafa6934c780de2b1fd08708f7b97bc756812257e66c80a6daa7dd5",
+      "source": "payloads/reconstructions/75/75a0d46aa2ada95db722db0e3882e522aae1ccc2-CMap.cpp"
+    },
+    {
+      "originalBlob": "a8ab7c56aa4ba14aec16f31ef6abd6dc4ae79820",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #351 reconstruction, not exact original. Prior actual creature combat/inventory bodies already obtain player through map, consistent with genuine removal of CGameScene::getPlayer; missing exact implementation unknown. Pending native verification; surviving original bytes retained.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "payloads/reconstructions/a8/a8ab7c56aa4ba14aec16f31ef6abd6dc4ae79820-CCreature.cpp"
+    },
+    {
+      "originalBlob": "a6e76a3cc1ce3f3a54220aeb3d455c989311c902",
+      "path": "game.pro",
+      "provenance": "Missing #351 reconstruction, not exact original. Preserves prior game translation-unit/header list while actual same-commit game.pri carries original platform settings. Genuine test subproject is deleted; no surviving game source is excluded. Pending native verification; surviving original bytes retained.",
+      "sha256": "d994bbe2b3b9ff5772354dbfce76a8b33f9dee90b9816c2c9e52cf326ceea32f",
+      "source": "payloads/reconstructions/a6/a6e76a3cc1ce3f3a54220aeb3d455c989311c902-game.pro"
+    },
+    {
+      "originalBlob": "3d74f8bb39040611e1edc5529c3a351a40fafda1",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project regenerated from genuine same-tree object_script.Game.Debug (40 source objects, no unmatched objects), with nearest intact #116 84017c91 Game.pro settings and same-tree headers/resources. No CharView force-include compatibility is needed because the genuine GameView header now declares it.",
+      "sha256": "454f00ef705d2ac5ae4386c329f4cca72a8c0898c84967d0b53476e9251e5650",
+      "source": "payloads/reconstructions/3d/3d74f8bb39040611e1edc5529c3a351a40fafda1-Game.pro"
+    },
+    {
+      "originalBlob": "37e427803241cb871151ac0db713908eebab274c",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #115\u2013116 set-based Creature reconstruction unchanged; same surviving Creature API at #117. Internal original implementation delta unavailable; inferred formulas/save behavior retain prior provenance.",
+      "sha256": "92e8cd504a41d309120e4b366b4346fcbe2fea132c396d1d0e79cf81f6078523",
+      "source": "payloads/reconstructions/37/37e427803241cb871151ac0db713908eebab274c-creature.cpp"
+    },
+    {
+      "originalBlob": "9ed8b6a0ea0c97e630b753130e7081e3e905ee8b",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #116 Player reconstruction to genuine #117 removal of BackPackObject::pixmap data member. Set the original backpack resource directly on the real QGraphicsPixmapItem, retaining existing click-to-showCharView and explicitly inferred top-center layout. Prior container/view/combat provenance remains; no surviving original changed.",
+      "sha256": "1c4b73a4bd5261e3616a90b8de243f205600481f8cd796dc362a5ad936733c32",
+      "source": "payloads/reconstructions/9e/9ed8b6a0ea0c97e630b753130e7081e3e905ee8b-player.cpp"
+    },
+    {
+      "originalBlob": "fa914510ef5d09fc81eeca52c6b1749836957f28",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #117 Creature to genuine #118 Q_OBJECT/statsChanged signal and surviving PlayerStatsView::setPlayer connection. Actual HP/mana/derived-pool mutations emit the real moc-generated signal so the original stats widget refreshes. Set containers/combat/stat formulas/save schema retain prior provenance; exact original signal timing and internal delta remain unverified.",
+      "sha256": "96f185f0f757dc455e9ce32feb8dad3f36218fd2ac6e24232dc1735ac793c875",
+      "source": "payloads/reconstructions/fa/fa914510ef5d09fc81eeca52c6b1749836957f28-creature.cpp"
+    },
+    {
+      "originalBlob": "988560a578c821c66f83b0317f9fbcea7f0b5c43",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #117 Player to genuine #118 removal of its stats widget/backpack and original QWidget PlayerStatsView::setPlayer signal contract. Player keeps its actual inventory/skill/equipment list views and base-pointer sets. Inventory/equipment parent to the actual CharView, following the surviving #117 GameView::showCharView local positions; exact original parenting/layout remains inferred. Real Player mutations emit inherited statsChanged; no stats/widget stand-ins. Prior save/combat inference remains explicit.",
+      "sha256": "1a107d4d0d30523d063b963b7455ea973ac061da6eb1e1b776ad31cd739e13a2",
+      "source": "payloads/reconstructions/98/988560a578c821c66f83b0317f9fbcea7f0b5c43-player.cpp"
+    },
+    {
+      "originalBlob": "466fd0ff60af42fa33a5d1a1a49459fa9c7b578b",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #115\u2013117 Scene reconstruction unchanged; surviving #118 Scene API is identical. Prior actual movement/map/save behavior retained; unknown original internal delta remains unverified.",
+      "sha256": "f4f4df8be4cd540a4a7062c32cf730d2e6d3ab901ee7d0fbf1b6dcc50effa2f1",
+      "source": "payloads/reconstructions/46/466fd0ff60af42fa33a5d1a1a49459fa9c7b578b-gamescene.cpp"
+    },
+    {
+      "originalBlob": "f4f8341ef74e233052ad7217fef609710f7861b5",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted genuine surviving immediately preceding #117 eacc2b048f24ef3ac1622e2ddfb6767e75ce0649:view/gameview.cpp to original #118 QWidget BackPackObject clicked signal/paint event and GameView-owned PlayerStatsView. Uses the actual backpack image, connects clicked to the authored showCharView slot, and binds the original stats widget to the actual player after real Scene startup. Child QWidget ownership preserves value-member lifetimes. Top-center backpack placement and exact original widget layout/signal timing are inferred; original main/config/headers/widgets/resources unchanged. Startup does not prove ordinary click behavior or gameplay parity.",
+      "sha256": "084aab2e7dc29fe38d728bbf28ed27186ffb5438e989af81f328c6563d2c8480",
+      "source": "payloads/reconstructions/f4/f4f8341ef74e233052ad7217fef609710f7861b5-gameview.cpp"
     }
   ],
   "schemaVersion": 1

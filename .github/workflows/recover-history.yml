@@ -14,6 +14,8 @@ on:
       - scripts/history_source_prep.py
       - scripts/history_prepare_includes.py
       - scripts/history_prepare_resources.py
+      - scripts/history_prepare_reflection.py
+      - scripts/history_prepare_coordinates.py
       - scripts/history_qmake_compatibility.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
@@ -27,6 +29,8 @@ on:
       - tests/test_history_workbench.py
       - tests/test_history_source_prep.py
       - tests/test_history_resource_preparation.py
+      - tests/test_history_reflection_preparation.py
+      - tests/test_history_coordinate_preparation.py
       - tests/test_history_prepare_includes.py
       - tests/test_history_qmake_compatibility.py
       - tests/test_recovery_workflow.py
@@ -55,7 +59,8 @@ jobs:
             tests.test_history_config tests.test_recovery_readme \
             tests.test_history_payloads tests.test_history_resources tests.test_history_rootfs \
             tests.test_history_workbench tests.test_history_source_prep tests.test_history_prepare_includes \
-            tests.test_history_qmake_compatibility tests.test_history_resource_preparation
+            tests.test_history_qmake_compatibility tests.test_history_resource_preparation \
+            tests.test_history_reflection_preparation tests.test_history_coordinate_preparation
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards
