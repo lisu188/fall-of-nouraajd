@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-e5zrbrvv/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-ak6rngwz/observer/recovery_smoke_config.h",
     "configSha256": "99b9801b098411b47a087fe8e4824cb3775e61c14447401e21239a079b4785f8",
     "id": "classic-editor",
     "mode": "editor",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-e5zrbrvv/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-ak6rngwz/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-e5zrbrvv/build.log",
+    "log": "/home/user/work2/verify/snapshot-ak6rngwz/build.log",
     "returnCode": 0,
-    "seconds": 16.659,
+    "seconds": 17.054,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-e5zrbrvv/source/Game.pro",
+      "/home/user/work2/verify/snapshot-ak6rngwz/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-e5zrbrvv/build/Makefile",
+      "/home/user/work2/verify/snapshot-ak6rngwz/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-e5zrbrvv/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-e5zrbrvv/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ak6rngwz/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ak6rngwz/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-e5zrbrvv/configure.log",
+    "log": "/home/user/work2/verify/snapshot-ak6rngwz/configure.log",
     "returnCode": 0,
-    "seconds": 0.064,
+    "seconds": 0.114,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/86073a19ae716db7d87de542ee564ebbc813a6d98b0d36c3b57ae5d054e6f493",
+  "evidenceDir": "/home/user/work2/verify/evidence/237ab871b94285ab30536a41b99e273cb67d5da863feadc031b0938e168c2903",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-e5zrbrvv/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-ak6rngwz/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-e5zrbrvv/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-ak6rngwz/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.215,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "86073a19ae716db7d87de542ee564ebbc813a6d98b0d36c3b57ae5d054e6f493",
+  "fingerprint": "237ab871b94285ab30536a41b99e273cb67d5da863feadc031b0938e168c2903",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-e5zrbrvv/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-ak6rngwz/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -183,15 +183,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-e5zrbrvv/source",
+    "outputDir": "/home/user/work2/verify/snapshot-ak6rngwz/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "36a2abe00f55a8a2c096d7659890b4b4ae359ce1",
         "path": "Game.pro",
-        "provenance": "unverified donor reconstruction; 5258bb040f2780638a76c26b0a61bb9437cdaab5:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=1",
-        "replacementBlob": "874d0ae4294d32f471f7a5c0c630245fa4ad19ea"
+        "provenance": "working reconstruction",
+        "replacementBlob": "49bebcf463a0eb4ef967b36899046d541a3afe39"
       },
       {
         "markerPath": "base64/base64.cpp.REMOVED.git-id",
@@ -1027,7 +1027,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "a322794e04fd8098a0019d2198fc165d68fec6cde0a37b74854381bec50ed99f",
+    "restoredFilesFingerprint": "ffa7453cb8252bf09bb0146b2f26e1f1bcdbf8c632083029c358741c4b627202",
     "sourceCommit": "709535a6085c63fe1d26aebc3414ea2281529b3b",
     "sourceTree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15",
     "status": "complete",
@@ -1065,10 +1065,10 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-e5zrbrvv/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-e5zrbrvv/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-ak6rngwz/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-ak6rngwz/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-e5zrbrvv/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-ak6rngwz/smoke/startup.log",
     "returnCode": 0,
     "seconds": 0.165,
     "startup": {
@@ -1080,7 +1080,7 @@
       },
       "frame": {
         "height": 704,
-        "path": "/home/user/work2/verify/snapshot-e5zrbrvv/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-ak6rngwz/smoke/startup.png",
         "sha256": "de00c5552573a50e389602a72a049c5e923c45d97a090689ee04ca69c9435bd3",
         "width": 1264
       },
@@ -1090,7 +1090,7 @@
       "status": "ready",
       "validationBoundary": "Authored editor startup; gameplay and player are unverified"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-e5zrbrvv/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-ak6rngwz/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
@@ -1153,7 +1153,7 @@
           "history_source_prep.py",
           "normalize-quoted-includes"
         ],
-        "log": "/home/user/work2/verify/snapshot-e5zrbrvv/preparation/include-separators.log",
+        "log": "/home/user/work2/verify/snapshot-ak6rngwz/preparation/include-separators.log",
         "name": "windowsIncludeSeparators",
         "returnCode": 0,
         "timedOut": false

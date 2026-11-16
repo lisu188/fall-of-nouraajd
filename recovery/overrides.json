@@ -95878,6 +95878,97 @@
       "provenance": "content reconstruction of the BFG-removed original; from the 787c07ab reconstruction: Map::isEditor reads the editor flag of config/init.json, and MapObject::mousePressEvent starts the surviving AnimatedObject drag in the editor while leaving game clicks to other handlers (same-commit map.h, item.cpp, init.json)",
       "sha256": "30be9fe5f01e8daba1bc08f67730aef49940cd08773fd034c19f54f5a826586b",
       "source": "payloads/reconstructions/13/13c4aab01de6bf426c3414c0cdaf713150c0ba08-map.cpp"
+    },
+    {
+      "originalBlob": "26987e9ade4abb9dca784c78d7ef4626434146d0",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #157 Map body carried unchanged from the native-verified #156 reconstruction: map/map.h and its callers are unchanged at #157; the tile size still follows config/init.json gameSize, which this commit lowers to 32 to match the new 32px tile images",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "payloads/reconstructions/26/26987e9ade4abb9dca784c78d7ef4626434146d0-map.cpp"
+    },
+    {
+      "originalBlob": "2e11b4ac70d1dd42150a0e3265af39cbe00d0955",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9a8894c8b2ad2550e0b28afe00d7c7c75d05da54 (previous version of view/gamescene.cpp)",
+      "sha256": "bb2a9f8399b86ba209386d8fc15898ae8a61e1bb4fe4bb762183daaf490f6ab8",
+      "source": "payloads/reconstructions/2e/2e11b4ac70d1dd42150a0e3265af39cbe00d0955-gamescene.cpp"
+    },
+    {
+      "originalBlob": "36a2abe00f55a8a2c096d7659890b4b4ae359ce1",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #156 project: the intact #155 Game.pro plus the vendored TmxParser library this commit ('tmx parser') adds (tmx/*, tinyxml/*, base64/*, zlib/* sources and headers, listed in directory order); compression/minizip.h, which this commit deletes, is no longer listed. Entry order is inferred.",
+      "sha256": "9067ec660c7aa8ba3bcdfb94147bb1bf690a7842b8de59a3a1dff172cc85ab3d",
+      "source": "payloads/reconstructions/36/36a2abe00f55a8a2c096d7659890b4b4ae359ce1-Game.pro"
+    },
+    {
+      "originalBlob": "38e482ddb223b7f3e4c6fe6392186bda488ccda4",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f50450a42a588a0a036ebff412b6ff245a8222cc (previous version of view/gamescene.cpp)",
+      "sha256": "bb2a9f8399b86ba209386d8fc15898ae8a61e1bb4fe4bb762183daaf490f6ab8",
+      "source": "payloads/reconstructions/38/38e482ddb223b7f3e4c6fe6392186bda488ccda4-gamescene.cpp"
+    },
+    {
+      "originalBlob": "6b6244e51180200914bebe6d31d0fc5f372d925b",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #166 Map body: the native-verified #164 reconstruction adapted to the same-commit map.h, which moves Map::getObjects out of line and adds virtual MapObject::onMoveEnd/isAsync while the surviving Monster starts its path search on a thread in onMove and applies it in onMoveEnd. The turn loop now calls onMove on every other object, then onMoveEnd on the asynchronous ones still on the map (inference); MapObject::onMoveEnd defaults to no action",
+      "sha256": "16532fdff5d7e323aa7193f35c831935d7728711c09ba2209a906ad206e208a0",
+      "source": "payloads/reconstructions/6b/6b6244e51180200914bebe6d31d0fc5f372d925b-map.cpp"
+    },
+    {
+      "originalBlob": "78c0f564d9e8c27c80bc82812979cf1709c3a866",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #164 Map body carried unchanged from the native-verified #163 reconstruction; the only same-commit map.h change adds an inline virtual MapObject::loadFromProps default. As in the earlier donor, loadMapFromTmx stays an empty declaration-only path and the map still loads from config/map.json (inference)",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "payloads/reconstructions/78/78c0f564d9e8c27c80bc82812979cf1709c3a866-map.cpp"
+    },
+    {
+      "originalBlob": "9112a47e26e740f03f986aba28a3ee50251d4978",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #160-#169 project (one original blob): the native-verified #159 project plus the RandomPathFinder sources #160 adds, and the vendored TmxParser library this tree carries since #156 (tmx/*, tinyxml/*, base64/*, zlib/* sources and headers, listed in directory order) which the surviving #164 teleporter.cpp and map.h require; compression/minizip.h, deleted at #156, is no longer listed. Entry order is inferred.",
+      "sha256": "5ecb173bdc85d41c509e4719e01fe515ba258daa09ef767e04e357b4a43ae287",
+      "source": "payloads/reconstructions/91/9112a47e26e740f03f986aba28a3ee50251d4978-Game.pro"
+    },
+    {
+      "originalBlob": "9d0668cc53b82faaec2241677f0d8f4cce905ccc",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #170 project ('Game.pro edited online with Bitbucket'): the native-verified #160-#169 project plus QMAKE_CXXFLAGS/LIBS -pthread. Inference: the only change in this commit follows #169's online edit wrapping the new std::thread pathfinding in try/catch, the symptom of a build linked without -pthread; the exact original wording is unknown",
+      "sha256": "aaf58503e3c6384a1e4b3b1cbfaff41fd2f45ab90abb7551af5230796ee0185a",
+      "source": "payloads/reconstructions/9d/9d0668cc53b82faaec2241677f0d8f4cce905ccc-Game.pro"
+    },
+    {
+      "originalBlob": "e197feb3953c9c65e51587a60fc2fe66155a063e",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f59850bc2948c48c34f05161ff83bf840234b80b (previous version of map/map.cpp)",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "payloads/reconstructions/e1/e197feb3953c9c65e51587a60fc2fe66155a063e-map.cpp"
+    },
+    {
+      "originalBlob": "e8f90a736b9d1ab09523193860a2f6df5fcf3875",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #157-#159 project: the #156 reconstruction with view/mapview and view/mapscene removed, exactly as this commit deletes those surviving files and their main.cpp/tile.cpp references",
+      "sha256": "fe16d4351fde92f728e5f46dfdca0dfbc0d8dbb63c3691a5431b090f5b3f79af",
+      "source": "payloads/reconstructions/e8/e8f90a736b9d1ab09523193860a2f6df5fcf3875-Game.pro"
+    },
+    {
+      "originalBlob": "f50450a42a588a0a036ebff412b6ff245a8222cc",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 2e11b4ac70d1dd42150a0e3265af39cbe00d0955 (previous version of view/gamescene.cpp)",
+      "sha256": "bb2a9f8399b86ba209386d8fc15898ae8a61e1bb4fe4bb762183daaf490f6ab8",
+      "source": "payloads/reconstructions/f5/f50450a42a588a0a036ebff412b6ff245a8222cc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "f59850bc2948c48c34f05161ff83bf840234b80b",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 26987e9ade4abb9dca784c78d7ef4626434146d0 (previous version of map/map.cpp)",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "payloads/reconstructions/f5/f59850bc2948c48c34f05161ff83bf840234b80b-map.cpp"
+    },
+    {
+      "originalBlob": "fadffa17076c55f9bfc705548f355e69c7a56248",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e197feb3953c9c65e51587a60fc2fe66155a063e (previous version of map/map.cpp)",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "payloads/reconstructions/fa/fadffa17076c55f9bfc705548f355e69c7a56248-map.cpp"
     }
   ],
   "schemaVersion": 1
