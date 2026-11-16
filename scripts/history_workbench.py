@@ -163,7 +163,8 @@ def prep(ref: str, quiet: bool = False) -> Path:
         for item in report["restored"]:
             if item["method"] == "reconstruction" and item["path"].endswith(CODE + (".pro", ".py", ".json")):
                 marker = "WORK " if item["originalBlob"] in working else "     "
-                print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{item['provenance'][:70]}]")
+                provenance = str(item["provenance"])[:70]
+                print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{provenance}]")
         print(destination)
     return destination
 
@@ -354,16 +355,46 @@ def verify(ref: str, recipe: str | None = None) -> str:
     return result.stdout.split(" ", 1)[0]
 
 
+def accepted(commit: str) -> bool:
+    """True when exported success evidence still matches this commit's current restored inputs."""
+    report_path = REPO / "recovery/evidence" / commit / "verification.json"
+    if not report_path.is_file():
+        return False
+    report = json.loads(report_path.read_text())
+    if report.get("status") != "success":
+        return False
+    overrides = rh.loadOverrides(workbenchOverrides())
+    with rh.GitObjects(REPO) as objects:
+        try:
+            current = rh.prepareSnapshot(objects, CATALOG, commit, overrides)[1]["restoredFilesFingerprint"]
+        except rh.RecoveryError:
+            return False
+    return report.get("restoration", {}).get("restoredFilesFingerprint") == current
+
+
+def regeneratedProject(number: int) -> str | None:
+    try:
+        return project(str(number))
+    except SystemExit as reason:
+        print("keeping the existing project proposal:", reason)
+        return None
+
+
 def auto(start: int, end: int, check: bool = False) -> None:
     for number in range(start, end + 1):
         commit = ORDER[number - 1]
+        if accepted(commit):
+            print(f"=== #{number} {commit[:8]} already accepted", flush=True)
+            continue
         print(f"=== #{number} {commit[:8]}", flush=True)
         prep(str(number), quiet=True)
         carried = carry(str(number))
         generated = [
-            (entry["path"], entry["originalBlob"], project(str(number)))
+            (entry["path"], entry["originalBlob"], summary)
             for entry in missing(commit)
             if entry["path"].endswith(".pro") and not reconstructed(entry["originalBlob"])
+            for summary in [regeneratedProject(number)]
+            if summary
         ]
         if not build(str(number), lines=25):
             print(f"STOP at #{number}")

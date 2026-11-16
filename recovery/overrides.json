@@ -95871,6 +95871,13 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7476f6bac498deb69ac2f9eb80963e8cab3c5705 (previous version of view/mapview.cpp)",
       "sha256": "539dbfbe69530be242b9864451dc2933fff9bccd6a39f18c5a20e3c6e9582e4e",
       "source": "payloads/reconstructions/8f/8f14ea380b0123c39f2ba1425e283a3e3ffed642-mapview.cpp"
+    },
+    {
+      "originalBlob": "13c4aab01de6bf426c3414c0cdaf713150c0ba08",
+      "path": "map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; from the 787c07ab reconstruction: Map::isEditor reads the editor flag of config/init.json, and MapObject::mousePressEvent starts the surviving AnimatedObject drag in the editor while leaving game clicks to other handlers (same-commit map.h, item.cpp, init.json)",
+      "sha256": "30be9fe5f01e8daba1bc08f67730aef49940cd08773fd034c19f54f5a826586b",
+      "source": "payloads/reconstructions/13/13c4aab01de6bf426c3414c0cdaf713150c0ba08-map.cpp"
     }
   ],
   "schemaVersion": 1
