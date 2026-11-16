@@ -819,6 +819,12 @@ def verifySnapshot(
                 raise VerificationError("Historical compatibility states unexpectedly overlap")
             startup["boundary"] = coordinates["validationBoundary"]
             result["startupCompatibility"] = "originalCoordinateHash"
+        resource_aliases = preparation["identity"].get("resourceAliases")
+        if resource_aliases:
+            if supplemental or reflection or coordinates:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = resource_aliases["validationBoundary"]
+            result["startupCompatibility"] = "renamedResourceAliases"
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")

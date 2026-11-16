@@ -152,6 +152,39 @@ def coordinateHashAttachments(report: dict, preparation: dict, evidence_dir: Pat
     }
 
 
+def resourceAliasAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.aliases_prep
+    compatibility = preparation.get("identity", {}).get("resourceAliases", {})
+    replay = Path(helper.__file__).read_bytes()
+    aliases = compatibility.get("aliases", {})
+    if (
+        {key: value for key, value in compatibility.items() if key != "aliases"}
+        != {
+            "inputs": helper.INPUTS,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "renamedResourceAliases"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+        or set(aliases) != set(helper.ALIASES)
+        or any(
+            aliases[target] != {"source": source, "sha256": helper.INPUTS[source]}
+            for target, source in helper.ALIASES.items()
+        )
+    ):
+        raise VerificationError("Resource alias compatibility differs from its reviewed original inputs or boundary")
+    outputs = {
+        entry.get("path"): entry.get("after")
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in helper.ALIASES
+    }
+    if outputs != {target: {"kind": "file", "sha256": aliases[target]["sha256"]} for target in helper.ALIASES}:
+        raise VerificationError("Resource alias compatibility outputs lack their exact preparation fingerprints")
+    return {"recovery/prepare_resource_aliases.py": replay}
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -165,10 +198,12 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_resources = "supplementalResources" in names
     has_reflection = "reflectionRegistration" in names
     has_coordinates = "coordinatesHash" in names
+    has_aliases = "resourceAliases" in names
     expected_names = (
         (["supplementalResources"] if has_resources else [])
         + (["reflectionRegistration"] if has_reflection else [])
         + (["coordinatesHash"] if has_coordinates else [])
+        + (["resourceAliases"] if has_aliases else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -191,6 +226,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         attachments.update(reflectionRegistrationAttachments(report, preparation, evidence_dir))
     if has_coordinates:
         attachments.update(coordinateHashAttachments(report, preparation, evidence_dir))
+    if has_aliases:
+        attachments.update(resourceAliasAttachments(report, preparation))
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -228,6 +265,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
                 or (has_reflection and name == source_prep.reflection_prep.TARGET)
                 or (has_coordinates and name == source_prep.coordinates_prep.TARGET)
+                or (has_aliases and name in source_prep.aliases_prep.ALIASES)
             )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
@@ -308,12 +346,14 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     resource_preparation = "recovery/supplemental_images.qrc" in preparation_files
     reflection_preparation = "recovery/prepare_reflection_registration.py" in preparation_files
     coordinates_preparation = "recovery/prepare_coordinates_hash.py" in preparation_files
+    alias_preparation = "recovery/prepare_resource_aliases.py" in preparation_files
     compatibility_modes = [
         name
         for enabled, name in (
             (resource_preparation, "supplementalQtResources"),
             (reflection_preparation, "parentReflectionRegistration"),
             (coordinates_preparation, "originalCoordinateHash"),
+            (alias_preparation, "renamedResourceAliases"),
         )
         if enabled
     ]
@@ -384,7 +424,13 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
         prerequisites += f", with CPython {abi} development files and its matching Boost.Python library"
-    if include_preparation or resource_preparation or reflection_preparation or coordinates_preparation:
+    if (
+        include_preparation
+        or resource_preparation
+        or reflection_preparation
+        or coordinates_preparation
+        or alias_preparation
+    ):
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
         f"# Recovered {mode} snapshot",
@@ -451,6 +497,19 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             if coordinates_preparation
             else []
         ),
+        *(
+            [
+                "Startup used explicit build-only resource aliases. This commit renamed three monster `time.txt`",
+                "files to `time.json` without changing their bytes, but its unchanged original `creatures.qrc`",
+                "still names `time.txt`, so the original manifest cannot compile; the next commit updates it.",
+                "The attached helper supplies each manifest-named file with the exact bytes of its rename target,",
+                "as the parent commit held them. The original manifest, sources and images remain unchanged.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if alias_preparation
+            else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -486,6 +545,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_supplemental_resources.py"] if resource_preparation else []),
         *(["python3 recovery/prepare_reflection_registration.py"] if reflection_preparation else []),
         *(["python3 recovery/prepare_coordinates_hash.py"] if coordinates_preparation else []),
+        *(["python3 recovery/prepare_resource_aliases.py"] if alias_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

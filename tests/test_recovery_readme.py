@@ -283,6 +283,67 @@ class RecoveryReadmeTest(unittest.TestCase):
             progress = json.loads((repository / "recovery/progress.json").read_text())
             self.assertEqual(0, progress["validatedCommitCount"])
 
+    def aliasReport(self):
+        helper = history_source_prep.aliases_prep
+        compatibility = {
+            "aliases": {
+                target: {"source": source, "sha256": helper.INPUTS[source]}
+                for target, source in sorted(helper.ALIASES.items())
+            },
+            "inputs": helper.INPUTS,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {"path": target, "before": None, "after": {"kind": "file", "sha256": helper.INPUTS[source]}}
+            for target, source in sorted(helper.ALIASES.items())
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "resourceAliases",
+                    "command": ["prepare-resource-aliases"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "resourceAliases": compatibility, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "renamedResourceAliases"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Supplied manifest-named resource aliases\n")
+        return helper
+
+    def testResourceAliasCompatibilityHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.aliasReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_resource_aliases.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("The original manifest, sources and images remain unchanged.", readme)
+        self.assertIn("python3 recovery/prepare_resource_aliases.py", readme)
+
+    def testResourceAliasCompatibilityRejectsChangedInputsOutputsAndLabels(self):
+        helper = self.aliasReport()
+        metadata = self.report["sourcePreparation"]["identity"]["resourceAliases"]
+        original = dict(metadata["inputs"])
+        metadata["inputs"] = {**original, "creatures.qrc": "0" * 64}
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        metadata["inputs"] = original
+        target = sorted(helper.ALIASES)[0]
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = helper.INPUTS[helper.ALIASES[target]]
+        self.report["startupCompatibility"] = None
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def resourceReport(self):
         resource = (
             '<RCC>\n    <qresource prefix="/">\n'
