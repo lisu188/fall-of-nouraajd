@@ -628,6 +628,9 @@ def progress() -> None:
             if report.get("startupCompatibility") == "mergedHeaderForwarders":
                 item["startupCompatibility"] = "mergedHeaderForwarders"
                 item["validation"] = "build-and-startup-with-forwarding-header-compatibility-passed"
+            if report.get("startupCompatibility") == "unfinishedRefactorCompletion":
+                item["startupCompatibility"] = "unfinishedRefactorCompletion"
+                item["validation"] = "build-and-startup-with-refactor-completion-compatibility-passed"
             if report.get("adapter", {}).get("shutdown"):
                 from recovery_readme import VerificationError as DocumentationError, consoleShutdown
 

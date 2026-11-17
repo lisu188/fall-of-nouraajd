@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **248 commits / 248 trees** against the
-restored inputs: **237 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **249 commits / 249 trees** against the
+restored inputs: **238 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -163,6 +163,18 @@ surviving form (`-L/lib64/ -lpython3.3m`, the Fedora CPython) beside the Windows
 `C:/Python34`, so Linux verification uses CPython 3.3 from there. #219 and #223 move the
 configuration, scripts and images out of Qt resources onto the filesystem and delete the
 manifests; their lost projects drop exactly the manifests those commits remove or empty.
+From #220 building scripts become modules named after each object's type (`import Cave`),
+so the lost object descriptors drop the buildings' `script` keys.
+
+Catalog #224 makes `GameScene`'s player, map and view accessors instance members, but its
+unchanged `monster.cpp`, `playerlistview.cpp` and `tile.cpp` still call them statically, so
+it cannot compile as committed; #225 rewrites those calls but comments out `RoadTile`, which
+`tile.cpp`'s step table still names, so #225 cannot compile either; #226 settles it. Only
+those exact states get a build-only completion (`unfinishedRefactorCompletion`) that
+replaces just the offending lines, each with the developer's own line from #225 or #226.
+The lost `gamescript.cpp` and `pathfinder.cpp` blobs that span both APIs reach the scene
+through pointers, which compile under either (inference). From #224 the scene, not the
+map, owns the player, and the observer reads it there.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

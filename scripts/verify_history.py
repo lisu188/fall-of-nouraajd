@@ -57,12 +57,19 @@ CONSOLE_LOOP = (
     b"        }\n"
 )
 # From #207 the surviving scriptmanager.h returns ScriptManager::getInstance() by pointer and executeScript takes a
-# QString; reconstructed mains keep the same loop with only that call adapted.
+# QString; reconstructed mains keep the same loop with only that call adapted. From #224 GameScene::getView() is no
+# longer static, so they test the view main created instead.
 CONSOLE_LOOPS = (
     CONSOLE_LOOP,
     CONSOLE_LOOP.replace(
         b"ScriptManager::getInstance().executeScript(script.toStdString());",
         b"ScriptManager::getInstance()->executeScript(script);",
+    ),
+)
+CONSOLE_LOOPS += (
+    CONSOLE_LOOPS[1].replace(
+        b"        while((!GameScene::getView())||GameScene::getView()->isVisible()){\n",
+        b"        while(view.isVisible()){\n",
     ),
 )
 CONSOLE_LOOP_SOURCE = {
@@ -466,7 +473,15 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         raise VerificationError("Map needs a reviewed tile-readiness adapter")
     coords3 = contains.group(1).count(",") >= 2
     static_player = re.search(r"\bstatic\s+\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
-    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player else map_text)
+    # From #224 the scene owns the player as an instance member and the map has no player accessor yet.
+    scene_player = (
+        not static_player
+        and re.search(r"\b\w+\s*\*\s*getPlayer\s*\(", map_text) is None
+        and re.search(r"\b\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
+    )
+    player_getter = re.search(
+        r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player or scene_player else map_text
+    )
     player_name = player_getter.group(1) if player_getter else ("CPlayer" if prefixed else "Player")
     # Several Qt trees define CPlayer alongside CCreature in the same header.
     if editor:
@@ -498,6 +513,8 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
     ]
     if player_header is not None:
         config.append(f'#define GAME_RECOVERY_PLAYER_HEADER "{player_header.relative_to(source_root).as_posix()}"')
+    if scene_player and not editor:
+        config.append("#define GAME_RECOVERY_SCENE_PLAYER 1")
     shutdown = None if editor else consoleShutdown(source_root)
     if shutdown is not None:
         config.append("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1")
@@ -923,6 +940,12 @@ def verifySnapshot(
                 raise VerificationError("Historical compatibility states unexpectedly overlap")
             startup["boundary"] = forwarders["validationBoundary"]
             result["startupCompatibility"] = "mergedHeaderForwarders"
+        refactor = preparation["identity"].get("refactorCompletion")
+        if refactor:
+            if supplemental or reflection or coordinates or resource_aliases or conflicts or forwarders:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = refactor["validationBoundary"]
+            result["startupCompatibility"] = "unfinishedRefactorCompletion"
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")

@@ -179,9 +179,12 @@ void SmartPathFinder::processNode(Coords start, std::list<Cell> &nodes, std::uno
     }
 }
 
+// The map of the creature whose path is being searched, recorded on the main thread.
+static Map *pathMap = 0;
+
 bool SmartPathFinder::canStep(int x, int y, int z)
 {
-    Map *map=GameScene::getGame()->getMap();
+    Map *map=pathMap;
     return (*ConfigurationProvider::getConfig("config/tiles.json"))
             [map->getTile(x,y,z)].get("canStep",true).asBool();
 }
@@ -190,6 +193,7 @@ bool SmartPathFinder::canStep(int x, int y, int z)
 PathFinderWorker::PathFinderWorker(Creature *creature, PathFinder *finder)
     : creature(creature), finder(finder)
 {
+    pathMap = creature->getMap();
     setAutoDelete(true);
     connect(this, SIGNAL(completed(int,int)), creature, SLOT(move(int,int)), Qt::QueuedConnection);
     connect(this, SIGNAL(started()), CompletionListener::getInstance(), SLOT(registerWorker()));
@@ -199,7 +203,8 @@ PathFinderWorker::PathFinderWorker(Creature *creature, PathFinder *finder)
 
 void PathFinderWorker::run()
 {
-    Coords path = finder->findPath(creature->getCoords(), GameScene::getPlayer()->getCoords());
+    Player *player = dynamic_cast<GameScene *>(creature->getMap()->getScene())->getPlayer();
+    Coords path = finder->findPath(creature->getCoords(), player->getCoords());
     delete finder;
     Q_EMIT completed(path.x, path.y);
     Q_EMIT ended();

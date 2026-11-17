@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-pvbklcj3/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-e2cis3ib/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
@@ -21,23 +21,23 @@
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-pvbklcj3/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-e2cis3ib/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-pvbklcj3/build.log",
+    "log": "/home/user/work2/verify/snapshot-e2cis3ib/build.log",
     "returnCode": 0,
-    "seconds": 12.854,
+    "seconds": 13.628,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-pvbklcj3/source/Game.pro",
+      "/home/user/work2/verify/snapshot-e2cis3ib/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-pvbklcj3/build/Makefile",
+      "/home/user/work2/verify/snapshot-e2cis3ib/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -47,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-pvbklcj3/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-pvbklcj3/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-e2cis3ib/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-e2cis3ib/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-pvbklcj3/configure.log",
+    "log": "/home/user/work2/verify/snapshot-e2cis3ib/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/2da1f0d0b085f03b1d6ebf6e0ded1e171df08320d595faf36077673fe8012a0e",
+  "evidenceDir": "/home/user/work2/verify/evidence/b2d3413a34a3d3f042cbcc130fdc0faee054678075e7af9c77be841e84d66b5a",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -64,20 +64,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-pvbklcj3/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-e2cis3ib/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-pvbklcj3/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-e2cis3ib/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.265,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "2da1f0d0b085f03b1d6ebf6e0ded1e171df08320d595faf36077673fe8012a0e",
+  "fingerprint": "b2d3413a34a3d3f042cbcc130fdc0faee054678075e7af9c77be841e84d66b5a",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-pvbklcj3/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-e2cis3ib/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -207,14 +207,14 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-pvbklcj3/source",
+    "outputDir": "/home/user/work2/verify/snapshot-e2cis3ib/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "9b410f416ba3d04da8d922651deabde430b97ff1",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "8f7e94c08a389343d6eaec6a1c1340a92143ff01"
       },
       {
@@ -557,7 +557,7 @@
         "method": "reconstruction",
         "originalBlob": "555d8d2a303e3c50f0658665710e70632b1fe287",
         "path": "res/config/object.json",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "4117a53a7ba800f0afb5e958bc2e9e03f84a0ca6"
       },
       {
@@ -1001,7 +1001,7 @@
         "method": "reconstruction",
         "originalBlob": "d64a2a45c2309cea6e7798e8e33276ae3194d1b9",
         "path": "src/gamescript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #212 'setProperty fixed': setProperty takes any Python value, converts it with str() and sets the matching user property by its exact name (the surviving util.h adds the str2int helper this uses for int properties); values for undeclared properties become bool, int or string; map.cpp carried from #208",
         "replacementBlob": "45f858e52d5ee051285ad97f13a81ff6fd12097b"
       },
       {
@@ -1025,7 +1025,7 @@
         "method": "reconstruction",
         "originalBlob": "576194480f858d04fb5586a77e26efc1b0c3ec72",
         "path": "src/main.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "5a3683df64a6cc37f865a30cc6bc8e20fe61f14e"
       },
       {
@@ -1033,7 +1033,7 @@
         "method": "reconstruction",
         "originalBlob": "2964936453c829964dd384ff9ceccd19ef2d0f26",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "17c8ed84320cb0129b52fb5062c89b3b51b30ca4"
       },
       {
@@ -1041,8 +1041,8 @@
         "method": "reconstruction",
         "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
         "path": "src/pathfinder.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
-        "replacementBlob": "5fbbe76524ed154f3415c90b7d11e98ff626565c"
+        "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+        "replacementBlob": "72a869253e27dbd5d07729c33ba29dd8d2537e07"
       },
       {
         "markerPath": "src/stats.cpp.REMOVED.git-id",
@@ -1073,7 +1073,7 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "6ee6f9962c9348c74436733b573eb4a2ba7d288a8f6e616b05f9fd67cd82f743",
+    "restoredFilesFingerprint": "0eca3b2cc1f973d303e0d45d2ab47bff57d410dc1651c32d683320768bfa5e58",
     "sourceCommit": "66975a887b903b121c4317d4497f0db83d9546d8",
     "sourceTree": "6cda675213055a181f26aadeff457b40493b0b33",
     "status": "complete",
@@ -1086,10 +1086,11 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-pvbklcj3/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-pvbklcj3/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-e2cis3ib/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-e2cis3ib/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-pvbklcj3/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-e2cis3ib/smoke/startup.log",
+    "readyBudgetMs": 290000,
     "returnCode": 0,
     "seconds": 0.333,
     "startup": {
@@ -1101,7 +1102,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-pvbklcj3/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-e2cis3ib/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1110,7 +1111,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-pvbklcj3/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-e2cis3ib/smoke/startup.json",
     "status": "success",
     "stdin": "open and silent until the readiness report",
     "timedOut": false
@@ -1121,7 +1122,7 @@
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "627e2240a4245bff328618c36685c75ad2ba7b767971a2553a18d62c2ee705f5"
+      "implementationSha256": "6039c238e67da4d68d8dc734ec2165af66725b1843c41b7164bb8505d7ba7180"
     },
     "outputs": [],
     "status": "not-required",

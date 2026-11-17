@@ -487,6 +487,79 @@ class RecoveryReadmeTest(unittest.TestCase):
         (self.evidence / "source-preparation.log").write_text("Created forwarding headers\n")
         return helper
 
+    def refactorReport(self):
+        helper = history_source_prep.refactor_prep
+        state = sorted(helper.STATES)[0]
+        files = {
+            name: {
+                "beforeSha256": spec["sha256"],
+                "afterSha256": hashlib.sha256(name.encode()).hexdigest(),
+                "lines": [list(line) for line in spec["lines"]],
+            }
+            for name, spec in helper.STATES[state].items()
+        }
+        recorded = {
+            "state": state,
+            "files": files,
+            "context": helper.CONTEXT[state],
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {
+                "path": name,
+                "before": {"kind": "file", "sha256": entry["beforeSha256"]},
+                "after": {"kind": "file", "sha256": entry["afterSha256"]},
+                "purpose": "unfinished-refactor lines completed with the developer's own following lines",
+            }
+            for name, entry in sorted(files.items())
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "refactorCompletion",
+                    "command": ["complete-unfinished-refactor-lines"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "refactorCompletion": recorded, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "unfinishedRefactorCompletion"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Completed the unfinished refactor lines\n")
+        return helper
+
+    def testRefactorCompletionHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.refactorReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_refactor_completion.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("developer's own line from", readme)
+        self.assertIn("python3 recovery/prepare_refactor_completion.py", readme)
+
+    def testRefactorCompletionRejectsChangedLinesOutputsAndState(self):
+        self.refactorReport()
+        recorded = self.report["sourcePreparation"]["identity"]["refactorCompletion"]
+        first = sorted(recorded["files"])[0]
+        lines = recorded["files"][first]["lines"]
+        recorded["files"][first]["lines"] = [[old, "changed", source] for old, _new, source in lines]
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs, lines"):
+            snapshotDocumentation(self.report, self.evidence)
+        recorded["files"][first]["lines"] = lines
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.refactorReport()
+        self.report["sourcePreparation"]["identity"]["refactorCompletion"]["state"] = "f" * 40
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs, lines"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def testForwarderCompatibilityHasExplicitBoundaryAndPortableCommand(self):
         helper = self.forwarderReport()
         files = snapshotDocumentation(self.report, self.evidence)

@@ -277,6 +277,48 @@ def forwarderAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
     return {"recovery/prepare_forwarding_headers.py": replay}
 
 
+def refactorAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.refactor_prep
+    recorded = preparation.get("identity", {}).get("refactorCompletion", {})
+    replay = Path(helper.__file__).read_bytes()
+    files = helper.STATES.get(recorded.get("state"), {})
+    expected_files = {
+        name: {"beforeSha256": spec["sha256"], "lines": [list(line) for line in spec["lines"]]}
+        for name, spec in files.items()
+    }
+    recorded_files = recorded.get("files", {})
+    if (
+        not files
+        or {key: value for key, value in recorded.items() if key not in ("state", "files")}
+        != {
+            "context": helper.CONTEXT.get(recorded.get("state"), {}),
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or {name: {k: v for k, v in entry.items() if k != "afterSha256"} for name, entry in recorded_files.items()}
+        != expected_files
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "unfinishedRefactorCompletion"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Refactor completion differs from its reviewed original inputs, lines or boundary")
+    outputs = {
+        entry.get("path"): (entry.get("before"), entry.get("after"))
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in files
+    }
+    if outputs != {
+        name: (
+            {"kind": "file", "sha256": files[name]["sha256"]},
+            {"kind": "file", "sha256": recorded_files[name].get("afterSha256")},
+        )
+        for name in files
+    }:
+        raise VerificationError("Refactor completion lacks its exact preparation fingerprints")
+    return {"recovery/prepare_refactor_completion.py": replay}
+
+
 def consoleShutdown(report: dict) -> bool:
     """True when the observer closed the window for a main.cpp holding the exact original stdin console loop."""
     adapter = report.get("adapter", {})
@@ -318,12 +360,14 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_aliases = "resourceAliases" in names
     has_conflicts = "conflictResolution" in names
     has_forwarders = "forwardingHeaders" in names
+    has_refactor = "refactorCompletion" in names
     expected_names = (
         (["supplementalResources"] if has_resources else [])
         + (["reflectionRegistration"] if has_reflection else [])
         + (["coordinatesHash"] if has_coordinates else [])
         + (["resourceAliases"] if has_aliases else [])
         + (["forwardingHeaders"] if has_forwarders else [])
+        + (["refactorCompletion"] if has_refactor else [])
         + (["conflictResolution"] if has_conflicts else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
@@ -353,6 +397,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         attachments.update(conflictResolutionAttachments(report, preparation))
     if has_forwarders:
         attachments.update(forwarderAttachments(report, preparation))
+    if has_refactor:
+        attachments.update(refactorAttachments(report, preparation))
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -397,6 +443,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                     and name in preparation["identity"]["conflictResolution"].get("supplied", {})
                 )
                 or (has_forwarders and name in preparation["identity"]["forwardingHeaders"].get("forwarders", {}))
+                or (has_refactor and name in preparation["identity"]["refactorCompletion"].get("files", {}))
             )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
@@ -480,6 +527,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     alias_preparation = "recovery/prepare_resource_aliases.py" in preparation_files
     conflict_preparation = "recovery/prepare_conflict_resolution.py" in preparation_files
     forwarder_preparation = "recovery/prepare_forwarding_headers.py" in preparation_files
+    refactor_preparation = "recovery/prepare_refactor_completion.py" in preparation_files
     console_shutdown = consoleShutdown(report)
     conflict_supplied = bool(
         report.get("sourcePreparation", {}).get("identity", {}).get("conflictResolution", {}).get("supplied")
@@ -493,6 +541,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             (alias_preparation, "renamedResourceAliases"),
             (conflict_preparation, "whitespaceConflictResolution"),
             (forwarder_preparation, "mergedHeaderForwarders"),
+            (refactor_preparation, "unfinishedRefactorCompletion"),
         )
         if enabled
     ]
@@ -571,6 +620,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         or alias_preparation
         or conflict_preparation
         or forwarder_preparation
+        or refactor_preparation
     ):
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
@@ -685,14 +735,28 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         ),
         *(
             [
+                "Startup used an explicit build-only completion of an unfinished original refactor. This commit",
+                "makes the scene's player, map and view accessors instance members while unchanged original",
+                "sources still call them statically or name a function it removes, so it cannot compile as",
+                "committed. The attached helper replaces only those lines, each with the developer's own line from",
+                "the following commit it records. Original sources remain unchanged in this snapshot.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if refactor_preparation
+            else []
+        ),
+        *(
+            [
                 "Shutdown used an explicit observer step. This version's `main.cpp` holds the developer's stdin",
                 "script console loop (original at catalog #204; reconstructions from #207 adapt only its",
-                "ScriptManager call). It runs on a thread-pool thread while the game window is visible, and the",
-                "original view destructor deletes the scene that loop still queries, so leaving the event loop",
-                "with the window shown crashes. Standard input stayed open and silent, like an idle console,",
-                "until the frame and readiness report; then the observer closed the game window as a player",
-                "would, stdin reached end of file, and the observer waited for that thread to stop. Sources are",
-                "unchanged; the `main.cpp` and loop hashes are in the verification metadata.",
+                "ScriptManager call and, from #224, its view test). It runs on a thread-pool thread while the",
+                "game window is visible, and the original view destructor deletes the scene that loop still",
+                "queries, so leaving the event loop with the window shown crashes. Standard input stayed open and",
+                "silent, like an idle console, until the frame and readiness report; then the observer closed the",
+                "game window as a player would, stdin reached end of file, and the observer waited for that",
+                "thread to stop. Sources are unchanged; the `main.cpp` and loop hashes are in the verification",
+                "metadata.",
                 "",
             ]
             if console_shutdown
@@ -736,6 +800,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_resource_aliases.py"] if alias_preparation else []),
         *(["python3 recovery/prepare_conflict_resolution.py"] if conflict_preparation else []),
         *(["python3 recovery/prepare_forwarding_headers.py"] if forwarder_preparation else []),
+        *(["python3 recovery/prepare_refactor_completion.py"] if refactor_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

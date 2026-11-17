@@ -19,6 +19,7 @@ on:
       - scripts/history_prepare_resource_aliases.py
       - scripts/history_prepare_conflicts.py
       - scripts/history_prepare_forwarders.py
+      - scripts/history_prepare_refactor_lines.py
       - scripts/history_qmake_compatibility.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
@@ -37,6 +38,7 @@ on:
       - tests/test_history_resource_alias_preparation.py
       - tests/test_history_conflict_preparation.py
       - tests/test_history_forwarder_preparation.py
+      - tests/test_history_refactor_preparation.py
       - tests/test_history_prepare_includes.py
       - tests/test_history_qmake_compatibility.py
       - tests/test_recovery_workflow.py
@@ -68,7 +70,7 @@ jobs:
             tests.test_history_qmake_compatibility tests.test_history_resource_preparation \
             tests.test_history_reflection_preparation tests.test_history_coordinate_preparation \
             tests.test_history_resource_alias_preparation tests.test_history_conflict_preparation \
-            tests.test_history_forwarder_preparation
+            tests.test_history_forwarder_preparation tests.test_history_refactor_preparation
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

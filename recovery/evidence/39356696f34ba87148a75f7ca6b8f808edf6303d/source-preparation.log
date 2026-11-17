@@ -1,0 +1,59 @@
+
+=== refactorCompletion ===
+{
+  "context": {
+    "src/gamescene.h": "ed87b8cd8a11e77507546942ea8334cfb117130f028ddc8265cd138afd1d954f"
+  },
+  "files": {
+    "src/monster.cpp": {
+      "afterSha256": "fce540105d498813261851cadd5b99044f4c406d8e50cb14f281af0afef7e8f0",
+      "beforeSha256": "feedbb1eef266498fdbf9e25ae9f31fa12ca2847c37fb50d53f9f90f25ae96bc",
+      "lines": [
+        [
+          "  if ((this->getCoords().getDist(GameScene::getPlayer()->getCoords())) < 25) {",
+          "  if ((this->getCoords().getDist(this->getMap()->getScene()->getPlayer()->getCoords())) < 25) {",
+          "38bba6a98d8a17324de69e30d7eee433da922962"
+        ],
+        [
+          "  GameScene::getPlayer()->addToFightList(this);",
+          "  map->getScene()->getPlayer()->addToFightList(this);",
+          "38bba6a98d8a17324de69e30d7eee433da922962"
+        ]
+      ]
+    },
+    "src/playerlistview.cpp": {
+      "afterSha256": "e317280c4c97ec34644764238f726555559f0e9c9e4a019ee6632d85340f9159",
+      "beforeSha256": "83fe471fe11c1d3e34f5744ed26dfdccb677678e8522b1e234a971054fb7a8b1",
+      "lines": [
+        [
+          "    if (GameScene::getPlayer() &&\n        item->getMap() != GameScene::getPlayer()->getMap()) {\n      item->setMap(GameScene::getPlayer()->getMap());\n    }\n",
+          "    if (item->getMap()->getScene()->getPlayer()) {\n      item->setMap(item->getMap()->getScene()->getPlayer()->getMap());\n  }\n",
+          "38bba6a98d8a17324de69e30d7eee433da922962"
+        ],
+        [
+          "  item->onUse(GameScene::getPlayer());",
+          "  item->onUse(this->getMap()->getScene()->getPlayer());",
+          "38bba6a98d8a17324de69e30d7eee433da922962"
+        ]
+      ]
+    },
+    "src/tile.cpp": {
+      "afterSha256": "4a61d762057e14592f99037eeea2bae9fd67b94d35f6b79bee8306630452de13",
+      "beforeSha256": "e1e9e10c30b8c739ea6ef2eee58083874151d0ae6df979f0fd8979d93ef7134c",
+      "lines": [
+        [
+          "void RoadTile() { GameScene::getPlayer()->heal(1); }",
+          "void RoadTile() { /*GameScene::getPlayer()->heal(1); */}",
+          "e43a91c0533f3ded4b560e92b0d735fc3613e8bf"
+        ]
+      ]
+    }
+  },
+  "provenance": {
+    "operation": "Replace only the lines that still use GameScene's removed static accessors, or that leave RoadTile undeclared, with the developer's own lines from the commit recorded beside each replacement",
+    "settledCommit": "e43a91c0533f3ded4b560e92b0d735fc3613e8bf"
+  },
+  "replaySha256": "bfd084f116948ca63ba9bc0d5017780e1454ae2bce18d22764b606e20cc50f60",
+  "state": "39356696f34ba87148a75f7ca6b8f808edf6303d",
+  "validationBoundary": "Game startup with build-only completion of an original unfinished refactor using the developer's own lines from the following commits; original sources unchanged in the snapshot"
+}

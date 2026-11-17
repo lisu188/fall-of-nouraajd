@@ -493,6 +493,28 @@ class HistoricalSmokeTest(unittest.TestCase):
             with self.assertRaisesRegex(verify.VerificationError, "cyclic"):
                 verify.selectProjects(root)
 
+    def testInstanceScenePlayerIsObservedThroughTheScene(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "src/gamescene.h").write_text(
+                "class GameScene : public QGraphicsScene { Player *getPlayer() const; Map *getMap() const; };\n"
+            )
+            (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
+            (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
+            (source / "src/player.h").write_text("class Player {};\n")
+            config = Path(verify.prepareSmokeAdapter(source, root / "observer")["config"]).read_text()
+            self.assertIn("#define GAME_RECOVERY_STATIC_PLAYER 0\n", config)
+            self.assertIn("#define GAME_RECOVERY_SCENE_PLAYER 1\n", config)
+            self.assertIn('GAME_RECOVERY_PLAYER_HEADER "src/player.h"', config)
+            (source / "src/map.h").write_text(
+                "class Map { Player *getPlayer(); bool contains(int x, int y, int z); };\n"
+            )
+            config = Path(verify.prepareSmokeAdapter(source, root / "map-player")["config"]).read_text()
+            self.assertNotIn("GAME_RECOVERY_SCENE_PLAYER", config)
+        self.assertIn("#elif GAME_RECOVERY_SCENE_PLAYER", verify.SMOKE_SOURCE.read_text(encoding="utf-8"))
+
     def testPrefixedPlayerCanBeDefinedInTheCombinedCreatureHeader(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

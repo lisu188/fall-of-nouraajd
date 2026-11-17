@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-c7h_xnqv/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-cl1zev3k/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
@@ -21,23 +21,23 @@
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-cl1zev3k/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/build.log",
+    "log": "/home/user/work2/verify/snapshot-cl1zev3k/build.log",
     "returnCode": 0,
-    "seconds": 13.358,
+    "seconds": 13.113,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-c7h_xnqv/source/Game.pro",
+      "/home/user/work2/verify/snapshot-cl1zev3k/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-c7h_xnqv/build/Makefile",
+      "/home/user/work2/verify/snapshot-cl1zev3k/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -47,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-c7h_xnqv/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-c7h_xnqv/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-cl1zev3k/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-cl1zev3k/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/configure.log",
+    "log": "/home/user/work2/verify/snapshot-cl1zev3k/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/c3b7e8b54cf2dcf773c59e8c434c660652006969b757f59cf835287db383832f",
+  "evidenceDir": "/home/user/work2/verify/evidence/6b6b409711471c17b6562f976c036a6f82387abb4f8d2e743e4f6f37bea5bc98",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -64,20 +64,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-c7h_xnqv/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-cl1zev3k/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-cl1zev3k/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "c3b7e8b54cf2dcf773c59e8c434c660652006969b757f59cf835287db383832f",
+  "fingerprint": "6b6b409711471c17b6562f976c036a6f82387abb4f8d2e743e4f6f37bea5bc98",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-c7h_xnqv/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-cl1zev3k/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -207,7 +207,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-c7h_xnqv/source",
+    "outputDir": "/home/user/work2/verify/snapshot-cl1zev3k/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -1041,8 +1041,8 @@
         "method": "reconstruction",
         "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
         "path": "src/pathfinder.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
-        "replacementBlob": "5fbbe76524ed154f3415c90b7d11e98ff626565c"
+        "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+        "replacementBlob": "72a869253e27dbd5d07729c33ba29dd8d2537e07"
       },
       {
         "markerPath": "src/stats.cpp.REMOVED.git-id",
@@ -1073,7 +1073,7 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "37780050ede9dc5a7de9438cdd037af65945cb70e1c7c70cab5af996dd14b604",
+    "restoredFilesFingerprint": "3504d5fe283e769454834ba15e814fdb6972d578e7bef4c106a76b802d8d38f4",
     "sourceCommit": "76f6d79cfe9f016ccd9973965b6c68de4a544bde",
     "sourceTree": "4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e",
     "status": "complete",
@@ -1086,10 +1086,11 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-c7h_xnqv/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-c7h_xnqv/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-cl1zev3k/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-cl1zev3k/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-cl1zev3k/smoke/startup.log",
+    "readyBudgetMs": 290000,
     "returnCode": 0,
     "seconds": 0.283,
     "startup": {
@@ -1101,7 +1102,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-cl1zev3k/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1110,7 +1111,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-cl1zev3k/smoke/startup.json",
     "status": "success",
     "stdin": "open and silent until the readiness report",
     "timedOut": false
@@ -1121,7 +1122,7 @@
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "627e2240a4245bff328618c36685c75ad2ba7b767971a2553a18d62c2ee705f5"
+      "implementationSha256": "6039c238e67da4d68d8dc734ec2165af66725b1843c41b7164bb8505d7ba7180"
     },
     "outputs": [],
     "status": "not-required",

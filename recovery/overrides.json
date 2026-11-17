@@ -97569,8 +97569,8 @@
     {
       "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
       "path": "src/pathfinder.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
-      "sha256": "2951d8419c9e4ab8123763eded576615afa2085ca1a6f4969500764162b49f92",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "cf0fa3151396929ecb8cc329111452c3a933c234925a3586d27c85024a0cafc2",
       "source": "payloads/reconstructions/b4/b4f415c7fd4f63c338fbe41af875517520b91b9e-pathfinder.cpp"
     },
     {
@@ -97660,8 +97660,8 @@
     {
       "originalBlob": "02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620",
       "path": "src/gamescript.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
-      "sha256": "39bc7c6a79b02d500537eec93ce4f40a4f2c3bdff7464e03065bfa2bab6de0c3",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "1cdb0a930df00d165bb925b44ef555faece392c4f80a67c1ce45ea84e814f41d",
       "source": "payloads/reconstructions/02/02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620-gamescript.cpp"
     },
     {
@@ -97761,6 +97761,55 @@
       "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (38be5ddfe1) carried forward",
       "sha256": "6c4cde3e1c611e45d7c65aff05efcd784986ed4c8213c145364521e7c345703a",
       "source": "payloads/reconstructions/d9/d993c8c7790bb759ca6053c470b7fbdb04cb8544-Game.pro"
+    },
+    {
+      "originalBlob": "0e519bd2fb50d408fedb6e8c7e4a90939f89ee50",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "1a54a0dac6d3d4de046d7203534a6126fb8fbc99d762ef2705419cdade6df75c",
+      "source": "payloads/reconstructions/0e/0e519bd2fb50d408fedb6e8c7e4a90939f89ee50-gameview.cpp"
+    },
+    {
+      "originalBlob": "323b52403dd63a76a53f37c7c7c9cd00a37b6aad",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "15c6878541a62dd82403cce661ca94d0a340759a78d28ad97f4266e272e51349",
+      "source": "payloads/reconstructions/32/323b52403dd63a76a53f37c7c7c9cd00a37b6aad-main.cpp"
+    },
+    {
+      "originalBlob": "8d9c95d788d8571eb212ffac495a44ed847ac8ab",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "09ae5c5e270a572e6b23af57bb1ae76c93eb8b0c0d79ef82e2f424e7076ad9ba",
+      "source": "payloads/reconstructions/8d/8d9c95d788d8571eb212ffac495a44ed847ac8ab-interaction.cpp"
+    },
+    {
+      "originalBlob": "9431385998c1b5e10f5484ef8f94c49b5a1cca4f",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "3a807da40b8b1b88fe212299e7858d68e139a0a126104b7305df325cf56410a5",
+      "source": "payloads/reconstructions/94/9431385998c1b5e10f5484ef8f94c49b5a1cca4f-Game.pro"
+    },
+    {
+      "originalBlob": "9ad8c45e27a4227f4a47097e4acffb9889894af8",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "98ae812fdcf5aef3a95ced0df1bb2c97a8cffadee1d25395b81559e1d73b53cc",
+      "source": "payloads/reconstructions/9a/9ad8c45e27a4227f4a47097e4acffb9889894af8-map.cpp"
+    },
+    {
+      "originalBlob": "f5483a900b421a723e7723e667dbdb67d719dcb6",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+      "sha256": "a816ca4bccf6c3dae95061ff057c4a2b15b2de8eddc32b2d94e24c1f465abdce",
+      "source": "payloads/reconstructions/f5/f5483a900b421a723e7723e667dbdb67d719dcb6-creature.cpp"
+    },
+    {
+      "originalBlob": "57078acb28515335ed4fa3f07359a8c9ee50e82f",
+      "path": "config/object.json",
+      "provenance": "content reconstruction of the BFG-removed original; #220-#225 object descriptors: the #213 reconstruction without the Cave and Teleporter 'script' keys, which the surviving #220 building.cpp stops reading as scripts become modules named after each object's type (import Cave; Cave.onCreate)",
+      "sha256": "89e43c10d48b44eb595e83283e6ba6f8db143a9c0bdc97db58817ae1714c5dd6",
+      "source": "payloads/reconstructions/57/57078acb28515335ed4fa3f07359a8c9ee50e82f-object.json"
     }
   ],
   "schemaVersion": 1

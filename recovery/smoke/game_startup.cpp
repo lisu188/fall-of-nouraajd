@@ -5,6 +5,9 @@
 #ifndef GAME_RECOVERY_CLOSE_BEFORE_EXIT
 #define GAME_RECOVERY_CLOSE_BEFORE_EXIT 0
 #endif
+#ifndef GAME_RECOVERY_SCENE_PLAYER
+#define GAME_RECOVERY_SCENE_PLAYER 0
+#endif
 #include GAME_RECOVERY_SCENE_HEADER
 #include GAME_RECOVERY_VIEW_HEADER
 #include GAME_RECOVERY_MAP_HEADER
@@ -154,6 +157,8 @@ class RecoveryStartupProbe : public QObject {
 #else
 #if GAME_RECOVERY_STATIC_PLAYER
         auto *player = RecoveryScene::getPlayer();
+#elif GAME_RECOVERY_SCENE_PLAYER
+        auto *player = scene->getPlayer();
 #else
         auto *player = map ? map->getPlayer() : nullptr;
 #endif

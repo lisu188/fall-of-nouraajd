@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-ay1jzl7l/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-slxpanch/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
@@ -21,23 +21,23 @@
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-ay1jzl7l/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-slxpanch/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-ay1jzl7l/build.log",
+    "log": "/home/user/work2/verify/snapshot-slxpanch/build.log",
     "returnCode": 0,
-    "seconds": 13.57,
+    "seconds": 13.416,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-ay1jzl7l/source/Game.pro",
+      "/home/user/work2/verify/snapshot-slxpanch/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-ay1jzl7l/build/Makefile",
+      "/home/user/work2/verify/snapshot-slxpanch/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -47,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ay1jzl7l/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ay1jzl7l/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-slxpanch/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-slxpanch/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-ay1jzl7l/configure.log",
+    "log": "/home/user/work2/verify/snapshot-slxpanch/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/8c6b864d7cf1422c2212cace698a6c5dce35d05bac7d3a69c8fb5cd689721c98",
+  "evidenceDir": "/home/user/work2/verify/evidence/6d98d1a35f7d2d67b529ae6748ae30e3ec56d80da7e81ed9fc1bf505ee056c5b",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -64,20 +64,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-ay1jzl7l/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-slxpanch/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-ay1jzl7l/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-slxpanch/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "8c6b864d7cf1422c2212cace698a6c5dce35d05bac7d3a69c8fb5cd689721c98",
+  "fingerprint": "6d98d1a35f7d2d67b529ae6748ae30e3ec56d80da7e81ed9fc1bf505ee056c5b",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-ay1jzl7l/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-slxpanch/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -231,14 +231,14 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-ay1jzl7l/source",
+    "outputDir": "/home/user/work2/verify/snapshot-slxpanch/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "9b410f416ba3d04da8d922651deabde430b97ff1",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "8f7e94c08a389343d6eaec6a1c1340a92143ff01"
       },
       {
@@ -573,7 +573,7 @@
         "method": "reconstruction",
         "originalBlob": "e8d6f32d9ce274c3dd482e40644c8b8392392881",
         "path": "res/config/map.tmx",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #215 Tiled map: the #186-#194 reconstruction plus the map layer's xBound 199 / yBound 111, the bounds the developer's own later copy of this map (55e6516e:maps/map1/map.json, the donor of its entry and placements) declares; this commit introduces the bounds and changes the map",
         "replacementBlob": "c45f5afa9d4bd5763ba642398f8790a49cf5a0dd"
       },
       {
@@ -581,7 +581,7 @@
         "method": "reconstruction",
         "originalBlob": "555d8d2a303e3c50f0658665710e70632b1fe287",
         "path": "res/config/object.json",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "4117a53a7ba800f0afb5e958bc2e9e03f84a0ca6"
       },
       {
@@ -989,7 +989,7 @@
         "method": "reconstruction",
         "originalBlob": "7935164cb1c409a279d0b570046478beb987021e",
         "path": "src/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
         "replacementBlob": "a189536e3068a4ac269b856e660526185ed26299"
       },
       {
@@ -997,15 +997,15 @@
         "method": "reconstruction",
         "originalBlob": "02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620",
         "path": "src/gamescript.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "8f4378d073fbab2e60343f64da86501a2c8a2129"
+        "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+        "replacementBlob": "df0b6afdf3b30559777ac7d9f7474a2ca77b6d2c"
       },
       {
         "markerPath": "src/gameview.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "79ced12581f3c0e03e7d325ca48f15026428bd00",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
         "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
       },
       {
@@ -1021,7 +1021,7 @@
         "method": "reconstruction",
         "originalBlob": "576194480f858d04fb5586a77e26efc1b0c3ec72",
         "path": "src/main.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
         "replacementBlob": "5a3683df64a6cc37f865a30cc6bc8e20fe61f14e"
       },
       {
@@ -1029,7 +1029,7 @@
         "method": "reconstruction",
         "originalBlob": "abd5ed9ed775b5cabc3152ee91af15cbb3d1b8f5",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
         "replacementBlob": "5201a74ee1d1a457ea95bc50ae0d3bbc63e61c04"
       },
       {
@@ -1037,8 +1037,8 @@
         "method": "reconstruction",
         "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
         "path": "src/pathfinder.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
-        "replacementBlob": "5fbbe76524ed154f3415c90b7d11e98ff626565c"
+        "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+        "replacementBlob": "72a869253e27dbd5d07729c33ba29dd8d2537e07"
       },
       {
         "markerPath": "src/stats.cpp.REMOVED.git-id",
@@ -1069,7 +1069,7 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "bd6795bfbe9c87720756ced169e8d3aef2f0a55944bd657d569c573e8a3eae63",
+    "restoredFilesFingerprint": "d368e5e1cef8e8193dc4d14054b757208c156d40a3882b872d59e08375432f18",
     "sourceCommit": "f558ee820b14da9543b9cb1a61da694e1b9422ad",
     "sourceTree": "a81291cfb57cbd6779f7dce349f4a792d431bc1d",
     "status": "complete",
@@ -1082,13 +1082,13 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-ay1jzl7l/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-ay1jzl7l/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-slxpanch/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-slxpanch/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-ay1jzl7l/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-slxpanch/smoke/startup.log",
     "readyBudgetMs": 290000,
     "returnCode": 0,
-    "seconds": 82.066,
+    "seconds": 98.13,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1098,7 +1098,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-ay1jzl7l/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-slxpanch/smoke/startup.png",
         "sha256": "e98ae7392768310c32d7f3f0ed45c89b0a2c66b15e508e42798f106914f99f4f",
         "width": 1278
       },
@@ -1107,7 +1107,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-ay1jzl7l/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-slxpanch/smoke/startup.json",
     "status": "success",
     "stdin": "open and silent until the readiness report",
     "timedOut": false
@@ -1118,7 +1118,7 @@
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "627e2240a4245bff328618c36685c75ad2ba7b767971a2553a18d62c2ee705f5"
+      "implementationSha256": "6039c238e67da4d68d8dc734ec2165af66725b1843c41b7164bb8505d7ba7180"
     },
     "outputs": [],
     "status": "not-required",

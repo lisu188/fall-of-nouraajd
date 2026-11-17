@@ -1,8 +1,23 @@
 #include "gamescript.h"
 #include "util.h"
+#include <QApplication>
+#include <QGraphicsView>
 #include <QDebug>
 #include <QMetaProperty>
 #define METHOD(name) {#name,name,METH_VARARGS,NULL}
+
+// Scripts act on the game's single scene, reached through the view that shows it.
+static GameScene *gameScene()
+{
+    for (QWidget *widget : QApplication::topLevelWidgets()) {
+        QGraphicsView *view = dynamic_cast<QGraphicsView *>(widget);
+        GameScene *scene = view ? dynamic_cast<GameScene *>(view->scene()) : 0;
+        if (scene) {
+            return scene;
+        }
+    }
+    return 0;
+}
 
 PyObject *addObject(PyObject *, PyObject *args)
 {
@@ -11,7 +26,7 @@ PyObject *addObject(PyObject *, PyObject *args)
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
     MapObject *object = MapObject::createMapObject(name);
     if (object) {
-        GameScene::getMap()->addObject(object);
+        gameScene()->getMap()->addObject(object);
         object->moveTo(x, y, z);
     }
     qDebug() << "Added object"<<object->typeName.c_str()<<"with name"<<object->name.c_str()<<"on"<<x<<y<<z<<"\n";
@@ -23,8 +38,8 @@ PyObject *replaceTile(PyObject *, PyObject *args)
     const char *name;
     int x, y, z;
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
-    GameScene::getMap()->removeTile(x, y, z);
-    GameScene::getMap()->addTile(name, x, y, z);
+    gameScene()->getMap()->removeTile(x, y, z);
+    gameScene()->getMap()->addTile(name, x, y, z);
     Py_RETURN_NONE;
 }
 
@@ -43,7 +58,7 @@ PyObject *setProperty(PyObject *, PyObject *args)
     std::string propName = propertyName;
     std::string propValue = PyUnicode_AsUTF8(text);
     Py_DECREF(text);
-    MapObject *object = GameScene::getMap()->getObjectByName(objectName);
+    MapObject *object = gameScene()->getMap()->getObjectByName(objectName);
     if (!object) {
         Py_RETURN_NONE;
     }
@@ -97,7 +112,7 @@ PyObject *incProperty(PyObject *, PyObject *args)
     const char *propertyName;
     int value;
     PyArg_ParseTuple(args, "ssi", &objectName, &propertyName, &value);
-    MapObject *object = GameScene::getMap()->getObjectByName(objectName);
+    MapObject *object = gameScene()->getMap()->getObjectByName(objectName);
     if (object) {
         object->setProperty(propertyName, object->property(propertyName).toInt() + value);
     }
@@ -109,7 +124,7 @@ PyObject *moveObject(PyObject *, PyObject *args)
     const char *name;
     int x, y, z;
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
-    MapObject *object = GameScene::getMap()->getObjectByName(name);
+    MapObject *object = gameScene()->getMap()->getObjectByName(name);
     if (object) {
         object->moveTo(x, y, z);
     }
@@ -121,7 +136,7 @@ PyObject *getProperty(PyObject *, PyObject *args)
     const char *objectName;
     const char *propertyName;
     PyArg_ParseTuple(args, "ss", &objectName, &propertyName);
-    MapObject *object = GameScene::getMap()->getObjectByName(objectName);
+    MapObject *object = gameScene()->getMap()->getObjectByName(objectName);
     if (!object) {
         Py_RETURN_NONE;
     }
@@ -142,9 +157,9 @@ PyObject *removeObject(PyObject *, PyObject *args)
 {
     const char *name;
     PyArg_ParseTuple(args, "s", &name);
-    MapObject *object = GameScene::getMap()->getObjectByName(name);
+    MapObject *object = gameScene()->getMap()->getObjectByName(name);
     if (object) {
-        GameScene::getMap()->removeObject(object);
+        gameScene()->getMap()->removeObject(object);
     }
     Py_RETURN_NONE;
 }
@@ -155,7 +170,7 @@ PyObject *giveItem(PyObject *, PyObject *args)
     PyArg_ParseTuple(args, "s", &name);
     Item *item = Item::createItem(name);
     if (item) {
-        GameScene::getPlayer()->addItem(item);
+        gameScene()->getPlayer()->addItem(item);
     }
     Py_RETURN_NONE;
 }
@@ -164,10 +179,10 @@ PyObject *takeItem(PyObject *, PyObject *args)
 {
     const char *name;
     PyArg_ParseTuple(args, "s", &name);
-    std::set<Item *> *inventory = GameScene::getPlayer()->getInventory();
+    std::set<Item *> *inventory = gameScene()->getPlayer()->getInventory();
     for (std::set<Item *>::iterator it = inventory->begin(); it != inventory->end(); it++) {
         if ((*it)->typeName.compare(name) == 0) {
-            GameScene::getPlayer()->removeFromInventory(*it);
+            gameScene()->getPlayer()->removeFromInventory(*it);
             break;
         }
     }
@@ -178,7 +193,7 @@ PyObject *getLocation(PyObject *, PyObject *args)
 {
     const char *name;
     PyArg_ParseTuple(args, "s", &name);
-    MapObject *object = GameScene::getMap()->getObjectByName(name);
+    MapObject *object = gameScene()->getMap()->getObjectByName(name);
     if (!object) {
         Py_RETURN_NONE;
     }
