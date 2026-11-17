@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **236 commits / 236 trees** against the
-restored inputs: **225 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **240 commits / 240 trees** against the
+restored inputs: **229 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -146,7 +146,16 @@ surviving `cave.py` usage. At #208 the surviving building and item loaders read 
 `animation` (#208's `AnimationProvider` appends `time.json` directly). #211 removes the
 `Cave` class: its reconstruction makes the cave a scripted `Building` (`cave.py`), and
 its `setProperty` raises the Python error for non-string values instead of reading
-unparsed arguments.
+unparsed arguments. #212 ("setProperty fixed") accepts any value through `str()` and the
+surviving `str2int`; #213 likewise makes the removed `Teleporter` a scripted `Building`.
+
+Catalog #215 ("loading") preloads every tile within the map's bounds behind a new loading
+image. Its map layer takes `xBound` 199 / `yBound` 111, the bounds the developer's own
+later copy of this map declares (the donor of its entry and placements). The developer's
+`CoordsHasher`, intact at #101 and #175, always returns 0, so each insert scans every
+tile and loading takes about 80 s here. The observer's readiness budget therefore
+follows the smoke watchdog (watchdog minus 10 s, recorded as `readyBudgetMs`); the
+workbench and the recovery workflow use a 300 s watchdog.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

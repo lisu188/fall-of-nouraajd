@@ -97656,6 +97656,83 @@
       "provenance": "content reconstruction of the BFG-removed original; #211 'cave script': the surviving building.h removes Cave, so the console main no longer registers it and object.json makes Cave a scripted Building (script cave.py; its monster/chance/monsters/enabled now come from the script's onCreate); setProperty returns the Python error when its arguments are not three strings instead of reading unparsed pointers (the developer's 'setProperty fixed' follows at #212)",
       "sha256": "40d7f32d275129172480d985757c573e7cd1629ac80c663101333c2a1693c2d9",
       "source": "payloads/reconstructions/b6/b61dc0cf85b8dadfdec71573bf3d515f20305b76-main.cpp"
+    },
+    {
+      "originalBlob": "02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+      "sha256": "39bc7c6a79b02d500537eec93ce4f40a4f2c3bdff7464e03065bfa2bab6de0c3",
+      "source": "payloads/reconstructions/02/02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620-gamescript.cpp"
+    },
+    {
+      "originalBlob": "1e73d683068ca1275b5036a93659d424dedc5f62",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #212 'setProperty fixed': setProperty takes any Python value, converts it with str() and sets the matching user property by its exact name (the surviving util.h adds the str2int helper this uses for int properties); values for undeclared properties become bool, int or string; map.cpp carried from #208",
+      "sha256": "e388fa5770fb6d7136d8c1e1d7b91534641b4bb2ed6f5802a8edc36a46a8cdab",
+      "source": "payloads/reconstructions/1e/1e73d683068ca1275b5036a93659d424dedc5f62-map.cpp"
+    },
+    {
+      "originalBlob": "2964936453c829964dd384ff9ceccd19ef2d0f26",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
+      "sha256": "e388fa5770fb6d7136d8c1e1d7b91534641b4bb2ed6f5802a8edc36a46a8cdab",
+      "source": "payloads/reconstructions/29/2964936453c829964dd384ff9ceccd19ef2d0f26-map.cpp"
+    },
+    {
+      "originalBlob": "555d8d2a303e3c50f0658665710e70632b1fe287",
+      "path": "res/config/object.json",
+      "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
+      "sha256": "39972aef2acea26b7796f21cb9045cc087fa1c0aa323d89264464dd162b1976c",
+      "source": "payloads/reconstructions/55/555d8d2a303e3c50f0658665710e70632b1fe287-object.json"
+    },
+    {
+      "originalBlob": "576194480f858d04fb5586a77e26efc1b0c3ec72",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
+      "sha256": "5827a34372fe0e966d77748f83bc0c9ab46fb0594fa4593b063e53eab48ccd7a",
+      "source": "payloads/reconstructions/57/576194480f858d04fb5586a77e26efc1b0c3ec72-main.cpp"
+    },
+    {
+      "originalBlob": "7935164cb1c409a279d0b570046478beb987021e",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+      "sha256": "a816ca4bccf6c3dae95061ff057c4a2b15b2de8eddc32b2d94e24c1f465abdce",
+      "source": "payloads/reconstructions/79/7935164cb1c409a279d0b570046478beb987021e-creature.cpp"
+    },
+    {
+      "originalBlob": "79ced12581f3c0e03e7d325ca48f15026428bd00",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/79/79ced12581f3c0e03e7d325ca48f15026428bd00-gameview.cpp"
+    },
+    {
+      "originalBlob": "9b410f416ba3d04da8d922651deabde430b97ff1",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
+      "sha256": "3b73325e91af7dbae0492ce432ed1c64e311aee4f4db9c8318ec0b22bbbb2e2e",
+      "source": "payloads/reconstructions/9b/9b410f416ba3d04da8d922651deabde430b97ff1-Game.pro"
+    },
+    {
+      "originalBlob": "abd5ed9ed775b5cabc3152ee91af15cbb3d1b8f5",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+      "sha256": "6e709b4aad69679fc3bf9ad4a5ba07a3ad79ded46b089685d99bf2b049d75530",
+      "source": "payloads/reconstructions/ab/abd5ed9ed775b5cabc3152ee91af15cbb3d1b8f5-map.cpp"
+    },
+    {
+      "originalBlob": "d64a2a45c2309cea6e7798e8e33276ae3194d1b9",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #212 'setProperty fixed': setProperty takes any Python value, converts it with str() and sets the matching user property by its exact name (the surviving util.h adds the str2int helper this uses for int properties); values for undeclared properties become bool, int or string; map.cpp carried from #208",
+      "sha256": "b73003a56ea9a0967f1bd13f775d4606219cc3c629459251c1be99a2aa059167",
+      "source": "payloads/reconstructions/d6/d64a2a45c2309cea6e7798e8e33276ae3194d1b9-gamescript.cpp"
+    },
+    {
+      "originalBlob": "e8d6f32d9ce274c3dd482e40644c8b8392392881",
+      "path": "config/map.tmx",
+      "provenance": "content reconstruction of the BFG-removed original; #215 Tiled map: the #186-#194 reconstruction plus the map layer's xBound 199 / yBound 111, the bounds the developer's own later copy of this map (55e6516e:maps/map1/map.json, the donor of its entry and placements) declares; this commit introduces the bounds and changes the map",
+      "sha256": "eb292c249b6c5ef8c2693b2e64f87ba5cd3f540477f88335c71182aff046d4a9",
+      "source": "payloads/reconstructions/e8/e8d6f32d9ce274c3dd482e40644c8b8392392881-map.tmx"
     }
   ],
   "schemaVersion": 1

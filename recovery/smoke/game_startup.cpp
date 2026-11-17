@@ -36,6 +36,11 @@ using RecoveryView = GAME_RECOVERY_VIEW_TYPE;
 class RecoveryStartupProbe : public QObject {
   public:
     explicit RecoveryStartupProbe(const QString &reportPath) : QObject(qApp), reportPath(reportPath) {
+        bool valid = false;
+        const qint64 budget = qgetenv("GAME_RECOVERY_READY_BUDGET_MS").toLongLong(&valid);
+        if (valid && budget > 0) {
+            readyBudget = budget;
+        }
         elapsed.start();
         timer.setInterval(25);
         QObject::connect(&timer, &QTimer::timeout, this, [this]() { inspect(); });
@@ -106,7 +111,7 @@ class RecoveryStartupProbe : public QObject {
     }
 
     void inspect() {
-        if (elapsed.elapsed() > 20000) {
+        if (elapsed.elapsed() > readyBudget) {
 #if GAME_RECOVERY_EDITOR
             finish(false, "Editor map and rendered frame did not become ready");
 #else
@@ -209,6 +214,7 @@ class RecoveryStartupProbe : public QObject {
     RecoveryView *view = nullptr;
     QTimer timer;
     QElapsedTimer elapsed;
+    qint64 readyBudget = 20000;
     bool menuActivated = false;
     bool mapReady = false;
 #if GAME_RECOVERY_EDITOR

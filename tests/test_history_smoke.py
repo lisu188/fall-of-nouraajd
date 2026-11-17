@@ -60,6 +60,18 @@ class HistoricalSmokeTest(unittest.TestCase):
             "'frame': {'path': str(report.with_suffix('.png')), 'width': 2, 'height': 1}}))\n"
         )
 
+    def testReadinessBudgetFollowsTheWatchdog(self):
+        code = self.producer() + (
+            "report.with_name('budget').write_text(os.environ['GAME_RECOVERY_READY_BUDGET_MS'])\n"
+        )
+        result = self.runFixture(code, timeout=40)
+        self.assertEqual("success", result["status"])
+        self.assertEqual(30000, result["readyBudgetMs"])
+        self.assertEqual("30000", (Path(result["log"]).parent / "budget").read_text())
+        observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
+        self.assertIn('qgetenv("GAME_RECOVERY_READY_BUDGET_MS")', observer)
+        self.assertIn("elapsed.elapsed() > readyBudget", observer)
+
     def testCleanExitWithoutGameReadinessFails(self):
         result = self.runFixture("raise SystemExit(0)\n")
         self.assertEqual("failed", result["status"])

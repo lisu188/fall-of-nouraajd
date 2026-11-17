@@ -345,7 +345,7 @@ def verify(ref: str, recipe: str | None = None) -> str:
     extra = f"--recipe {recipe}" if recipe else ""
     result = docker(
         f"/opt/recovery/controller/bin/python3.12 {REPO}/scripts/verify_history.py --commit {commit} "
-        f"--overrides {overrides} --output-dir {output} --timeout 60 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
+        f"--overrides {overrides} --output-dir {output} --timeout 300 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
         f"/opt/recovery/controller/bin/python3.12 -c 'import json,sys; "
         f'r=json.load(open(sys.argv[1]))["results"][-1]; print(r["status"], r.get("reason",""))\' '
         f"{output}/summary-0.json",

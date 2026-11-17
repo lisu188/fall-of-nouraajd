@@ -290,9 +290,12 @@ def runSmoke(
             return {"status": "blocked", "reason": "Isolated Linux startup requires xvfb-run and xauth"}
         command = ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", *command]
     child_environment = dict(os.environ if environment is None else environment)
+    # Readiness must be reported before the watchdog fires; loading time is not an original property.
+    ready_budget_ms = max(1000, int((timeout - 10) * 1000))
     child_environment.update(
         {
             "GAME_RECOVERY_SMOKE_REPORT": str(report_path),
+            "GAME_RECOVERY_READY_BUDGET_MS": str(ready_budget_ms),
             "SDL_VIDEODRIVER": "x11",
             "SDL_AUDIODRIVER": "dummy",
             "SDL_RENDER_DRIVER": "software",
@@ -305,6 +308,7 @@ def runSmoke(
         command, cwd, child_environment, timeout, output_dir / "startup.log", report_path if console else None
     )
     result["stdin"] = "open and silent until the readiness report" if console else "empty"
+    result["readyBudgetMs"] = ready_budget_ms
     result["status"] = "failed"
     if result["timedOut"]:
         result["reason"] = "Startup watchdog expired; a timeout is not successful readiness"
