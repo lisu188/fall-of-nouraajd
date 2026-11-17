@@ -372,10 +372,48 @@ def accepted(commit: str) -> bool:
     return report.get("restoration", {}).get("restoredFilesFingerprint") == current
 
 
+def verifiedProjectDonor(number: int, path: str) -> str | None:
+    """The nearest earlier reconstruction of this project path that is not an unverified donor proposal."""
+    committed = {
+        entry["originalBlob"]: entry
+        for entry in json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+        if "originalBlob" in entry
+    }
+    working = notes()
+    for previous in reversed(ORDER[: number - 1]):
+        for earlier in missing(previous):
+            if earlier["path"] != path:
+                continue
+            blob = earlier["originalBlob"]
+            if (RECON / blob).exists():
+                return blob if not str(working.get(blob, "")).startswith("unverified") else None
+            entry = committed.get(blob)
+            if entry and not str(entry.get("provenance", "")).startswith("unverified"):
+                return blob
+    return None
+
+
 def regeneratedProject(number: int) -> str | None:
     try:
         return project(str(number))
     except SystemExit as reason:
+        commit = ORDER[number - 1]
+        for entry in missing(commit):
+            if not entry["path"].endswith(".pro"):
+                continue
+            donor = verifiedProjectDonor(number, entry["path"])
+            if donor:
+                source = RECON / donor
+                if not source.exists():
+                    committed = {
+                        item["originalBlob"]: item
+                        for item in json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+                        if "originalBlob" in item
+                    }
+                    source = REPO / "recovery" / committed[donor]["source"]
+                (WORK / "src" / commit[:8] / entry["path"]).write_bytes(source.read_bytes())
+                print("carried project", entry["path"], "from", donor[:10], "-", reason)
+                return f"the previous verified project ({donor[:10]}) carried forward"
         print("keeping the existing project proposal:", reason)
         return None
 
