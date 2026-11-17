@@ -628,6 +628,15 @@ def progress() -> None:
             if report.get("startupCompatibility") == "mergedHeaderForwarders":
                 item["startupCompatibility"] = "mergedHeaderForwarders"
                 item["validation"] = "build-and-startup-with-forwarding-header-compatibility-passed"
+            if report.get("adapter", {}).get("shutdown"):
+                from recovery_readme import VerificationError as DocumentationError, consoleShutdown
+
+                try:
+                    consoleShutdown(report)
+                except DocumentationError:
+                    continue
+                item["shutdownCompatibility"] = "closeWindowAndJoinConsole"
+                item["validation"] = item["validation"].replace("-passed", "-with-console-shutdown-passed")
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])

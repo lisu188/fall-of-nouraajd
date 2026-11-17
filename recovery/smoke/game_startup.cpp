@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // This observer is linked into the actual historical game; its original main remains active.
 #include "recovery_smoke_config.h"
+#ifndef GAME_RECOVERY_CLOSE_BEFORE_EXIT
+#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 0
+#endif
 #include GAME_RECOVERY_SCENE_HEADER
 #include GAME_RECOVERY_VIEW_HEADER
 #include GAME_RECOVERY_MAP_HEADER
@@ -20,6 +23,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSaveFile>
+#include <QThreadPool>
 #include <QTimer>
 #if GAME_RECOVERY_OPENGL
 #include <QtOpenGL/QGLWidget>
@@ -87,6 +91,17 @@ class RecoveryStartupProbe : public QObject {
             QCoreApplication::exit(42);
             return;
         }
+#if GAME_RECOVERY_CLOSE_BEFORE_EXIT
+        // The original stdin console loops while the game window is visible; close it as a player would and
+        // let that thread stop before the original destructors delete the scene it still queries.
+        if (view) {
+            view->close();
+        }
+        if (!QThreadPool::globalInstance()->waitForDone(10000)) {
+            QCoreApplication::exit(43);
+            return;
+        }
+#endif
         QCoreApplication::exit(success ? 0 : 41);
     }
 

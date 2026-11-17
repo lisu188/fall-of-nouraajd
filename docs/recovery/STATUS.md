@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **219 commits / 219 trees** against the
-restored inputs: **208 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **229 commits / 229 trees** against the
+restored inputs: **218 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -124,6 +124,13 @@ reconstructed with CPython 3.3 (the developer's earliest explicit link, in Septe
 2014, is `python3.3m`) and `CONFIG += no_keywords`, which the commit's own conversion of
 every surviving `slots`/`signals`/`emit` to `Q_SLOT`/`Q_SIGNAL`/`Q_EMIT` implies: Python 3's
 `object.h` declares a `slots` member that Qt's keyword macro breaks. Both are inference.
+
+Catalog #204's surviving `main.cpp` runs a stdin script console on a thread-pool thread
+for as long as the game view is visible, and the developer's view destructor deletes the
+scene that loop still queries, so leaving the event loop with the window shown is a
+use-after-free. Every verified process gets an empty stdin; for that exact `main.cpp`
+alone, the observer closes the game window as a player would after the readiness report
+and waits for the console thread before exiting (`closeWindowAndJoinConsole`).
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

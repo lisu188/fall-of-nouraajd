@@ -16,6 +16,8 @@ import xml.etree.ElementTree as ET
 try:
     from scripts import history_source_prep as source_prep
     from scripts.verify_history import (
+        CONSOLE_SHUTDOWN_BOUNDARY,
+        CONSOLE_SHUTDOWN_MAINS,
         EDITOR_CHECKS,
         REQUIRED_CHECKS,
         VerificationError,
@@ -24,7 +26,15 @@ try:
     )
 except ModuleNotFoundError:
     import history_source_prep as source_prep
-    from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
+    from verify_history import (
+        CONSOLE_SHUTDOWN_BOUNDARY,
+        CONSOLE_SHUTDOWN_MAINS,
+        EDITOR_CHECKS,
+        REQUIRED_CHECKS,
+        VerificationError,
+        validatePng,
+        verifiedStartupMode,
+    )
 
 
 def requireIdentity(value, length, name):
@@ -265,6 +275,21 @@ def forwarderAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
     return {"recovery/prepare_forwarding_headers.py": replay}
 
 
+def consoleShutdown(report: dict) -> bool:
+    """True when the observer closed the window for the exact reviewed original stdin console main."""
+    shutdown = report.get("adapter", {}).get("shutdown")
+    if shutdown is None:
+        return False
+    expected = {
+        "mode": "closeWindowAndJoinConsole",
+        "inputs": CONSOLE_SHUTDOWN_MAINS,
+        "validationBoundary": CONSOLE_SHUTDOWN_BOUNDARY,
+    }
+    if shutdown != expected or report.get("adapter", {}).get("mode") != "game":
+        raise VerificationError("Console shutdown differs from its reviewed original main or boundary")
+    return True
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -443,6 +468,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     alias_preparation = "recovery/prepare_resource_aliases.py" in preparation_files
     conflict_preparation = "recovery/prepare_conflict_resolution.py" in preparation_files
     forwarder_preparation = "recovery/prepare_forwarding_headers.py" in preparation_files
+    console_shutdown = consoleShutdown(report)
     conflict_supplied = bool(
         report.get("sourcePreparation", {}).get("identity", {}).get("conflictResolution", {}).get("supplied")
     )
@@ -643,6 +669,19 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
                 "",
             ]
             if forwarder_preparation
+            else []
+        ),
+        *(
+            [
+                "Shutdown used an explicit observer step. The surviving original `main.cpp` runs a stdin script",
+                "console on a thread-pool thread while the game window is visible, and the original view",
+                "destructor deletes the scene that loop still queries, so leaving the event loop with the window",
+                "shown crashes. After the frame and readiness report, the observer closed the game window as a",
+                "player would and waited for that thread to stop; stdin was empty. Original sources remain",
+                "unchanged; the exact `main.cpp` hash and this boundary are recorded in the verification metadata.",
+                "",
+            ]
+            if console_shutdown
             else []
         ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",

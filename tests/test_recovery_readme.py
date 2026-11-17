@@ -73,6 +73,26 @@ class RecoveryReadmeTest(unittest.TestCase):
         self.assertEqual("startup.png", metadata["smoke"]["startup"]["frame"]["path"])
         self.assertEqual("/original/build/startup.png", self.report["smoke"]["startup"]["frame"]["path"])
 
+    def testConsoleShutdownIsDescribedOnlyForTheReviewedOriginalMain(self):
+        from scripts import verify_history
+
+        self.assertNotIn(b"Shutdown used", snapshotDocumentation(self.report, self.evidence)["README.md"])
+        shutdown = {
+            "mode": "closeWindowAndJoinConsole",
+            "inputs": dict(verify_history.CONSOLE_SHUTDOWN_MAINS),
+            "validationBoundary": verify_history.CONSOLE_SHUTDOWN_BOUNDARY,
+        }
+        self.report["adapter"] = {"mode": "game", "shutdown": shutdown}
+        readme = snapshotDocumentation(self.report, self.evidence)["README.md"].decode()
+        self.assertIn("closed the game window as a\nplayer would", readme)
+        shutdown["inputs"] = {"src/main.cpp": "0" * 64}
+        with self.assertRaisesRegex(VerificationError, "reviewed original main"):
+            snapshotDocumentation(self.report, self.evidence)
+        shutdown["inputs"] = dict(verify_history.CONSOLE_SHUTDOWN_MAINS)
+        self.report["adapter"]["mode"] = "editor"
+        with self.assertRaisesRegex(VerificationError, "reviewed original main"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def reflectionReport(self):
         helper = history_source_prep.reflection_prep
         compatibility = {

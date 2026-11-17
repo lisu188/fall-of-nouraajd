@@ -514,6 +514,51 @@ class HistoricalSmokeTest(unittest.TestCase):
             self.assertIn('GAME_RECOVERY_SCENE_HEADER "gamescene.h"', config)
             self.assertIn("GAME_RECOVERY_SCENE_TYPE CGameScene", config)
 
+    def testOnlyTheExactOriginalConsoleMainClosesTheWindowBeforeExit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "src/gamescene.h").write_text(
+                "class GameScene : public QGraphicsScene { static Player* getPlayer(); Map *getMap(); };\n"
+            )
+            (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
+            (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
+            (source / "src/player.h").write_text("class Player {};\n")
+            main = b"int main() { while (view->isVisible()) { streamIn >> script; } }\n"
+            (source / "src/main.cpp").write_bytes(main)
+            plain = verify.prepareSmokeAdapter(source, root / "plain")
+            self.assertNotIn("shutdown", plain)
+            self.assertNotIn("GAME_RECOVERY_CLOSE_BEFORE_EXIT", Path(plain["config"]).read_text())
+            pins = {"src/main.cpp": hashlib.sha256(main).hexdigest()}
+            with mock.patch.object(verify, "CONSOLE_SHUTDOWN_MAINS", pins):
+                adapter = verify.prepareSmokeAdapter(source, root / "console")
+                self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1\n", Path(adapter["config"]).read_text())
+                self.assertEqual(
+                    {
+                        "mode": "closeWindowAndJoinConsole",
+                        "inputs": pins,
+                        "validationBoundary": verify.CONSOLE_SHUTDOWN_BOUNDARY,
+                    },
+                    adapter["shutdown"],
+                )
+                (source / "src/main.cpp").write_bytes(main + b"\n")
+                self.assertIsNone(verify.consoleShutdown(source))
+                (source / "src/main.cpp").unlink()
+                (source / "src/main.cpp").symlink_to(root / "elsewhere.cpp")
+                (root / "elsewhere.cpp").write_bytes(main)
+                self.assertIsNone(verify.consoleShutdown(source))
+        observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 0", observer)
+        self.assertIn("waitForDone(10000)", observer)
+
+    def testHistoricalProgramsReadAnEmptyStandardInput(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            code = "import sys\nsys.exit(0 if sys.stdin.read() == '' else 3)\n"
+            result = verify.runCommand([sys.executable, "-c", code], root, dict(os.environ), 10, root / "stdin.log")
+            self.assertEqual(0, result["returnCode"])
+
     def testSubdirSnapshotBuildsLibraryBeforeObservedApplication(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

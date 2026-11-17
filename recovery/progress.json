@@ -2059,6 +2059,107 @@
       "validation": "build-and-startup-passed"
     },
     {
+      "evidence": "recovery/evidence/17760db4ce0810e9d1f145e916f1ba78988c7149",
+      "originalCommit": "17760db4ce0810e9d1f145e916f1ba78988c7149",
+      "originalTree": "e32fb6d1f416bc264911c953505ace448054db47",
+      "published": false,
+      "restoredFilesFingerprint": "44c7110443aabf9164a6e97afbf6095a889b039d5e5fdc5d6418ee45d923ea25",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+      "originalCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+      "originalTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
+      "published": false,
+      "restoredFilesFingerprint": "44c7110443aabf9164a6e97afbf6095a889b039d5e5fdc5d6418ee45d923ea25",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7555be4552788be476084397738baf36ca8cac95",
+      "originalCommit": "7555be4552788be476084397738baf36ca8cac95",
+      "originalTree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14",
+      "published": false,
+      "restoredFilesFingerprint": "a4c95715a92a88584afa117c6410a61db8f63fc32ef94a0a11b1cf63db1a9d8a",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb",
+      "originalCommit": "50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb",
+      "originalTree": "c6b7e935bed34fa316636826d7e283521aa5b1df",
+      "published": false,
+      "restoredFilesFingerprint": "fa0e52d8334746b47cceab0806f6cc7beaefbc62ae21048eb3a3806c44498182",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7c1127cf428ae90028e13005e7fe4a78d727c678",
+      "originalCommit": "7c1127cf428ae90028e13005e7fe4a78d727c678",
+      "originalTree": "70cf9e3f6be89e501a0a74f6c5ec6a742d08c028",
+      "published": false,
+      "restoredFilesFingerprint": "fa0e52d8334746b47cceab0806f6cc7beaefbc62ae21048eb3a3806c44498182",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c4154108da73e14df7694666a020281cf424a3ab",
+      "originalCommit": "c4154108da73e14df7694666a020281cf424a3ab",
+      "originalTree": "6d517da53cc090e578fee25ae7103b9f703c003d",
+      "published": false,
+      "restoredFilesFingerprint": "86d8f08f00e14e569a6fab64d4867c41860e1104db122d03b9f29c7794d3b60e",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/54f4e53ca1ffcb22eb1a7c49e1f8a2cf0c8d538c",
+      "originalCommit": "54f4e53ca1ffcb22eb1a7c49e1f8a2cf0c8d538c",
+      "originalTree": "8fbe1c6af577c7bdf85df3bc420721459a7e9a73",
+      "published": false,
+      "restoredFilesFingerprint": "86d8f08f00e14e569a6fab64d4867c41860e1104db122d03b9f29c7794d3b60e",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/a23be4699a956fdaac390af03c5fbbc1679f7481",
+      "originalCommit": "a23be4699a956fdaac390af03c5fbbc1679f7481",
+      "originalTree": "982f28924a8fb6aceacc9d39525a7e64bd5b4331",
+      "published": false,
+      "restoredFilesFingerprint": "86d8f08f00e14e569a6fab64d4867c41860e1104db122d03b9f29c7794d3b60e",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/e00a7c3e7babb948012584b298fab2f1e5abe351",
+      "originalCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351",
+      "originalTree": "8d5e571ff54c8bce2a5588efe01b59647e790e55",
+      "published": false,
+      "restoredFilesFingerprint": "86d8f08f00e14e569a6fab64d4867c41860e1104db122d03b9f29c7794d3b60e",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c577f6225739c5e3e1cf90081a92e997eaed65a4",
+      "originalCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+      "originalTree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc",
+      "published": false,
+      "restoredFilesFingerprint": "8aefe8d3dc516194d794c1e17db967ae54c54c30cc420278818a7e9de365adaf",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
       "evidence": "recovery/evidence/2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalCommit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalTree": "eae1fe5dfbfd25187a96bf7c957d358d5db121ee",
@@ -2315,10 +2416,10 @@
   "status": "in-progress",
   "targetCommitCount": 367,
   "targetTreeCount": 365,
-  "validatedCommitCount": 219,
+  "validatedCommitCount": 229,
   "validatedEditorCommitCount": 11,
   "validatedEditorTreeCount": 11,
-  "validatedGameCommitCount": 208,
-  "validatedGameTreeCount": 208,
-  "validatedTreeCount": 219
+  "validatedGameCommitCount": 218,
+  "validatedGameTreeCount": 218,
+  "validatedTreeCount": 229
 }

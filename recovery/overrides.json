@@ -97327,6 +97327,153 @@
       "provenance": "content reconstruction of the BFG-removed original; #194: the native-verified #193 reconstruction carried unchanged; the same-commit headers only add an include, and this commit's edit to it is unknown (inference)",
       "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
       "source": "payloads/reconstructions/fa/fae8263548d0f71e1f752718d15c1803db5d47fd-gameview.cpp"
+    },
+    {
+      "originalBlob": "01848b9eddc854adb2f4b1fd10a614bca9079ab8",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #204 Stats body: the native-verified #203 reconstruction plus the member-wise copy constructor/assignment the QObject-based header needs (preserving the previous copy semantics)",
+      "sha256": "d72aaffa2714938c57baae7caa4919eea3a083d1926a896f270634a73a84f63c",
+      "source": "payloads/reconstructions/01/01848b9eddc854adb2f4b1fd10a614bca9079ab8-stats.cpp"
+    },
+    {
+      "originalBlob": "0fc948f562f96549ee9e4ad85e00e2771e046673",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference)",
+      "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
+      "source": "payloads/reconstructions/0f/0fc948f562f96549ee9e4ad85e00e2771e046673-Game.pro"
+    },
+    {
+      "originalBlob": "11042d29411da627c4906ac77fa1af756c1428f9",
+      "path": "src/stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; #204 Stats header ('stats properties'; BFG-removed here): the exact surviving #203 stats.h with Stats and Damage made QObjects exposing every stat as a user Q_PROPERTY, member-wise copy operations and Q_DECLARE_METATYPE, as the surviving main.cpp now registers both as Qt metatypes and the commit makes creature/item/cave values properties (inference)",
+      "sha256": "c41100ec11b32fc332c6013dce0f5d66b7ad86cfc442ba6b29bf8743c577e77a",
+      "source": "payloads/reconstructions/11/11042d29411da627c4906ac77fa1af756c1428f9-stats.h"
+    },
+    {
+      "originalBlob": "1635542d44e479a5f3e54a6210ca74cf8cde3e42",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1 (previous version of src/map.cpp)",
+      "sha256": "fa99028df9e94d303e89698ffb2353f293c6216c88a65e4020cca7abd025d4e2",
+      "source": "payloads/reconstructions/16/1635542d44e479a5f3e54a6210ca74cf8cde3e42-map.cpp"
+    },
+    {
+      "originalBlob": "18be8bbf5eb090a0c93864ff87bebc281751d218",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #204 GameScene body: the exact surviving #203 (e00a7c3e) gamescene.cpp; gamescene.h is unchanged and this commit's edit is unknown (inference)",
+      "sha256": "e02c0c9103348c7bf348bb61e65437f11a2f9017eea8885ea90db0a735425640",
+      "source": "payloads/reconstructions/18/18be8bbf5eb090a0c93864ff87bebc281751d218-gamescene.cpp"
+    },
+    {
+      "originalBlob": "1be734cf86370fb9fb719ecc8aa149609ff85ee6",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #200 Map body: the native-verified #199 reconstruction with this commit's map.h change of the tile index to std::unordered_map<Coords, Tile *, CoordsHasher> and the now Q_INVOKABLE ensureTile defined to create the missing tile at (i, j) on the current level (inference)",
+      "sha256": "c6d6b14ae41e9ac6be7a870fcd930762998a28eefd49b366fdcd57614cd3d491",
+      "source": "payloads/reconstructions/1b/1be734cf86370fb9fb719ecc8aa149609ff85ee6-map.cpp"
+    },
+    {
+      "originalBlob": "2120c237f34b407648bd3502e788def68c74c960",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #204 GameView body carried unchanged from the native-verified #203 reconstruction; this commit's edit is unknown (inference)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/21/2120c237f34b407648bd3502e788def68c74c960-gameview.cpp"
+    },
+    {
+      "originalBlob": "2e59130c5e07d3adfde1a4bc90bab2c6a2d98f03",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #204 Map body: the native-verified #203 reconstruction without Map::isEditor, which this commit's map.h removes (objects are no longer dragged in an editor mode)",
+      "sha256": "2cf640dfab054bdc2dd20d97b92d5999882d236fa127f74f83aa00f98b9cd2ef",
+      "source": "payloads/reconstructions/2e/2e59130c5e07d3adfde1a4bc90bab2c6a2d98f03-map.cpp"
+    },
+    {
+      "originalBlob": "3112b3bbd3b20daecaab9bbafb77d84129b480f8",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a871912d43fa73573aba19580138413f383742bd (previous version of src/gameview.cpp)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/31/3112b3bbd3b20daecaab9bbafb77d84129b480f8-gameview.cpp"
+    },
+    {
+      "originalBlob": "4adae28cb3992fe92de902d86b5d3619aaf01297",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1be734cf86370fb9fb719ecc8aa149609ff85ee6 (previous version of src/map.cpp)",
+      "sha256": "c6d6b14ae41e9ac6be7a870fcd930762998a28eefd49b366fdcd57614cd3d491",
+      "source": "payloads/reconstructions/4a/4adae28cb3992fe92de902d86b5d3619aaf01297-map.cpp"
+    },
+    {
+      "originalBlob": "4db6a1b87f6ff850612d815ffa96ecde2bd6faac",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #197 Map body: the native-verified #196 reconstruction adapted to this commit's map.h, which makes Map a QObject with a moveCompleted slot: the map connects it to CompletionListener::completed, Map::move starts and runs the listener after the monsters start their path searches, and the entered-object/fight handling moves into moveCompleted (inference)",
+      "sha256": "5557a6a55e73ee7fbf339e8fbd2045f79fbbe93f157f5998ba50408b719ed23e",
+      "source": "payloads/reconstructions/4d/4db6a1b87f6ff850612d815ffa96ecde2bd6faac-map.cpp"
+    },
+    {
+      "originalBlob": "589f6cf886e2c02b679872108d2ccd000b93d95c",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #204 Creature body: the native-verified #203 reconstruction with the mana/hp property setters and signature changes this commit's creature.h declares",
+      "sha256": "37b86911476a3d2857cb48f62506a1d5e119f0e9d8a79fed5605afa7a5d876b1",
+      "source": "payloads/reconstructions/58/589f6cf886e2c02b679872108d2ccd000b93d95c-creature.cpp"
+    },
+    {
+      "originalBlob": "834bd0b2705b7c5bd284702b5c38711de9744991",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #204 Game script module: the native-verified #194-#203 reconstruction plus getObjectLocation (a named object's x, y, z tuple), declared by this commit's gamescript.h (inference)",
+      "sha256": "d878528331030c69590886a7d941932dcc86f2943dd939200c33ef0cb97f371e",
+      "source": "payloads/reconstructions/83/834bd0b2705b7c5bd284702b5c38711de9744991-gamescript.cpp"
+    },
+    {
+      "originalBlob": "909fe69c1c44ab07cbaa303798240d5f5d481e56",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of fae8263548d0f71e1f752718d15c1803db5d47fd (previous version of src/gameview.cpp)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/90/909fe69c1c44ab07cbaa303798240d5f5d481e56-gameview.cpp"
+    },
+    {
+      "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (e53cc0bde8) carried forward",
+      "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
+      "source": "payloads/reconstructions/9a/9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa-Game.pro"
+    },
+    {
+      "originalBlob": "a871912d43fa73573aba19580138413f383742bd",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b218b69777c7e2c3928e97155c3e30aa5b5fa906 (previous version of src/gameview.cpp)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/a8/a871912d43fa73573aba19580138413f383742bd-gameview.cpp"
+    },
+    {
+      "originalBlob": "adcbe3a18c46dd564e8c2f9086d638c3510ecfa9",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3112b3bbd3b20daecaab9bbafb77d84129b480f8 (previous version of src/gameview.cpp)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/ad/adcbe3a18c46dd564e8c2f9086d638c3510ecfa9-gameview.cpp"
+    },
+    {
+      "originalBlob": "b218b69777c7e2c3928e97155c3e30aa5b5fa906",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #200 GameView body carried unchanged from the native-verified #199 reconstruction; gameview.h is unchanged and this commit's edit is unknown (inference)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/b2/b218b69777c7e2c3928e97155c3e30aa5b5fa906-gameview.cpp"
+    },
+    {
+      "originalBlob": "c1870edaeb19e8ecf7e830e72eec20b8c9c840fe",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 4db6a1b87f6ff850612d815ffa96ecde2bd6faac (previous version of src/map.cpp)",
+      "sha256": "5557a6a55e73ee7fbf339e8fbd2045f79fbbe93f157f5998ba50408b719ed23e",
+      "source": "payloads/reconstructions/c1/c1870edaeb19e8ecf7e830e72eec20b8c9c840fe-map.cpp"
+    },
+    {
+      "originalBlob": "e3894cafc3fcf8170dd3ed83c40088e3c268d130",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #197 PathFinder body: the native-verified #194-#196 reconstruction with this commit's PathFinderWorker signals (completed(x,y) queued to the monster's move slot; started/ended registering with the new CompletionListener, which emits completed when its last worker ends or when run() finds none pending; inference)",
+      "sha256": "2951d8419c9e4ab8123763eded576615afa2085ca1a6f4969500764162b49f92",
+      "source": "payloads/reconstructions/e3/e3894cafc3fcf8170dd3ed83c40088e3c268d130-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "e53cc0bde800c6d39a4e0b71b24fbb603481ebeb",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #195 project ('libraries'): the native-verified #194 project with each resource manifest under res/, where this commit moves the manifests and their files unchanged (resource paths inside the manifests are unchanged)",
+      "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
+      "source": "payloads/reconstructions/e5/e53cc0bde800c6d39a4e0b71b24fbb603481ebeb-Game.pro"
     }
   ],
   "schemaVersion": 1

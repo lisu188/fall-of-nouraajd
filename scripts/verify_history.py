@@ -44,6 +44,16 @@ REVIEWED_EDITOR_MAIN_SHA256 = frozenset(
         "fa471718f3119672baf3b78564ccb3215351e4c69c637d4ca895b6513a98c5e1",  # #155
     }
 )
+# Catalog #204 ('stats properties') keeps an original stdin script console on a thread-pool thread that loops
+# while the game view is visible; the original view destructor deletes the scene that loop still queries, so
+# leaving the event loop with the window shown races a use-after-free. Only for this exact main.cpp does the
+# observer close the game window as a player would and wait for that thread before exiting.
+CONSOLE_SHUTDOWN_MAINS = {"src/main.cpp": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"}
+CONSOLE_SHUTDOWN_BOUNDARY = (
+    "After the first frame and readiness report, the observer closes the game window as a player would and "
+    "waits for the original stdin script console thread to stop before exiting; stdin is empty and original "
+    "sources are unchanged"
+)
 
 
 class VerificationError(ValueError):
@@ -66,6 +76,7 @@ def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeo
             command,
             cwd=cwd,
             env=environment,
+            stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=os.name == "posix",
@@ -343,6 +354,19 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
     }
 
 
+def consoleShutdown(source_root: Path) -> dict | None:
+    """Recognize only the exact original mains whose stdin console stops when the game window closes."""
+    for name, expected in CONSOLE_SHUTDOWN_MAINS.items():
+        path = source_root / name
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            return None
+    return {
+        "mode": "closeWindowAndJoinConsole",
+        "inputs": dict(CONSOLE_SHUTDOWN_MAINS),
+        "validationBoundary": CONSOLE_SHUTDOWN_BOUNDARY,
+    }
+
+
 def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str = "game") -> dict:
     """Add a startup observer to the real target, retaining its original main function."""
     editor = startup_mode == "editor"
@@ -416,6 +440,9 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
     ]
     if player_header is not None:
         config.append(f'#define GAME_RECOVERY_PLAYER_HEADER "{player_header.relative_to(source_root).as_posix()}"')
+    shutdown = None if editor else consoleShutdown(source_root)
+    if shutdown is not None:
+        config.append("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1")
     build_root.mkdir(parents=True, exist_ok=True)
     config_path = build_root / "recovery_smoke_config.h"
     config_path.write_text("\n".join(config) + "\n", encoding="utf-8")
@@ -426,6 +453,7 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         "config": str(config_path),
         "overlays": overlays,
         "configSha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        **({"shutdown": shutdown} if shutdown is not None else {}),
     }
 
 
