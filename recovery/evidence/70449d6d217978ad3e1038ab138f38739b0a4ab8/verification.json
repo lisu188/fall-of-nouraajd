@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-typvvohx/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-fk1wg9fy/observer/recovery_smoke_config.h",
     "configSha256": "9e5d3a791bc308327147ab07ef697533c391e9e97f00313c2250e2a217da007c",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-typvvohx/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-fk1wg9fy/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-typvvohx/build.log",
+    "log": "/home/user/work2/verify/snapshot-fk1wg9fy/build.log",
     "returnCode": 0,
-    "seconds": 15.998,
+    "seconds": 14.571,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-typvvohx/source/Game.pro",
+      "/home/user/work2/verify/snapshot-fk1wg9fy/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-typvvohx/build/Makefile",
+      "/home/user/work2/verify/snapshot-fk1wg9fy/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-typvvohx/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-typvvohx/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-fk1wg9fy/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-fk1wg9fy/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-typvvohx/configure.log",
+    "log": "/home/user/work2/verify/snapshot-fk1wg9fy/configure.log",
     "returnCode": 0,
-    "seconds": 0.064,
+    "seconds": 0.065,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/9f9a63a92aa865588b7ccb74665d2f30e1597b9062e62bbba2a7999514ea1599",
+  "evidenceDir": "/home/user/work2/verify/evidence/e46f53a41a393132a55324b6538d61f485317bc1fc462e44905ca3fb916f594f",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-typvvohx/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-fk1wg9fy/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-typvvohx/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-fk1wg9fy/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.265,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "9f9a63a92aa865588b7ccb74665d2f30e1597b9062e62bbba2a7999514ea1599",
+  "fingerprint": "e46f53a41a393132a55324b6538d61f485317bc1fc462e44905ca3fb916f594f",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-typvvohx/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-fk1wg9fy/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -183,7 +183,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-typvvohx/source",
+    "outputDir": "/home/user/work2/verify/snapshot-fk1wg9fy/source",
     "restored": [
       {
         "markerPath": "compression/minizip.h.REMOVED.git-id",
@@ -683,7 +683,7 @@
         "method": "reconstruction",
         "originalBlob": "66cb117a2777beb98242c62e3e2251fe32be7b21",
         "path": "json/json_batchallocator.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 42508f11c1246bc11a430fe3122a608b3dd565fc (previous version of json/json_batchallocator.h)",
         "replacementBlob": "87ea5ed80785bb82eda9ae4df1177bc58e1f0c41"
       },
       {
@@ -705,7 +705,7 @@
         "method": "reconstruction",
         "originalBlob": "747ff61ca4584f1f590e1b53cde7d8c76f7c233b",
         "path": "json/json_reader.cpp",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0323f4ae887196084c02f96525010860055454db (previous version of json/json_reader.cpp)",
         "replacementBlob": "4eb2d11fd3150081a7a80c2e1bf137cc052049c6"
       },
       {
@@ -713,7 +713,7 @@
         "method": "reconstruction",
         "originalBlob": "a4d8a073ec7f9740f34934d641d03dad185f1116",
         "path": "json/json_value.cpp",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of fbcc3fd9782b105b30b7c18e42793c5c9ebb2f52 (previous version of json/json_value.cpp)",
         "replacementBlob": "573205f13e2cb4a98262c9b5f563de7264660fb6"
       },
       {
@@ -728,7 +728,7 @@
         "method": "reconstruction",
         "originalBlob": "764261ab77886a275a2cbf7bf3a622d13355d97e",
         "path": "json/json_writer.cpp",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 29f09f14d0ca16253ccedfd3fff1d287b0ea72a9 (previous version of json/json_writer.cpp)",
         "replacementBlob": "cdf4188f2ec9be07e3bb7b248ff48ac98f71e497"
       },
       {
@@ -806,7 +806,6 @@
     "submodules": [],
     "unresolved": []
   },
-  "resumed": true,
   "runtimePreparation": {
     "directories": [
       {
@@ -838,10 +837,10 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-typvvohx/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-typvvohx/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-fk1wg9fy/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-fk1wg9fy/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-typvvohx/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-fk1wg9fy/smoke/startup.log",
     "returnCode": 0,
     "seconds": 0.315,
     "startup": {
@@ -853,7 +852,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-typvvohx/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-fk1wg9fy/smoke/startup.png",
         "sha256": "52e40b2b639fce34503f8e008fd9d126e1cd6db765a8276a1b63c86572f68ca1",
         "width": 1278
       },
@@ -862,7 +861,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-typvvohx/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-fk1wg9fy/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
@@ -872,7 +871,7 @@
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "2ce6f08f4127a903ed0dae25db9bd46ffa10b52fbaab9bef40b66c675dbe5f9d",
+      "implementationSha256": "627e2240a4245bff328618c36685c75ad2ba7b767971a2553a18d62c2ee705f5",
       "includeReplaySha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7",
       "includeSeparators": [
         {
@@ -925,7 +924,7 @@
           "history_source_prep.py",
           "normalize-quoted-includes"
         ],
-        "log": "/home/user/work2/verify/snapshot-typvvohx/preparation/include-separators.log",
+        "log": "/home/user/work2/verify/snapshot-fk1wg9fy/preparation/include-separators.log",
         "name": "windowsIncludeSeparators",
         "returnCode": 0,
         "timedOut": false

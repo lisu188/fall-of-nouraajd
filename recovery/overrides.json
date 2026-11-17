@@ -97586,6 +97586,55 @@
       "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
       "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
       "source": "payloads/reconstructions/f8/f82fd7a1268dc523b3fc75b092cd1bd5328a424c-gameview.cpp"
+    },
+    {
+      "originalBlob": "363ae4eb1824c8b726aa5e4891792bdb9a60de4c",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
+      "sha256": "d364b5c6f71d5d7964320934a50ed383b71eaae037cdf292eb62003023e88a6f",
+      "source": "payloads/reconstructions/36/363ae4eb1824c8b726aa5e4891792bdb9a60de4c-gamescript.cpp"
+    },
+    {
+      "originalBlob": "6e5500b794ddf20aec213f414af43144d9122175",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
+      "sha256": "7165cf5d842a8628b69081558cd0c803b6d07c262764de68e15633f367691889",
+      "source": "payloads/reconstructions/6e/6e5500b794ddf20aec213f414af43144d9122175-creature.cpp"
+    },
+    {
+      "originalBlob": "6ec618c2f8be0595574a63c92888e1f467ae7a5a",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 01eb658269988a3cbb0067f7ed632e78563256f9 (previous version of src/main.cpp)",
+      "sha256": "68b6a8b144e6f13dc2ec5e4e8605765aed755b2c65ccb70a53c0d98eccd073be",
+      "source": "payloads/reconstructions/6e/6ec618c2f8be0595574a63c92888e1f467ae7a5a-main.cpp"
+    },
+    {
+      "originalBlob": "a36d3f99c326e515de031d07563c2a155ce17454",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 363ae4eb1824c8b726aa5e4891792bdb9a60de4c (previous version of src/gamescript.cpp)",
+      "sha256": "d364b5c6f71d5d7964320934a50ed383b71eaae037cdf292eb62003023e88a6f",
+      "source": "payloads/reconstructions/a3/a36d3f99c326e515de031d07563c2a155ce17454-gamescript.cpp"
+    },
+    {
+      "originalBlob": "adb578cf43f85cd3881a1f0511f8992344db42f9",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
+      "sha256": "e388fa5770fb6d7136d8c1e1d7b91534641b4bb2ed6f5802a8edc36a46a8cdab",
+      "source": "payloads/reconstructions/ad/adb578cf43f85cd3881a1f0511f8992344db42f9-map.cpp"
+    },
+    {
+      "originalBlob": "b342f433d8088ac2e1d0a6a4cfacf8be4bb3ad84",
+      "path": "res/config/object.json",
+      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
+      "sha256": "008bc54d449cb1e59a8a04b2fce1064a01042a89d2eb28a8efd1bca09fcf64c4",
+      "source": "payloads/reconstructions/b3/b342f433d8088ac2e1d0a6a4cfacf8be4bb3ad84-object.json"
+    },
+    {
+      "originalBlob": "d2215eae8693265faa32461529be17f2dcb5858f",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
+      "sha256": "493c7026ee4e8488b26df5e5147dc88a7f5a16ab526ffae16b6871028c31e4a0",
+      "source": "payloads/reconstructions/d2/d2215eae8693265faa32461529be17f2dcb5858f-Game.pro"
     }
   ],
   "schemaVersion": 1

@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **232 commits / 232 trees** against the
-restored inputs: **221 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **235 commits / 235 trees** against the
+restored inputs: **224 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -135,7 +135,10 @@ readiness report and wait for the console thread before exiting
 surviving `scriptmanager.h` returns `ScriptManager::getInstance()` by pointer and takes a
 `QString`, so only that call is adapted. The #205/#206 script functions declared by the
 surviving `gamescript.h` (`incProperty`, `getProperty`, `moveObject`) follow the later
-surviving `cave.py` usage.
+surviving `cave.py` usage. At #208 the surviving building and item loaders read an
+`animation` key; the donor `object.json` only carries later slash-less values there, so
+#208's reconstruction moves each building's and item's slash-terminated `path` to
+`animation` (#208's `AnimationProvider` appends `time.json` directly).
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-ji5md8jf/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-es38jokg/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-ji5md8jf/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-es38jokg/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-ji5md8jf/build.log",
+    "log": "/home/user/work2/verify/snapshot-es38jokg/build.log",
     "returnCode": 0,
-    "seconds": 17.922,
+    "seconds": 12.375,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-ji5md8jf/source/Game.pro",
+      "/home/user/work2/verify/snapshot-es38jokg/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-ji5md8jf/build/Makefile",
+      "/home/user/work2/verify/snapshot-es38jokg/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ji5md8jf/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ji5md8jf/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-es38jokg/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-es38jokg/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-ji5md8jf/configure.log",
+    "log": "/home/user/work2/verify/snapshot-es38jokg/configure.log",
     "returnCode": 0,
-    "seconds": 0.065,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/227655229a0773c9ac755033399256811ecf9f6ddc06b97ba1de02b1cf17d022",
+  "evidenceDir": "/home/user/work2/verify/evidence/6d48485bf3f3e12c0e92d917edeac8e1580fe4a8e1c6cd6161752cd08116b962",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-ji5md8jf/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-es38jokg/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-ji5md8jf/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-es38jokg/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.266,
+    "seconds": 0.215,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "227655229a0773c9ac755033399256811ecf9f6ddc06b97ba1de02b1cf17d022",
+  "fingerprint": "6d48485bf3f3e12c0e92d917edeac8e1580fe4a8e1c6cd6161752cd08116b962",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-ji5md8jf/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-es38jokg/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -187,14 +187,14 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-ji5md8jf/source",
+    "outputDir": "/home/user/work2/verify/snapshot-es38jokg/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "0583775cbc7671422c9a0caaee3e0944ead818d7",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #190 project ('script protoype'): the native-verified #187-#189 project plus the event and gamescript sources this commit adds, CPython 3.3 linkage (win32 C:/Python33, unix python3.3m; the surviving code uses the Python 3 module API and the developer's earliest explicit link, at 1b30a291, is python3.3m) and CONFIG += no_keywords, which this commit's own conversion of every surviving slots/signals/emit to Q_SLOT/Q_SIGNAL/Q_EMIT implies: Python 3's object.h declares a 'slots' member that Qt's keyword macro breaks (inference)",
         "replacementBlob": "3a061cfc3d34e805973982681de21272f13cfea4"
       },
       {
@@ -202,7 +202,7 @@
         "method": "reconstruction",
         "originalBlob": "7f7268444a1a6ef546c319f62826df8825b3df4b",
         "path": "config/map.tmx",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #186-#190 Tiled map reconstruction (same inferred content as #186; the donor's script-less StartEvent placements are not added)",
         "replacementBlob": "b79e5cfa51eaf3d529cf347da8141f9eaddf82fd"
       },
       {
@@ -945,7 +945,7 @@
         "method": "reconstruction",
         "originalBlob": "2faff048ad875d34b2222faeeb01c3b9ea23b18f",
         "path": "src/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #190 Creature body: the native-verified #187 reconstruction with the exp/gold property accessors this commit's creature.h adds and emit written as Q_EMIT for no_keywords, as the surviving player.cpp now does",
         "replacementBlob": "4dc56e3372653aac45df2656e917437924f5a7d2"
       },
       {
@@ -961,7 +961,7 @@
         "method": "reconstruction",
         "originalBlob": "7faeb23ecb8d346cec800aa2a9e04546a71b26f4",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #190 GameView body: the native-verified #182-#189 reconstruction with emit written as Q_EMIT for the no_keywords build this commit adopts",
         "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
       },
       {
@@ -977,7 +977,7 @@
         "method": "reconstruction",
         "originalBlob": "f596e8277b88f93908fe292d0b2f2e9d958c6de2",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #190 Map body carried unchanged from the native-verified #189 reconstruction; map.h is unchanged and this commit's edit to it is unknown (inference)",
         "replacementBlob": "4aaa99909aa78a8641f8290c9955c7d120fd6cd7"
       },
       {
@@ -1016,12 +1016,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-ji5md8jf/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-ji5md8jf/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-es38jokg/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-es38jokg/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-ji5md8jf/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-es38jokg/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.366,
+    "seconds": 0.315,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1031,7 +1031,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-ji5md8jf/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-es38jokg/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1040,7 +1040,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-ji5md8jf/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-es38jokg/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
