@@ -97474,6 +97474,118 @@
       "provenance": "content reconstruction of the BFG-removed original; #195 project ('libraries'): the native-verified #194 project with each resource manifest under res/, where this commit moves the manifests and their files unchanged (resource paths inside the manifests are unchanged)",
       "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
       "source": "payloads/reconstructions/e5/e53cc0bde800c6d39a4e0b71b24fbb603481ebeb-Game.pro"
+    },
+    {
+      "originalBlob": "21b5941123106fb4f2e353a5e88437ad7aef0039",
+      "path": "src/stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
+      "sha256": "c41100ec11b32fc332c6013dce0f5d66b7ad86cfc442ba6b29bf8743c577e77a",
+      "source": "payloads/reconstructions/21/21b5941123106fb4f2e353a5e88437ad7aef0039-stats.h"
+    },
+    {
+      "originalBlob": "3f01d8caa41fcf648691c4cc1804f6053bfaa920",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
+      "sha256": "f0c6171d680fa3fc38f5d467a27329300ed364d51add1113dfa3d51fe3048997",
+      "source": "payloads/reconstructions/3f/3f01d8caa41fcf648691c4cc1804f6053bfaa920-map.cpp"
+    },
+    {
+      "originalBlob": "606f247b2c803f7a754d9a4c454af2ef72ac1ce3",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
+      "sha256": "7165cf5d842a8628b69081558cd0c803b6d07c262764de68e15633f367691889",
+      "source": "payloads/reconstructions/60/606f247b2c803f7a754d9a4c454af2ef72ac1ce3-creature.cpp"
+    },
+    {
+      "originalBlob": "64dc3b0bcc6566efa84d8870488a402de339605e",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
+      "sha256": "d72aaffa2714938c57baae7caa4919eea3a083d1926a896f270634a73a84f63c",
+      "source": "payloads/reconstructions/64/64dc3b0bcc6566efa84d8870488a402de339605e-stats.cpp"
+    },
+    {
+      "originalBlob": "8e4c40ae32ef1432d5dd11f911244978ee2a4f76",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
+      "sha256": "d00663704a4ab367241e30e38701f15e34b0d448a7f4ab170311920a3305e238",
+      "source": "payloads/reconstructions/8e/8e4c40ae32ef1432d5dd11f911244978ee2a4f76-main.cpp"
+    },
+    {
+      "originalBlob": "b53d411565fe3386af59454484f0e179017e788a",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #206 'python': the surviving gamescript.h replaces decProperty with moveObject (moves a named object, inferred from the declaration and the existing addObject arguments); the rest carried from #205",
+      "sha256": "1f4e52862aabc8c4422148d9c5e2995279c80a8e0c0d7d58edec4838dabd6b2e",
+      "source": "payloads/reconstructions/b5/b53d411565fe3386af59454484f0e179017e788a-gamescript.cpp"
+    },
+    {
+      "originalBlob": "bde5af0ba1cae0afb6f4071c9b4c8fa98a629d6e",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
+      "sha256": "92c094b9b2e034843e814deaf5080cc96ea4ed184ceba9ef2b933708425ea9d9",
+      "source": "payloads/reconstructions/bd/bde5af0ba1cae0afb6f4071c9b4c8fa98a629d6e-gamescript.cpp"
+    },
+    {
+      "originalBlob": "01eb658269988a3cbb0067f7ed632e78563256f9",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "68b6a8b144e6f13dc2ec5e4e8605765aed755b2c65ccb70a53c0d98eccd073be",
+      "source": "payloads/reconstructions/01/01eb658269988a3cbb0067f7ed632e78563256f9-main.cpp"
+    },
+    {
+      "originalBlob": "049b72e3f14c618f35580a9bea88c174cc139963",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "1f4e52862aabc8c4422148d9c5e2995279c80a8e0c0d7d58edec4838dabd6b2e",
+      "source": "payloads/reconstructions/04/049b72e3f14c618f35580a9bea88c174cc139963-gamescript.cpp"
+    },
+    {
+      "originalBlob": "2b903bcb0a401c1af4fc48295cfd3f7825deeab2",
+      "path": "src/stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "c41100ec11b32fc332c6013dce0f5d66b7ad86cfc442ba6b29bf8743c577e77a",
+      "source": "payloads/reconstructions/2b/2b903bcb0a401c1af4fc48295cfd3f7825deeab2-stats.h"
+    },
+    {
+      "originalBlob": "329201a12b0c1eae6f5ae30dca1bb833f85d7827",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "7165cf5d842a8628b69081558cd0c803b6d07c262764de68e15633f367691889",
+      "source": "payloads/reconstructions/32/329201a12b0c1eae6f5ae30dca1bb833f85d7827-creature.cpp"
+    },
+    {
+      "originalBlob": "6310500db9888ff5f46ff89988f7e7a8dbfedc8c",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "ddbeef2a8cf23a8249e174f372718619d8f0fb477ec0d5bce0786660fb9df910",
+      "source": "payloads/reconstructions/63/6310500db9888ff5f46ff89988f7e7a8dbfedc8c-interaction.cpp"
+    },
+    {
+      "originalBlob": "799d96674c084aeec8dba44e2b66c12b64f1d306",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "d72aaffa2714938c57baae7caa4919eea3a083d1926a896f270634a73a84f63c",
+      "source": "payloads/reconstructions/79/799d96674c084aeec8dba44e2b66c12b64f1d306-stats.cpp"
+    },
+    {
+      "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "2951d8419c9e4ab8123763eded576615afa2085ca1a6f4969500764162b49f92",
+      "source": "payloads/reconstructions/b4/b4f415c7fd4f63c338fbe41af875517520b91b9e-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "e81c10c6755d978f81df2320086d9591a29334f7",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "63f3f54803c3232c2cff5a54a2c0aa7e9461210d583196f58e1fbd4f449d6e3b",
+      "source": "payloads/reconstructions/e8/e81c10c6755d978f81df2320086d9591a29334f7-map.cpp"
+    },
+    {
+      "originalBlob": "f82fd7a1268dc523b3fc75b092cd1bd5328a424c",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/f8/f82fd7a1268dc523b3fc75b092cd1bd5328a424c-gameview.cpp"
     }
   ],
   "schemaVersion": 1

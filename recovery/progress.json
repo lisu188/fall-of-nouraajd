@@ -2160,6 +2160,39 @@
       "validation": "build-and-startup-with-console-shutdown-passed"
     },
     {
+      "evidence": "recovery/evidence/9b71b07e7cecb4f629bb61b2b2ca08737a9fc52e",
+      "originalCommit": "9b71b07e7cecb4f629bb61b2b2ca08737a9fc52e",
+      "originalTree": "c2d25aea2e47f049d61f8fd55df0d09ad8299225",
+      "published": false,
+      "restoredFilesFingerprint": "f55d94a926d4c30507d91c73c101c4515892ffc1ea72d4bbd1a9bb12e087d476",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/07af2054088cb3aa440ef5594d2caa0179c420b6",
+      "originalCommit": "07af2054088cb3aa440ef5594d2caa0179c420b6",
+      "originalTree": "e7ba7d0616017f0411fc573dd57ea42ec47faf22",
+      "published": false,
+      "restoredFilesFingerprint": "a1ecd4a56f8a3ebbcd5ed4582552fd3e5f046af18e83a776f7c4261e87713013",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/3b0df86767a7483056dd3bfe71d3a19bf6268874",
+      "originalCommit": "3b0df86767a7483056dd3bfe71d3a19bf6268874",
+      "originalTree": "fd2b561df769eb7cd05a5b24810dc5354c9778ea",
+      "published": false,
+      "restoredFilesFingerprint": "febb08139f15edbd84ebf0ea4e42cd909582868042394b885cce2e30a8b1603d",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
       "evidence": "recovery/evidence/2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalCommit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalTree": "eae1fe5dfbfd25187a96bf7c957d358d5db121ee",
@@ -2416,10 +2449,10 @@
   "status": "in-progress",
   "targetCommitCount": 367,
   "targetTreeCount": 365,
-  "validatedCommitCount": 229,
+  "validatedCommitCount": 232,
   "validatedEditorCommitCount": 11,
   "validatedEditorTreeCount": 11,
-  "validatedGameCommitCount": 218,
-  "validatedGameTreeCount": 218,
-  "validatedTreeCount": 229
+  "validatedGameCommitCount": 221,
+  "validatedGameTreeCount": 221,
+  "validatedTreeCount": 232
 }

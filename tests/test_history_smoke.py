@@ -514,7 +514,7 @@ class HistoricalSmokeTest(unittest.TestCase):
             self.assertIn('GAME_RECOVERY_SCENE_HEADER "gamescene.h"', config)
             self.assertIn("GAME_RECOVERY_SCENE_TYPE CGameScene", config)
 
-    def testOnlyTheExactOriginalConsoleMainClosesTheWindowBeforeExit(self):
+    def testOnlyTheExactOriginalConsoleLoopClosesTheWindowBeforeExit(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "source"
@@ -525,32 +525,57 @@ class HistoricalSmokeTest(unittest.TestCase):
             (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
             (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
             (source / "src/player.h").write_text("class Player {};\n")
-            main = b"int main() { while (view->isVisible()) { streamIn >> script; } }\n"
-            (source / "src/main.cpp").write_bytes(main)
+            altered = verify.CONSOLE_LOOP.replace(b"isVisible()", b"isVisible() && running")
+            (source / "src/main.cpp").write_bytes(b"int main() {\n" + altered + b"}\n")
             plain = verify.prepareSmokeAdapter(source, root / "plain")
             self.assertNotIn("shutdown", plain)
             self.assertNotIn("GAME_RECOVERY_CLOSE_BEFORE_EXIT", Path(plain["config"]).read_text())
-            pins = {"src/main.cpp": hashlib.sha256(main).hexdigest()}
-            with mock.patch.object(verify, "CONSOLE_SHUTDOWN_MAINS", pins):
-                adapter = verify.prepareSmokeAdapter(source, root / "console")
-                self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1\n", Path(adapter["config"]).read_text())
-                self.assertEqual(
-                    {
-                        "mode": "closeWindowAndJoinConsole",
-                        "inputs": pins,
-                        "validationBoundary": verify.CONSOLE_SHUTDOWN_BOUNDARY,
-                    },
-                    adapter["shutdown"],
-                )
-                (source / "src/main.cpp").write_bytes(main + b"\n")
-                self.assertIsNone(verify.consoleShutdown(source))
-                (source / "src/main.cpp").unlink()
-                (source / "src/main.cpp").symlink_to(root / "elsewhere.cpp")
-                (root / "elsewhere.cpp").write_bytes(main)
-                self.assertIsNone(verify.consoleShutdown(source))
+            main = b"int main() {\n" + verify.CONSOLE_LOOP + b"}\n"
+            (source / "src/main.cpp").write_bytes(main)
+            adapter = verify.prepareSmokeAdapter(source, root / "console")
+            self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1\n", Path(adapter["config"]).read_text())
+            self.assertEqual(
+                {
+                    "mode": "closeWindowAndJoinConsole",
+                    "main": {"path": "src/main.cpp", "sha256": hashlib.sha256(main).hexdigest()},
+                    "consoleLoopSha256": hashlib.sha256(verify.CONSOLE_LOOP).hexdigest(),
+                    "consoleLoopSource": verify.CONSOLE_LOOP_SOURCE,
+                    "validationBoundary": verify.CONSOLE_SHUTDOWN_BOUNDARY,
+                },
+                adapter["shutdown"],
+            )
+            adapted = b"int main() {\n" + verify.CONSOLE_LOOPS[1] + b"}\n"
+            (source / "src/main.cpp").write_bytes(adapted)
+            self.assertIn(b"ScriptManager::getInstance()->executeScript(script);", verify.CONSOLE_LOOPS[1])
+            self.assertEqual(
+                hashlib.sha256(verify.CONSOLE_LOOPS[1]).hexdigest(),
+                verify.consoleShutdown(source)["consoleLoopSha256"],
+            )
+            (source / "src/main.cpp").write_bytes(main + verify.CONSOLE_LOOP)
+            self.assertIsNone(verify.consoleShutdown(source))
+            (source / "src/main.cpp").write_bytes(main + verify.CONSOLE_LOOPS[1])
+            self.assertIsNone(verify.consoleShutdown(source))
+            (source / "src/main.cpp").unlink()
+            (root / "elsewhere.cpp").write_bytes(main)
+            (source / "src/main.cpp").symlink_to(root / "elsewhere.cpp")
+            self.assertIsNone(verify.consoleShutdown(source))
         observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
         self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 0", observer)
         self.assertIn("waitForDone(10000)", observer)
+
+    def testTheConsoleLoopIsTheSurvivingOriginal(self):
+        source = verify.CONSOLE_LOOP_SOURCE
+        try:
+            original = subprocess.run(
+                ["git", "show", f"{source['commit']}:{source['path']}"],
+                cwd=verify.REPO_ROOT,
+                capture_output=True,
+                check=True,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("Original history is not available in this checkout")
+        self.assertEqual(source["sha256"], hashlib.sha256(original).hexdigest())
+        self.assertEqual(1, original.count(verify.CONSOLE_LOOP))
 
     def testHistoricalProgramsReadAnEmptyStandardInput(self):
         with tempfile.TemporaryDirectory() as directory:

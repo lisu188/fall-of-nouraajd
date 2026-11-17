@@ -44,15 +44,36 @@ REVIEWED_EDITOR_MAIN_SHA256 = frozenset(
         "fa471718f3119672baf3b78564ccb3215351e4c69c637d4ca895b6513a98c5e1",  # #155
     }
 )
-# Catalog #204 ('stats properties') keeps an original stdin script console on a thread-pool thread that loops
-# while the game view is visible; the original view destructor deletes the scene that loop still queries, so
-# leaving the event loop with the window shown races a use-after-free. Only for this exact main.cpp does the
-# observer close the game window as a player would and wait for that thread before exiting.
-CONSOLE_SHUTDOWN_MAINS = {"src/main.cpp": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"}
+# Catalog #204 ('stats properties') adds the developer's stdin script console on a thread-pool thread; it loops
+# while the game view is visible, and the original view destructor deletes the scene that loop still queries, so
+# leaving the event loop with the window shown races a use-after-free. Only for a main.cpp holding this exact
+# original loop does the observer close the game window as a player would and wait for that thread before exiting.
+CONSOLE_LOOP = (
+    b"        QTextStream streamIn(stdin);\n"
+    b"        QString script;\n"
+    b"        while((!GameScene::getView())||GameScene::getView()->isVisible()){\n"
+    b"            streamIn>>script;\n"
+    b"            ScriptManager::getInstance().executeScript(script.toStdString());\n"
+    b"        }\n"
+)
+# From #207 the surviving scriptmanager.h returns ScriptManager::getInstance() by pointer and executeScript takes a
+# QString; reconstructed mains keep the same loop with only that call adapted.
+CONSOLE_LOOPS = (
+    CONSOLE_LOOP,
+    CONSOLE_LOOP.replace(
+        b"ScriptManager::getInstance().executeScript(script.toStdString());",
+        b"ScriptManager::getInstance()->executeScript(script);",
+    ),
+)
+CONSOLE_LOOP_SOURCE = {
+    "commit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+    "path": "src/main.cpp",
+    "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589",
+}
 CONSOLE_SHUTDOWN_BOUNDARY = (
     "After the first frame and readiness report, the observer closes the game window as a player would and "
-    "waits for the original stdin script console thread to stop before exiting; stdin is empty and original "
-    "sources are unchanged"
+    "waits for the original stdin script console thread to stop before exiting; stdin is empty and sources "
+    "are unchanged"
 )
 
 
@@ -355,14 +376,19 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
 
 
 def consoleShutdown(source_root: Path) -> dict | None:
-    """Recognize only the exact original mains whose stdin console stops when the game window closes."""
-    for name, expected in CONSOLE_SHUTDOWN_MAINS.items():
-        path = source_root / name
-        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-            return None
+    """Recognize only a main.cpp that holds the developer's exact stdin console loop or its reviewed adaptation."""
+    path = source_root / "src/main.cpp"
+    if path.is_symlink() or not path.is_file():
+        return None
+    data = path.read_bytes()
+    loops = [loop for loop in CONSOLE_LOOPS if loop in data]
+    if len(loops) != 1 or data.count(loops[0]) != 1:
+        return None
     return {
         "mode": "closeWindowAndJoinConsole",
-        "inputs": dict(CONSOLE_SHUTDOWN_MAINS),
+        "main": {"path": "src/main.cpp", "sha256": hashlib.sha256(data).hexdigest()},
+        "consoleLoopSha256": hashlib.sha256(loops[0]).hexdigest(),
+        "consoleLoopSource": dict(CONSOLE_LOOP_SOURCE),
         "validationBoundary": CONSOLE_SHUTDOWN_BOUNDARY,
     }
 

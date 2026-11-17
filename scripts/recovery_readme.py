@@ -16,8 +16,9 @@ import xml.etree.ElementTree as ET
 try:
     from scripts import history_source_prep as source_prep
     from scripts.verify_history import (
+        CONSOLE_LOOP_SOURCE,
+        CONSOLE_LOOPS,
         CONSOLE_SHUTDOWN_BOUNDARY,
-        CONSOLE_SHUTDOWN_MAINS,
         EDITOR_CHECKS,
         REQUIRED_CHECKS,
         VerificationError,
@@ -27,8 +28,9 @@ try:
 except ModuleNotFoundError:
     import history_source_prep as source_prep
     from verify_history import (
+        CONSOLE_LOOP_SOURCE,
+        CONSOLE_LOOPS,
         CONSOLE_SHUTDOWN_BOUNDARY,
-        CONSOLE_SHUTDOWN_MAINS,
         EDITOR_CHECKS,
         REQUIRED_CHECKS,
         VerificationError,
@@ -276,17 +278,26 @@ def forwarderAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
 
 
 def consoleShutdown(report: dict) -> bool:
-    """True when the observer closed the window for the exact reviewed original stdin console main."""
-    shutdown = report.get("adapter", {}).get("shutdown")
+    """True when the observer closed the window for a main.cpp holding the exact original stdin console loop."""
+    adapter = report.get("adapter", {})
+    shutdown = adapter.get("shutdown")
     if shutdown is None:
         return False
     expected = {
         "mode": "closeWindowAndJoinConsole",
-        "inputs": CONSOLE_SHUTDOWN_MAINS,
+        "consoleLoopSource": CONSOLE_LOOP_SOURCE,
         "validationBoundary": CONSOLE_SHUTDOWN_BOUNDARY,
     }
-    if shutdown != expected or report.get("adapter", {}).get("mode") != "game":
-        raise VerificationError("Console shutdown differs from its reviewed original main or boundary")
+    main = shutdown.get("main", {})
+    if (
+        {key: value for key, value in shutdown.items() if key not in ("main", "consoleLoopSha256")} != expected
+        or shutdown.get("consoleLoopSha256") not in [hashlib.sha256(loop).hexdigest() for loop in CONSOLE_LOOPS]
+        or set(main) != {"path", "sha256"}
+        or main.get("path") != "src/main.cpp"
+        or adapter.get("mode") != "game"
+    ):
+        raise VerificationError("Console shutdown differs from its reviewed original console loop or boundary")
+    requireIdentity(main.get("sha256"), 64, "console main fingerprint")
     return True
 
 
@@ -673,12 +684,13 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         ),
         *(
             [
-                "Shutdown used an explicit observer step. The surviving original `main.cpp` runs a stdin script",
-                "console on a thread-pool thread while the game window is visible, and the original view",
-                "destructor deletes the scene that loop still queries, so leaving the event loop with the window",
-                "shown crashes. After the frame and readiness report, the observer closed the game window as a",
-                "player would and waited for that thread to stop; stdin was empty. Original sources remain",
-                "unchanged; the exact `main.cpp` hash and this boundary are recorded in the verification metadata.",
+                "Shutdown used an explicit observer step. This version's `main.cpp` holds the developer's stdin",
+                "script console loop (original at catalog #204; reconstructions from #207 adapt only its",
+                "ScriptManager call). It runs on a thread-pool thread while the game window is visible, and the",
+                "original view destructor deletes the scene that loop still queries, so leaving the event loop",
+                "with the window shown crashes. After the frame and readiness report, the observer closed the",
+                "game window as a player would and waited for that thread to stop; stdin was empty. Sources are",
+                "unchanged; the `main.cpp` and loop hashes are in the verification metadata.",
                 "",
             ]
             if console_shutdown

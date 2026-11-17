@@ -73,24 +73,30 @@ class RecoveryReadmeTest(unittest.TestCase):
         self.assertEqual("startup.png", metadata["smoke"]["startup"]["frame"]["path"])
         self.assertEqual("/original/build/startup.png", self.report["smoke"]["startup"]["frame"]["path"])
 
-    def testConsoleShutdownIsDescribedOnlyForTheReviewedOriginalMain(self):
+    def testConsoleShutdownIsDescribedOnlyForTheReviewedOriginalLoop(self):
         from scripts import verify_history
 
         self.assertNotIn(b"Shutdown used", snapshotDocumentation(self.report, self.evidence)["README.md"])
         shutdown = {
             "mode": "closeWindowAndJoinConsole",
-            "inputs": dict(verify_history.CONSOLE_SHUTDOWN_MAINS),
+            "main": {"path": "src/main.cpp", "sha256": "d" * 64},
+            "consoleLoopSha256": hashlib.sha256(verify_history.CONSOLE_LOOP).hexdigest(),
+            "consoleLoopSource": dict(verify_history.CONSOLE_LOOP_SOURCE),
             "validationBoundary": verify_history.CONSOLE_SHUTDOWN_BOUNDARY,
         }
         self.report["adapter"] = {"mode": "game", "shutdown": shutdown}
         readme = snapshotDocumentation(self.report, self.evidence)["README.md"].decode()
-        self.assertIn("closed the game window as a\nplayer would", readme)
-        shutdown["inputs"] = {"src/main.cpp": "0" * 64}
-        with self.assertRaisesRegex(VerificationError, "reviewed original main"):
+        self.assertIn("closed the game window as a player would", readme.replace("\n", " "))
+        shutdown["consoleLoopSha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
             snapshotDocumentation(self.report, self.evidence)
-        shutdown["inputs"] = dict(verify_history.CONSOLE_SHUTDOWN_MAINS)
+        shutdown["consoleLoopSha256"] = hashlib.sha256(verify_history.CONSOLE_LOOP).hexdigest()
+        shutdown["main"]["sha256"] = "not-a-hash"
+        with self.assertRaisesRegex(VerificationError, "console main fingerprint"):
+            snapshotDocumentation(self.report, self.evidence)
+        shutdown["main"]["sha256"] = "d" * 64
         self.report["adapter"]["mode"] = "editor"
-        with self.assertRaisesRegex(VerificationError, "reviewed original main"):
+        with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
             snapshotDocumentation(self.report, self.evidence)
 
     def reflectionReport(self):

@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **229 commits / 229 trees** against the
-restored inputs: **218 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **232 commits / 232 trees** against the
+restored inputs: **221 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -128,9 +128,14 @@ every surviving `slots`/`signals`/`emit` to `Q_SLOT`/`Q_SIGNAL`/`Q_EMIT` implies
 Catalog #204's surviving `main.cpp` runs a stdin script console on a thread-pool thread
 for as long as the game view is visible, and the developer's view destructor deletes the
 scene that loop still queries, so leaving the event loop with the window shown is a
-use-after-free. Every verified process gets an empty stdin; for that exact `main.cpp`
-alone, the observer closes the game window as a player would after the readiness report
-and waits for the console thread before exiting (`closeWindowAndJoinConsole`).
+use-after-free. Every verified process gets an empty stdin. Only for a `main.cpp` holding
+that exact loop does the observer close the game window as a player would after the
+readiness report and wait for the console thread before exiting
+(`closeWindowAndJoinConsole`). The lost #205-#207 mains carry the loop; from #207 the
+surviving `scriptmanager.h` returns `ScriptManager::getInstance()` by pointer and takes a
+`QString`, so only that call is adapted. The #205/#206 script functions declared by the
+surviving `gamescript.h` (`incProperty`, `getProperty`, `moveObject`) follow the later
+surviving `cave.py` usage.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

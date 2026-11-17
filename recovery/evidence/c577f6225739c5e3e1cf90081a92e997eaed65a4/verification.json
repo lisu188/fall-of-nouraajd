@@ -1,36 +1,43 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-nyd3n7xr/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-89udehvv/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "shutdown": {
-      "inputs": {
-        "src/main.cpp": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
+      "consoleLoopSha256": "ef11a33bf0432565f4d8162f7e74e69ec5337d7f520e920bcd8c85adddb5ab8e",
+      "consoleLoopSource": {
+        "commit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+        "path": "src/main.cpp",
+        "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
+      },
+      "main": {
+        "path": "src/main.cpp",
+        "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
       },
       "mode": "closeWindowAndJoinConsole",
-      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin is empty and original sources are unchanged"
+      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin is empty and sources are unchanged"
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-nyd3n7xr/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-89udehvv/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-nyd3n7xr/build.log",
+    "log": "/home/user/work2/verify/snapshot-89udehvv/build.log",
     "returnCode": 0,
-    "seconds": 17.866,
+    "seconds": 18.472,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-nyd3n7xr/source/Game.pro",
+      "/home/user/work2/verify/snapshot-89udehvv/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-nyd3n7xr/build/Makefile",
+      "/home/user/work2/verify/snapshot-89udehvv/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -40,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-nyd3n7xr/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-nyd3n7xr/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-89udehvv/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-89udehvv/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-nyd3n7xr/configure.log",
+    "log": "/home/user/work2/verify/snapshot-89udehvv/configure.log",
     "returnCode": 0,
     "seconds": 0.115,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/4724edd6ec9091cec2986533512c42fffc1756116e5cfb264fc3ceebd003077f",
+  "evidenceDir": "/home/user/work2/verify/evidence/f5243782b793ec30b86c6ca79828b29bd2fba41e031139a9c187f90c6b172a81",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -57,20 +64,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-nyd3n7xr/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-89udehvv/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-nyd3n7xr/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-89udehvv/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.319,
+    "seconds": 0.417,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "4724edd6ec9091cec2986533512c42fffc1756116e5cfb264fc3ceebd003077f",
+  "fingerprint": "f5243782b793ec30b86c6ca79828b29bd2fba41e031139a9c187f90c6b172a81",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-nyd3n7xr/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-89udehvv/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -194,14 +201,14 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-nyd3n7xr/source",
+    "outputDir": "/home/user/work2/verify/snapshot-89udehvv/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "0fc948f562f96549ee9e4ad85e00e2771e046673",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference)",
         "replacementBlob": "02d5b9320746a08290a576cc26a765f7e2b359b7"
       },
       {
@@ -952,7 +959,7 @@
         "method": "reconstruction",
         "originalBlob": "589f6cf886e2c02b679872108d2ccd000b93d95c",
         "path": "src/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 Creature body: the native-verified #203 reconstruction with the mana/hp property setters and signature changes this commit's creature.h declares",
         "replacementBlob": "763af7c9fc9e55e20b8c40a058565379ffba08f6"
       },
       {
@@ -960,7 +967,7 @@
         "method": "reconstruction",
         "originalBlob": "18be8bbf5eb090a0c93864ff87bebc281751d218",
         "path": "src/gamescene.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 GameScene body: the exact surviving #203 (e00a7c3e) gamescene.cpp; gamescene.h is unchanged and this commit's edit is unknown (inference)",
         "replacementBlob": "a9883f575801e5d8d73197e14d700b4d9069e376"
       },
       {
@@ -968,7 +975,7 @@
         "method": "reconstruction",
         "originalBlob": "834bd0b2705b7c5bd284702b5c38711de9744991",
         "path": "src/gamescript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 Game script module: the native-verified #194-#203 reconstruction plus getObjectLocation (a named object's x, y, z tuple), declared by this commit's gamescript.h (inference)",
         "replacementBlob": "db069a6cf8de5feefcb1a1d1c3a2b8039311a125"
       },
       {
@@ -976,7 +983,7 @@
         "method": "reconstruction",
         "originalBlob": "2120c237f34b407648bd3502e788def68c74c960",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 GameView body carried unchanged from the native-verified #203 reconstruction; this commit's edit is unknown (inference)",
         "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
       },
       {
@@ -992,7 +999,7 @@
         "method": "reconstruction",
         "originalBlob": "2e59130c5e07d3adfde1a4bc90bab2c6a2d98f03",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 Map body: the native-verified #203 reconstruction without Map::isEditor, which this commit's map.h removes (objects are no longer dragged in an editor mode)",
         "replacementBlob": "8cc8e23cd25d2aea513beab89bc1b92f8225e891"
       },
       {
@@ -1000,7 +1007,7 @@
         "method": "reconstruction",
         "originalBlob": "e3894cafc3fcf8170dd3ed83c40088e3c268d130",
         "path": "src/pathfinder.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #197 PathFinder body: the native-verified #194-#196 reconstruction with this commit's PathFinderWorker signals (completed(x,y) queued to the monster's move slot; started/ended registering with the new CompletionListener, which emits completed when its last worker ends or when run() finds none pending; inference)",
         "replacementBlob": "5fbbe76524ed154f3415c90b7d11e98ff626565c"
       },
       {
@@ -1008,7 +1015,7 @@
         "method": "reconstruction",
         "originalBlob": "01848b9eddc854adb2f4b1fd10a614bca9079ab8",
         "path": "src/stats.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 Stats body: the native-verified #203 reconstruction plus the member-wise copy constructor/assignment the QObject-based header needs (preserving the previous copy semantics)",
         "replacementBlob": "f623e523c1121dd0b41b8f8145e7d07ac2cc70a2"
       },
       {
@@ -1016,7 +1023,7 @@
         "method": "reconstruction",
         "originalBlob": "11042d29411da627c4906ac77fa1af756c1428f9",
         "path": "src/stats.h",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #204 Stats header ('stats properties'; BFG-removed here): the exact surviving #203 stats.h with Stats and Damage made QObjects exposing every stat as a user Q_PROPERTY, member-wise copy operations and Q_DECLARE_METATYPE, as the surviving main.cpp now registers both as Qt metatypes and the commit makes creature/item/cave values properties (inference)",
         "replacementBlob": "3836caed41f2725e37ebba6b0cd405214f6ae222"
       },
       {
@@ -1039,12 +1046,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-nyd3n7xr/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-nyd3n7xr/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-89udehvv/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-89udehvv/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-nyd3n7xr/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-89udehvv/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.416,
+    "seconds": 0.517,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1054,7 +1061,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-nyd3n7xr/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-89udehvv/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1063,7 +1070,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-nyd3n7xr/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-89udehvv/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
