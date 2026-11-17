@@ -48,6 +48,8 @@ import verify_history as vh  # noqa: E402
 
 WORK = Path(os.environ.get("HISTORY_WORK_DIR", REPO / ".cache/history-recovery/workbench")).resolve()
 RECON = WORK / "recon"
+# Startup watchdog for verify; trees with genuine minutes-long background loading need more.
+VERIFY_TIMEOUT = float(os.environ.get("HISTORY_VERIFY_TIMEOUT", "60"))
 NOTES = RECON / "notes.json"
 IMAGE = os.environ.get("HISTORY_TOOLCHAIN_IMAGE", "nouraajd-recovery:qt5")
 ROOTFS = Path(os.environ["HISTORY_TOOLCHAIN_ROOTFS"]).resolve() if os.environ.get("HISTORY_TOOLCHAIN_ROOTFS") else None
@@ -579,6 +581,9 @@ def project(ref: str) -> str:
         print("left out resource manifests listing files absent from this tree:", stale)
     if resources:
         lines += ["RESOURCES += \\\n    " + " \\\n    ".join(resources), ""]
+    forms = sorted(path for path in files if path.endswith(".ui") and not path.startswith("tmp/"))
+    if forms:
+        lines += ["FORMS += \\\n    " + " \\\n    ".join(forms), ""]
     (source / name).write_text("\n".join(lines))
     summary = f"{origin}; settings from {kind} {donor[:8]}:{name}"
     print("wrote", name, "-", summary, "; unmatched objects:", unknown)
@@ -604,7 +609,7 @@ def verify(ref: str, recipe: str | None = None) -> str:
     extra = f"--recipe {recipe}" if recipe else ""
     result = docker(
         f"/opt/recovery/controller/bin/python3.12 {REPO}/scripts/verify_history.py --commit {commit} "
-        f"--overrides {overrides} --output-dir {output} --timeout 60 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
+        f"--overrides {overrides} --output-dir {output} --timeout {VERIFY_TIMEOUT} --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
         f"/opt/recovery/controller/bin/python3.12 -c 'import json,sys; "
         f'r=json.load(open(sys.argv[1]))["results"][-1]; print(r["status"], r.get("reason",""))\' '
         f"{output}/summary-0.json",

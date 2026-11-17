@@ -259,6 +259,7 @@ def runSmoke(
     child_environment.update(
         {
             "GAME_RECOVERY_SMOKE_REPORT": str(report_path),
+            "GAME_RECOVERY_LOAD_DEADLINE_MS": str(max(20000, int((timeout - 10) * 1000))),
             "SDL_VIDEODRIVER": "x11",
             "SDL_AUDIODRIVER": "dummy",
             "SDL_RENDER_DRIVER": "software",
@@ -407,7 +408,13 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         raise VerificationError("Map needs a reviewed tile-readiness adapter")
     coords3 = contains.group(1).count(",") >= 2
     static_player = re.search(r"\bstatic\s+\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
-    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player else map_text)
+    # From #226 the player is an instance member of the scene and the map has no accessor.
+    scene_player = (
+        not static_player
+        and re.search(r"\b\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
+        and re.search(r"\bgetPlayer\s*\(", map_text) is None
+    )
+    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player or scene_player else map_text)
     player_name = player_getter.group(1) if player_getter else ("CPlayer" if prefixed else "Player")
     # Several Qt trees define CPlayer alongside CCreature in the same header.
     if editor:
@@ -434,6 +441,7 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         f"#define GAME_RECOVERY_VIEW_TYPE {view_name}",
         f"#define GAME_RECOVERY_MAP_GETTER {'getMap' if has_map_getter else 'recoveryGetMap'}",
         f"#define GAME_RECOVERY_STATIC_PLAYER {int(static_player)}",
+        f"#define GAME_RECOVERY_SCENE_PLAYER {int(scene_player)}",
         f"#define GAME_RECOVERY_COORDS3 {int(coords3)}",
         f"#define GAME_RECOVERY_OPENGL {int(opengl)}",
     ]

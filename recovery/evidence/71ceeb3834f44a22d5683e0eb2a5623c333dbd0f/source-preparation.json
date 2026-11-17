@@ -1,6 +1,6 @@
 {
   "identity": {
-    "implementationSha256": "3620b8fd24e0334e713c8d6d8b17add50e48ee1de909d46326024c3bb9952de9",
+    "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
     "outputs": [
       {
         "after": {
@@ -52,7 +52,7 @@
         "history_source_prep.py",
         "prepare-reflection-registration"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-xg8czm7q/preparation/reflection-registration.log",
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/preparation/reflection-registration.log",
       "name": "reflectionRegistration",
       "returnCode": 0,
       "timedOut": false

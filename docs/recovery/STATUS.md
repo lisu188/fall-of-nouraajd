@@ -105,6 +105,20 @@ and `recovery/diagnostics/native-224-225-original-build-defects-2026-11-18.json`
 Carry-forward now seeds a missing file from the nearest earlier version even when that
 version is a surviving original, and inferred projects leave out Qt resource manifests
 whose listed files are absent.
+The verifier now treats a cached success whose artifacts moved as a cache miss, and
+the startup observer gained three narrowly scoped behaviours, re-checked against
+accepted #193, #223, #258 and #340: it reads the player from the scene instance when the
+scene declares a non-static `getPlayer()` and the map has none (#226+); it does not
+force a still-hidden game view visible while background tasks run (a view hidden after
+5 s with an idle pool is shown as before); and it reports success only once the global
+thread pool is idle, so it never exits underneath genuine background loading. The
+workbench startup watchdog is configurable with `HISTORY_VERIFY_TIMEOUT` (default 60 s),
+and inferred projects list Qt Designer forms in `FORMS`.
+#226 builds and starts with reconstructions adapted to its instance-based `GameScene`,
+but is not accepted: its surviving `LoadGameTask` fills every map cell through the
+genuine `CoordsHasher`, which always returns 0 (unchanged up to #366), so loading the
+restored 200x200 map is quadratic and did not settle within 720 s. See
+`recovery/diagnostics/native-226-background-loading-2026-11-18.json`.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -215,10 +229,10 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  The next blocker is #226 (instance-based `GameScene`, per-scene `Map` files, the
-  creature-based pathfinder API, the first Qt Designer form); later the
-  `CMapObject`/`CGamePanel` renames before #256. `recovery/progress.json` records the
-  exact accepted set.
+  The next blocker is the #226-#248 background map loading (see the #226 diagnostic):
+  establish whether the thread pool settles after `LoadGameTask`, then decide on the
+  map size or verification window; later the `CMapObject`/`CGamePanel` renames before
+  #256. `recovery/progress.json` records the exact accepted set.
 - Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
   partial #176 conflict-adapter wiring.
 - Replace later donor implementations that conflict with surviving APIs, including

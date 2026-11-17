@@ -97544,6 +97544,62 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp",
       "sha256": "7a7884ab19487dcf9320bd8d4ae4b89a6e2ed4f551952f7f24802084913c5c9b",
       "source": "payloads/reconstructions/f8/f82fd7a1268dc523b3fc75b092cd1bd5328a424c-gameview.cpp"
+    },
+    {
+      "originalBlob": "186ad502e0a4760e9000f8846d7be74c78125734",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed) and the #226 pathfinder API: findPath(first, second) derives start/goal coordinates from the creatures, the smart finder uses the first creature's map, and PathFinderWorker moves the first creature toward the second",
+      "sha256": "5cd7f9e6ae0f0bd46c3baf1de82f7a7069cc90e1dc2ceab771989f290861e0f9",
+      "source": "payloads/reconstructions/18/186ad502e0a4760e9000f8846d7be74c78125734-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "1a13d135f9791d13143c260e886c00e6dd347924",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/creature.cpp",
+      "sha256": "4f2ff5399e28a9a8c4e06f393f027d02850e8974a7f73917b6e0da8ffe4821f4",
+      "source": "payloads/reconstructions/1a/1a13d135f9791d13143c260e886c00e6dd347924-creature.cpp"
+    },
+    {
+      "originalBlob": "30a4fad3e0324075b7afc887b87e9586bff9bd75",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed): Python bindings resolve the Map from the hexadecimal pointer the same-commit ScriptEngine publishes as __main__.map (inferred; bindings declared in gamescript.h but absent from the carried reconstruction remain unimplemented)",
+      "sha256": "11852f52466de22dc60ee0b4eb67a98453e4e9e62b6f530702769df36fc3bb9a",
+      "source": "payloads/reconstructions/30/30a4fad3e0324075b7afc887b87e9586bff9bd75-gamescript.cpp"
+    },
+    {
+      "originalBlob": "3c49a04c95ac5e68c262321e911c50a85d134b3d",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed): the view uses its own scene and starts maps/map.tmx (the tree's TMX file; inferred); it no longer shows itself on construction because the surviving #226 LoadGameTask shows it after loading through the new Q_INVOKABLE show(), which keeps the earlier full-screen presentation (inferred)",
+      "sha256": "2e4817714e24a2c5bce5fbb01e7424266a29abc4e389368b265b4e53c683dd19",
+      "source": "payloads/reconstructions/3c/3c49a04c95ac5e68c262321e911c50a85d134b3d-gameview.cpp"
+    },
+    {
+      "originalBlob": "8062e7f1be57037cfbdcc840407815df7569afa3",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/main.cpp",
+      "sha256": "e069340c79b5494c0b0a31f1cae509f9326fc69262d0f25db6fc222ebf598709",
+      "source": "payloads/reconstructions/80/8062e7f1be57037cfbdcc840407815df7569afa3-main.cpp"
+    },
+    {
+      "originalBlob": "8d9c95d788d8571eb212ffac495a44ed847ac8ab",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed): the player is taken from the item's own GameScene",
+      "sha256": "d2d48586c821a8b46a355b49451e8fe6e5e3760c11cb4161c36ae6250ae62493",
+      "source": "payloads/reconstructions/8d/8d9c95d788d8571eb212ffac495a44ed847ac8ab-interaction.cpp"
+    },
+    {
+      "originalBlob": "9431385998c1b5e10f5484ef8f94c49b5a1cca4f",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated without a surviving object_script listing from the best-matching nearby reconstructed project, with the tree's Qt Designer form (src/mainwindow.ui) listed in FORMS",
+      "sha256": "fc6328a8d9db964996ad4a9a522c7e0a4b639553f30b02dbf2579e71c92b21e0",
+      "source": "payloads/reconstructions/94/9431385998c1b5e10f5484ef8f94c49b5a1cca4f-Game.pro"
+    },
+    {
+      "originalBlob": "a6e10fa8fae5a80db1c532c3bd411dc534dcb4e8",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed): Map(GameScene*, file) owns its ScriptEngine and loads the TMX file (inferred from the surviving GameScene::startGame), ensureSize() reads the scene's player, getScene returns GameScene*, per-level TMX layer sizes back the new getBounds/getCurrentXBound/getCurrentYBound, MapObject code reaches the scene through its map, and the player-follow animation centres the item's own scene view",
+      "sha256": "51cc470b46309c13acd89d7c3541a10c8fa2a1995e2cb21024dddcf7f9e90bad",
+      "source": "payloads/reconstructions/a6/a6e10fa8fae5a80db1c532c3bd411dc534dcb4e8-map.cpp"
     }
   ],
   "schemaVersion": 1
