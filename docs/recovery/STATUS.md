@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **213 commits / 213 trees** against the
-restored inputs: **202 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **219 commits / 219 trees** against the
+restored inputs: **208 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -118,6 +118,12 @@ fills the empty terrain layer with one default terrain (inference). `startGame` 
 the developer's own intact #197 implementation, which does not recentre the view, so
 the first frame shows the map origin rather than the distant entry. Later intact
 `item.cpp` (#187) and `player.cpp` (#188) bodies are used where their headers match.
+
+From #190 the game embeds CPython through the Python 3 module API. The lost project is
+reconstructed with CPython 3.3 (the developer's earliest explicit link, in September
+2014, is `python3.3m`) and `CONFIG += no_keywords`, which the commit's own conversion of
+every surviving `slots`/`signals`/`emit` to `Q_SLOT`/`Q_SIGNAL`/`Q_EMIT` implies: Python 3's
+`object.h` declares a `slots` member that Qt's keyword macro breaks. Both are inference.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`
