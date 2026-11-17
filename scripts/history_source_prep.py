@@ -15,9 +15,21 @@ import re
 try:
     from scripts import history_prepare_reflection as reflection_prep
     from scripts import history_prepare_coordinates as coordinates_prep
+    from scripts import history_prepare_legacy_tiles as legacy_tiles_prep
+    from scripts import history_prepare_maps_manifest as maps_manifest_prep
+    from scripts import history_prepare_teleporter as teleporter_prep
+    from scripts import history_prepare_legacy_timing as timing_prep
+    from scripts import history_prepare_conflicts as conflicts_prep
+    from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
     import history_prepare_coordinates as coordinates_prep
+    import history_prepare_legacy_tiles as legacy_tiles_prep
+    import history_prepare_maps_manifest as maps_manifest_prep
+    import history_prepare_teleporter as teleporter_prep
+    import history_prepare_legacy_timing as timing_prep
+    import history_prepare_conflicts as conflicts_prep
+    import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
@@ -115,6 +127,10 @@ def preparationArguments(source_root: Path) -> list[str]:
         arguments.append(reflection_prep.ARGUMENT)
     if coordinates_prep.coordinateHashPlan(source_root):
         arguments.append(coordinates_prep.ARGUMENT)
+    if maps_manifest_prep.mapsManifestPlan(source_root):
+        arguments.extend(maps_manifest_prep.ARGUMENTS)
+    if teleporterPlan(source_root):
+        arguments.extend(teleporter_prep.ARGUMENTS)
     return arguments
 
 
@@ -229,6 +245,14 @@ def includeOverlays(source_root: Path) -> list[dict]:
     return overlays
 
 
+def teleporterHelper(inputs):
+    return teleporter_conflicts_prep if inputs == teleporter_conflicts_prep.INPUTS else teleporter_prep
+
+
+def teleporterPlan(source_root):
+    return teleporter_conflicts_prep.teleporterPlan(source_root) or teleporter_prep.teleporterPlan(source_root)
+
+
 def preparationRequired(source_root: Path) -> bool:
     return (
         (source_root / "preprocessor.py").is_file()
@@ -236,6 +260,11 @@ def preparationRequired(source_root: Path) -> bool:
         or supplementalResourcePlan(source_root) is not None
         or reflection_prep.reflectionPlan(source_root) is not None
         or coordinates_prep.coordinateHashPlan(source_root) is not None
+        or legacy_tiles_prep.legacyTilePlan(source_root) is not None
+        or maps_manifest_prep.mapsManifestPlan(source_root) is not None
+        or teleporterPlan(source_root) is not None
+        or timing_prep.legacyTimingPlan(source_root) is not None
+        or conflicts_prep.conflictPlan(source_root) is not None
     )
 
 
@@ -270,6 +299,17 @@ def prepareSources(
     supplement = supplementalResourcePlan(source_root)
     reflection = reflection_prep.reflectionPlan(source_root)
     coordinates = coordinates_prep.coordinateHashPlan(source_root)
+    legacy_tiles = legacy_tiles_prep.legacyTilePlan(source_root)
+    maps_manifest = maps_manifest_prep.mapsManifestPlan(source_root)
+    teleporter = teleporterPlan(source_root)
+    timing = timing_prep.legacyTimingPlan(source_root)
+    conflicts = conflicts_prep.conflictPlan(source_root)
+    if teleporter and teleporter_prep.containedPath(source_root, teleporter["path"]).exists():
+        raise ValueError("Teleporter compatibility requires a new derived source, preserving existing files")
+    if maps_manifest and (source_root / maps_manifest["path"]).exists():
+        raise ValueError("Maps manifest compatibility requires a new derived manifest, preserving existing files")
+    if legacy_tiles and legacy_tiles_prep.containedPath(source_root, legacy_tiles["path"]).exists():
+        raise ValueError("Legacy tile compatibility requires a new derived configuration, preserving existing files")
     if coordinates:
         target = source_root / coordinates["path"]
         if target.is_symlink() or (
@@ -288,7 +328,18 @@ def prepareSources(
             raise ValueError("Supplemental Qt resource output is symlinked")
         if target.exists() and (not target.is_file() or target.read_bytes() != supplement["data"]):
             raise ValueError("Supplemental Qt resource output already exists with different bytes")
-    if not generator.is_file() and not include_overlays and not supplement and not reflection and not coordinates:
+    if (
+        not generator.is_file()
+        and not include_overlays
+        and not supplement
+        and not reflection
+        and not coordinates
+        and not legacy_tiles
+        and not maps_manifest
+        and not teleporter
+        and not timing
+        and not conflicts
+    ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
     before = sourceManifest(source_root)
@@ -343,6 +394,79 @@ def prepareSources(
                 "log": str(log),
             }
         )
+    if legacy_tiles:
+        legacy_tiles_prep.writeConfiguration(source_root, legacy_tiles["data"])
+        identity = {key: value for key, value in legacy_tiles.items() if key != "data"}
+        result["identity"]["legacyTileConfiguration"] = identity
+        log = output_root / "legacy-tile-configuration.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "legacyTileConfiguration",
+                "command": ["history_source_prep.py", "prepare-legacy-tile-configuration"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if maps_manifest:
+        maps_manifest_prep.writeManifest(source_root, maps_manifest["data"])
+        identity = {key: value for key, value in maps_manifest.items() if key != "data"}
+        result["identity"]["mapsManifest"] = identity
+        result.setdefault("qmakeArguments", []).extend(maps_manifest["qmakeArguments"])
+        log = output_root / "maps-manifest.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "mapsManifest",
+                "command": ["history_source_prep.py", "prepare-maps-manifest"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if teleporter:
+        teleporter_prep.writeSource(source_root, teleporter["data"])
+        identity = {key: value for key, value in teleporter.items() if key != "data"}
+        result["identity"]["teleporterSerialization"] = identity
+        result.setdefault("qmakeArguments", []).extend(teleporter["qmakeArguments"])
+        log = output_root / "teleporter-serialization.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "teleporterSerialization",
+                "command": ["history_source_prep.py", "prepare-teleporter-serialization"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if timing:
+        timing_prep.writeTimingResources(source_root, timing["data"])
+        identity = {key: value for key, value in timing.items() if key != "data"}
+        result["identity"]["legacyTimingResources"] = identity
+        log = output_root / "legacy-timing-resources.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "legacyTimingResources",
+                "command": ["history_source_prep.py", "prepare-legacy-timing-resources"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if conflicts:
+        conflicts_prep.writeSources(source_root, conflicts["data"])
+        identity = {key: value for key, value in conflicts.items() if key != "data"}
+        result["identity"]["trivialConflicts"] = identity
+        log = output_root / "trivial-conflicts.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "trivialConflicts",
+            "command": ["history_source_prep.py", "resolve-reviewed-whitespace-conflicts"],
+            "returnCode": 0, "timedOut": False, "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -388,15 +512,31 @@ def prepareSources(
                 "before": before.get(name),
                 "after": after.get(name),
                 "purpose": (
-                    "supplemental Qt resources"
-                    if name == SUPPLEMENTAL_QRC
+                    "byte-identical legacy timing resource aliases"
+                    if timing and name in timing["paths"]
                     else (
-                        "immediate-parent reflection registration compatibility"
-                        if name == reflection_prep.TARGET
+                        "supplemental Qt resources"
+                        if name == SUPPLEMENTAL_QRC
                         else (
-                            "coordinate hashing delegated to original CoordsHasher"
-                            if name == coordinates_prep.TARGET
-                            else "Windows include separators on an isolated build-source copy"
+                            "immediate-parent reflection registration compatibility"
+                            if name == reflection_prep.TARGET
+                            else (
+                                "coordinate hashing delegated to original CoordsHasher"
+                                if name == coordinates_prep.TARGET
+                                else (
+                                    "legacy tile configuration derived from original object configuration"
+                                    if name == legacy_tiles_prep.TARGET
+                                    else (
+                                        "authored removal of a genuinely deleted trigger resource"
+                                        if name == maps_manifest_prep.TARGET
+                                        else (
+                                            "teleporter coordinate-and-enabled object serialization"
+                                            if name == teleporter_prep.TARGET
+                                            else ("exact-pinned whitespace-only conflict resolution" if conflicts and name in conflicts["data"] else "Windows include separators on an isolated build-source copy")
+                                        )
+                                    )
+                                )
+                            )
                         )
                     )
                 ),
@@ -407,6 +547,10 @@ def prepareSources(
                 or (supplement and name == SUPPLEMENTAL_QRC)
                 or (reflection and name == reflection_prep.TARGET)
                 or (coordinates and name == coordinates_prep.TARGET)
+                or (legacy_tiles and name == legacy_tiles_prep.TARGET)
+                or (maps_manifest and name == maps_manifest_prep.TARGET)
+                or (teleporter and name == teleporter_prep.TARGET)
+                or (timing and name in timing["paths"])
             )
         ]
         result.update({"status": "success", "outputs": outputs})
@@ -455,7 +599,11 @@ def prepareSources(
                     "path": name,
                     "before": before.get(name),
                     "after": after.get(name),
-                    "purpose": "historical property generation",
+                    "purpose": (
+                        "legacy tile configuration derived from original object configuration"
+                        if legacy_tiles and name == legacy_tiles_prep.TARGET
+                        else "historical property generation"
+                    ),
                 }
             )
     result["outputs"] = outputs
@@ -479,6 +627,8 @@ def prepareSources(
                 or (supplement and entry["path"] == SUPPLEMENTAL_QRC)
                 or (reflection and entry["path"] == reflection_prep.TARGET)
                 or (coordinates and entry["path"] == coordinates_prep.TARGET)
+                or (legacy_tiles and entry["path"] == legacy_tiles_prep.TARGET)
+                or (timing and entry["path"] in timing["paths"])
             )
         )
     ]

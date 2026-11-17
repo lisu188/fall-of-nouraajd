@@ -16,7 +16,7 @@
       "sha256": "64031980ad55bc1cc92a9a0f97bf5bfdaf1662b942fb91ab14ad5095df96574c",
       "validationBoundary": "Game startup with coordinate hashing delegated to original CoordsHasher; original sources unchanged"
     },
-    "implementationSha256": "2ce6f08f4127a903ed0dae25db9bd46ffa10b52fbaab9bef40b66c675dbe5f9d",
+    "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
     "includeReplaySha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7",
     "includeSeparators": [
       {
@@ -90,7 +90,7 @@
         "history_source_prep.py",
         "prepare-coordinates-hash"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-e17q_9ya/preparation/coordinates-hash.log",
+      "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-86pkmc4j/preparation/coordinates-hash.log",
       "name": "coordinatesHash",
       "returnCode": 0,
       "timedOut": false
@@ -100,7 +100,7 @@
         "history_source_prep.py",
         "normalize-quoted-includes"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-e17q_9ya/preparation/include-separators.log",
+      "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-86pkmc4j/preparation/include-separators.log",
       "name": "windowsIncludeSeparators",
       "returnCode": 0,
       "timedOut": false

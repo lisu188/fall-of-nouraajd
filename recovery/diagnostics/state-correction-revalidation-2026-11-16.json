@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "reason": "Real native causal regressions demonstrated inferred gear reload clears equipment and inferred map removal deletes an item before genuine inventory transfer. Missing item config requires class names for surviving QMetaType factory.",
+  "changedOriginalBlobs": [
+    "08ec144f196a9a5195e281997b5695828ccbd2ab",
+    "2081d2dea252a6a38259edabea59e26fb74c6726",
+    "a8de3873c648161f0ab8c80b2f9c67fabde5193b"
+  ],
+  "previouslyExportedAffectedCommits": [
+    "a1102ac053605a68abd7f98eb8b714b5a00ac6ec",
+    "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+    "cdc0be72f141da8414fa7c59baf24917a4897b75",
+    "709535a6085c63fe1d26aebc3414ea2281529b3b",
+    "8bb9add08cfde759541b3b35a5a2f9ad499654ed",
+    "5258bb040f2780638a76c26b0a61bb9437cdaab5",
+    "fd507cdac42337d763550ffe41334a39a1d0d954",
+    "169b592c32924654d830fbf0571e86c5de9dc692",
+    "80920f276d6aff53a2aa0dd237f4a26cb47cb60d",
+    "cb42b1415a317340d83d240b92e65bae631b7dea",
+    "152007b28631784d3c5e17f2686eb6ef9ff30e46"
+  ],
+  "revalidation": "Fresh isolated151\u2013174 and367 checks passed.150 passed full native plus real state regressions;175 passed coherent vendored C compilation and actual startup. Existing109 published mappings remain valid.",
+  "priorPublicationPolicy": "Do not rewrite or delete any existing refs, mapping or bundle; corrected historical identities get a new versioned publication.",
+  "status": "150\u2013175 and367 native revalidation passed; matching successful evidence exported",
+  "publicationFinding": "Fresh367 restored fingerprint55b594ad512cdb95c078d3473f58dc6ca123c3192110b76bafd0bfdf6aff12ab exactly matches existing published c71ee387c03b31954c72ae1538ff075028aeca2d. Earlier full-catalog scope assumption was incorrect; no published identity changed."
+}

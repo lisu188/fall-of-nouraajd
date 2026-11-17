@@ -28,6 +28,7 @@ outputs stay under ``HISTORY_WORK_DIR``. Docker remains the default runner.
 from __future__ import annotations
 
 import argparse
+import functools
 import gzip
 import hashlib
 import json
@@ -278,6 +279,147 @@ def intactProject(commit: str, name: str) -> tuple[str, str] | None:
     return None
 
 
+@functools.lru_cache(maxsize=1)
+def committedPayloads() -> dict[str, str]:
+    entries = json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+    return {entry["originalBlob"]: entry["source"] for entry in entries if entry.get("originalBlob") and entry.get("source")}
+
+
+def reconstructionText(blob: str) -> str | None:
+    """A working or committed content-keyed reconstruction of ``blob``, if any."""
+    if (RECON / blob).exists():
+        return (RECON / blob).read_text(errors="replace")
+    source = committedPayloads().get(blob)
+    if source is None:
+        return None
+    path = (REPO / "recovery" / rh.safePath(source)).resolve()
+    return path.read_text(errors="replace") if path.is_relative_to(REPO / "recovery") else None
+
+
+def projectTemplates(commit: str, name: str, radius: int = 40) -> list[tuple[str, str, int, str]]:
+    """Candidate project settings: the nearest intact project plus nearby reconstructed ones.
+
+    Each candidate is ``(commit, text, distance, kind)``. Reconstructed neighbours matter
+    after layout moves (for example sources moving under ``src/`` and ``lib/``), where the
+    nearest intact project predates the move and matches none of this tree's files.
+    """
+    index = ORDER.index(commit) if commit in ORDER else 0
+    candidates = []
+    intact = intactProject(commit, name)
+    if intact is not None:
+        candidates.append((intact[0], intact[1], abs(ORDER.index(intact[0]) - index), "intact"))
+    for distance in range(1, radius + 1):
+        for position in (index - distance, index + distance):
+            if not 0 <= position < len(ORDER):
+                continue
+            for entry in missing(ORDER[position]):
+                if entry["path"] == name:
+                    text = reconstructionText(entry["originalBlob"])
+                    if text is not None:
+                        candidates.append((ORDER[position], text, distance, "reconstructed"))
+    return candidates
+
+
+def templateUnits(template: str, files: list[str]) -> list[str]:
+    """The project template's SOURCES that exist in this tree, matched case-insensitively."""
+    listed = []
+    for block in re.findall(r"^[ \t]*SOURCES[ \t]*\+?=((?:.*\\\n)*.*)$", template, flags=re.M):
+        for token in block.split():
+            token = re.sub(r"^(\$\$PWD/|\./)", "", token.replace("\\", "/"))
+            if token.endswith((".cpp", ".c", ".cc")):
+                listed.append(token)
+    present = sorted(path for path in files if path.endswith((".cpp", ".c", ".cc")) and not path.startswith("tmp/"))
+    by_lower = {path.lower(): path for path in present}
+    kept: list[str] = []
+    for token in listed:
+        match = token if token in by_lower.values() else by_lower.get(token.lower())
+        if match and match not in kept:
+            kept.append(match)
+    return kept
+
+
+def donorSources(template: str, files: list[str], read=None) -> list[str]:
+    """Infer a tree's translation units when no object_script listing survives.
+
+    Keeps the donor project's SOURCES that still exist in this tree (matching
+    Windows-era paths case-insensitively), then adds this tree's other C/C++ files from
+    directories the donor already compiled from. With ``read``, sources of new directories
+    reached through ``#include`` closure are added too (see ``includedSources``). The result is an inference, not the
+    original list; native build and startup verification decide whether it is accepted.
+    """
+    present = sorted(path for path in files if path.endswith((".cpp", ".c", ".cc")) and not path.startswith("tmp/"))
+    kept = templateUnits(template, files)
+    directories = {Path(path).parent.as_posix() for path in kept}
+    extra = [
+        path
+        for path in present
+        if path not in kept
+        and Path(path).parent.as_posix() in directories
+        and not Path(path).name.startswith(("moc_", "qrc_"))
+    ]
+    units = kept + extra
+    if read is not None and units:
+        units += includedSources(units, files, present, directories, read)
+    return units
+
+
+INCLUDE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
+ENTRY_POINT = re.compile(r"\bint\s+main\s*\(")
+COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
+
+
+def definesEntryPoint(text: str | None) -> bool:
+    """True when ``main`` is declared outside comments (zlib's inflate.c mentions it in one)."""
+    return bool(text) and ENTRY_POINT.search(COMMENT.sub(" ", text)) is not None
+
+
+def includedSources(units: list[str], files: list[str], present: list[str], directories: set[str], read) -> list[str]:
+    """Add translation units from directories the inferred units reach through ``#include``.
+
+    Directories introduced after the donor project (for example vendored TMX, TinyXML or
+    zlib sources) are otherwise missing at link time. The first reached header in a
+    directory the donor did not compile from adds all of that directory's C/C++ sources,
+    except generated ``moc_``/``qrc_`` files and files defining ``main``; their includes
+    are followed in turn. Includes resolve against the including file's directory, then
+    the tree root, case-insensitively as on the original Windows hosts.
+    """
+    by_lower = {path.lower(): path for path in files}
+    by_directory: dict[str, list[str]] = {}
+    for path in present:
+        if not Path(path).name.startswith(("moc_", "qrc_")):
+            by_directory.setdefault(Path(path).parent.as_posix(), []).append(path)
+    added: list[str] = []
+    entered = set(directories)
+    queue, seen = list(units), set(units)
+    while queue:
+        current = queue.pop()
+        text = read(current)
+        if not text:
+            continue
+        for name in INCLUDE.findall(text):
+            name = name.replace("\\", "/")
+            header = None
+            for base in (Path(current).parent.as_posix(), "."):
+                candidate = os.path.normpath(f"{base}/{name}").replace(os.sep, "/")
+                header = by_lower.get(candidate.lower())
+                if header:
+                    break
+            if header is None or header in seen:
+                continue
+            seen.add(header)
+            queue.append(header)
+            directory = Path(header).parent.as_posix()
+            if directory in entered:
+                continue
+            entered.add(directory)
+            for path in by_directory.get(directory, []):
+                if path not in seen and not definesEntryPoint(read(path)):
+                    seen.add(path)
+                    queue.append(path)
+                    added.append(path)
+    return added
+
+
 def project(ref: str) -> str:
     """Write a qmake project from the tree's surviving object_script listing and the nearest intact project."""
     commit = resolve(ref)
@@ -287,26 +429,43 @@ def project(ref: str) -> str:
         raise SystemExit("this tree's qmake project survived")
     name = lost[0]
     scripts = sorted(source.glob("object_script.*.Debug")) or sorted(source.glob("object_script.*.Release"))
-    if not scripts:
-        raise SystemExit("no object_script listing survives in this tree")
-    objects = [
-        Path(line.strip().replace("\\", "/")).stem
-        for line in scripts[0].read_text(errors="replace").splitlines()
-        if line.strip().endswith(".o")
-    ]
     files = [path.relative_to(source).as_posix() for path in source.rglob("*") if path.is_file()]
-    by_stem: dict[str, list[str]] = {}
-    for path in files:
-        if path.endswith((".cpp", ".c", ".cc")):
-            by_stem.setdefault(Path(path).stem, []).append(path)
+    candidates = projectTemplates(commit, name)
+    if not candidates:
+        raise SystemExit("no intact or reconstructed qmake project survives to supply settings")
+    if scripts:
+        candidates = [candidate for candidate in candidates if candidate[3] == "intact"] or candidates
+    donor, template, _, kind = max(candidates, key=lambda c: (len(templateUnits(c[1], files)), -c[2], c[3] == "intact"))
     sources, unknown = [], []
-    for stem in objects:
-        if stem.startswith(("moc_", "qrc_")):
-            continue
-        matches = by_stem.get(stem, [])
-        (sources.append(matches[0]) if len(matches) == 1 else unknown.append(stem))
+    if scripts:
+        objects = [
+            Path(line.strip().replace("\\", "/")).stem
+            for line in scripts[0].read_text(errors="replace").splitlines()
+            if line.strip().endswith(".o")
+        ]
+        by_stem: dict[str, list[str]] = {}
+        for path in files:
+            if path.endswith((".cpp", ".c", ".cc")):
+                by_stem.setdefault(Path(path).stem, []).append(path)
+        for stem in objects:
+            if stem.startswith(("moc_", "qrc_")):
+                continue
+            matches = by_stem.get(stem, [])
+            (sources.append(matches[0]) if len(matches) == 1 else unknown.append(stem))
+        origin = f"{len(sources)} sources from {scripts[0].name}"
+    else:
+        def readTreeFile(path: str) -> str | None:
+            try:
+                return (source / path).read_text(errors="replace")
+            except OSError:
+                return None
+
+        sources = donorSources(template, files, readTreeFile)
+        origin = (
+            f"{len(sources)} sources inferred without a surviving object_script listing: {kind} "
+            f"{donor[:8]}:{name} SOURCES reconciled with this tree's files"
+        )
     headers = sorted(path for path in files if path.endswith(".h") and not path.startswith("tmp/"))
-    donor, template = intactProject(commit, name)
     head = template.split("SOURCES", 1)[0].rstrip()
     lines = [
         head,
@@ -320,7 +479,7 @@ def project(ref: str) -> str:
     if resources:
         lines += ["RESOURCES += \\\n    " + " \\\n    ".join(resources), ""]
     (source / name).write_text("\n".join(lines))
-    summary = f"{len(sources)} sources from {scripts[0].name}; settings from intact {donor[:8]}:{name}"
+    summary = f"{origin}; settings from {kind} {donor[:8]}:{name}"
     print("wrote", name, "-", summary, "; unmatched objects:", unknown)
     return summary
 
@@ -447,6 +606,9 @@ def export() -> None:
                 "supplemental_images.qrc",
                 "reflection_registration.h",
                 "coordinates_hash.h",
+                "legacy_tiles.json",
+                "maps_manifest.qrc",
+                "teleporter_serialization.cpp",
             ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
@@ -495,7 +657,14 @@ def progress() -> None:
                     continue
             except vh.VerificationError:
                 continue
-            if report.get("startupCompatibility") in ("parentReflectionRegistration", "originalCoordinateHash"):
+            if report.get("startupCompatibility") in (
+                "parentReflectionRegistration",
+                "originalCoordinateHash",
+                "legacyTileConfiguration",
+                "authoredMapsManifest",
+                "teleporterSerialization",
+                "legacyTimingResources",
+            ):
                 from recovery_readme import VerificationError as DocumentationError, snapshotDocumentation
 
                 try:
@@ -523,6 +692,18 @@ def progress() -> None:
             if report.get("startupCompatibility") == "originalCoordinateHash":
                 item["startupCompatibility"] = "originalCoordinateHash"
                 item["validation"] = "build-and-startup-with-coordinate-hash-compatibility-passed"
+            if report.get("startupCompatibility") == "legacyTileConfiguration":
+                item["startupCompatibility"] = "legacyTileConfiguration"
+                item["validation"] = "build-and-startup-with-legacy-tile-compatibility-passed"
+            if report.get("startupCompatibility") == "authoredMapsManifest":
+                item["startupCompatibility"] = "authoredMapsManifest"
+                item["validation"] = "build-and-startup-with-maps-manifest-compatibility-passed"
+            if report.get("startupCompatibility") == "teleporterSerialization":
+                item["startupCompatibility"] = "teleporterSerialization"
+                item["validation"] = "build-and-startup-with-teleporter-serialization-compatibility-passed"
+            if report.get("startupCompatibility") == "legacyTimingResources":
+                item["startupCompatibility"] = "legacyTimingResources"
+                item["validation"] = "build-and-startup-with-legacy-timing-resource-compatibility-passed"
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])

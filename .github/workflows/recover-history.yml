@@ -16,7 +16,13 @@ on:
       - scripts/history_prepare_resources.py
       - scripts/history_prepare_reflection.py
       - scripts/history_prepare_coordinates.py
+      - scripts/history_prepare_legacy_tiles.py
+      - scripts/history_prepare_maps_manifest.py
+      - scripts/history_prepare_teleporter.py
+      - scripts/history_prepare_legacy_timing.py
       - scripts/history_qmake_compatibility.py
+      - scripts/history_static_lto.py
+      - scripts/history_state_regression.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
       - tests/test_history_smoke.py
@@ -31,8 +37,19 @@ on:
       - tests/test_history_resource_preparation.py
       - tests/test_history_reflection_preparation.py
       - tests/test_history_coordinate_preparation.py
+      - tests/test_history_legacy_tiles.py
+      - tests/test_history_maps_manifest.py
+      - tests/test_history_teleporter_preparation.py
+      - tests/test_history_legacy_timing.py
+      - tests/test_history_legacy_timing_integration.py
+      - tests/fixtures/history_teleporter/**
+      - tests/fixtures/history-timing-128/**
       - tests/test_history_prepare_includes.py
       - tests/test_history_qmake_compatibility.py
+      - tests/test_history_static_lto.py
+      - tests/test_history_movement_completion.py
+      - tests/fixtures/history-movement-195/**
+      - tests/fixtures/history-state/**
       - tests/test_recovery_workflow.py
 
 permissions:
@@ -60,7 +77,10 @@ jobs:
             tests.test_history_payloads tests.test_history_resources tests.test_history_rootfs \
             tests.test_history_workbench tests.test_history_source_prep tests.test_history_prepare_includes \
             tests.test_history_qmake_compatibility tests.test_history_resource_preparation \
-            tests.test_history_reflection_preparation tests.test_history_coordinate_preparation
+            tests.test_history_reflection_preparation tests.test_history_maps_manifest tests.test_history_coordinate_preparation \
+            tests.test_history_legacy_tiles tests.test_history_teleporter_preparation \
+            tests.test_history_legacy_timing tests.test_history_legacy_timing_integration \
+            tests.test_history_static_lto tests.test_history_movement_completion
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

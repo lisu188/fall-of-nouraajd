@@ -110,6 +110,96 @@ class RecoveryReadmeTest(unittest.TestCase):
         (self.evidence / helper.ATTACHMENT).write_bytes(helper.HEADER)
         return helper
 
+    def legacyTileReport(self):
+        helper = history_source_prep.legacy_tiles_prep
+        names = (
+            "Beach",
+            "Desert",
+            "Grass",
+            "Ground",
+            "Lava",
+            "Mountain",
+            "Road",
+            "Snow",
+            "Swamp",
+            "Wasteland",
+            "Water",
+        )
+        data = (
+            json.dumps(
+                {
+                    name
+                    + "Tile": {"path": "images/tiles/" + name.lower(), "canStep": name not in ("Mountain", "Water")}
+                    for name in names
+                },
+                sort_keys=True,
+                indent=2,
+            )
+            + "\n"
+        ).encode()
+        self.assertEqual(helper.OUTPUT_SHA256, hashlib.sha256(data).hexdigest())
+        compatibility = {
+            "path": helper.TARGET,
+            "sha256": helper.OUTPUT_SHA256,
+            "inputs": dict(helper.INPUTS),
+            "provenance": dict(helper.PROVENANCE),
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [{"path": helper.TARGET, "before": None, "after": {"kind": "file", "sha256": helper.OUTPUT_SHA256}}]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "legacyTileConfiguration",
+                    "command": ["prepare-legacy-tile-configuration"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {
+                "implementationSha256": "d" * 64,
+                "legacyTileConfiguration": compatibility,
+                "outputs": outputs,
+            },
+        }
+        self.report.update(
+            sourcePreparation=preparation,
+            startupCompatibility="legacyTileConfiguration",
+            startupSelection={"mode": "game", "boundary": helper.BOUNDARY},
+        )
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Derived exact original legacy tile configuration\n")
+        (self.evidence / helper.ATTACHMENT).write_bytes(data)
+        return helper
+
+    def testLegacyTileCompatibilityHasOriginalByteBoundaryAndPortableReplay(self):
+        helper = self.legacyTileReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual((self.evidence / helper.ATTACHMENT).read_bytes(), files["recovery/" + helper.ATTACHMENT])
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_legacy_tile_configuration.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("Original source and configuration bytes remain", readme)
+        self.assertIn("explicitly inferred compatibility", readme)
+        self.assertIn("python3 recovery/prepare_legacy_tile_configuration.py", readme)
+
+    def testLegacyTileCompatibilityRejectsChangedDataInputsAndMissingBoundary(self):
+        helper = self.legacyTileReport()
+        original = (self.evidence / helper.ATTACHMENT).read_bytes()
+        (self.evidence / helper.ATTACHMENT).write_bytes(b"{}")
+        with self.assertRaisesRegex(VerificationError, "reviewed derived bytes"):
+            snapshotDocumentation(self.report, self.evidence)
+        (self.evidence / helper.ATTACHMENT).write_bytes(original)
+        metadata = self.report["sourcePreparation"]["identity"]["legacyTileConfiguration"]
+        metadata["inputs"]["src/CTile.cpp"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "reviewed inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        metadata["inputs"] = dict(helper.INPUTS)
+        self.report.pop("startupCompatibility")
+        with self.assertRaisesRegex(VerificationError, "reviewed inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def testReflectionCompatibilityHasExplicitBoundaryHeaderAndPortableCommand(self):
         helper = self.reflectionReport()
         files = snapshotDocumentation(self.report, self.evidence)
@@ -279,6 +369,286 @@ class RecoveryReadmeTest(unittest.TestCase):
             self.assertEqual(1, progress["validatedCommitCount"])
             self.assertEqual("originalCoordinateHash", progress["snapshots"][0]["startupCompatibility"])
             (evidence / helper.ATTACHMENT).write_bytes(b"changed header")
+            workbench.progress()
+            progress = json.loads((repository / "recovery/progress.json").read_text())
+            self.assertEqual(0, progress["validatedCommitCount"])
+
+    def testProgressRejectsTamperedLegacyTileProofAndLabelsCompatibility(self):
+        from scripts import history_workbench as workbench
+
+        helper = self.legacyTileReport()
+        image = "sha256:" + "d" * 64
+        self.report["toolchainImage"] = image
+        commit = self.report["sourceCommit"]
+        tree = {"tree": self.report["sourceTree"]}
+        repository = self.evidence / "repository"
+        evidence = repository / "recovery/evidence" / commit
+        evidence.mkdir(parents=True)
+        for path in list(self.evidence.iterdir()):
+            if path.is_file():
+                (evidence / path.name).write_bytes(path.read_bytes())
+        (evidence / "verification.json").write_text(json.dumps(self.report))
+        with (
+            patch.object(workbench, "REPO", repository),
+            patch.object(workbench, "ROOTFS", None),
+            patch.object(workbench, "TREE_OF", {commit: tree}),
+            patch.object(workbench, "ORDER", [commit]),
+            patch.object(workbench, "CATALOG", {"trees": [tree]}),
+            patch.dict(workbench.os.environ, {"HISTORY_TOOLCHAIN_IMAGE_ID": image}),
+            patch.object(workbench.rh, "loadOverrides", return_value={}),
+            patch.object(workbench.rh, "GitObjects"),
+            patch.object(
+                workbench.rh,
+                "prepareSnapshot",
+                return_value=(
+                    None,
+                    {"restoredFilesFingerprint": self.report["restoration"]["restoredFilesFingerprint"]},
+                ),
+            ),
+        ):
+            workbench.progress()
+            progress = json.loads((repository / "recovery/progress.json").read_text())
+            self.assertEqual(1, progress["validatedCommitCount"])
+            self.assertEqual("legacyTileConfiguration", progress["snapshots"][0]["startupCompatibility"])
+            (evidence / helper.ATTACHMENT).write_bytes(b"changed tile configuration")
+            workbench.progress()
+            progress = json.loads((repository / "recovery/progress.json").read_text())
+            self.assertEqual(0, progress["validatedCommitCount"])
+
+    def mapsManifestReport(self):
+        from tests.test_history_maps_manifest import ORIGINAL
+
+        helper = history_source_prep.maps_manifest_prep
+        data = ORIGINAL.replace(helper.REMOVED_LINE, b"")
+        compatibility = {
+            "path": helper.TARGET,
+            "sha256": helper.OUTPUT_SHA256,
+            "inputs": dict(helper.INPUTS),
+            "absentInputs": list(helper.ABSENT_INPUTS),
+            "qmakeArguments": list(helper.ARGUMENTS),
+            "provenance": dict(helper.PROVENANCE),
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [{"path": helper.TARGET, "before": None, "after": {"kind": "file", "sha256": helper.OUTPUT_SHA256}}]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {"name": "mapsManifest", "command": ["prepare-maps-manifest"], "returnCode": 0, "timedOut": False}
+            ],
+            "outputs": outputs,
+            "qmakeArguments": list(helper.ARGUMENTS),
+            "identity": {"implementationSha256": "d" * 64, "mapsManifest": compatibility, "outputs": outputs},
+        }
+        self.report.update(
+            sourcePreparation=preparation,
+            startupCompatibility="authoredMapsManifest",
+            startupSelection={"mode": "game", "boundary": helper.BOUNDARY},
+        )
+        self.report["recipe"]["qmakeArguments"] = list(helper.ARGUMENTS)
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text(
+            "Generated authored deleted-resource manifest correction\n"
+        )
+        (self.evidence / helper.ATTACHMENT).write_bytes(data)
+        return helper
+
+    def testMapsManifestHasAuthoredBoundaryAndPortableQuotedArguments(self):
+        helper = self.mapsManifestReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_maps_manifest.py"])
+        self.assertEqual((self.evidence / helper.ATTACHMENT).read_bytes(), files["recovery/" + helper.ATTACHMENT])
+        readme = files["README.md"].decode()
+        self.assertIn("trigger configuration that the original commit deleted", readme)
+        self.assertIn("python3 recovery/prepare_maps_manifest.py", readme)
+        qmake = next(line for line in readme.splitlines() if line.startswith("qmake "))
+        self.assertEqual(shlex.split(qmake)[2:5], helper.ARGUMENTS)
+
+    def testMapsManifestRejectsForgedDataAbsenceStateAndFlagOrder(self):
+        helper = self.mapsManifestReport()
+        original = (self.evidence / helper.ATTACHMENT).read_bytes()
+        (self.evidence / helper.ATTACHMENT).write_bytes(b"forged")
+        with self.assertRaisesRegex(VerificationError, "authored corrected bytes"):
+            snapshotDocumentation(self.report, self.evidence)
+        (self.evidence / helper.ATTACHMENT).write_bytes(original)
+        metadata = self.report["sourcePreparation"]["identity"]["mapsManifest"]
+        metadata["absentInputs"] = []
+        with self.assertRaisesRegex(VerificationError, "absence state"):
+            snapshotDocumentation(self.report, self.evidence)
+        metadata["absentInputs"] = list(helper.ABSENT_INPUTS)
+        for arguments in [
+            helper.ARGUMENTS[1:],
+            list(reversed(helper.ARGUMENTS)),
+            helper.ARGUMENTS + [helper.ARGUMENTS[-1]],
+        ]:
+            self.report["recipe"]["qmakeArguments"] = arguments
+            with self.assertRaisesRegex(VerificationError, "replacement order"):
+                snapshotDocumentation(self.report, self.evidence)
+
+    def testMapsManifestFlagsWithoutProofRejected(self):
+        helper = history_source_prep.maps_manifest_prep
+        self.report["recipe"]["qmakeArguments"] = helper.ARGUMENTS
+        with self.assertRaisesRegex(VerificationError, "lack attached preparation"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def testProgressRejectsTamperedMapsManifestProofAndLabelsCompatibility(self):
+        from scripts import history_workbench as workbench
+
+        helper = self.mapsManifestReport()
+        image = "sha256:" + "d" * 64
+        self.report["toolchainImage"] = image
+        commit = self.report["sourceCommit"]
+        tree = {"tree": self.report["sourceTree"]}
+        repository = self.evidence / "repository"
+        evidence = repository / "recovery/evidence" / commit
+        evidence.mkdir(parents=True)
+        for path in list(self.evidence.iterdir()):
+            if path.is_file():
+                (evidence / path.name).write_bytes(path.read_bytes())
+        (evidence / "verification.json").write_text(json.dumps(self.report))
+        with (
+            patch.object(workbench, "REPO", repository),
+            patch.object(workbench, "ROOTFS", None),
+            patch.object(workbench, "TREE_OF", {commit: tree}),
+            patch.object(workbench, "ORDER", [commit]),
+            patch.object(workbench, "CATALOG", {"trees": [tree]}),
+            patch.dict(workbench.os.environ, {"HISTORY_TOOLCHAIN_IMAGE_ID": image}),
+            patch.object(workbench.rh, "loadOverrides", return_value={}),
+            patch.object(workbench.rh, "GitObjects"),
+            patch.object(
+                workbench.rh,
+                "prepareSnapshot",
+                return_value=(
+                    None,
+                    {"restoredFilesFingerprint": self.report["restoration"]["restoredFilesFingerprint"]},
+                ),
+            ),
+        ):
+            workbench.progress()
+            progress = json.loads((repository / "recovery/progress.json").read_text())
+            self.assertEqual(1, progress["validatedCommitCount"])
+            self.assertEqual("authoredMapsManifest", progress["snapshots"][0]["startupCompatibility"])
+            (evidence / helper.ATTACHMENT).write_bytes(b"changed manifest")
+            workbench.progress()
+            progress = json.loads((repository / "recovery/progress.json").read_text())
+            self.assertEqual(0, progress["validatedCommitCount"])
+
+    def teleporterReport(self):
+        from tests.test_history_teleporter_preparation import FIXTURES
+
+        helper = history_source_prep.teleporter_prep
+        compatibility = helper.reviewedIdentity(helper.STATES[0]["inputs"])
+        data = helper.derivedSource((FIXTURES / "164-teleporter.cpp").read_bytes())
+        outputs = [
+            {"path": helper.TARGET, "before": None, "after": {"kind": "file", "sha256": compatibility["sha256"]}}
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "teleporterSerialization",
+                    "command": ["prepare-teleporter"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "qmakeArguments": list(helper.ARGUMENTS),
+            "identity": {
+                "implementationSha256": "d" * 64,
+                "teleporterSerialization": compatibility,
+                "outputs": outputs,
+            },
+        }
+        self.report.update(
+            sourcePreparation=preparation,
+            startupCompatibility="teleporterSerialization",
+            startupSelection={"mode": "game", "boundary": helper.BOUNDARY},
+        )
+        self.report["recipe"]["qmakeArguments"] = list(helper.ARGUMENTS)
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text(
+            "Generated inverse teleporter coordinate/enable serialization\n"
+        )
+        (self.evidence / helper.ATTACHMENT).write_bytes(data)
+        return helper
+
+    def testTeleporterHasExplicitSemanticBoundaryAndPortableQuotedArguments(self):
+        helper = self.teleporterReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_teleporter_serialization.py"])
+        self.assertEqual((self.evidence / helper.ATTACHMENT).read_bytes(), files["recovery/" + helper.ATTACHMENT])
+        readme = files["README.md"].decode()
+        self.assertIn("initialized to true by every reviewed original header", readme)
+        self.assertIn("ordinary save/shutdown paths", readme)
+        self.assertIn("python3 recovery/prepare_teleporter_serialization.py", readme)
+        qmake = next(line for line in readme.splitlines() if line.startswith("qmake "))
+        self.assertEqual(shlex.split(qmake)[2:5], helper.ARGUMENTS)
+
+    def testTeleporterRejectsForgedSourceJsonAndFlagOrder(self):
+        helper = self.teleporterReport()
+        original = (self.evidence / helper.ATTACHMENT).read_bytes()
+        (self.evidence / helper.ATTACHMENT).write_bytes(b"forged")
+        with self.assertRaisesRegex(VerificationError, "reviewed derived source"):
+            snapshotDocumentation(self.report, self.evidence)
+        (self.evidence / helper.ATTACHMENT).write_bytes(original)
+        metadata = self.report["sourcePreparation"]["identity"]["teleporterSerialization"]
+        metadata["inputs"]["json/json_value.cpp"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "JsonCpp"):
+            snapshotDocumentation(self.report, self.evidence)
+        metadata["inputs"] = dict(helper.STATES[0]["inputs"])
+        for arguments in [
+            helper.ARGUMENTS[1:],
+            list(reversed(helper.ARGUMENTS)),
+            helper.ARGUMENTS + [helper.ARGUMENTS[-1]],
+        ]:
+            self.report["recipe"]["qmakeArguments"] = arguments
+            with self.assertRaisesRegex(VerificationError, "replacement order"):
+                snapshotDocumentation(self.report, self.evidence)
+
+    def testTeleporterFlagsWithoutProofRejected(self):
+        self.report["recipe"]["qmakeArguments"] = history_source_prep.teleporter_prep.ARGUMENTS
+        with self.assertRaisesRegex(VerificationError, "lack attached preparation"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def testProgressRejectsTamperedTeleporterProofAndLabelsCompatibility(self):
+        from scripts import history_workbench as workbench
+
+        helper = self.teleporterReport()
+        image = "sha256:" + "d" * 64
+        self.report["toolchainImage"] = image
+        commit = self.report["sourceCommit"]
+        tree = {"tree": self.report["sourceTree"]}
+        repository = self.evidence / "repository"
+        evidence = repository / "recovery/evidence" / commit
+        evidence.mkdir(parents=True)
+        for path in list(self.evidence.iterdir()):
+            if path.is_file():
+                (evidence / path.name).write_bytes(path.read_bytes())
+        (evidence / "verification.json").write_text(json.dumps(self.report))
+        with (
+            patch.object(workbench, "REPO", repository),
+            patch.object(workbench, "ROOTFS", None),
+            patch.object(workbench, "TREE_OF", {commit: tree}),
+            patch.object(workbench, "ORDER", [commit]),
+            patch.object(workbench, "CATALOG", {"trees": [tree]}),
+            patch.dict(workbench.os.environ, {"HISTORY_TOOLCHAIN_IMAGE_ID": image}),
+            patch.object(workbench.rh, "loadOverrides", return_value={}),
+            patch.object(workbench.rh, "GitObjects"),
+            patch.object(
+                workbench.rh,
+                "prepareSnapshot",
+                return_value=(
+                    None,
+                    {"restoredFilesFingerprint": self.report["restoration"]["restoredFilesFingerprint"]},
+                ),
+            ),
+        ):
+            workbench.progress()
+            progress = json.loads((repository / "recovery/progress.json").read_text())
+            self.assertEqual(1, progress["validatedCommitCount"])
+            self.assertEqual("teleporterSerialization", progress["snapshots"][0]["startupCompatibility"])
+            (evidence / helper.ATTACHMENT).write_bytes(b"changed derived source")
             workbench.progress()
             progress = json.loads((repository / "recovery/progress.json").read_text())
             self.assertEqual(0, progress["validatedCommitCount"])

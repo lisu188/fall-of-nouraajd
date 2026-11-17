@@ -21,9 +21,11 @@ import zlib
 
 try:
     from scripts import history_source_prep as source_prep
+    from scripts import history_static_lto as static_lto
     from scripts.history_qmake_compatibility import recipeForSource
 except ModuleNotFoundError:
     import history_source_prep as source_prep
+    import history_static_lto as static_lto
     from history_qmake_compatibility import recipeForSource
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -676,7 +678,7 @@ def selectRecipe(recipes: list[dict], source_root: Path, selected: str | None) -
         matching = [recipe for recipe in recipes if str(recipe.get("pythonAbi", "none")) == abi]
     if len(matching) != 1:
         raise VerificationError(f"Expected one build recipe; found {len(matching)}")
-    recipe = recipeForSource(matching[0], source_root)
+    recipe = static_lto.recipeForSource(recipeForSource(matching[0], source_root), source_root)
     arguments = source_prep.preparationArguments(source_root)
     if arguments:
         recipe = {**recipe, "qmakeArguments": [*recipe.get("qmakeArguments", []), *arguments]}
@@ -737,6 +739,59 @@ def exportEvidence(result: dict, output_root: Path) -> None:
         if hashlib.sha256(header.read_bytes()).hexdigest() != coordinates.get("sha256"):
             raise VerificationError("Coordinate hash compatibility header differs from its preparation proof")
         shutil.copyfile(header, evidence_dir / helper.ATTACHMENT)
+    legacy_tiles = result.get("sourcePreparation", {}).get("identity", {}).get("legacyTileConfiguration")
+    if legacy_tiles:
+        helper = source_prep.legacy_tiles_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.legacyTilePlan(root)
+        if plan is None or legacy_tiles != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Legacy tile configuration differs from its reviewed preparation identity")
+        target = helper.containedPath(root, helper.TARGET)
+        if not target.is_file() or target.read_bytes() != plan["data"]:
+            raise VerificationError("Legacy tile configuration differs from its reviewed derived bytes")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    maps_manifest = result.get("sourcePreparation", {}).get("identity", {}).get("mapsManifest")
+    if maps_manifest:
+        helper = source_prep.maps_manifest_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.mapsManifestPlan(root)
+        if plan is None or maps_manifest != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Maps manifest differs from its reviewed preparation identity")
+        target = root / helper.TARGET
+        if target.is_symlink() or not target.is_file() or target.read_bytes() != plan["data"]:
+            raise VerificationError("Maps manifest differs from its authored corrected bytes")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    teleporter = result.get("sourcePreparation", {}).get("identity", {}).get("teleporterSerialization")
+    if teleporter:
+        helper = source_prep.teleporterHelper(teleporter.get("inputs"))
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.teleporterPlan(root)
+        if plan is None or teleporter != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Teleporter serialization differs from its reviewed preparation identity")
+        target = helper.containedPath(root, helper.TARGET)
+        if not target.is_file() or target.read_bytes() != plan["data"]:
+            raise VerificationError("Teleporter serialization differs from its reviewed derived source")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    conflicts = result.get("sourcePreparation", {}).get("identity", {}).get("trivialConflicts")
+    if conflicts:
+        helper = source_prep.conflicts_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.conflictPlan(root, allow_prepared=True)
+        if plan is None or conflicts != helper.reviewedIdentity():
+            raise VerificationError("Whitespace-only conflict source differs from its preparation proof")
+        helper.validatePreparation(result["sourcePreparation"])
+        if result.get("buildCompatibility") != "trivialConflicts":
+            raise VerificationError("Whitespace-only conflict preparation lacks its explicit build boundary")
+    timing = result.get("sourcePreparation", {}).get("identity", {}).get("legacyTimingResources")
+    if timing:
+        helper = source_prep.timing_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.legacyTimingPlan(root, allow_generated=True)
+        if plan is None or timing != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Legacy timing resources differ from their reviewed preparation identity")
+        for name, expected in plan["data"].items():
+            if helper.originalInput(root, name) != expected:
+                raise VerificationError("Legacy timing resource differs from its byte-identical renamed input")
     frame_path = Path(startup["frame"]["path"])
     if not frame_path.is_absolute():
         frame_path = artifact_root / frame_path
@@ -819,6 +874,32 @@ def verifySnapshot(
                 raise VerificationError("Historical compatibility states unexpectedly overlap")
             startup["boundary"] = coordinates["validationBoundary"]
             result["startupCompatibility"] = "originalCoordinateHash"
+        legacy_tiles = preparation["identity"].get("legacyTileConfiguration")
+        if legacy_tiles:
+            if supplemental or reflection or coordinates:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = legacy_tiles["validationBoundary"]
+            result["startupCompatibility"] = "legacyTileConfiguration"
+        maps_manifest = preparation["identity"].get("mapsManifest")
+        if maps_manifest:
+            if supplemental or reflection or coordinates or legacy_tiles:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = maps_manifest["validationBoundary"]
+            result["startupCompatibility"] = "authoredMapsManifest"
+        teleporter = preparation["identity"].get("teleporterSerialization")
+        if teleporter:
+            if supplemental or reflection or coordinates or legacy_tiles or maps_manifest:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = teleporter["validationBoundary"]
+            result["startupCompatibility"] = "teleporterSerialization"
+        timing = preparation["identity"].get("legacyTimingResources")
+        if timing:
+            if supplemental or reflection or coordinates or legacy_tiles or maps_manifest or teleporter:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = timing["validationBoundary"]
+            result["startupCompatibility"] = "legacyTimingResources"
+        if preparation["identity"].get("trivialConflicts"):
+            result["buildCompatibility"] = "trivialConflicts"
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")

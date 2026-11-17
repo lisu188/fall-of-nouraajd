@@ -28,7 +28,11 @@ void CGameView::start() {
   init = true;
 }
 
-void CGameView::show() { showNormal(); }
+void CGameView::show() {
+  if (parentWidget() && !isWindow())
+    setWindowFlags(windowFlags() | Qt::Window);
+  showNormal();
+}
 
 CGameView::CGameView(QString mapName, QString playerType) {
   this->mapName = mapName;

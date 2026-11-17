@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/observer/recovery_smoke_config.h",
     "configSha256": "9e5d3a791bc308327147ab07ef697533c391e9e97f00313c2250e2a217da007c",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/smoke",
+  "artifactDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/smoke",
   "build": {
     "command": [
       "make",
-      "-j4"
+      "-j8"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/build.log",
     "returnCode": 0,
-    "seconds": 15.741,
+    "seconds": 8.852,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/source/Game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/source/Game.pro",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/source",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/observer"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-middle/verify/evidence/eaae77743adb3600099d7f25323005b8864e413fcc7ad4bcb6977adcf76a6c27",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/evidence/ca939f43b57896ea4efa948434f6fec76456d45f3d016fcbe9af87673af42574",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/observer/libwindowspaths.so",
       "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.164,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "eaae77743adb3600099d7f25323005b8864e413fcc7ad4bcb6977adcf76a6c27",
+  "fingerprint": "ca939f43b57896ea4efa948434f6fec76456d45f3d016fcbe9af87673af42574",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -183,7 +183,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/source",
     "restored": [
       {
         "markerPath": "compression/minizip.h.REMOVED.git-id",
@@ -219,23 +219,23 @@
         "method": "reconstruction",
         "originalBlob": "2081d2dea252a6a38259edabea59e26fb74c6726",
         "path": "config/items.json",
-        "provenance": "unverified donor reconstruction; 5e000dca02a17e179719d99ae93d31687c9d2244:config/items.json; headerMatch=0; apiOverlap=0/10000; distance=33",
-        "replacementBlob": "41d081fe6c796beab79afb418358b8af12cfa877"
+        "provenance": "content reconstruction of the BFG-removed original; Adapted genuine119 config/items.json donor blob41d081fe6c796beab79afb418358b8af12cfa877 to missing original2081: adds only class Weapon/Armor/Potion from each actual legacy type, as required by surviving150 Item::getItem/QMetaType factory. Preserves every donor item name/path/stat/power/type. All lost original later item IDs, exact balance and slot metadata remain unavailable and are not invented. This is inferred missing-config compatibility, not original2081 bytes or gameplay parity. Root owns integration and affected-proof revalidation.",
+        "replacementBlob": "b482b536045ab11d3feed4916010352bf1bf36c5"
       },
       {
         "markerPath": "creatures/creature.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "08ec144f196a9a5195e281997b5695828ccbd2ab",
         "path": "creatures/creature.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "ffb77333761607cf463c6f20b578093645f0dd38"
+        "provenance": "Content reconstruction of the BFG-removed original; Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited. Corrected inferred equipment reload: legacy inventory.weapon/armor apply only if present; modern equipment slots survive save/load. Before/after native regression and revalidation required.",
+        "replacementBlob": "fa60819dd9356038aaa2b18be237279d0960901c"
       },
       {
         "markerPath": "creatures/player.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "74b5208082ffe0051446bac78b0e1e3eacdaa584",
         "path": "creatures/player.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Missing #150 player body inferred from earlier surviving donor and exact original Player.h/GameView caller: restored declared update() to refresh inventory/action maps and emit statsChanged. Remaining donor combat preserved; historical behavior not proven.",
         "replacementBlob": "9eed715c9c9fe3a68dc7a21b49e75a6c2e566acc"
       },
       {
@@ -675,7 +675,7 @@
         "method": "reconstruction",
         "originalBlob": "0b0a9c19112914c23dcd4a6e2e032f335f7abf76",
         "path": "interactions/interaction.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Missing #150 Interaction body inferred from native-verified #97 implementation and exact #150 surviving header: public/default/copy constructors, ListItem ordering and Effect state serialization added. Removed undeclared legacy setAnimation override, retaining inherited real resource loading. Historical ordering/effect persistence parity unverified.",
         "replacementBlob": "4407036d97c31cfc977a71a25b88a1761033bbc8"
       },
       {
@@ -757,8 +757,8 @@
         "method": "reconstruction",
         "originalBlob": "a8de3873c648161f0ab8c80b2f9c67fabde5193b",
         "path": "map/map.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "761a74a4149f85a6b54c0d9906f756380575ed55"
+        "provenance": "Content reconstruction of the BFG-removed original; Missing map body inferred from earlier recovered donor; adapted to exact #150 intact Map/MapObject declarations: no later TMX/entry-coordinate API, original JSON map/state and declared ownership preserved. Not exact original content; gameplay parity unverified. Missing ensureSize background generation is inferred as GrassTile (declared in original tiles.json) when the original default string is empty; preserves every explicitly authored road/mountain and player coordinate. Before this missing-body repair native observer reported real healthy player but no terrain at authored spawn (0,0,0). Historical terrain parity is unverified. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+        "replacementBlob": "fd2387d292402b6ee2f942cd026743e5a92b6bc5"
       },
       {
         "markerPath": "stats/stats.cpp.REMOVED.git-id",
@@ -773,7 +773,7 @@
         "method": "reconstruction",
         "originalBlob": "9a8894c8b2ad2550e0b28afe00d7c7c75d05da54",
         "path": "view/gamescene.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Missing scene body inferred from earlier recovered donor and exact #150 intact declarations; restored declared map accessor/StepTimer mouse movement and kept player/game initialization and arrow movement. Removed undeclared later tile-size setter. Original behavior not proven; startup evidence and gameplay parity reported separately.",
         "replacementBlob": "134d9c9aee46203665bc86c1bd7d98da13e95acd"
       },
       {
@@ -781,7 +781,7 @@
         "method": "reconstruction",
         "originalBlob": "6eb88a3320dbc6f6e1b994b86d9001da97fbe33b",
         "path": "view/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Missing game view body inferred from earlier donor and exact #150 intact headers/UI sources: views are owned by GameView, constructed from surviving Creature collections, refreshed through declared signals; BackPackObject renders original PNG and emits declared clicked signal. Not exact original content; layout and gameplay parity unverified.",
         "replacementBlob": "85413a27980877ac1e50411019ac0d5e5f511c4c"
       },
       {
@@ -789,8 +789,8 @@
         "method": "reconstruction",
         "originalBlob": "8f14ea380b0123c39f2ba1425e283a3e3ffed642",
         "path": "view/mapview.cpp",
-        "provenance": "unverified donor reconstruction; 251c727c2a6957bcaca2335e2632bf2a60a772d3:view/mapview.cpp; headerMatch=0; apiOverlap=7500/10000; distance=29",
-        "replacementBlob": "cecac856fa4fe453f0bf0a73650f0aad8f77cd91"
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7476f6bac498deb69ac2f9eb80963e8cab3c5705 (previous version of view/mapview.cpp)",
+        "replacementBlob": "76903db888f42409195d2f254dd00f056fdb603b"
       },
       {
         "method": "compatibilityRepair",
@@ -799,7 +799,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "eea70f539063ccbde942701e529430b8281ea76e4968727d3b5229388e597a4a",
+    "restoredFilesFingerprint": "65bb1df7f5d6d9f3aed2472cd334fe07be6222eb12aff8d51148d9439350707e",
     "sourceCommit": "fd507cdac42337d763550ffe41334a39a1d0d954",
     "sourceTree": "bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4",
     "status": "complete",
@@ -837,10 +837,10 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/observer/libwindowspaths.so",
-      "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/smoke/startup.log",
     "returnCode": 0,
     "seconds": 0.214,
     "startup": {
@@ -852,7 +852,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/smoke/startup.png",
+        "path": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/smoke/startup.png",
         "sha256": "52e40b2b639fce34503f8e008fd9d126e1cd6db765a8276a1b63c86572f68ca1",
         "width": 1278
       },
@@ -861,7 +861,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/smoke/startup.json",
+    "startupReport": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
@@ -871,7 +871,7 @@
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "3446c99a1abfb69a52ab271ee37b7933f5e7c0cb9b433a163fc5d6b357590d96",
+      "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
       "includeReplaySha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7",
       "includeSeparators": [
         {
@@ -924,7 +924,7 @@
           "history_source_prep.py",
           "normalize-quoted-includes"
         ],
-        "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-i3_7it4b/preparation/include-separators.log",
+        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-yx0fyc0_/preparation/include-separators.log",
         "name": "windowsIncludeSeparators",
         "returnCode": 0,
         "timedOut": false
@@ -934,7 +934,20 @@
   "sourceTree": "bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4",
   "startupMode": "game",
   "startupSelection": {
-    "mode": "game"
+    "boundary": "Authored game startup",
+    "mode": "game",
+    "originalInputs": [
+      {
+        "blob": "853739bcb7e93b10a0784d55904cf9a4692a9749",
+        "path": "main.cpp",
+        "sha256": "fa471718f3119672baf3b78564ccb3215351e4c69c637d4ca895b6513a98c5e1"
+      },
+      {
+        "blob": "f97aaa4d8ca54b706769a3276257e5202ec18559",
+        "path": "config/init.json",
+        "sha256": "6e4b65156f5188998cbf6b5a8a719d6701fddbf84786b4a9cc11b6b61a8ebec7"
+      }
+    ]
   },
   "status": "success",
   "toolchain": {

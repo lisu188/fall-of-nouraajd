@@ -1,0 +1,75 @@
+process 410: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: "config/objects/items.json" 
+
+Loaded configuration: "config/objects/monsters.json" 
+
+Loaded configuration: "config/objects/interactions.json" 
+
+Loaded configuration: "config/objects/tiles.json" 
+
+Loaded configuration: "config/objects/effects.json" 
+
+Loaded configuration: "config/objects/armors.json" 
+
+Loaded configuration: "config/objects/buildings.json" 
+
+Loaded configuration: "config/objects/weapons.json" 
+
+Loaded configuration: "config/objects/potions.json" 
+
+Loaded configuration: "config/objects/misc.json" 
+
+Cannot load file:images/buildings/cavetime.json
+Loaded animation: "images/buildings/cave" 
+
+Cannot load file:images/buildings/teleportertime.json
+Loaded animation: "images/buildings/teleporter" 
+
+Cannot load file:images/items/weapons/chaosswordtime.json
+Loaded animation: "images/items/weapons/chaossword" 
+
+Cannot load file:images/interactions/chaosblasttime.json
+Loaded animation: "images/interactions/chaosblast" 
+
+Loaded configuration: "config/slots.json" 
+
+Cannot load file:images/players/assasintime.json
+Loaded animation: "images/players/assasin" 
+
+Cannot load file:images/interactions/attacktime.json
+Loaded animation: "images/interactions/attack" 
+
+Cannot load file:images/items/potions/lifetime.json
+Loaded animation: "images/items/potions/life" 
+
+Cannot load file:images/items/potions/manatime.json
+Loaded animation: "images/items/potions/mana" 
+
+Cannot load file:images/items/weapons/daggertime.json
+Loaded animation: "images/items/weapons/dagger" 
+
+"Assasin" equipped "Dagger" 
+
+Cannot load file:images/items/armors/leatherarmortime.json
+Loaded animation: "images/items/armors/leatherarmor" 
+
+"Assasin" equipped "LeatherArmor" 
+
+Cannot load file:images/interactions/sneakattacktime.json
+Loaded animation: "images/interactions/sneakattack" 
+
+Cannot load file:images/arrows/right/time.json
+Loaded animation: "images/arrows/right/" 
+
+Cannot load file:images/arrows/left/time.json
+Loaded animation: "images/arrows/left/" 
+
+Loaded configuration: "config/tiles.json" 
+
+Cannot load file:images/tiles/grasstime.json
+Loaded animation: "images/tiles/grass" 
+
+Cannot load file:images/tiles/roadtime.json
+Loaded animation: "images/tiles/road" 
+
