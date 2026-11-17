@@ -250,7 +250,7 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         ]
         if aliases["aliases"]:
             configure += ["-after", "LIBS+=-L" + aliases["directory"]]
-        make = [*environment, recipe.get("makeCommand", "make"), "-k", f"-j{os.cpu_count() or 1}"]
+        make = [*environment, "timeout", "1500", recipe.get("makeCommand", "make"), "-k", f"-j{os.cpu_count() or 1}"]
         commands += [
             "cd " + shlex.quote(str(build_root)),
             shlex.join(configure) + ' > qmake.log 2>&1 || { rc=$?; cat qmake.log; exit "$rc"; }',
