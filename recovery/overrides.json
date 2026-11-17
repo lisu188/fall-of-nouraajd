@@ -97184,15 +97184,15 @@
     {
       "originalBlob": "010c0526113d1a99bd048592ed8c68d10aebbe8d",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (4fe4d0e259) carried forward",
-      "sha256": "3581f25099b9896f7f2e4ee49b5a66fcc40d9ae23ac75578cb5c3d289149b377",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (4fe4d0e259) carried forward; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "843b58d6040897eadb06eb7a3efbef20760066f8b7f3d3e6386513dd118d671d",
       "source": "payloads/reconstructions/01/010c0526113d1a99bd048592ed8c68d10aebbe8d-Game.pro"
     },
     {
       "originalBlob": "0583775cbc7671422c9a0caaee3e0944ead818d7",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; #190 project ('script protoype'): the native-verified #187-#189 project plus the event and gamescript sources this commit adds, CPython 3.3 linkage (win32 C:/Python33, unix python3.3m; the surviving code uses the Python 3 module API and the developer's earliest explicit link, at 1b30a291, is python3.3m) and CONFIG += no_keywords, which this commit's own conversion of every surviving slots/signals/emit to Q_SLOT/Q_SIGNAL/Q_EMIT implies: Python 3's object.h declares a 'slots' member that Qt's keyword macro breaks (inference)",
-      "sha256": "9c4a079e2b3de565169e05e9fcf53cf2c60849a0b597ad9ab68144ec97df7e8d",
+      "provenance": "content reconstruction of the BFG-removed original; #190 project ('script protoype'): the native-verified #187-#189 project plus the event and gamescript sources this commit adds, CPython 3.4 linkage (win32 C:/Python34, unix python3.4m: the surviving code uses the Python 3 module API, the developer's Windows build links C:\\Python34 at #270 and #210's restored scripts/*.py are CPython 3.4's standard library) and CONFIG += no_keywords, which this commit's own conversion of every surviving slots/signals/emit to Q_SLOT/Q_SIGNAL/Q_EMIT implies: Python 3's object.h declares a 'slots' member that Qt's keyword macro breaks (inference)",
+      "sha256": "bde87d27167212e76f296806c7168f39a013c1be059ec46265d5f9793a5e79a7",
       "source": "payloads/reconstructions/05/0583775cbc7671422c9a0caaee3e0944ead818d7-Game.pro"
     },
     {
@@ -97247,15 +97247,15 @@
     {
       "originalBlob": "4fe4d0e2595e3c7ffa16773f6255a48fb987bca6",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; #191 project: the native-verified #190 project with src/patch.h renamed to src/util.h, as this commit renames it",
-      "sha256": "3581f25099b9896f7f2e4ee49b5a66fcc40d9ae23ac75578cb5c3d289149b377",
+      "provenance": "content reconstruction of the BFG-removed original; #191 project: the native-verified #190 project with src/patch.h renamed to src/util.h, as this commit renames it; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "843b58d6040897eadb06eb7a3efbef20760066f8b7f3d3e6386513dd118d671d",
       "source": "payloads/reconstructions/4f/4fe4d0e2595e3c7ffa16773f6255a48fb987bca6-Game.pro"
     },
     {
       "originalBlob": "6ddc1f9da818798f6a8b25e46ed9c37d7fee2c3b",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; #194 project: the native-verified #191-#193 project carried unchanged; no new sources are added by this commit and its project edit is unknown (inference)",
-      "sha256": "3581f25099b9896f7f2e4ee49b5a66fcc40d9ae23ac75578cb5c3d289149b377",
+      "provenance": "content reconstruction of the BFG-removed original; #194 project: the native-verified #191-#193 project carried unchanged; no new sources are added by this commit and its project edit is unknown (inference); embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "843b58d6040897eadb06eb7a3efbef20760066f8b7f3d3e6386513dd118d671d",
       "source": "payloads/reconstructions/6d/6ddc1f9da818798f6a8b25e46ed9c37d7fee2c3b-Game.pro"
     },
     {
@@ -97338,8 +97338,8 @@
     {
       "originalBlob": "0fc948f562f96549ee9e4ad85e00e2771e046673",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference)",
-      "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
+      "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference); embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "5ddfb55d8d87536135efea70238f6215e675c8253ec3bc5eeab5766317475c2e",
       "source": "payloads/reconstructions/0f/0fc948f562f96549ee9e4ad85e00e2771e046673-Game.pro"
     },
     {
@@ -97429,8 +97429,8 @@
     {
       "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (e53cc0bde8) carried forward",
-      "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (e53cc0bde8) carried forward; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "5ddfb55d8d87536135efea70238f6215e675c8253ec3bc5eeab5766317475c2e",
       "source": "payloads/reconstructions/9a/9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa-Game.pro"
     },
     {
@@ -97471,8 +97471,8 @@
     {
       "originalBlob": "e53cc0bde800c6d39a4e0b71b24fbb603481ebeb",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; #195 project ('libraries'): the native-verified #194 project with each resource manifest under res/, where this commit moves the manifests and their files unchanged (resource paths inside the manifests are unchanged)",
-      "sha256": "33af4613590a49970d2cc9d3555a029a03ae2784c316dd1b4a97d29059d4c645",
+      "provenance": "content reconstruction of the BFG-removed original; #195 project ('libraries'): the native-verified #194 project with each resource manifest under res/, where this commit moves the manifests and their files unchanged (resource paths inside the manifests are unchanged); embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "5ddfb55d8d87536135efea70238f6215e675c8253ec3bc5eeab5766317475c2e",
       "source": "payloads/reconstructions/e5/e53cc0bde800c6d39a4e0b71b24fbb603481ebeb-Game.pro"
     },
     {
@@ -97632,9 +97632,30 @@
     {
       "originalBlob": "d2215eae8693265faa32461529be17f2dcb5858f",
       "path": "Game.pro",
-      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
-      "sha256": "493c7026ee4e8488b26df5e5147dc88a7f5a16ab526ffae16b6871028c31e4a0",
+      "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+      "sha256": "3b73325e91af7dbae0492ce432ed1c64e311aee4f4db9c8318ec0b22bbbb2e2e",
       "source": "payloads/reconstructions/d2/d2215eae8693265faa32461529be17f2dcb5858f-Game.pro"
+    },
+    {
+      "originalBlob": "5d5b1762f78e0b36c47e9161769a65f448214935",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #211 'cave script': the surviving building.h removes Cave, so the console main no longer registers it and object.json makes Cave a scripted Building (script cave.py; its monster/chance/monsters/enabled now come from the script's onCreate); setProperty returns the Python error when its arguments are not three strings instead of reading unparsed pointers (the developer's 'setProperty fixed' follows at #212)",
+      "sha256": "703f3438ba05ecfd965a36321df7a0c5a0d919dc21b71ec7652336cea4c9257f",
+      "source": "payloads/reconstructions/5d/5d5b1762f78e0b36c47e9161769a65f448214935-gamescript.cpp"
+    },
+    {
+      "originalBlob": "8dd6da152661ee2f352c76059b567454eb9e6293",
+      "path": "res/config/object.json",
+      "provenance": "content reconstruction of the BFG-removed original; #211 'cave script': the surviving building.h removes Cave, so the console main no longer registers it and object.json makes Cave a scripted Building (script cave.py; its monster/chance/monsters/enabled now come from the script's onCreate); setProperty returns the Python error when its arguments are not three strings instead of reading unparsed pointers (the developer's 'setProperty fixed' follows at #212)",
+      "sha256": "d15cb6543c37e1b0dad7f99b50e47158a1df5de3296e8d89eece0b2923fdd634",
+      "source": "payloads/reconstructions/8d/8dd6da152661ee2f352c76059b567454eb9e6293-object.json"
+    },
+    {
+      "originalBlob": "b61dc0cf85b8dadfdec71573bf3d515f20305b76",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #211 'cave script': the surviving building.h removes Cave, so the console main no longer registers it and object.json makes Cave a scripted Building (script cave.py; its monster/chance/monsters/enabled now come from the script's onCreate); setProperty returns the Python error when its arguments are not three strings instead of reading unparsed pointers (the developer's 'setProperty fixed' follows at #212)",
+      "sha256": "40d7f32d275129172480d985757c573e7cd1629ac80c663101333c2a1693c2d9",
+      "source": "payloads/reconstructions/b6/b61dc0cf85b8dadfdec71573bf3d515f20305b76-main.cpp"
     }
   ],
   "schemaVersion": 1

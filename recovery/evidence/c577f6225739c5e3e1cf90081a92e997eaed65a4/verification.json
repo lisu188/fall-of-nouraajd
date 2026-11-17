@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-89udehvv/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-1rwij9rx/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
@@ -17,27 +17,27 @@
         "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
       },
       "mode": "closeWindowAndJoinConsole",
-      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin is empty and sources are unchanged"
+      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin stays open and silent, like an idle console, until that report and then reaches end of file; sources are unchanged"
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-89udehvv/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-1rwij9rx/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-89udehvv/build.log",
+    "log": "/home/user/work2/verify/snapshot-1rwij9rx/build.log",
     "returnCode": 0,
-    "seconds": 18.472,
+    "seconds": 13.22,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-89udehvv/source/Game.pro",
+      "/home/user/work2/verify/snapshot-1rwij9rx/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-89udehvv/build/Makefile",
+      "/home/user/work2/verify/snapshot-1rwij9rx/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -47,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-89udehvv/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-89udehvv/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-1rwij9rx/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-1rwij9rx/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-89udehvv/configure.log",
+    "log": "/home/user/work2/verify/snapshot-1rwij9rx/configure.log",
     "returnCode": 0,
-    "seconds": 0.115,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/f5243782b793ec30b86c6ca79828b29bd2fba41e031139a9c187f90c6b172a81",
+  "evidenceDir": "/home/user/work2/verify/evidence/d212b957317d322a9e1bc8f37e0e7562d2e5e929fc40ef4cb3a6bfd2638ff72a",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -64,37 +64,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-89udehvv/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-1rwij9rx/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-89udehvv/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-1rwij9rx/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.417,
+    "seconds": 0.265,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "f5243782b793ec30b86c6ca79828b29bd2fba41e031139a9c187f90c6b172a81",
+  "fingerprint": "d212b957317d322a9e1bc8f37e0e7562d2e5e929fc40ef4cb3a6bfd2638ff72a",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-89udehvv/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-1rwij9rx/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -201,15 +201,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-89udehvv/source",
+    "outputDir": "/home/user/work2/verify/snapshot-1rwij9rx/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "0fc948f562f96549ee9e4ad85e00e2771e046673",
         "path": "Game.pro",
-        "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference)",
-        "replacementBlob": "02d5b9320746a08290a576cc26a765f7e2b359b7"
+        "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference); embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+        "replacementBlob": "c6574bfb7f1ec47bb3e775b1f2b378618486d417"
       },
       {
         "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
@@ -1033,7 +1033,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "8aefe8d3dc516194d794c1e17db967ae54c54c30cc420278818a7e9de365adaf",
+    "restoredFilesFingerprint": "2ece9597df759c9dfae651d60b0214a4a21d0e90409697228ebe6e1a75821aad",
     "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
     "sourceTree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc",
     "status": "complete",
@@ -1046,12 +1046,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-89udehvv/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-89udehvv/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-1rwij9rx/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-1rwij9rx/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-89udehvv/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-1rwij9rx/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.517,
+    "seconds": 0.334,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1061,7 +1061,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-89udehvv/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-1rwij9rx/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1070,8 +1070,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-89udehvv/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-1rwij9rx/smoke/startup.json",
     "status": "success",
+    "stdin": "open and silent until the readiness report",
     "timedOut": false
   },
   "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",

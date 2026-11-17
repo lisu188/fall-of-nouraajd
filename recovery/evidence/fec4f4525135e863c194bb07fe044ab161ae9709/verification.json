@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-es38jokg/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-8uhfvca5/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-es38jokg/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-8uhfvca5/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-es38jokg/build.log",
+    "log": "/home/user/work2/verify/snapshot-8uhfvca5/build.log",
     "returnCode": 0,
-    "seconds": 12.375,
+    "seconds": 12.358,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-es38jokg/source/Game.pro",
+      "/home/user/work2/verify/snapshot-8uhfvca5/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-es38jokg/build/Makefile",
+      "/home/user/work2/verify/snapshot-8uhfvca5/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-es38jokg/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-es38jokg/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-8uhfvca5/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-8uhfvca5/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-es38jokg/configure.log",
+    "log": "/home/user/work2/verify/snapshot-8uhfvca5/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/6d48485bf3f3e12c0e92d917edeac8e1580fe4a8e1c6cd6161752cd08116b962",
+  "evidenceDir": "/home/user/work2/verify/evidence/9722703738aa5dab775d36d4b34f87874cec887bb4969872c67f746caa66656f",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,37 +50,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-es38jokg/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-8uhfvca5/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-es38jokg/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-8uhfvca5/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.215,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "6d48485bf3f3e12c0e92d917edeac8e1580fe4a8e1c6cd6161752cd08116b962",
+  "fingerprint": "9722703738aa5dab775d36d4b34f87874cec887bb4969872c67f746caa66656f",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-es38jokg/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-8uhfvca5/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -187,15 +187,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-es38jokg/source",
+    "outputDir": "/home/user/work2/verify/snapshot-8uhfvca5/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "0583775cbc7671422c9a0caaee3e0944ead818d7",
         "path": "Game.pro",
-        "provenance": "content reconstruction of the BFG-removed original; #190 project ('script protoype'): the native-verified #187-#189 project plus the event and gamescript sources this commit adds, CPython 3.3 linkage (win32 C:/Python33, unix python3.3m; the surviving code uses the Python 3 module API and the developer's earliest explicit link, at 1b30a291, is python3.3m) and CONFIG += no_keywords, which this commit's own conversion of every surviving slots/signals/emit to Q_SLOT/Q_SIGNAL/Q_EMIT implies: Python 3's object.h declares a 'slots' member that Qt's keyword macro breaks (inference)",
-        "replacementBlob": "3a061cfc3d34e805973982681de21272f13cfea4"
+        "provenance": "content reconstruction of the BFG-removed original; #190 project ('script protoype'): the native-verified #187-#189 project plus the event and gamescript sources this commit adds, CPython 3.4 linkage (win32 C:/Python34, unix python3.4m: the surviving code uses the Python 3 module API, the developer's Windows build links C:\\Python34 at #270 and #210's restored scripts/*.py are CPython 3.4's standard library) and CONFIG += no_keywords, which this commit's own conversion of every surviving slots/signals/emit to Q_SLOT/Q_SIGNAL/Q_EMIT implies: Python 3's object.h declares a 'slots' member that Qt's keyword macro breaks (inference)",
+        "replacementBlob": "015a36c4d1f17a6469d9413da3cf7fbac929ced7"
       },
       {
         "markerPath": "config/map.tmx.REMOVED.git-id",
@@ -1003,7 +1003,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "b781d93c45d3ef401c89033b01c91023d12cf56db723122888cb63df09a04855",
+    "restoredFilesFingerprint": "5fda18d2429601999de894dac210cdd1b33a32522a0d4b9989381f1c49f8dd2b",
     "sourceCommit": "fec4f4525135e863c194bb07fe044ab161ae9709",
     "sourceTree": "0176fdfd407c6f7afd38f01bccdea9c2edc3ae87",
     "status": "complete",
@@ -1016,12 +1016,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-es38jokg/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-es38jokg/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-8uhfvca5/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-8uhfvca5/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-es38jokg/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-8uhfvca5/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.315,
+    "seconds": 0.265,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1031,7 +1031,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-es38jokg/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-8uhfvca5/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1040,8 +1040,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-es38jokg/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-8uhfvca5/smoke/startup.json",
     "status": "success",
+    "stdin": "empty",
     "timedOut": false
   },
   "sourceCommit": "fec4f4525135e863c194bb07fe044ab161ae9709",

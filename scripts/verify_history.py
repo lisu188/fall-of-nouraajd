@@ -72,8 +72,8 @@ CONSOLE_LOOP_SOURCE = {
 }
 CONSOLE_SHUTDOWN_BOUNDARY = (
     "After the first frame and readiness report, the observer closes the game window as a player would and "
-    "waits for the original stdin script console thread to stop before exiting; stdin is empty and sources "
-    "are unchanged"
+    "waits for the original stdin script console thread to stop before exiting; stdin stays open and silent, "
+    "like an idle console, until that report and then reaches end of file; sources are unchanged"
 )
 
 
@@ -88,8 +88,19 @@ def writeJson(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
-def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeout: float, log_path: Path) -> dict:
-    """Drain output directly to a file and terminate the entire child group on timeout."""
+def runCommand(
+    command: list[str],
+    cwd: Path,
+    environment: dict[str, str],
+    timeout: float,
+    log_path: Path,
+    stdin_release: Path | None = None,
+) -> dict:
+    """Drain output directly to a file and terminate the entire child group on timeout.
+
+    Standard input is empty. With stdin_release, it instead stays open and silent, as an idle console's would,
+    until that file exists, and then reaches end of file.
+    """
     log_path.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     with log_path.open("wb") as log:
@@ -97,14 +108,25 @@ def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeo
             command,
             cwd=cwd,
             env=environment,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL if stdin_release is None else subprocess.PIPE,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=os.name == "posix",
         )
         timed_out = False
         try:
-            process.wait(timeout=timeout)
+            if stdin_release is None:
+                process.wait(timeout=timeout)
+            else:
+                while True:
+                    try:
+                        process.wait(timeout=0.05)
+                        break
+                    except subprocess.TimeoutExpired:
+                        if not process.stdin.closed and stdin_release.exists():
+                            process.stdin.close()
+                        if time.monotonic() - started > timeout:
+                            raise
         except subprocess.TimeoutExpired:
             timed_out = True
             if os.name == "posix":
@@ -115,6 +137,8 @@ def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeo
             else:
                 process.kill()
             process.wait()
+        if process.stdin is not None and not process.stdin.closed:
+            process.stdin.close()
     return {
         "command": command,
         "returnCode": process.returncode,
@@ -253,6 +277,7 @@ def runSmoke(
     timeout: float = 30,
     isolate: bool = True,
     startup_mode: str = "game",
+    console: bool = False,
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir.resolve() / "startup.json"
@@ -276,7 +301,10 @@ def runSmoke(
             "QT_X11_NO_MITSHM": "1",
         }
     )
-    result = runCommand(command, cwd, child_environment, timeout, output_dir / "startup.log")
+    result = runCommand(
+        command, cwd, child_environment, timeout, output_dir / "startup.log", report_path if console else None
+    )
+    result["stdin"] = "open and silent until the readiness report" if console else "empty"
     result["status"] = "failed"
     if result["timedOut"]:
         result["reason"] = "Startup watchdog expired; a timeout is not successful readiness"
@@ -1043,6 +1071,7 @@ def verifySnapshot(
             environment=smoke_environment,
             timeout=timeout,
             startup_mode=startup["mode"],
+            console="shutdown" in adapter,
         )
         result["smoke"]["startupReport"] = str(artifact_dir / "startup.json")
         result["artifactDir"] = str(artifact_dir)

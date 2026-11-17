@@ -584,6 +584,30 @@ class HistoricalSmokeTest(unittest.TestCase):
             result = verify.runCommand([sys.executable, "-c", code], root, dict(os.environ), 10, root / "stdin.log")
             self.assertEqual(0, result["returnCode"])
 
+    def testConsoleStandardInputStaysOpenUntilTheReadinessReport(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "ready"
+            code = (
+                "import sys, time\nfrom pathlib import Path\n"
+                "time.sleep(0.3)\nPath(sys.argv[1]).write_text('ready')\n"
+                "sys.exit(0 if sys.stdin.read() == '' else 3)\n"
+            )
+            result = verify.runCommand(
+                [sys.executable, "-c", code, str(report)], root, dict(os.environ), 10, root / "stdin.log", report
+            )
+            self.assertEqual(0, result["returnCode"])
+            self.assertFalse(result["timedOut"])
+            silent = verify.runCommand(
+                [sys.executable, "-c", "import sys\nsys.stdin.read()\n"],
+                root,
+                dict(os.environ),
+                1,
+                root / "silent.log",
+                root / "never",
+            )
+            self.assertTrue(silent["timedOut"])
+
     def testSubdirSnapshotBuildsLibraryBeforeObservedApplication(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-ycbsh1hl/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-kuujhti8/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-ycbsh1hl/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-kuujhti8/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-ycbsh1hl/build.log",
+    "log": "/home/user/work2/verify/snapshot-kuujhti8/build.log",
     "returnCode": 0,
-    "seconds": 16.588,
+    "seconds": 12.109,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-ycbsh1hl/source/Game.pro",
+      "/home/user/work2/verify/snapshot-kuujhti8/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-ycbsh1hl/build/Makefile",
+      "/home/user/work2/verify/snapshot-kuujhti8/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ycbsh1hl/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-ycbsh1hl/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-kuujhti8/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-kuujhti8/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-ycbsh1hl/configure.log",
+    "log": "/home/user/work2/verify/snapshot-kuujhti8/configure.log",
     "returnCode": 0,
-    "seconds": 0.115,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/049e3e1f85f375f83e68bf4b531484a1b65c892ed8328f12ffa6551c43fdd9a1",
+  "evidenceDir": "/home/user/work2/verify/evidence/33954841e8f60c1e890f1a5aca142529749c6dde5a6446356b134825eb5a4709",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,37 +50,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-ycbsh1hl/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-kuujhti8/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-ycbsh1hl/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-kuujhti8/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.315,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "049e3e1f85f375f83e68bf4b531484a1b65c892ed8328f12ffa6551c43fdd9a1",
+  "fingerprint": "33954841e8f60c1e890f1a5aca142529749c6dde5a6446356b134825eb5a4709",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-ycbsh1hl/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-kuujhti8/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -169,22 +169,22 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-ycbsh1hl/source",
+    "outputDir": "/home/user/work2/verify/snapshot-kuujhti8/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "6ddc1f9da818798f6a8b25e46ed9c37d7fee2c3b",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
-        "replacementBlob": "3043c864905b7f647227e92ca394b4d1458dfb04"
+        "provenance": "content reconstruction of the BFG-removed original; #194 project: the native-verified #191-#193 project carried unchanged; no new sources are added by this commit and its project edit is unknown (inference); embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+        "replacementBlob": "86bac57bbf64e5c10eedeed8384f0a64fb45d180"
       },
       {
         "markerPath": "config/map.tmx.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "dfccba0169e557915c305a811bd02dbacdc97e6c",
         "path": "config/map.tmx",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #186-#194 Tiled map reconstruction (same inferred content as #186)",
         "replacementBlob": "b79e5cfa51eaf3d529cf347da8141f9eaddf82fd"
       },
       {
@@ -927,7 +927,7 @@
         "method": "reconstruction",
         "originalBlob": "d24f984fc8a37f0d3c14c160bb78a3e42848210e",
         "path": "src/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #194: the native-verified #193 reconstruction with this commit's factory renames (getMapObject/getCreature/getItem/getBuilding to createMapObject/createCreature/createItem/createBuilding); MapObject::move is now declared a slot with an unchanged body",
         "replacementBlob": "e6f8117b9c12cf16b3234e396f8f7da9269dfb04"
       },
       {
@@ -935,7 +935,7 @@
         "method": "reconstruction",
         "originalBlob": "43ef0bfcbd2e0638159429d359e5e8027f4f535a",
         "path": "src/gamescene.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #194: the native-verified #193 reconstruction carried unchanged; the same-commit headers only add an include, and this commit's edit to it is unknown (inference)",
         "replacementBlob": "0f6a9067b471ddf6444789bc5d9ee94a6eb3dd10"
       },
       {
@@ -943,7 +943,7 @@
         "method": "reconstruction",
         "originalBlob": "a1f41460b8cd1fcfd1e9166184ef858275c34ce9",
         "path": "src/gamescript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #194 Game script module: the exact surviving #193 gamescript.cpp with the createMapObject rename and the removeObject, giveItem and takeItem functions this commit's gamescript.h declares (remove a named object; give or take a configured item from the player; inference)",
         "replacementBlob": "0868e2de3d4d702259dfec516bec32eb37ccc759"
       },
       {
@@ -951,7 +951,7 @@
         "method": "reconstruction",
         "originalBlob": "fae8263548d0f71e1f752718d15c1803db5d47fd",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #194: the native-verified #193 reconstruction carried unchanged; the same-commit headers only add an include, and this commit's edit to it is unknown (inference)",
         "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
       },
       {
@@ -959,7 +959,7 @@
         "method": "reconstruction",
         "originalBlob": "0980735af26fb1e63ae71464facb01c79a1d2e32",
         "path": "src/interaction.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #191 Interaction body: the native-verified #186-#190 reconstruction with the Stun effect handler renamed StunEffect as this commit's interaction.h declares; the surviving effects.json still names the effect 'Stun'",
         "replacementBlob": "0545033e45d5079430b4f453dd17e49a41f6bb3c"
       },
       {
@@ -967,7 +967,7 @@
         "method": "reconstruction",
         "originalBlob": "42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #194: the native-verified #193 reconstruction with this commit's factory renames (getMapObject/getCreature/getItem/getBuilding to createMapObject/createCreature/createItem/createBuilding); MapObject::move is now declared a slot with an unchanged body",
         "replacementBlob": "6feda79c5c486ba674186580e6a65ed3099a47ec"
       },
       {
@@ -975,7 +975,7 @@
         "method": "reconstruction",
         "originalBlob": "a66abb977d8290f3e46b61e4b2a9708a87ba6630",
         "path": "src/pathfinder.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #194 PathFinder body: the native-verified #193 reconstruction plus the PathFinderWorker this commit's pathfinder.h declares: the surviving Monster starts it on the global QThreadPool, it finds the path off the main thread and emits complete(x,y), queued to the monster's move slot (inference)",
         "replacementBlob": "936bb2e6503bea525d2a38e1e699da54d04f297d"
       },
       {
@@ -993,7 +993,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "19d5be57523bd10f7223bf91c86e180c516ac99536fbf9cd22b324fe8f70e833",
+    "restoredFilesFingerprint": "d7b2b03249a848d50540789085af897df21e435320bc204ff05c73da75ca442f",
     "sourceCommit": "6465fa1050850af1836a4327c4edb14aceb7cd69",
     "sourceTree": "01d9145c5d6863a582d645b874cde73b5d9f21db",
     "status": "complete",
@@ -1006,12 +1006,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-ycbsh1hl/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-ycbsh1hl/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-kuujhti8/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-kuujhti8/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-ycbsh1hl/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-kuujhti8/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.366,
+    "seconds": 0.265,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1021,7 +1021,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-ycbsh1hl/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-kuujhti8/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1030,8 +1030,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-ycbsh1hl/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-kuujhti8/smoke/startup.json",
     "status": "success",
+    "stdin": "empty",
     "timedOut": false
   },
   "sourceCommit": "6465fa1050850af1836a4327c4edb14aceb7cd69",

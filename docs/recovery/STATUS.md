@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **235 commits / 235 trees** against the
-restored inputs: **224 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **236 commits / 236 trees** against the
+restored inputs: **225 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -120,25 +120,33 @@ the first frame shows the map origin rather than the distant entry. Later intact
 `item.cpp` (#187) and `player.cpp` (#188) bodies are used where their headers match.
 
 From #190 the game embeds CPython through the Python 3 module API. The lost project is
-reconstructed with CPython 3.3 (the developer's earliest explicit link, in September
-2014, is `python3.3m`) and `CONFIG += no_keywords`, which the commit's own conversion of
-every surviving `slots`/`signals`/`emit` to `Q_SLOT`/`Q_SIGNAL`/`Q_EMIT` implies: Python 3's
-`object.h` declares a `slots` member that Qt's keyword macro breaks. Both are inference.
+reconstructed with CPython 3.4 and `CONFIG += no_keywords`. The game was developed on
+Windows, whose build links `C:\Python34` once the projects survive (#270, September
+2014; only the Fedora lines name `python3.3m`), and the `scripts/*.py` restored exactly
+at #210 are CPython 3.4's standard library (`random.py` imports `_collections_abc`).
+`no_keywords` follows from the commit's own conversion of every surviving
+`slots`/`signals`/`emit` to `Q_SLOT`/`Q_SIGNAL`/`Q_EMIT`: Python 3's `object.h` declares
+a `slots` member that Qt's keyword macro breaks. Both are inference.
 
 Catalog #204's surviving `main.cpp` runs a stdin script console on a thread-pool thread
 for as long as the game view is visible, and the developer's view destructor deletes the
 scene that loop still queries, so leaving the event loop with the window shown is a
-use-after-free. Every verified process gets an empty stdin. Only for a `main.cpp` holding
-that exact loop does the observer close the game window as a player would after the
-readiness report and wait for the console thread before exiting
-(`closeWindowAndJoinConsole`). The lost #205-#207 mains carry the loop; from #207 the
+use-after-free. Only for a `main.cpp` holding that exact loop does the observer close the
+game window as a player would after the readiness report and wait for the console thread
+before exiting (`closeWindowAndJoinConsole`). Such a game's stdin stays open and silent,
+like an idle console's, until that report and then reaches end of file; an empty stdin
+would spin the loop and call CPython from two threads at once. Every other verified
+process gets an empty stdin. The lost #205-#207 mains carry the loop; from #207 the
 surviving `scriptmanager.h` returns `ScriptManager::getInstance()` by pointer and takes a
 `QString`, so only that call is adapted. The #205/#206 script functions declared by the
 surviving `gamescript.h` (`incProperty`, `getProperty`, `moveObject`) follow the later
 surviving `cave.py` usage. At #208 the surviving building and item loaders read an
 `animation` key; the donor `object.json` only carries later slash-less values there, so
 #208's reconstruction moves each building's and item's slash-terminated `path` to
-`animation` (#208's `AnimationProvider` appends `time.json` directly).
+`animation` (#208's `AnimationProvider` appends `time.json` directly). #211 removes the
+`Cave` class: its reconstruction makes the cave a scripted `Building` (`cave.py`), and
+its `setProperty` raises the Python error for non-string values instead of reading
+unparsed arguments.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

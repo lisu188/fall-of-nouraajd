@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-izkx6it7/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-id0pyiu9/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
@@ -17,27 +17,27 @@
         "sha256": "d00663704a4ab367241e30e38701f15e34b0d448a7f4ab170311920a3305e238"
       },
       "mode": "closeWindowAndJoinConsole",
-      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin is empty and sources are unchanged"
+      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin stays open and silent, like an idle console, until that report and then reaches end of file; sources are unchanged"
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-izkx6it7/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-id0pyiu9/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-izkx6it7/build.log",
+    "log": "/home/user/work2/verify/snapshot-id0pyiu9/build.log",
     "returnCode": 0,
-    "seconds": 17.65,
+    "seconds": 12.706,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-izkx6it7/source/Game.pro",
+      "/home/user/work2/verify/snapshot-id0pyiu9/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-izkx6it7/build/Makefile",
+      "/home/user/work2/verify/snapshot-id0pyiu9/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -47,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-izkx6it7/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-izkx6it7/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-id0pyiu9/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-id0pyiu9/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-izkx6it7/configure.log",
+    "log": "/home/user/work2/verify/snapshot-id0pyiu9/configure.log",
     "returnCode": 0,
-    "seconds": 0.115,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/f7522d370e8836281bc67cad3cbadcfef07e0d54205f1789ffc7042e7709669a",
+  "evidenceDir": "/home/user/work2/verify/evidence/a030bfa384f41b1059bc50ed7a425b31baa09c97a77370ef3e792209b891aaae",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -64,37 +64,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-izkx6it7/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-id0pyiu9/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-izkx6it7/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-id0pyiu9/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.316,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "f7522d370e8836281bc67cad3cbadcfef07e0d54205f1789ffc7042e7709669a",
+  "fingerprint": "a030bfa384f41b1059bc50ed7a425b31baa09c97a77370ef3e792209b891aaae",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-izkx6it7/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-id0pyiu9/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -201,15 +201,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-izkx6it7/source",
+    "outputDir": "/home/user/work2/verify/snapshot-id0pyiu9/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "0fc948f562f96549ee9e4ad85e00e2771e046673",
         "path": "Game.pro",
-        "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference)",
-        "replacementBlob": "02d5b9320746a08290a576cc26a765f7e2b359b7"
+        "provenance": "content reconstruction of the BFG-removed original; #204 project: the native-verified #197-#203 project carried unchanged; this commit adds no sources and its project edit is unknown (inference); embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+        "replacementBlob": "c6574bfb7f1ec47bb3e775b1f2b378618486d417"
       },
       {
         "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
@@ -959,7 +959,7 @@
         "method": "reconstruction",
         "originalBlob": "606f247b2c803f7a754d9a4c454af2ef72ac1ce3",
         "path": "src/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
         "replacementBlob": "a1468d0e5fce2185a24d3b0566aa0ba38b7b4a98"
       },
       {
@@ -975,7 +975,7 @@
         "method": "reconstruction",
         "originalBlob": "b53d411565fe3386af59454484f0e179017e788a",
         "path": "src/gamescript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #206 'python': the surviving gamescript.h replaces decProperty with moveObject (moves a named object, inferred from the declaration and the existing addObject arguments); the rest carried from #205",
         "replacementBlob": "029d76394715e3b7f6d4c584199ab046f36f2ad1"
       },
       {
@@ -999,7 +999,7 @@
         "method": "reconstruction",
         "originalBlob": "8e4c40ae32ef1432d5dd11f911244978ee2a4f76",
         "path": "src/main.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
         "replacementBlob": "123e0d8652a0f7535a5ada112e8385a99d263fa8"
       },
       {
@@ -1007,7 +1007,7 @@
         "method": "reconstruction",
         "originalBlob": "3f01d8caa41fcf648691c4cc1804f6053bfaa920",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
         "replacementBlob": "46ee8e46e59bffb0e33fbfaa14940b5d34842f02"
       },
       {
@@ -1023,7 +1023,7 @@
         "method": "reconstruction",
         "originalBlob": "64dc3b0bcc6566efa84d8870488a402de339605e",
         "path": "src/stats.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
         "replacementBlob": "f623e523c1121dd0b41b8f8145e7d07ac2cc70a2"
       },
       {
@@ -1031,7 +1031,7 @@
         "method": "reconstruction",
         "originalBlob": "21b5941123106fb4f2e353a5e88437ad7aef0039",
         "path": "src/stats.h",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #205 'python': factories take QString as the surviving headers declare; incProperty/decProperty/getProperty implement the declarations the surviving gamescript.h adds (semantics inferred from the later surviving res/scripts/cave.py); main.cpp is the surviving #204 original plus registration of the item/potion pointer metatypes that the surviving checkInheritance and Q_DECLARE_METATYPE(T*) additions require (inference); stats.cpp/stats.h carried from #204",
         "replacementBlob": "3836caed41f2725e37ebba6b0cd405214f6ae222"
       },
       {
@@ -1041,7 +1041,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "a1ecd4a56f8a3ebbcd5ed4582552fd3e5f046af18e83a776f7c4261e87713013",
+    "restoredFilesFingerprint": "3a73c023c5dd8e5811ec4d6c0703ed2d792acdb833a88a2e034ce37a0f6748df",
     "sourceCommit": "07af2054088cb3aa440ef5594d2caa0179c420b6",
     "sourceTree": "e7ba7d0616017f0411fc573dd57ea42ec47faf22",
     "status": "complete",
@@ -1054,12 +1054,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-izkx6it7/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-izkx6it7/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-id0pyiu9/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-id0pyiu9/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-izkx6it7/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-id0pyiu9/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.416,
+    "seconds": 0.834,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1069,7 +1069,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-izkx6it7/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-id0pyiu9/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1078,8 +1078,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-izkx6it7/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-id0pyiu9/smoke/startup.json",
     "status": "success",
+    "stdin": "open and silent until the readiness report",
     "timedOut": false
   },
   "sourceCommit": "07af2054088cb3aa440ef5594d2caa0179c420b6",

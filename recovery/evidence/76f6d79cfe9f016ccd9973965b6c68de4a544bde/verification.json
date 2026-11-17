@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-q0a2heaq/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-c7h_xnqv/observer/recovery_smoke_config.h",
     "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
     "id": "classic-3d",
     "mode": "game",
@@ -17,27 +17,27 @@
         "sha256": "68b6a8b144e6f13dc2ec5e4e8605765aed755b2c65ccb70a53c0d98eccd073be"
       },
       "mode": "closeWindowAndJoinConsole",
-      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin is empty and sources are unchanged"
+      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin stays open and silent, like an idle console, until that report and then reaches end of file; sources are unchanged"
     },
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-q0a2heaq/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-q0a2heaq/build.log",
+    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/build.log",
     "returnCode": 0,
-    "seconds": 13.216,
+    "seconds": 13.358,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-q0a2heaq/source/Game.pro",
+      "/home/user/work2/verify/snapshot-c7h_xnqv/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-q0a2heaq/build/Makefile",
+      "/home/user/work2/verify/snapshot-c7h_xnqv/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -47,15 +47,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-q0a2heaq/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-q0a2heaq/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-c7h_xnqv/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-c7h_xnqv/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-q0a2heaq/configure.log",
+    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/configure.log",
     "returnCode": 0,
-    "seconds": 0.065,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/27b4e984aab348d84be9e2e6e49693d82ddb77451094bac975a6d771623f21b3",
+  "evidenceDir": "/home/user/work2/verify/evidence/c3b7e8b54cf2dcf773c59e8c434c660652006969b757f59cf835287db383832f",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -64,37 +64,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-q0a2heaq/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-c7h_xnqv/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-q0a2heaq/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.214,
+    "seconds": 0.215,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "27b4e984aab348d84be9e2e6e49693d82ddb77451094bac975a6d771623f21b3",
+  "fingerprint": "c3b7e8b54cf2dcf773c59e8c434c660652006969b757f59cf835287db383832f",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-q0a2heaq/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-c7h_xnqv/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -207,15 +207,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-q0a2heaq/source",
+    "outputDir": "/home/user/work2/verify/snapshot-c7h_xnqv/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "d2215eae8693265faa32461529be17f2dcb5858f",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
-        "replacementBlob": "40d35b96bf0c7e55a80ff78f209f1480d47c6736"
+        "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+        "replacementBlob": "8f7e94c08a389343d6eaec6a1c1340a92143ff01"
       },
       {
         "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
@@ -557,7 +557,7 @@
         "method": "reconstruction",
         "originalBlob": "b342f433d8088ac2e1d0a6a4cfacf8be4bb3ad84",
         "path": "res/config/object.json",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
         "replacementBlob": "c323050065f8201599adae6d890ca1cfc52d72e7"
       },
       {
@@ -993,7 +993,7 @@
         "method": "reconstruction",
         "originalBlob": "6e5500b794ddf20aec213f414af43144d9122175",
         "path": "src/creature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
         "replacementBlob": "a1468d0e5fce2185a24d3b0566aa0ba38b7b4a98"
       },
       {
@@ -1001,7 +1001,7 @@
         "method": "reconstruction",
         "originalBlob": "a36d3f99c326e515de031d07563c2a155ce17454",
         "path": "src/gamescript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 363ae4eb1824c8b726aa5e4891792bdb9a60de4c (previous version of src/gamescript.cpp)",
         "replacementBlob": "a2c78927a38c56754dae02f3935b5e11887dbd9c"
       },
       {
@@ -1025,7 +1025,7 @@
         "method": "reconstruction",
         "originalBlob": "6ec618c2f8be0595574a63c92888e1f467ae7a5a",
         "path": "src/main.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 01eb658269988a3cbb0067f7ed632e78563256f9 (previous version of src/main.cpp)",
         "replacementBlob": "4e6450483506af82c284e9fe54389ef3256705f9"
       },
       {
@@ -1033,7 +1033,7 @@
         "method": "reconstruction",
         "originalBlob": "adb578cf43f85cd3881a1f0511f8992344db42f9",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #208 'cave script': the surviving map.h gives MapObject non-pure onEnter/onMove plus onCreate/onDestroy hooks (empty defaults; Map::addObject/removeObject call onCreate/onDestroy, inferred from the later surviving Building::onCreate/onDestroy scripts); getObjectLocation renamed getLocation as the surviving gamescript.h declares; Game.pro adds the new res/scripts.qrc; object.json moves the slash-terminated building and item paths to the 'animation' key the surviving building.cpp/item.cpp now read",
         "replacementBlob": "17c8ed84320cb0129b52fb5062c89b3b51b30ca4"
       },
       {
@@ -1073,7 +1073,7 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "5d6a8ca4d4c3978e3b595ee8d730cb862af82ec7127545aee5df99aff95e7663",
+    "restoredFilesFingerprint": "37780050ede9dc5a7de9438cdd037af65945cb70e1c7c70cab5af996dd14b604",
     "sourceCommit": "76f6d79cfe9f016ccd9973965b6c68de4a544bde",
     "sourceTree": "4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e",
     "status": "complete",
@@ -1086,12 +1086,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-q0a2heaq/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-q0a2heaq/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-c7h_xnqv/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-c7h_xnqv/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-q0a2heaq/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.315,
+    "seconds": 0.283,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1101,7 +1101,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-q0a2heaq/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1110,8 +1110,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-q0a2heaq/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-c7h_xnqv/smoke/startup.json",
     "status": "success",
+    "stdin": "open and silent until the readiness report",
     "timedOut": false
   },
   "sourceCommit": "76f6d79cfe9f016ccd9973965b6c68de4a544bde",

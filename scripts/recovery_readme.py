@@ -295,6 +295,7 @@ def consoleShutdown(report: dict) -> bool:
         or set(main) != {"path", "sha256"}
         or main.get("path") != "src/main.cpp"
         or adapter.get("mode") != "game"
+        or report.get("smoke", {}).get("stdin") != "open and silent until the readiness report"
     ):
         raise VerificationError("Console shutdown differs from its reviewed original console loop or boundary")
     requireIdentity(main.get("sha256"), 64, "console main fingerprint")
@@ -688,8 +689,9 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
                 "script console loop (original at catalog #204; reconstructions from #207 adapt only its",
                 "ScriptManager call). It runs on a thread-pool thread while the game window is visible, and the",
                 "original view destructor deletes the scene that loop still queries, so leaving the event loop",
-                "with the window shown crashes. After the frame and readiness report, the observer closed the",
-                "game window as a player would and waited for that thread to stop; stdin was empty. Sources are",
+                "with the window shown crashes. Standard input stayed open and silent, like an idle console,",
+                "until the frame and readiness report; then the observer closed the game window as a player",
+                "would, stdin reached end of file, and the observer waited for that thread to stop. Sources are",
                 "unchanged; the `main.cpp` and loop hashes are in the verification metadata.",
                 "",
             ]

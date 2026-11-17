@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-60rkhgmd/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-r7nxxwpi/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-60rkhgmd/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-r7nxxwpi/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-60rkhgmd/build.log",
+    "log": "/home/user/work2/verify/snapshot-r7nxxwpi/build.log",
     "returnCode": 0,
-    "seconds": 16.345,
+    "seconds": 12.617,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-60rkhgmd/source/Game.pro",
+      "/home/user/work2/verify/snapshot-r7nxxwpi/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-60rkhgmd/build/Makefile",
+      "/home/user/work2/verify/snapshot-r7nxxwpi/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-60rkhgmd/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-60rkhgmd/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-r7nxxwpi/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-r7nxxwpi/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-60rkhgmd/configure.log",
+    "log": "/home/user/work2/verify/snapshot-r7nxxwpi/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/f5e2021061e80da8f6b8cb98fccf8020fd765828a8579ac2bc24539c1ccb45ef",
+  "evidenceDir": "/home/user/work2/verify/evidence/590ad1ac61d6c48dab0ad4fdbc4a052afad1c19cb9f7615b26ebe53663401d59",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,37 +50,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-60rkhgmd/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-r7nxxwpi/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-60rkhgmd/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-r7nxxwpi/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.265,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "f5e2021061e80da8f6b8cb98fccf8020fd765828a8579ac2bc24539c1ccb45ef",
+  "fingerprint": "590ad1ac61d6c48dab0ad4fdbc4a052afad1c19cb9f7615b26ebe53663401d59",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-60rkhgmd/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-r7nxxwpi/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -187,15 +187,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-60rkhgmd/source",
+    "outputDir": "/home/user/work2/verify/snapshot-r7nxxwpi/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
-        "replacementBlob": "02d5b9320746a08290a576cc26a765f7e2b359b7"
+        "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (e53cc0bde8) carried forward; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+        "replacementBlob": "c6574bfb7f1ec47bb3e775b1f2b378618486d417"
       },
       {
         "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
@@ -961,7 +961,7 @@
         "method": "reconstruction",
         "originalBlob": "adcbe3a18c46dd564e8c2f9086d638c3510ecfa9",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3112b3bbd3b20daecaab9bbafb77d84129b480f8 (previous version of src/gameview.cpp)",
         "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
       },
       {
@@ -977,7 +977,7 @@
         "method": "reconstruction",
         "originalBlob": "4adae28cb3992fe92de902d86b5d3619aaf01297",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1be734cf86370fb9fb719ecc8aa149609ff85ee6 (previous version of src/map.cpp)",
         "replacementBlob": "144a06c78eabcedc6af854de9b5fc1c4b65156cf"
       },
       {
@@ -985,7 +985,7 @@
         "method": "reconstruction",
         "originalBlob": "e3894cafc3fcf8170dd3ed83c40088e3c268d130",
         "path": "src/pathfinder.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; #197 PathFinder body: the native-verified #194-#196 reconstruction with this commit's PathFinderWorker signals (completed(x,y) queued to the monster's move slot; started/ended registering with the new CompletionListener, which emits completed when its last worker ends or when run() finds none pending; inference)",
         "replacementBlob": "5fbbe76524ed154f3415c90b7d11e98ff626565c"
       },
       {
@@ -1003,7 +1003,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "86d8f08f00e14e569a6fab64d4867c41860e1104db122d03b9f29c7794d3b60e",
+    "restoredFilesFingerprint": "5640fbb38d04dea50b6a2f7c4927281c2fea76fd8fe563501dc64374c760a7bc",
     "sourceCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351",
     "sourceTree": "8d5e571ff54c8bce2a5588efe01b59647e790e55",
     "status": "complete",
@@ -1016,12 +1016,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-60rkhgmd/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-60rkhgmd/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-r7nxxwpi/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-r7nxxwpi/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-60rkhgmd/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-r7nxxwpi/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.365,
+    "seconds": 0.315,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1031,7 +1031,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-60rkhgmd/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-r7nxxwpi/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1040,8 +1040,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-60rkhgmd/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-r7nxxwpi/smoke/startup.json",
     "status": "success",
+    "stdin": "empty",
     "timedOut": false
   },
   "sourceCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351",

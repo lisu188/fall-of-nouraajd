@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/user/work2/verify/snapshot-bb0dw65s/observer/recovery_smoke_config.h",
+    "config": "/home/user/work2/verify/snapshot-mem9p4m6/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/user/work2/verify/snapshot-bb0dw65s/smoke",
+  "artifactDir": "/home/user/work2/verify/snapshot-mem9p4m6/smoke",
   "build": {
     "command": [
       "make",
       "-j4"
     ],
-    "log": "/home/user/work2/verify/snapshot-bb0dw65s/build.log",
+    "log": "/home/user/work2/verify/snapshot-mem9p4m6/build.log",
     "returnCode": 0,
-    "seconds": 16.639,
+    "seconds": 12.102,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/user/work2/verify/snapshot-bb0dw65s/source/Game.pro",
+      "/home/user/work2/verify/snapshot-mem9p4m6/source/Game.pro",
       "-o",
-      "/home/user/work2/verify/snapshot-bb0dw65s/build/Makefile",
+      "/home/user/work2/verify/snapshot-mem9p4m6/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-bb0dw65s/source",
-      "INCLUDEPATH+=/home/user/work2/verify/snapshot-bb0dw65s/observer"
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-mem9p4m6/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-mem9p4m6/observer"
     ],
-    "log": "/home/user/work2/verify/snapshot-bb0dw65s/configure.log",
+    "log": "/home/user/work2/verify/snapshot-mem9p4m6/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/user/work2/verify/evidence/47ea6b3f4428a39bf22b39214852ae3e987cc1c62b40799680b273191e6e0924",
+  "evidenceDir": "/home/user/work2/verify/evidence/316a71f855bb148b210c9f3d23a340088e50e36bfb164ed2332ff6f69868d748",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,37 +50,37 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/user/work2/verify/snapshot-bb0dw65s/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-mem9p4m6/observer/libwindowspaths.so",
       "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/user/work2/verify/snapshot-bb0dw65s/file-lookup.log",
+    "log": "/home/user/work2/verify/snapshot-mem9p4m6/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.315,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "47ea6b3f4428a39bf22b39214852ae3e987cc1c62b40799680b273191e6e0924",
+  "fingerprint": "316a71f855bb148b210c9f3d23a340088e50e36bfb164ed2332ff6f69868d748",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/user/work2/verify/snapshot-bb0dw65s/observer/library-aliases"
+    "directory": "/home/user/work2/verify/snapshot-mem9p4m6/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
     "compilerCommand": "g++-5",
     "environment": {
-      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
-      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
       "LIBGL_ALWAYS_SOFTWARE": "1",
-      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
-      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
-      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
       "QT_OPENGL": "software",
       "QT_X11_NO_MITSHM": "1"
     },
-    "id": "qt5-python33",
+    "id": "qt5-python34",
     "makeCommand": "make",
-    "pythonAbi": "3.3",
+    "pythonAbi": "3.4",
     "qmakeArguments": [
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
@@ -181,15 +181,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/user/work2/verify/snapshot-bb0dw65s/source",
+    "outputDir": "/home/user/work2/verify/snapshot-mem9p4m6/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
-        "replacementBlob": "02d5b9320746a08290a576cc26a765f7e2b359b7"
+        "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (e53cc0bde8) carried forward; embeds CPython 3.4, the developer's Windows Python (C:\\Python34 at #270) whose standard library #210's restored scripts/*.py come from (inference)",
+        "replacementBlob": "c6574bfb7f1ec47bb3e775b1f2b378618486d417"
       },
       {
         "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
@@ -963,7 +963,7 @@
         "method": "reconstruction",
         "originalBlob": "909fe69c1c44ab07cbaa303798240d5f5d481e56",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of fae8263548d0f71e1f752718d15c1803db5d47fd (previous version of src/gameview.cpp)",
         "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
       },
       {
@@ -979,7 +979,7 @@
         "method": "reconstruction",
         "originalBlob": "1635542d44e479a5f3e54a6210ca74cf8cde3e42",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1 (previous version of src/map.cpp)",
         "replacementBlob": "6feda79c5c486ba674186580e6a65ed3099a47ec"
       },
       {
@@ -1005,7 +1005,7 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "44c7110443aabf9164a6e97afbf6095a889b039d5e5fdc5d6418ee45d923ea25",
+    "restoredFilesFingerprint": "670ae3042ef1c56c26e108b437da87e5c9cd8e301b3528d3bd88f9b4f0058c8b",
     "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
     "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
     "status": "complete",
@@ -1018,12 +1018,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/user/work2/verify/snapshot-bb0dw65s/observer/libwindowspaths.so",
-      "/home/user/work2/verify/snapshot-bb0dw65s/build/RecoveryGame"
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-mem9p4m6/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-mem9p4m6/build/RecoveryGame"
     ],
-    "log": "/home/user/work2/verify/snapshot-bb0dw65s/smoke/startup.log",
+    "log": "/home/user/work2/verify/snapshot-mem9p4m6/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.366,
+    "seconds": 0.315,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1033,7 +1033,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/user/work2/verify/snapshot-bb0dw65s/smoke/startup.png",
+        "path": "/home/user/work2/verify/snapshot-mem9p4m6/smoke/startup.png",
         "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
         "width": 1278
       },
@@ -1042,8 +1042,9 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/user/work2/verify/snapshot-bb0dw65s/smoke/startup.json",
+    "startupReport": "/home/user/work2/verify/snapshot-mem9p4m6/smoke/startup.json",
     "status": "success",
+    "stdin": "empty",
     "timedOut": false
   },
   "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",

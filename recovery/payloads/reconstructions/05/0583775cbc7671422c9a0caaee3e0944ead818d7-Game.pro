@@ -17,9 +17,9 @@ CONFIG += console
 
 QMAKE_CXXFLAGS += -std=c++11
 
-win32:LIBS += -LC:/Python33/libs -lpython33
-win32:INCLUDEPATH += C:/Python33/include
-unix:LIBS += -lpython3.3m
+win32:LIBS += -LC:/Python34/libs -lpython34
+win32:INCLUDEPATH += C:/Python34/include
+unix:LIBS += -lpython3.4m
 CONFIG += no_keywords
 
         RESOURCES +=  \

@@ -85,8 +85,12 @@ class RecoveryReadmeTest(unittest.TestCase):
             "validationBoundary": verify_history.CONSOLE_SHUTDOWN_BOUNDARY,
         }
         self.report["adapter"] = {"mode": "game", "shutdown": shutdown}
+        with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.report["smoke"]["stdin"] = "open and silent until the readiness report"
         readme = snapshotDocumentation(self.report, self.evidence)["README.md"].decode()
         self.assertIn("closed the game window as a player would", readme.replace("\n", " "))
+        self.assertIn("open and silent, like an idle console", readme.replace("\n", " "))
         shutdown["consoleLoopSha256"] = "0" * 64
         with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
             snapshotDocumentation(self.report, self.evidence)
