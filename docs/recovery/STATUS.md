@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **240 commits / 240 trees** against the
-restored inputs: **229 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **248 commits / 248 trees** against the
+restored inputs: **237 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -156,6 +156,13 @@ later copy of this map declares (the donor of its entry and placements). The dev
 tile and loading takes about 80 s here. The observer's readiness budget therefore
 follows the smoke watchdog (watchdog minus 10 s, recorded as `readyBudgetMs`); the
 workbench and the recovery workflow use a 300 s watchdog.
+
+#216 ("unix compatibility", a side branch merged at #217) is where the developer first
+builds on Linux: its project gains the unix Python linkage in the developer's later
+surviving form (`-L/lib64/ -lpython3.3m`, the Fedora CPython) beside the Windows
+`C:/Python34`, so Linux verification uses CPython 3.3 from there. #219 and #223 move the
+configuration, scripts and images out of Qt resources onto the filesystem and delete the
+manifests; their lost projects drop exactly the manifests those commits remove or empty.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

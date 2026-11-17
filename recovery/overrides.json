@@ -97733,6 +97733,34 @@
       "provenance": "content reconstruction of the BFG-removed original; #215 Tiled map: the #186-#194 reconstruction plus the map layer's xBound 199 / yBound 111, the bounds the developer's own later copy of this map (55e6516e:maps/map1/map.json, the donor of its entry and placements) declares; this commit introduces the bounds and changes the map",
       "sha256": "eb292c249b6c5ef8c2693b2e64f87ba5cd3f540477f88335c71182aff046d4a9",
       "source": "payloads/reconstructions/e8/e8d6f32d9ce274c3dd482e40644c8b8392392881-map.tmx"
+    },
+    {
+      "originalBlob": "38be5ddfe18d8e3ee6cff6c84056b2bd2c188359",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #219 project: the #216-#218 project without res/config.qrc, which this commit deletes as it moves the configuration to config/ on the filesystem, and without res/scripts.qrc, whose surviving entries name the scripts this commit moves out of res/ (the original build could not have compiled it)",
+      "sha256": "6c4cde3e1c611e45d7c65aff05efcd784986ed4c8213c145364521e7c345703a",
+      "source": "payloads/reconstructions/38/38be5ddfe18d8e3ee6cff6c84056b2bd2c188359-Game.pro"
+    },
+    {
+      "originalBlob": "7355f2394e6c7ac63dbb5489ba8c0fef9f6be84c",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #216 'unix compatibility' project: the #215 project plus the unix Python linkage in the developer's later surviving form (-L/lib64/ -lpython3.3m and /usr/include/python3.3m, as at 1b30a291/e4a4821f), the Fedora CPython beside the Windows C:/Python34 (inference)",
+      "sha256": "2b1510a53151a8f7445472e229e313f77cd98b707a62f97fe1d0b455bede7dd2",
+      "source": "payloads/reconstructions/73/7355f2394e6c7ac63dbb5489ba8c0fef9f6be84c-Game.pro"
+    },
+    {
+      "originalBlob": "9d91df9fb265585473095ded16771c283a4f9c36",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #223 project: the #219-#222 project without RESOURCES, as this commit moves every image to images/ on the filesystem and deletes all remaining .qrc manifests",
+      "sha256": "42b7a98bd9c4aa0aeb8fbdd07eb2480362bd412a0ff066ca0fac727863b15075",
+      "source": "payloads/reconstructions/9d/9d91df9fb265585473095ded16771c283a4f9c36-Game.pro"
+    },
+    {
+      "originalBlob": "d993c8c7790bb759ca6053c470b7fbdb04cb8544",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (38be5ddfe1) carried forward",
+      "sha256": "6c4cde3e1c611e45d7c65aff05efcd784986ed4c8213c145364521e7c345703a",
+      "source": "payloads/reconstructions/d9/d993c8c7790bb759ca6053c470b7fbdb04cb8544-Game.pro"
     }
   ],
   "schemaVersion": 1
