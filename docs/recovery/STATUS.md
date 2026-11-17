@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **210 commits / 210 trees** against the
-restored inputs: **199 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **213 commits / 213 trees** against the
+restored inputs: **202 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -110,6 +110,14 @@ header while their unchanged `main.cpp`, `monster.cpp`, `playerstatsview.cpp` an
 `creature.h` still include the old names; #182 rewrites those includes. Only those pinned
 states get build-only forwarding headers (`mergedHeaderForwarders`). The merged
 implementations are assembled from the exact per-class sources the refactor deletes.
+
+Catalog #186 replaces JSON maps and saves with a Tiled map. Its `config/map.tmx` is
+BFG-removed and only a later donor's object placements survive, so the reconstruction
+keeps the donor's entry, tileset and placements of object types that exist at #186 and
+fills the empty terrain layer with one default terrain (inference). `startGame` follows
+the developer's own intact #197 implementation, which does not recentre the view, so
+the first frame shows the map origin rather than the distant entry. Later intact
+`item.cpp` (#187) and `player.cpp` (#188) bodies are used where their headers match.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

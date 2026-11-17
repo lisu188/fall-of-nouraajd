@@ -97082,6 +97082,104 @@
       "provenance": "content reconstruction of the BFG-removed original; #180 ('refactor') moves this file under src/; the native-verified #179 reconstruction with includes rewritten to the <src/...> and <lib/...> form the surviving sources of this commit use; the moved headers are otherwise unchanged apart from whitespace",
       "sha256": "41bfc1e26c5b42f80923659069d3dbf1413b68e3224652d628d6e00e7a89156d",
       "source": "payloads/reconstructions/ff/fffd50650ef8a19a9b23b080045f915b2a03b664-creature.cpp"
+    },
+    {
+      "originalBlob": "12e57e9463dbb15adb30f77f751cd65a502820e6",
+      "path": "src/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #186 Player body: the exact surviving #188 (83a7cb12) src/player.cpp plus the canMove/getCanMove/setCanMove/event members this commit's player.h still declares, with the exact surviving #175 bodies (#188's header drops them)",
+      "sha256": "d694b3f6403528a06b8f7d95077aa91212b2331eab7d71daaa490a2844b14bbc",
+      "source": "payloads/reconstructions/12/12e57e9463dbb15adb30f77f751cd65a502820e6-player.cpp"
+    },
+    {
+      "originalBlob": "13c9b5aabc9cf84068655bab2f0e753af7959e7a",
+      "path": "config/map.tmx",
+      "provenance": "content reconstruction of the BFG-removed original; #186 Tiled map (BFG-removed; first loaded by this commit): the donor's authored map properties (entry 110,111,0), terrain tileset and object placements, keeping only object types that exist at this commit (Cave, Teleporter, ChaosSword), with the empty donor tile layer filled as CSV in one default terrain (GrassTile). The authored terrain is unknown (inference)",
+      "sha256": "beb2829eee0d84a810fd6e391f0f2db892e8abc2b9cac8542508599618d4c519",
+      "source": "payloads/reconstructions/13/13c9b5aabc9cf84068655bab2f0e753af7959e7a-map.tmx"
+    },
+    {
+      "originalBlob": "2cf7e2c02ff770647dd5244a60744d4f5cb21f57",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #186 Interaction body: the native-verified #185 reconstruction adapted to this commit's interaction.h: loadFromJson(name) reads interactions.json, getInteraction creates and loads by name, and saving is removed",
+      "sha256": "0974273c3eef9967e607cd043fb435c2c44b1ea5c85ea6c49a3e65b71e067d4e",
+      "source": "payloads/reconstructions/2c/2cf7e2c02ff770647dd5244a60744d4f5cb21f57-interaction.cpp"
+    },
+    {
+      "originalBlob": "3d9cf257513d763a72ae798b0b88d14959465e5e",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #187 Map body: the native-verified #186 reconstruction adapted to this commit's map.h: MapObject loses its destructor and movement animation (moveTo places directly, and Map::move now always processes entered objects and the fight view that PlayerAnimation used to handle), PlayerAnimation is removed, getMapObject creates the 'class' of the merged config/object.json entry, and the new non-virtual MapObject::loadFromProps sets each Tiled property as the Qt property of the same name (the 'property system'; inference)",
+      "sha256": "71548e4092d8c35283f9944be457c660101071124c3a73a47159f3e7c52516c8",
+      "source": "payloads/reconstructions/3d/3d9cf257513d763a72ae798b0b88d14959465e5e-map.cpp"
+    },
+    {
+      "originalBlob": "4658e1588df777d2ec0453fad41902e51bb577c1",
+      "path": "src/item.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #186 Item body: the exact surviving #187 (413714c4) src/item.cpp, whose item.h is identical to this commit's, reading this commit's config/items.json where #187's property system reads its new object.json",
+      "sha256": "d02c9cfa9a613128b4787ec531a0ab1dc88aba476640fdc769c80f11fa9f515c",
+      "source": "payloads/reconstructions/46/4658e1588df777d2ec0453fad41902e51bb577c1-item.cpp"
+    },
+    {
+      "originalBlob": "52e8dee3d72eda882f744840db669225414f7a3e",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #186 Map body: the native-verified #185 reconstruction without the JSON map/state persistence this commit removes; loadMapFromTmx reads the entry from map properties, terrain from each tile's 'type' property and objects from each object's type, name and properties; MapObject::getMapObject creates creatures, buildings or items by configured name (inference). addDungeon only carves its area since Dungeon is removed",
+      "sha256": "72019b17987265fbaf7f01a724bc1c42dfbf5b656a32e756f6b9b02820a85014",
+      "source": "payloads/reconstructions/52/52e8dee3d72eda882f744840db669225414f7a3e-map.cpp"
+    },
+    {
+      "originalBlob": "5fd1435317fb8da6502441e3f2d9e21cec4a8b70",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #186 GameScene body: the native-verified #185 reconstruction without the removed destructor/save; startGame follows the developer's own surviving #197 (7555be45) startGame: parse :/config/map.tmx with the vendored TmxParser, Map::loadMapFromTmx, a Sorcerer player placed at the map entry, updateViews and ensureSize",
+      "sha256": "28684deacc384015f40d53c1000d19dd8cf73838e1981f20822ab58a958fd9b1",
+      "source": "payloads/reconstructions/5f/5fd1435317fb8da6502441e3f2d9e21cec4a8b70-gamescene.cpp"
+    },
+    {
+      "originalBlob": "67a99edcd4e0b258b4eec77fd3fe08f78c5107f4",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #186 Creature body: the native-verified #185 reconstruction adapted to this commit's creature.h: no JSON constructor or saving, loadFromJson(name) reads the creatures.json template, and the new static getCreature instantiates the configured class (Player when 'isPlayer') by Qt metatype like the surviving Building::getBuilding (inference)",
+      "sha256": "24fb6d1ebb711a3213fbbebd4139c875c415c02cae8d7b5c8826656140d993bf",
+      "source": "payloads/reconstructions/67/67a99edcd4e0b258b4eec77fd3fe08f78c5107f4-creature.cpp"
+    },
+    {
+      "originalBlob": "a92349a6466f3b3c1d8b0b19d41e3a24b80fd0bb",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #187 Creature body: the native-verified #186 reconstruction reading the merged config/object.json, with getCreature delegating to MapObject::getMapObject as the surviving Building::getBuilding now does",
+      "sha256": "b0defe04feea9295d886a096de8994643b38d9e5f4b1a0df5eeaa6eb8930bbfb",
+      "source": "payloads/reconstructions/a9/a92349a6466f3b3c1d8b0b19d41e3a24b80fd0bb-creature.cpp"
+    },
+    {
+      "originalBlob": "adf18640d901d2bd3dc5f025f6e00ec22e4652a8",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #188 GameScene body: the native-verified #186-#187 reconstruction without the click throttle and Player::canMove gate that this commit's gamescene.h and surviving player.cpp remove (moves stay blocked during fights, as in the developer's later intact #197 playerMove)",
+      "sha256": "492a4e4a5e59b877459bae845d4512dc3733eebf608cefe930434991c2bb35b0",
+      "source": "payloads/reconstructions/ad/adf18640d901d2bd3dc5f025f6e00ec22e4652a8-gamescene.cpp"
+    },
+    {
+      "originalBlob": "d520b1bab110fa8baec2258fb363df7acff7b751",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #187 project: the native-verified #186 project with the armors, buildings, potions and weapons resource manifests removed, as this commit deletes those surviving .qrc files",
+      "sha256": "e91445154f2e4ec882c8e6f509a0bdbf7ab09bfed7692b14d2a4a4c1aeae0deb",
+      "source": "payloads/reconstructions/d5/d520b1bab110fa8baec2258fb363df7acff7b751-Game.pro"
+    },
+    {
+      "originalBlob": "dd512de89d06c3ddd9f5efeffdc332dbd272157e",
+      "path": "config/map.tmx",
+      "provenance": "content reconstruction of the BFG-removed original; #186-#187 Tiled map reconstruction (same inferred content as #186: donor map properties, tileset and placements of object types existing here, one default terrain)",
+      "sha256": "beb2829eee0d84a810fd6e391f0f2db892e8abc2b9cac8542508599618d4c519",
+      "source": "payloads/reconstructions/dd/dd512de89d06c3ddd9f5efeffdc332dbd272157e-map.tmx"
+    },
+    {
+      "originalBlob": "e27e7989a6497ac022d89e535b084c0c7cc718c6",
+      "path": "config/map.tmx",
+      "provenance": "content reconstruction of the BFG-removed original; #186-#188 Tiled map reconstruction (same inferred content as #186)",
+      "sha256": "8b1d5550ad3d7a83cd8f79e34e5f8ef656d7b9c8344fd32c47552a339600a10a",
+      "source": "payloads/reconstructions/e2/e27e7989a6497ac022d89e535b084c0c7cc718c6-map.tmx"
+    },
+    {
+      "originalBlob": "f75fb5f91bea40986179b84ee7da206b71e09b63",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #188 Map body carried unchanged from the native-verified #187 reconstruction; map.h is unchanged and this commit's edit to it is unknown (inference)",
+      "sha256": "71548e4092d8c35283f9944be457c660101071124c3a73a47159f3e7c52516c8",
+      "source": "payloads/reconstructions/f7/f75fb5f91bea40986179b84ee7da206b71e09b63-map.cpp"
     }
   ],
   "schemaVersion": 1
