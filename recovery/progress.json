@@ -1910,6 +1910,36 @@
       "validation": "build-and-startup-with-teleporter-serialization-compatibility-passed"
     },
     {
+      "evidence": "recovery/evidence/d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
+      "originalCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
+      "originalTree": "c65f66a9510d49049e1ffc6e40d569c95e013ed6",
+      "published": false,
+      "restoredFilesFingerprint": "6ddc8d980d9295f0878a00d6ccfb639a2873818a246d9650a310af09e44f86a2",
+      "startupMode": "game",
+      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/cc1597bad4b840bfcc2ad4663b410495fae038c1",
+      "originalCommit": "cc1597bad4b840bfcc2ad4663b410495fae038c1",
+      "originalTree": "b3d39756210c65ee5cfada2f6a4d361f772ff23a",
+      "published": false,
+      "restoredFilesFingerprint": "6ddc8d980d9295f0878a00d6ccfb639a2873818a246d9650a310af09e44f86a2",
+      "startupMode": "game",
+      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/0a3d56f9013ffc2356697596c094d1b53efde28b",
+      "originalCommit": "0a3d56f9013ffc2356697596c094d1b53efde28b",
+      "originalTree": "1e5673b7f5083ab0286c0b402ca0d5716c798468",
+      "published": false,
+      "restoredFilesFingerprint": "b7cc7e37e81f3124b58d377c47d1b341247328a70577009a28386a01dc51e84a",
+      "startupMode": "game",
+      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "validation": "build-and-startup-passed"
+    },
+    {
       "evidence": "recovery/evidence/6465fa1050850af1836a4327c4edb14aceb7cd69",
       "originalCommit": "6465fa1050850af1836a4327c4edb14aceb7cd69",
       "originalTree": "01d9145c5d6863a582d645b874cde73b5d9f21db",
@@ -2429,10 +2459,10 @@
   "targetCommitCount": 367,
   "targetTreeCount": 365,
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "validatedCommitCount": 229,
+  "validatedCommitCount": 232,
   "validatedEditorCommitCount": 11,
   "validatedEditorTreeCount": 11,
-  "validatedGameCommitCount": 218,
-  "validatedGameTreeCount": 217,
-  "validatedTreeCount": 228
+  "validatedGameCommitCount": 221,
+  "validatedGameTreeCount": 220,
+  "validatedTreeCount": 231
 }

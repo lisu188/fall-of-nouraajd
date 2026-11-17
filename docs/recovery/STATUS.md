@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **150 commits / 150 trees** against the
-restored inputs: **144 game startups and 6 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **232 commits / 231 trees** against the
+restored inputs: **221 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -73,6 +73,19 @@ The first 65 recovered commits are already ancestors of main through merge commi
 connecting their ancestry to main requires retaining the recovery branch's merge
 parent. Squash or rebase merging would discard that connection. The owner waived
 queued CI only for PRs #1659 and #1660; that waiver does not apply to this checkpoint.
+
+The 2026-11-17 continuation accepted #177-#179, #183-#185, #194, #198-#199 and #200-#203
+(an earlier commit message listed #194-#197 instead of #178, #194, #198 and #199; #195-#197
+were already accepted). Rebuilt qmake projects for trees without an object listing now
+follow `#include` chains into vendored directories, borrow settings from the
+best-matching nearby reconstructed project (dropping `QT_NO_KEYWORDS` and Python
+libraries when the earlier tree does not need them), and carry reconstructions across
+file moves without ever replacing exact originals. The verifier treats a cached
+success whose artifacts have moved as a cache miss instead of a startup failure.
+Revisions #180-#182 are mid-refactor commits that cannot compile from their committed
+contents (deleted per-class headers still included, missing jsoncpp `.inl` companions);
+see `recovery/diagnostics/native-180-182-original-build-defects-2026-11-17.json`.
+Their reconstructions are kept for carrying; no compatibility step exists for them yet.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -183,8 +196,10 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  Continue beyond the verified early prefix and the middle/later accepted snapshots;
-  `recovery/progress.json` records the exact accepted set.
+  The next blocker is #186, the serialization refactor (`loadFromJson(std::string)`,
+  default-only constructors); `recovery/progress.json` records the exact accepted set.
+- Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
+  partial #176 conflict-adapter wiring.
 - Replace later donor implementations that conflict with surviving APIs, including
   the remaining whole-game blockers around #257/#266. Object compilation and generator preparation
   are supporting evidence only.

@@ -255,5 +255,48 @@ class DonorSourcesTest(unittest.TestCase):
     def test_returns_nothing_when_no_donor_unit_survives(self):
         self.assertEqual([], workbench.donorSources(self.TEMPLATE, ["other/new.cpp"]))
 
+
+class EarlierReconstructionTest(unittest.TestCase):
+    """Carry-forward follows the developer's directory moves when the same path has no earlier version."""
+
+    TREES = {
+        "a": [{"path": "creatures/creature.cpp", "originalBlob": "1" * 40}],
+        "b": [{"path": "src/creatures/creature.cpp", "originalBlob": "2" * 40}, {"path": "src/map.cpp", "originalBlob": "3" * 40}],
+        "c": [{"path": "src/creature.cpp", "originalBlob": "4" * 40}, {"path": "src/map.cpp", "originalBlob": "5" * 40}],
+    }
+
+    def find(self, path, index, available):
+        with mock.patch.object(workbench, "ORDER", list(self.TREES)), mock.patch.object(
+            workbench, "missing", lambda commit: self.TREES[commit]
+        ):
+            return workbench.earlierReconstruction(path, index, available)
+
+    def test_prefers_same_path_then_nearest_moved_version(self):
+        everything = lambda blob: True  # noqa: E731
+        self.assertEqual(("3" * 40, "src/map.cpp"), self.find("src/map.cpp", 2, everything))
+        self.assertEqual(("2" * 40, "src/creatures/creature.cpp"), self.find("src/creature.cpp", 2, everything))
+        only_oldest = lambda blob: blob == "1" * 40  # noqa: E731
+        self.assertEqual(("1" * 40, "creatures/creature.cpp"), self.find("src/Creature.cpp", 2, only_oldest))
+        self.assertIsNone(self.find("src/item.cpp", 2, everything))
+
+
+class AdaptSettingsTest(unittest.TestCase):
+    """Settings borrowed from a later reconstructed project must fit the earlier tree."""
+
+    HEAD = (
+        "QT += core gui widgets\nDEFINES += QT_NO_KEYWORDS\nINCLUDEPATH += . src\n"
+        "unix:LIBS += -lpython3.4m -ldl -lutil\nwin32:LIBS += -lpython34"
+    )
+
+    def test_drops_no_keywords_and_python_for_a_pre_python_tree(self):
+        files = {"src/a.h": "class A : public QObject {\npublic slots:\n    void f();\n};\n", "src/a.cpp": ""}
+        head, notes = workbench.adaptSettings(self.HEAD, list(files), files.get)
+        self.assertEqual("QT += core gui widgets\nINCLUDEPATH += . src", head)
+        self.assertEqual(2, len(notes))
+
+    def test_keeps_settings_the_tree_needs(self):
+        files = {"src/a.h": "Q_SLOT void f();\n", "src/script.cpp": "#include <Python.h>\n"}
+        self.assertEqual((self.HEAD, []), workbench.adaptSettings(self.HEAD, list(files), files.get))
+
 if __name__ == "__main__":
     unittest.main()

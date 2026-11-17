@@ -214,6 +214,27 @@ def validateSmokeReport(
     return report
 
 
+def reusableCachedResult(cached_path: Path, startup_mode: str) -> dict | None:
+    """A cached success for this restored fingerprint, or None when the tree must be re-run.
+
+    Cache entries record absolute artifact paths. Once the work directory moves or its
+    snapshots are cleaned, those artifacts are gone; a missing artifact is a cache miss
+    that triggers a fresh build and startup, never evidence and never a startup failure.
+    Artifacts that exist but no longer validate still fail verification.
+    """
+    if not cached_path.is_file():
+        return None
+    cached = json.loads(cached_path.read_text())
+    if cached.get("status") != "success":
+        return None
+    report = Path(cached["smoke"]["startupReport"])
+    artifacts = Path(cached["artifactDir"])
+    if not report.is_file() or not artifacts.is_dir():
+        return None
+    validateSmokeReport(report, artifacts, startup_mode)
+    return cached
+
+
 def runSmoke(
     executable: Path | list[str],
     cwd: Path,
@@ -933,15 +954,11 @@ def verifySnapshot(
             }
         )
         cached_path = output_root / "results" / (fingerprint + ".json")
-        if cached_path.is_file():
-            cached = json.loads(cached_path.read_text())
-            if cached.get("status") == "success":
-                validateSmokeReport(
-                    Path(cached["smoke"]["startupReport"]), Path(cached["artifactDir"]), startup["mode"]
-                )
-                cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
-                exportEvidence(cached, output_root)
-                return cached
+        cached = reusableCachedResult(cached_path, startup["mode"])
+        if cached is not None:
+            cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
+            exportEvidence(cached, output_root)
+            return cached
         build_base = work_root / "build"
         build_base.mkdir()
         dependencies = []

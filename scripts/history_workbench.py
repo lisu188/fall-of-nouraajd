@@ -159,6 +159,10 @@ def prep(ref: str, quiet: bool = False) -> Path:
     destination = WORK / "src" / commit[:8]
     shutil.rmtree(destination, ignore_errors=True)
     report = rh.restoreSnapshot(REPO, CATALOG, commit, destination, rh.loadOverrides(workbenchOverrides()))
+    methods = {item["path"]: item["method"] for item in report["restored"]}
+    record = WORK / "restoration" / f"{commit}.json"
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(json.dumps(methods, indent=1, sort_keys=True))
     if not quiet:
         working = {path.name for path in workingReconstructions()}
         for item in report["restored"]:
@@ -167,6 +171,26 @@ def prep(ref: str, quiet: bool = False) -> Path:
                 print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{item['provenance'][:70]}]")
         print(destination)
     return destination
+
+
+def earlierReconstruction(path: str, index: int, available) -> tuple[str, str] | None:
+    """The nearest earlier reconstructed version of ``path``, following file moves.
+
+    Same-path versions win. Otherwise the nearest earlier missing file with the same
+    basename (case-insensitively) is used, which follows the developer's directory
+    reorganisations such as ``creatures/creature.cpp`` -> ``src/creatures/creature.cpp``
+    -> ``src/creature.cpp``. Returns ``(originalBlob, earlierPath)``.
+    """
+    for same_path in (True, False):
+        for previous in reversed(ORDER[:index]):
+            for earlier in missing(previous):
+                if same_path:
+                    matches = earlier["path"] == path
+                else:
+                    matches = Path(earlier["path"]).name.lower() == Path(path).name.lower()
+                if matches and available(earlier["originalBlob"]):
+                    return earlier["originalBlob"], earlier["path"]
+    return None
 
 
 def carry(ref: str) -> list[tuple[str, str, str]]:
@@ -185,24 +209,24 @@ def carry(ref: str) -> list[tuple[str, str, str]]:
             return (RECON / blob).read_bytes()
         return committed[blob].read_bytes() if blob in committed else None
 
+    record = WORK / "restoration" / f"{commit}.json"
+    if not record.is_file():
+        raise SystemExit("run prep first: carry needs this tree's restoration methods")
+    methods = json.loads(record.read_text())
     carried = []
     index = ORDER.index(commit)
     for entry in missing(commit):
         if not entry["path"].endswith(CODE) or content(entry["originalBlob"]) is not None:
             continue
-        donor = next(
-            (
-                earlier["originalBlob"]
-                for previous in reversed(ORDER[:index])
-                for earlier in missing(previous)
-                if earlier["path"] == entry["path"] and content(earlier["originalBlob"]) is not None
-            ),
-            None,
-        )
-        if donor:
+        if methods.get(entry["path"]) != "reconstruction":
+            continue  # exact originals and compatibility repairs are never replaced by older versions
+        found = earlierReconstruction(entry["path"], index, lambda blob: content(blob) is not None)
+        if found:
+            donor, earlier_path = found
             (source / entry["path"]).write_bytes(content(donor))
-            print("carried", entry["path"], "from", donor[:10])
-            carried.append((entry["path"], entry["originalBlob"], donor))
+            moved = "" if earlier_path == entry["path"] else f" (moved from {earlier_path})"
+            print("carried", entry["path"], "from", donor[:10] + moved)
+            carried.append((entry["path"], entry["originalBlob"], donor + moved))
         elif not entry["path"].startswith("json/"):
             print("no earlier reconstruction for", entry["path"])
     return carried
@@ -420,6 +444,29 @@ def includedSources(units: list[str], files: list[str], present: list[str], dire
     return added
 
 
+QT_KEYWORDS = re.compile(r"^[ \t]*(?:(?:public|protected|private)[ \t]+)?(?:slots|signals)[ \t]*:", re.M)
+PYTHON_USE = re.compile(r'#[ \t]*include[ \t]*[<"](?:Python\.h|boost/python)')
+
+
+def adaptSettings(head: str, files: list[str], read) -> tuple[str, list[str]]:
+    """Fit settings borrowed from a reconstructed neighbour project to this tree.
+
+    A later neighbour may define ``QT_NO_KEYWORDS`` and link Python because it embeds an
+    interpreter; an earlier tree whose headers still use bare ``slots``/``signals`` and
+    never includes Python cannot be built with those settings.
+    """
+    adjustments = []
+    code = [path for path in files if path.endswith((".h", ".hpp", ".cpp", ".c")) and not path.startswith("tmp/")]
+    if "QT_NO_KEYWORDS" in head and any(QT_KEYWORDS.search(read(path) or "") for path in code if path.endswith((".h", ".hpp"))):
+        head = re.sub(r"^([ \t]*DEFINES[ \t]*\+?=.*?)[ \t]*\bQT_NO_KEYWORDS\b", r"\1", head, flags=re.M)
+        head = re.sub(r"^[ \t]*DEFINES[ \t]*\+?=[ \t]*$\n?", "", head, flags=re.M)
+        adjustments.append("QT_NO_KEYWORDS dropped because this tree uses bare Qt keywords")
+    if re.search(r"python", head, re.I) and not any(PYTHON_USE.search(read(path) or "") for path in code):
+        head = re.sub(r"^.*LIBS.*python.*$\n?", "", head, flags=re.M | re.I)
+        adjustments.append("Python libraries dropped because this tree does not include Python")
+    return head.rstrip(), adjustments
+
+
 def project(ref: str) -> str:
     """Write a qmake project from the tree's surviving object_script listing and the nearest intact project."""
     commit = resolve(ref)
@@ -467,6 +514,17 @@ def project(ref: str) -> str:
         )
     headers = sorted(path for path in files if path.endswith(".h") and not path.startswith("tmp/"))
     head = template.split("SOURCES", 1)[0].rstrip()
+    if not scripts and kind == "reconstructed":
+
+        def readTree(path: str) -> str | None:
+            try:
+                return (source / path).read_text(errors="replace")
+            except OSError:
+                return None
+
+        head, adjustments = adaptSettings(head, files, readTree)
+        if adjustments:
+            origin += "; " + "; ".join(adjustments)
     lines = [
         head,
         "",

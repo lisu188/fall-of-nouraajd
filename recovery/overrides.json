@@ -96134,9 +96134,9 @@
     {
       "originalBlob": "5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029",
       "path": "src/stats.cpp",
-      "provenance": "Missing merged Stats/Damage TU assembled from accepted plain #150 Stats reconstruction and surviving #150 Damage implementation for exact #195 merged declarations; no QObject/future API donor retained. Not exact original. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/4f/4ff9f45b2f23d26fc69280d6c0df542e02efa223-stats.cpp\", \"sha256\": \"bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/stats/damage.cpp\", \"sha256\": \"de430be10d1a6f3f174a2efa9f0604743aff9601c0ab5fb2c9e3eeddf01ff6df\"}, {\"path\": \"src/stats.h\", \"sha256\": \"462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef\"}]",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
       "sha256": "87c0f297cc265b035b4b200916172595cf583e17d747290ccd048c689b8331b8",
-      "source": "payloads/reconstructions/51/5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029-87c0f297cc26-stats.cpp"
+      "source": "payloads/reconstructions/51/5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029-stats.cpp"
     },
     {
       "originalBlob": "fae8263548d0f71e1f752718d15c1803db5d47fd",
@@ -96921,6 +96921,167 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1 (previous version of zlib/gzwrite.c)",
       "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
       "source": "payloads/reconstructions/e8/e8defc6887a186055f17597968c4fc5791332811-gzwrite.c"
+    },
+    {
+      "originalBlob": "09ca56f5dc5f07894d1d716d4b0643e94d7cb513",
+      "path": "src/creatures/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; interaction.h included directly because the merged item.h no longer provides it. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "3896f33734dc070877ecc4074482dd85807caa5d9f5c88359a19522029911df7",
+      "source": "payloads/reconstructions/09/09ca56f5dc5f07894d1d716d4b0643e94d7cb513-player.cpp"
+    },
+    {
+      "originalBlob": "0c45984cfe838c4252e6bac450b4d7961fc24bc3",
+      "path": "src/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+      "sha256": "dd0c439eef89c4299b6c7dc61483a8763449bd69435c6320f363fa978fe9e92e",
+      "source": "payloads/reconstructions/0c/0c45984cfe838c4252e6bac450b4d7961fc24bc3-player.cpp"
+    },
+    {
+      "originalBlob": "0f40a613a006e72cd85f2316beaab3823dc4b5d5",
+      "path": "src/view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; removed compression/compression.h include (directory deleted in #180, unused). The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "baa1a27f2f03e604074b43b8a9d45d46d3032b1c53d959b1f0c4f98cf7b2ae61",
+      "source": "payloads/reconstructions/0f/0f40a613a006e72cd85f2316beaab3823dc4b5d5-gamescene.cpp"
+    },
+    {
+      "originalBlob": "14e4eb8ad61882fe7b5aa0005901bcfea811904e",
+      "path": "src/items/item.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored item.cpp, armor.cpp, belt.cpp, helmet.cpp, boots.cpp, gloves.cpp, weapon.cpp and smallweapon.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred",
+      "sha256": "2076ddefc28da8372eb3df01bafa9862b1c6d0ddb2eb11126a7ee1b7ec1e9ee8",
+      "source": "payloads/reconstructions/14/14e4eb8ad61882fe7b5aa0005901bcfea811904e-item.cpp"
+    },
+    {
+      "originalBlob": "1f3ca121d4c0093f1cc3487e9e18fdd043c5130a",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className); Destroyer::terminate() call removed because the same-commit Destroyer cleans up in its static instance destructor",
+      "sha256": "cf4b28e540694ba5ab1f006f3c7165968bfda61b267a2ec968217a07b6efc28d",
+      "source": "payloads/reconstructions/1f/1f3ca121d4c0093f1cc3487e9e18fdd043c5130a-gamescene.cpp"
+    },
+    {
+      "originalBlob": "26fe417cd979cab018ea99ebfd138bbb4a60bacb",
+      "path": "src/building.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction (merged #179 building/cave/dungeon/teleporter sources) with includes rewritten to the flat src/ layout and MapObject::className renamed typeName; Cave::loadFromProps (optional enabled/monster/chance TMX properties) and Cave::saveToJson (Building position array, matching Cave::loadFromJson) inferred for declarations added in #180; Teleporter::saveToJson/loadFromJson inferred in the reviewed coordinate-and-enabled object form (also reading legacy arrays) because the genuine #179 array-plus-field form aborts jsoncpp on save and the developer's later form is lost",
+      "sha256": "0f247a4d084231121ec2bb8ce045ddb6342fa49f73a45c78cfe0afda94c4f06e",
+      "source": "payloads/reconstructions/26/26fe417cd979cab018ea99ebfd138bbb4a60bacb-building.cpp"
+    },
+    {
+      "originalBlob": "2aec4097a94cc4f377c8857dfbacc2c46cde252d",
+      "path": "src/item.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className); empty Item::onMove (inline no-op at #179) and empty Item::loadFromProps (map loader configures items via Item::getItem) inferred for declarations added in #180",
+      "sha256": "d13373392d2f00c535338ffc105ed3ac3d2951251e6831f89545a4aa6b1698e1",
+      "source": "payloads/reconstructions/2a/2aec4097a94cc4f377c8857dfbacc2c46cde252d-item.cpp"
+    },
+    {
+      "originalBlob": "31a94b4301a510fee5e7606ce66b2a5f4913d42f",
+      "path": "src/stats/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd",
+      "source": "payloads/reconstructions/31/31a94b4301a510fee5e7606ce66b2a5f4913d42f-stats.cpp"
+    },
+    {
+      "originalBlob": "43b946a46394e80dddc4af9fe853eb87e8824dd8",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+      "sha256": "8fdcf6d8304ddce9eba1ca9ac146a9e9465d7b6d07b0d840dcf34473caa68ef3",
+      "source": "payloads/reconstructions/43/43b946a46394e80dddc4af9fe853eb87e8824dd8-creature.cpp"
+    },
+    {
+      "originalBlob": "461080b5ce84d104c3df3ad553aaa99d5b5044de",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+      "sha256": "f4cebc14f47889b4d61d506c63c09b53a5689f706143c4b6ece2c2e0dbf3c76c",
+      "source": "payloads/reconstructions/46/461080b5ce84d104c3df3ad553aaa99d5b5044de-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "53004ed2b3a5d1935de3fcf883287ff257dc6841",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className); the #180 surviving coords.cpp and playeranimation.cpp bodies appended verbatim because #182 merged Coords and PlayerAnimation into map.h; Map::getEntryX/Y/Z defined out of line as the same-commit header now only declares them",
+      "sha256": "666c8ce3886619aa9bd309057a7b6120bdd2231973306c92f328da7a6edf6139",
+      "source": "payloads/reconstructions/53/53004ed2b3a5d1935de3fcf883287ff257dc6841-map.cpp"
+    },
+    {
+      "originalBlob": "585498d4381893b5f1f1f1f0b33f357df0444623",
+      "path": "src/interactions/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "b92ab92f5877a405db837c4fda098abb3f02bab5bb86f43eac032d5c2ba67473",
+      "source": "payloads/reconstructions/58/585498d4381893b5f1f1f1f0b33f357df0444623-interaction.cpp"
+    },
+    {
+      "originalBlob": "6911196c1f1aa2d36cbff3cbf7eb9577c076e25b",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 53004ed2b3a5d1935de3fcf883287ff257dc6841 (previous version of src/map.cpp)",
+      "sha256": "666c8ce3886619aa9bd309057a7b6120bdd2231973306c92f328da7a6edf6139",
+      "source": "payloads/reconstructions/69/6911196c1f1aa2d36cbff3cbf7eb9577c076e25b-map.cpp"
+    },
+    {
+      "originalBlob": "6b37e7a600dbf205575b09580259e6999bf124e2",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+      "sha256": "10b11f4a6c3dec17f25dcfb3761008cd8f90b76fcd013f06b754d975500b31d3",
+      "source": "payloads/reconstructions/6b/6b37e7a600dbf205575b09580259e6999bf124e2-gameview.cpp"
+    },
+    {
+      "originalBlob": "6cf08a9efddb72851fdebb3a181ffce5717e37ac",
+      "path": "src/pathfinder/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored pathfinder.cpp, dumbpathfinder.cpp, randompathfinder.cpp and smartpathfinder.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred",
+      "sha256": "b95b6b2843739c9d9ef6b1ee74d0a8b39e83fd821151419475d47c22fb35d0fc",
+      "source": "payloads/reconstructions/6c/6cf08a9efddb72851fdebb3a181ffce5717e37ac-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "76887ebcfefb59aee2559c858f6335fbb2700818",
+      "path": "src/map/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; MapObject animation member renamed dynamicAnimation and onMoveEnd removed to match the same-commit map.h. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "7bab7fe715a855deaf24c6a40dc7b0ba6dfa1b58132c10459d55d413b27e43e8",
+      "source": "payloads/reconstructions/76/76887ebcfefb59aee2559c858f6335fbb2700818-map.cpp"
+    },
+    {
+      "originalBlob": "b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420",
+      "path": "src/buildings/building.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored building.cpp, cave.cpp, dungeon.cpp and teleporter.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred",
+      "sha256": "0cd95483c0a389518643bc2e525f324499254eb2e77439cad9feb78d6e9d1457",
+      "source": "payloads/reconstructions/b4/b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420-building.cpp"
+    },
+    {
+      "originalBlob": "c6fc86ef0c3cbdaba6ee8a02c51820a30725150a",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #182 reconstruction; GameScene::map is now a static member defined here and the removed addObject/addTile/addRandomTile are dropped, matching the same-commit gamescene.h",
+      "sha256": "bc81278993fb02e9eae55711732f307ba67a02ff64a6704c1bf76edc3fd154c6",
+      "source": "payloads/reconstructions/c6/c6fc86ef0c3cbdaba6ee8a02c51820a30725150a-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e53eac1625cfdc41a4406407100b5ed4b8bc2d59",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 65 sources inferred without a surviving object_script listing: reconstructed 6465fa10:Game.pro SOURCES reconciled with this tree's files; QT_NO_KEYWORDS dropped because this tree uses bare Qt keywords; Python libraries dropped because this tree does not include Python; settings from reconstructed 6465fa10:Game.pro",
+      "sha256": "340fffdd8f94a710780137a280182b6f9ff3358d074d904b69ca3f66f3196f91",
+      "source": "payloads/reconstructions/e5/e53eac1625cfdc41a4406407100b5ed4b8bc2d59-Game.pro"
+    },
+    {
+      "originalBlob": "ea60e543b7ef9d6710f68a46335f11046d1f3a3d",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6911196c1f (previous version of src/map.cpp)",
+      "sha256": "666c8ce3886619aa9bd309057a7b6120bdd2231973306c92f328da7a6edf6139",
+      "source": "payloads/reconstructions/ea/ea60e543b7ef9d6710f68a46335f11046d1f3a3d-map.cpp"
+    },
+    {
+      "originalBlob": "f59e788e08acb9e22ca1f4e0e7c98dcaaaa39f9c",
+      "path": "src/view/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "aeb1e112ca5fc26c3baa498be4d69ea3d4d12cc2739de17eba4bc5a1b9e41565",
+      "source": "payloads/reconstructions/f5/f59e788e08acb9e22ca1f4e0e7c98dcaaaa39f9c-gameview.cpp"
+    },
+    {
+      "originalBlob": "fd3967eaae84a1021dbd387790ef6198dbeb2195",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+      "sha256": "d042db4dc8477aecaf01509936e7e81474dd07b0d8120a14963d493a759403a6",
+      "source": "payloads/reconstructions/fd/fd3967eaae84a1021dbd387790ef6198dbeb2195-interaction.cpp"
+    },
+    {
+      "originalBlob": "fffd50650ef8a19a9b23b080045f915b2a03b664",
+      "path": "src/creatures/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
+      "sha256": "e19a087d9df238894ea7fb1d1106d9189a617c07fe3ba35d1cf9ba2124dae4ed",
+      "source": "payloads/reconstructions/ff/fffd50650ef8a19a9b23b080045f915b2a03b664-creature.cpp"
     }
   ],
   "schemaVersion": 1
