@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **232 commits / 231 trees** against the
-restored inputs: **221 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **240 commits / 239 trees** against the
+restored inputs: **229 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -86,6 +86,13 @@ Revisions #180-#182 are mid-refactor commits that cannot compile from their comm
 contents (deleted per-class headers still included, missing jsoncpp `.inl` companions);
 see `recovery/diagnostics/native-180-182-original-build-defects-2026-11-17.json`.
 Their reconstructions are kept for carrying; no compatibility step exists for them yet.
+The same continuation then accepted #186-#193 through the developer's serialization
+refactor (#186: name-keyed `loadFromJson`, static factories, no saving), property
+system (#187: per-kind configs merged into `config/object.json`, TMX properties applied
+through `QObject::setProperty`) and `QT_NO_KEYWORDS` switch (#190). Inferred members are
+named in each reconstruction's provenance (for example `Creature::getCreature`,
+`MapObject::getMapObject`, `MapObject::loadFromProps`, `Map::getObjectByName`,
+`Map::removeTile`).
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -196,8 +203,9 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  The next blocker is #186, the serialization refactor (`loadFromJson(std::string)`,
-  default-only constructors); `recovery/progress.json` records the exact accepted set.
+  The next blockers are #204 onward (from `Map::isEditor` removal through the
+  `CMapObject`/`CGamePanel` renames before #256); `recovery/progress.json` records the
+  exact accepted set.
 - Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
   partial #176 conflict-adapter wiring.
 - Replace later donor implementations that conflict with surviving APIs, including

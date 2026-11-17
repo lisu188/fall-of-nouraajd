@@ -97082,6 +97082,153 @@
       "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
       "sha256": "e19a087d9df238894ea7fb1d1106d9189a617c07fe3ba35d1cf9ba2124dae4ed",
       "source": "payloads/reconstructions/ff/fffd50650ef8a19a9b23b080045f915b2a03b664-creature.cpp"
+    },
+    {
+      "originalBlob": "010c0526113d1a99bd048592ed8c68d10aebbe8d",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 67 sources inferred without a surviving object_script listing: reconstructed e2e604b0:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed e2e604b0:Game.pro",
+      "sha256": "ed4fdc361b389be0b1a8c4d8fb59a56511e3d6802102c5d1bd56720431771099",
+      "source": "payloads/reconstructions/01/010c0526113d1a99bd048592ed8c68d10aebbe8d-Game.pro"
+    },
+    {
+      "originalBlob": "0583775cbc7671422c9a0caaee3e0944ead818d7",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 67 sources inferred without a surviving object_script listing: reconstructed 6465fa10:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed 6465fa10:Game.pro",
+      "sha256": "bb79b1580fd640271294f65a3779d0a83b9b33119553d64e2527cb9f575b25ce",
+      "source": "payloads/reconstructions/05/0583775cbc7671422c9a0caaee3e0944ead818d7-Game.pro"
+    },
+    {
+      "originalBlob": "09268f774a64ba64d699d6a494df4eb7e1f8771a",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3b3c98e7f8c81955cb057cea3a699f62356d6c18 (previous version of src/map.cpp)",
+      "sha256": "b821f386240ea6060f173328d2ce5eff16e3f6596bbbb5ab91a1bceb4589c6ef",
+      "source": "payloads/reconstructions/09/09268f774a64ba64d699d6a494df4eb7e1f8771a-map.cpp"
+    },
+    {
+      "originalBlob": "12e57e9463dbb15adb30f77f751cd65a502820e6",
+      "path": "src/player.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #185 reconstruction and adapted to the #186 serialization refactor following the same-commit surviving building.cpp/tile.cpp/potion.cpp/monster.cpp: loadFromJson(std::string name) sets typeName and reads its config, saveToJson/canSave removed, copy constructors emptied; Player(name) loads by name; Player() now calls init() because factory creation uses the default constructor (inferred)",
+      "sha256": "de13b55ae74e9056a74b942f16b9b93a42381bc9eebb210b2f5fcc1dc19476f2",
+      "source": "payloads/reconstructions/12/12e57e9463dbb15adb30f77f751cd65a502820e6-player.cpp"
+    },
+    {
+      "originalBlob": "258b3f53d45c129d47e47d9e4d8ff68518baba2c",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 2faff048ad (previous version of src/creature.cpp)",
+      "sha256": "77581a12d70faa7089001ea486d17a852d7dcd0ae2a30d4c6959160d1d839abd",
+      "source": "payloads/reconstructions/25/258b3f53d45c129d47e47d9e4d8ff68518baba2c-creature.cpp"
+    },
+    {
+      "originalBlob": "2cf7e2c02ff770647dd5244a60744d4f5cb21f57",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #185 reconstruction and adapted to the #186 serialization refactor following the same-commit surviving building.cpp/tile.cpp/potion.cpp/monster.cpp: loadFromJson(std::string name) sets typeName and reads its config, saveToJson/canSave removed, copy constructors emptied; getInteraction creates a default Interaction and loads it by name; the saved-position array branch is dropped",
+      "sha256": "3e360c3f9f4ee80cd433285df3a75e8b4d9dc5519459abc8e958a8f73665b3aa",
+      "source": "payloads/reconstructions/2c/2cf7e2c02ff770647dd5244a60744d4f5cb21f57-interaction.cpp"
+    },
+    {
+      "originalBlob": "2faff048ad875d34b2222faeeb01c3b9ea23b18f",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #187 reconstruction; emit spelled Q_EMIT because #190 builds with QT_NO_KEYWORDS; plain accessors setExp/getGold/setGold inferred for the USER Q_PROPERTYs declared in #190",
+      "sha256": "77581a12d70faa7089001ea486d17a852d7dcd0ae2a30d4c6959160d1d839abd",
+      "source": "payloads/reconstructions/2f/2faff048ad875d34b2222faeeb01c3b9ea23b18f-creature.cpp"
+    },
+    {
+      "originalBlob": "3b3c98e7f8c81955cb057cea3a699f62356d6c18",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #190 reconstruction; Map::removeTile (declared since #182, first called by the surviving #191 gamescript.cpp) inferred from the tile-replacement branch of Map::addTile",
+      "sha256": "b821f386240ea6060f173328d2ce5eff16e3f6596bbbb5ab91a1bceb4589c6ef",
+      "source": "payloads/reconstructions/3b/3b3c98e7f8c81955cb057cea3a699f62356d6c18-map.cpp"
+    },
+    {
+      "originalBlob": "3d9cf257513d763a72ae798b0b88d14959465e5e",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #186 reconstruction and adapted to the #187 property system: MapObject destructor, movement animation (dynamicAnimation/QTimeLine) and PlayerAnimation removed with their declarations so moveTo places the item directly; MapObject::loadFromProps, now non-virtual, inferred to apply every TMX property through QObject::setProperty (the loader's duplicate property loop moved into it); MapObject::getMapObject inferred to create any object from its config/object.json class like the same-commit Building::getBuilding, because #187 merged the per-kind configs into object.json",
+      "sha256": "442c2d74b7846cded637025dad00400bc26e60a5e94575eff8c8703b5c0b9c41",
+      "source": "payloads/reconstructions/3d/3d9cf257513d763a72ae798b0b88d14959465e5e-map.cpp"
+    },
+    {
+      "originalBlob": "4658e1588df777d2ec0453fad41902e51bb577c1",
+      "path": "src/item.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #185 reconstruction and adapted to the #186 serialization refactor following the same-commit surviving building.cpp/tile.cpp/potion.cpp/monster.cpp: loadFromJson(std::string name) sets typeName and reads its config, saveToJson/canSave removed, copy constructors emptied; getItem loads by name; Item position is no longer read from configuration; Item::loadFromProps removed with its declaration",
+      "sha256": "148c3add6faad7ebf6b162522413ef15b0ad23ed4750ed346e4757be57a54acb",
+      "source": "payloads/reconstructions/46/4658e1588df777d2ec0453fad41902e51bb577c1-item.cpp"
+    },
+    {
+      "originalBlob": "4fe4d0e2595e3c7ffa16773f6255a48fb987bca6",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 67 sources inferred without a surviving object_script listing: reconstructed fec4f452:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed fec4f452:Game.pro",
+      "sha256": "ed4fdc361b389be0b1a8c4d8fb59a56511e3d6802102c5d1bd56720431771099",
+      "source": "payloads/reconstructions/4f/4fe4d0e2595e3c7ffa16773f6255a48fb987bca6-Game.pro"
+    },
+    {
+      "originalBlob": "52e8dee3d72eda882f744840db669225414f7a3e",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #185 reconstruction and adapted to the #186 serialization refactor following the same-commit surviving building.cpp/tile.cpp/potion.cpp/monster.cpp: loadFromJson(std::string name) sets typeName and reads its config, saveToJson/canSave removed, copy constructors emptied; Map JSON save/load family and object factory removed with their declarations; addDungeon keeps only its tile carving because the Dungeon class was deleted; TMX objects come from the new MapObject::getMapObject, inferred to dispatch on items/creatures configs then Building::getBuilding",
+      "sha256": "e2ee927fb26a3410c8ca5f541f82b3af2cd23b2de357a4a573fdd48fa8825d23",
+      "source": "payloads/reconstructions/52/52e8dee3d72eda882f744840db669225414f7a3e-map.cpp"
+    },
+    {
+      "originalBlob": "5fd1435317fb8da6502441e3f2d9e21cec4a8b70",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #185 reconstruction and adapted to the #186 serialization refactor following the same-commit surviving building.cpp/tile.cpp/potion.cpp/monster.cpp: loadFromJson(std::string name) sets typeName and reads its config, saveToJson/canSave removed, copy constructors emptied; save loading at start and the saving destructor removed with their declarations; the game always starts from config/map.tmx",
+      "sha256": "23da5556a431ea33f73d3e44ab05776d3447400ef94ed2896d490a3a59d580b3",
+      "source": "payloads/reconstructions/5f/5fd1435317fb8da6502441e3f2d9e21cec4a8b70-gamescene.cpp"
+    },
+    {
+      "originalBlob": "67a99edcd4e0b258b4eec77fd3fe08f78c5107f4",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #185 reconstruction and adapted to the #186 serialization refactor following the same-commit surviving building.cpp/tile.cpp/potion.cpp/monster.cpp: loadFromJson(std::string name) sets typeName and reads its config, saveToJson/canSave removed, copy constructors emptied; default constructor initializes fields without loading; Creature::getCreature inferred after Building::getBuilding, using config class or, absent that, Player/Monster from the config isPlayer flag (the restored #186 creatures.json has no class keys)",
+      "sha256": "2c78f87ca0ee35d3ad766ece22a52c53474aeb6fe66898fed5cd2a91de915797",
+      "source": "payloads/reconstructions/67/67a99edcd4e0b258b4eec77fd3fe08f78c5107f4-creature.cpp"
+    },
+    {
+      "originalBlob": "7faeb23ecb8d346cec800aa2a9e04546a71b26f4",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #182 reconstruction; emit spelled Q_EMIT because #190 builds with QT_NO_KEYWORDS, and the player statsChanged emission is dropped because #190 made that signal protected (updateViews already refreshes the views)",
+      "sha256": "c71d172775b3bb39b72211a64c96c52344e77dd8879f18cc58820c1a37d665c8",
+      "source": "payloads/reconstructions/7f/7faeb23ecb8d346cec800aa2a9e04546a71b26f4-gameview.cpp"
+    },
+    {
+      "originalBlob": "a4db7e2f49453f2f08d312f4d0ca2b38a9f44b93",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #188 reconstruction; Map::getObjectByName, declared in #189 for the surviving Teleporter exit lookup, inferred to return the map object whose QObject name (set from the TMX object name by the loader) matches",
+      "sha256": "3cd89d24b208fcdff7ad45da87b29ba8423399584d28466e9d77d82b78462f01",
+      "source": "payloads/reconstructions/a4/a4db7e2f49453f2f08d312f4d0ca2b38a9f44b93-map.cpp"
+    },
+    {
+      "originalBlob": "a92349a6466f3b3c1d8b0b19d41e3a24b80fd0bb",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #186 reconstruction; reads config/object.json because #187 merged creatures.json and items.json into it, as the same-commit surviving building.cpp, item.cpp and lootprovider.cpp do",
+      "sha256": "f4c00b11c0862db159a8c3c3cb25bbc340e2602fd0a0061ebff018209b73ed5e",
+      "source": "payloads/reconstructions/a9/a92349a6466f3b3c1d8b0b19d41e3a24b80fd0bb-creature.cpp"
+    },
+    {
+      "originalBlob": "adf18640d901d2bd3dc5f025f6e00ec22e4652a8",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #186 reconstruction; the key-repeat throttle using GameScene::click is removed because #188 deleted that member",
+      "sha256": "8a22de9ce66952416ca54e583d8e3831d2b222e18ba91a0f1e51d24d20bb306d",
+      "source": "payloads/reconstructions/ad/adf18640d901d2bd3dc5f025f6e00ec22e4652a8-gamescene.cpp"
+    },
+    {
+      "originalBlob": "d520b1bab110fa8baec2258fb363df7acff7b751",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 65 sources inferred without a surviving object_script listing: reconstructed 2d5108ed:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed 2d5108ed:Game.pro",
+      "sha256": "ab5c1c722b32620af1f3c773d729308303185f3b6964562baeb44cab74086a07",
+      "source": "payloads/reconstructions/d5/d520b1bab110fa8baec2258fb363df7acff7b751-Game.pro"
+    },
+    {
+      "originalBlob": "f596e8277b88f93908fe292d0b2f2e9d958c6de2",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a4db7e2f49 (previous version of src/map.cpp)",
+      "sha256": "3cd89d24b208fcdff7ad45da87b29ba8423399584d28466e9d77d82b78462f01",
+      "source": "payloads/reconstructions/f5/f596e8277b88f93908fe292d0b2f2e9d958c6de2-map.cpp"
+    },
+    {
+      "originalBlob": "f75fb5f91bea40986179b84ee7da206b71e09b63",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3d9cf25751 (previous version of src/map.cpp)",
+      "sha256": "442c2d74b7846cded637025dad00400bc26e60a5e94575eff8c8703b5c0b9c41",
+      "source": "payloads/reconstructions/f7/f75fb5f91bea40986179b84ee7da206b71e09b63-map.cpp"
     }
   ],
   "schemaVersion": 1
