@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **150 commits / 150 trees** against the
-restored inputs: **144 game startups and 6 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **254 commits / 254 trees** against the
+restored inputs: **243 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -81,6 +81,111 @@ uses recorded Linux build-copy translations of surviving Windows include paths
 and an empty save-directory prerequisite where required. Reconstructions are derived from same-version headers,
 callers and configuration; underdetermined formulas, map transitions and layouts
 are labeled as inference. Compilation/startup do not prove historical gameplay parity.
+
+Catalog #128 (`856d7792`) is an original defect: it renamed `images/monsters/*/time.txt`
+to `time.json` (identical bytes) but left the surviving `creatures.qrc` naming the old
+files, so `rcc` fails on the original manifest; #129 updates it. Only that exact original
+state receives hash-pinned build-only aliases: each manifest-named `time.txt` gets the
+bytes of its rename target, as the parent commit held them. The original manifest,
+sources and images are unchanged; verification labels its evidence and progress entry
+`renamedResourceAliases`.
+
+From #156 the tree vendors TmxParser (`tmx/`, `tinyxml/`, `base64/`, `zlib/`); the
+reconstructed #156, #157 and #160 projects compile it, as the surviving #164
+`teleporter.cpp` requires. The surviving `map.h` declares `loadMapFromTmx` from #159
+and `config/map.tmx` is BFG-removed; as in the earlier donor, reconstructed `Map`
+bodies keep loading `config/map.json` and leave that path undefined (inference).
+
+Catalog #176 and #177 were committed with unresolved merge-conflict markers in seven
+files; every hunk's sides differ only in whitespace, and #178 resolves them. Only those
+pinned file states get a build-only resolution that keeps the origin/master side (at
+#176 byte-identical to the parent's file). #176 also omitted `pathfindercache.cpp`, which
+#177 adds unchanged two minutes later; where absent, the build copy receives #177's
+hash-pinned bytes. Evidence is labeled `whitespaceConflictResolution`. Single-file
+project edits with no surviving trace (#170, #172) are recorded as inference.
+
+Catalog #180-#182 move the game under `src/` and `lib/` and then flatten `src/`. #180 and
+#181 merge each item, building and pathfinder class family (and at #181 `Damage`) into one
+header while their unchanged `main.cpp`, `monster.cpp`, `playerstatsview.cpp` and
+`creature.h` still include the old names; #182 rewrites those includes. Only those pinned
+states get build-only forwarding headers (`mergedHeaderForwarders`). The merged
+implementations are assembled from the exact per-class sources the refactor deletes.
+
+Catalog #186 replaces JSON maps and saves with a Tiled map. Its `config/map.tmx` is
+BFG-removed and only a later donor's object placements survive, so the reconstruction
+keeps the donor's entry, tileset and placements of object types that exist at #186 and
+fills the empty terrain layer with one default terrain (inference). `startGame` follows
+the developer's own intact #197 implementation, which does not recentre the view, so
+the first frame shows the map origin rather than the distant entry. Later intact
+`item.cpp` (#187) and `player.cpp` (#188) bodies are used where their headers match.
+
+From #190 the game embeds CPython through the Python 3 module API. The lost project is
+reconstructed with CPython 3.4 and `CONFIG += no_keywords`. The game was developed on
+Windows, whose build links `C:\Python34` once the projects survive (#270, September
+2014; only the Fedora lines name `python3.3m`), and the `scripts/*.py` restored exactly
+at #210 are CPython 3.4's standard library (`random.py` imports `_collections_abc`).
+`no_keywords` follows from the commit's own conversion of every surviving
+`slots`/`signals`/`emit` to `Q_SLOT`/`Q_SIGNAL`/`Q_EMIT`: Python 3's `object.h` declares
+a `slots` member that Qt's keyword macro breaks. Both are inference.
+
+Catalog #204's surviving `main.cpp` runs a stdin script console on a thread-pool thread
+for as long as the game view is visible, and the developer's view destructor deletes the
+scene that loop still queries, so leaving the event loop with the window shown is a
+use-after-free. Only for a `main.cpp` holding that exact loop does the observer close the
+game window as a player would after the readiness report and wait for the console thread
+before exiting (`closeWindowAndJoinConsole`). Such a game's stdin stays open and silent,
+like an idle console's, until that report and then reaches end of file; an empty stdin
+would spin the loop and call CPython from two threads at once. Every other verified
+process gets an empty stdin. The lost #205-#207 mains carry the loop; from #207 the
+surviving `scriptmanager.h` returns `ScriptManager::getInstance()` by pointer and takes a
+`QString`, so only that call is adapted. The #205/#206 script functions declared by the
+surviving `gamescript.h` (`incProperty`, `getProperty`, `moveObject`) follow the later
+surviving `cave.py` usage. At #208 the surviving building and item loaders read an
+`animation` key; the donor `object.json` only carries later slash-less values there, so
+#208's reconstruction moves each building's and item's slash-terminated `path` to
+`animation` (#208's `AnimationProvider` appends `time.json` directly). #211 removes the
+`Cave` class: its reconstruction makes the cave a scripted `Building` (`cave.py`), and
+its `setProperty` raises the Python error for non-string values instead of reading
+unparsed arguments. #212 ("setProperty fixed") accepts any value through `str()` and the
+surviving `str2int`; #213 likewise makes the removed `Teleporter` a scripted `Building`.
+
+Catalog #215 ("loading") preloads every tile within the map's bounds behind a new loading
+image. Its map layer takes `xBound` 199 / `yBound` 111, the bounds the developer's own
+later copy of this map declares (the donor of its entry and placements). The developer's
+`CoordsHasher`, intact at #101 and #175, always returns 0, so each insert scans every
+tile and loading takes about 80 s here. The observer's readiness budget therefore
+follows the smoke watchdog (watchdog minus 10 s, recorded as `readyBudgetMs`); the
+workbench and the recovery workflow use a 300 s watchdog.
+
+#216 ("unix compatibility", a side branch merged at #217) is where the developer first
+builds on Linux: its project gains the unix Python linkage in the developer's later
+surviving form (`-L/lib64/ -lpython3.3m`, the Fedora CPython) beside the Windows
+`C:/Python34`, so Linux verification uses CPython 3.3 from there. #219 and #223 move the
+configuration, scripts and images out of Qt resources onto the filesystem and delete the
+manifests; their lost projects drop exactly the manifests those commits remove or empty.
+From #220 building scripts become modules named after each object's type (`import Cave`),
+so the lost object descriptors drop the buildings' `script` keys.
+
+Catalog #224 makes `GameScene`'s player, map and view accessors instance members, but its
+unchanged `monster.cpp`, `playerlistview.cpp` and `tile.cpp` still call them statically, so
+it cannot compile as committed; #225 rewrites those calls but comments out `RoadTile`, which
+`tile.cpp`'s step table still names, so #225 cannot compile either; #226 settles it. Only
+those exact states get a build-only completion (`unfinishedRefactorCompletion`) that
+replaces just the offending lines, each with the developer's own line from #225 or #226.
+The lost `gamescript.cpp` and `pathfinder.cpp` blobs that span both APIs reach the scene
+through pointers, which compile under either (inference). From #224 the scene, not the
+map, owns the player, and the observer reads it there.
+
+Catalog #226 replaces the `ScriptManager` singleton with a per-map `ScriptEngine` that
+stores the map's address in Python's `__main__.map`; the lost script functions read it
+there, and the stdin console, whose singleton is gone, is dropped (the next surviving
+`main.cpp`, #247, has none; inference). Its scene loads the map's tiles on the thread pool
+through blocking calls to the main thread and then invokes `GameView::show`; for a scene
+that starts such a `LoadGameTask`, the observer waits for the pool to go idle before
+inspecting the scene, and it always shows the view through `QWidget::show`. #229
+("BoostPython") initialises the script module through the Python 2 API, so from there the
+lost project embeds CPython 2.7 with Boost.Python, in the developer's later surviving form
+(`-lpython2.7 -lboost_python`, #266).
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`
@@ -154,6 +259,13 @@ It contains GCC 5.4, Qt 5.5.1, CPython 2.7/3.3/3.4 and their Boost.Python librar
 Compact provenance is in `recovery/toolchains/evidence/local-2026-11-15/`.
 This local image identity is separate from any future CI-built image.
 
+Catalog #119 onward were verified on a Docker host with an image built from the
+byte-identical recipe (`Dockerfile`, `build.sh`, `sources*.json` hashes as recorded in
+`recipe-provenance.json`, staged with `sources-git.json`); its identity is
+`sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d`. Re-running
+the already accepted #118 on that image reproduced success. Each snapshot in
+`recovery/progress.json` records the image that verified it.
+
 ## Resume
 
 ```sh
@@ -166,6 +278,7 @@ python3 scripts/history_workbench.py auto 108 367 --verify  # stop at the first 
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
+python3 scripts/history_workbench.py revalidate   # re-verify accepted trees whose shared inputs changed
 python3 scripts/history_workbench.py progress
 ```
 

@@ -1,0 +1,19 @@
+{
+  "checks": {
+    "editor": true,
+    "eventLoop": true,
+    "map": true,
+    "renderedFrame": true
+  },
+  "frame": {
+    "height": 718,
+    "path": "/home/user/work2/verify/snapshot-j51dljz1/smoke/startup.png",
+    "sha256": "bbe6d3137b480c3b20584405ca3ccd6c7efbf929ca945891051961289566f1cf",
+    "width": 1264
+  },
+  "mode": "editor",
+  "reason": "",
+  "schemaVersion": 1,
+  "status": "ready",
+  "validationBoundary": "Authored editor startup; gameplay and player are unverified"
+}

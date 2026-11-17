@@ -1,0 +1,888 @@
+{
+  "adapter": {
+    "config": "/home/user/work2/verify/snapshot-19cne_r8/observer/recovery_smoke_config.h",
+    "configSha256": "99b9801b098411b47a087fe8e4824cb3775e61c14447401e21239a079b4785f8",
+    "id": "classic-editor",
+    "mode": "editor",
+    "overlays": [],
+    "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
+  },
+  "artifactDir": "/home/user/work2/verify/snapshot-19cne_r8/smoke",
+  "build": {
+    "command": [
+      "make",
+      "-j4"
+    ],
+    "log": "/home/user/work2/verify/snapshot-19cne_r8/build.log",
+    "returnCode": 0,
+    "seconds": 13.48,
+    "timedOut": false
+  },
+  "configure": {
+    "command": [
+      "qmake",
+      "/home/user/work2/verify/snapshot-19cne_r8/source/Game.pro",
+      "-o",
+      "/home/user/work2/verify/snapshot-19cne_r8/build/Makefile",
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional",
+      "-after",
+      "TARGET=RecoveryGame",
+      "DESTDIR=.",
+      "CONFIG-=app_bundle",
+      "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-19cne_r8/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-19cne_r8/observer"
+    ],
+    "log": "/home/user/work2/verify/snapshot-19cne_r8/configure.log",
+    "returnCode": 0,
+    "seconds": 0.064,
+    "timedOut": false
+  },
+  "evidenceDir": "/home/user/work2/verify/evidence/4e58f380420ec9e0863a2ec0b26c7011c6a831af9a1aa6ac28cd3247cec2184e",
+  "fileLookup": {
+    "command": [
+      "g++-5",
+      "-shared",
+      "-fPIC",
+      "-O2",
+      "-std=c++11",
+      "-o",
+      "/home/user/work2/verify/snapshot-19cne_r8/observer/libwindowspaths.so",
+      "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
+      "-ldl"
+    ],
+    "log": "/home/user/work2/verify/snapshot-19cne_r8/file-lookup.log",
+    "returnCode": 0,
+    "seconds": 0.215,
+    "semantics": "Windows-style case-insensitive file lookup for the game process",
+    "timedOut": false
+  },
+  "fingerprint": "4e58f380420ec9e0863a2ec0b26c7011c6a831af9a1aa6ac28cd3247cec2184e",
+  "libraryAliases": {
+    "aliases": {},
+    "directory": "/home/user/work2/verify/snapshot-19cne_r8/observer/library-aliases"
+  },
+  "project": "Game.pro",
+  "recipe": {
+    "compilerCommand": "g++-5",
+    "environment": {
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "PATH": "/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "QT_OPENGL": "software",
+      "QT_X11_NO_MITSHM": "1"
+    },
+    "id": "qt5-no-python",
+    "makeCommand": "make",
+    "pythonAbi": "none",
+    "qmakeArguments": [
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional"
+    ],
+    "qmakeCommand": "qmake",
+    "toolchainLock": {
+      "compatibility": [
+        "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+      ],
+      "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+      "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+      "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+      "schemaVersion": 1,
+      "sourceLock": "recovery/toolchains/sources.json",
+      "sourceLockSha256": "d94f274c60a4bd52aaeedfe01bc5d3e4a116c5181443def07ce6edd59c14d10f"
+    }
+  },
+  "restoration": {
+    "excluded": [
+      {
+        "markerPath": "7za.exe.REMOVED.git-id",
+        "originalBlob": "bd30a5167ed65d30b32e96536d50d2947fb04be3",
+        "path": "7za.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "Game.pro.user.03c9be7.REMOVED.git-id",
+        "originalBlob": "8c46cf6b513aeb8ecdfcf8d9f7faaa2004f7e68c",
+        "path": "Game.pro.user.03c9be7",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Game.pro.user.REMOVED.git-id",
+        "originalBlob": "4d331832bf60af2916e4c1d77b46aba3a1180922",
+        "path": "Game.pro.user",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Game.pro.user.f159572.REMOVED.git-id",
+        "originalBlob": "bad493903c3d1125c1186748b90fe187391534f1",
+        "path": "Game.pro.user.f159572",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Makefile.Debug.REMOVED.git-id",
+        "originalBlob": "fa1646b25f29b94dcb1b3fd6646e7caddb0f3648",
+        "path": "Makefile.Debug",
+        "reason": "generated build output"
+      },
+      {
+        "markerPath": "Makefile.REMOVED.git-id",
+        "originalBlob": "921db970ee4a4e55ee9e96681d4ecdefa8bfd693",
+        "path": "Makefile",
+        "reason": "generated build output"
+      },
+      {
+        "markerPath": "Makefile.Release.REMOVED.git-id",
+        "originalBlob": "200749495f5ebaa894b5dc00866661187949c429",
+        "path": "Makefile.Release",
+        "reason": "generated build output"
+      },
+      {
+        "markerPath": "astyle.exe.REMOVED.git-id",
+        "originalBlob": "49d123f08b607ebdbdff222429dc522b1c261a32",
+        "path": "astyle.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "git/git.exe.REMOVED.git-id",
+        "originalBlob": "fb55799d5b8acb31c2b81d3bf855653b2e8fe6fe",
+        "path": "git/git.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "git/libiconv-2.dll.REMOVED.git-id",
+        "originalBlob": "dbcd667563797799f4232129ed76da5b60644459",
+        "path": "git/libiconv-2.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Core.dll.REMOVED.git-id",
+        "originalBlob": "8f0a5ca6becd577c64dcf3c10976493980fa0dc5",
+        "path": "libraries/Qt5Core.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Gui.dll.REMOVED.git-id",
+        "originalBlob": "2b5baf3c25a5f6488f698f6b9f9e81c160f1c924",
+        "path": "libraries/Qt5Gui.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Widgets.dll.REMOVED.git-id",
+        "originalBlob": "08e21b94311ac7f9cec972447224f4f02726dfb9",
+        "path": "libraries/Qt5Widgets.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icudt51.dll.REMOVED.git-id",
+        "originalBlob": "f78424b6aa529f67ad0f6a76208112d660807a21",
+        "path": "libraries/icudt51.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icuin51.dll.REMOVED.git-id",
+        "originalBlob": "7e199ecb0b30688d731d33ae098d359324dd4db5",
+        "path": "libraries/icuin51.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icuuc51.dll.REMOVED.git-id",
+        "originalBlob": "089ec7d0cad797369fb7e367ec39d7b892a7757f",
+        "path": "libraries/icuuc51.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libgcc_s_dw2-1.dll.REMOVED.git-id",
+        "originalBlob": "82b277632c513c594a9ef41ff8763e36f969479b",
+        "path": "libraries/libgcc_s_dw2-1.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libstdc++-6.dll.REMOVED.git-id",
+        "originalBlob": "fcce1f69da0ba1e7d083b8f159088a516a72bd95",
+        "path": "libraries/libstdc++-6.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libwinpthread-1.dll.REMOVED.git-id",
+        "originalBlob": "22fa8390962b26de53d88a8da73a22dbc272b893",
+        "path": "libraries/libwinpthread-1.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/platforms/qwindows.dll.REMOVED.git-id",
+        "originalBlob": "b403f5d3a030e8614b43890a710cc0b089361aab",
+        "path": "libraries/platforms/qwindows.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      }
+    ],
+    "outputDir": "/home/user/work2/verify/snapshot-19cne_r8/source",
+    "restored": [
+      {
+        "markerPath": "compression/minizip.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "35723964b2e4e15104637005e76a5ed6cb7094d4",
+        "path": "compression/minizip.h",
+        "provenance": "unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114",
+        "replacementBlob": "ac3d93569f4f2b5683c639aa6b55db9c64894425"
+      },
+      {
+        "markerPath": "config/creatures.json.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "a0a8a14fb49e66b75760874b6b9c86f7fa5dbfe5",
+        "path": "config/creatures.json",
+        "provenance": "content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta",
+        "replacementBlob": "765d7cefe160d7a4a3db6e18a51b7defccd5a3e8"
+      },
+      {
+        "markerPath": "config/items.json.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "2c4a970391bc5c69cc51a4822d07fa727d621425",
+        "path": "config/items.json",
+        "provenance": "unverified donor reconstruction; 5e000dca02a17e179719d99ae93d31687c9d2244:config/items.json; headerMatch=0; apiOverlap=0/10000; distance=15",
+        "replacementBlob": "41d081fe6c796beab79afb418358b8af12cfa877"
+      },
+      {
+        "markerPath": "creatures/creature.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "51cc3081ffb58fdf1b482488ebc31e6c8a14654b",
+        "path": "creatures/creature.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a773641d633236095a67164688d482c402ac87ca (previous version of creatures/creature.cpp)",
+        "replacementBlob": "cb5fd8fb4856f1a6cd8c3384fb6ad42279a67d33"
+      },
+      {
+        "markerPath": "images/arrows/left/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8",
+        "path": "images/arrows/left/0.png",
+        "replacementBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8"
+      },
+      {
+        "markerPath": "images/arrows/right/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297",
+        "path": "images/arrows/right/0.png",
+        "replacementBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297"
+      },
+      {
+        "markerPath": "images/buildings/cave/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a",
+        "path": "images/buildings/cave/0.png",
+        "replacementBlob": "d6c544ba5c714dab550c51f926aa62a0b7bf908a"
+      },
+      {
+        "markerPath": "images/buildings/dungeon/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "6dde9d7686fbf5b8733af9d6663cbb2018149ec3",
+        "path": "images/buildings/dungeon/0.png",
+        "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=27",
+        "replacementBlob": "24f5f0edc0a248b89101db535bdb429f0b1b7861"
+      },
+      {
+        "markerPath": "images/buildings/teleporter/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "646f3262bd25c564f8d1ad2770756ba896190345",
+        "path": "images/buildings/teleporter/0.png",
+        "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=27",
+        "replacementBlob": "51db2b14b9a75e7e0c5ad73daedfe7e25f8b3df0"
+      },
+      {
+        "markerPath": "images/interactions/abyssalshadows/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a",
+        "path": "images/interactions/abyssalshadows/0.png",
+        "replacementBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a"
+      },
+      {
+        "markerPath": "images/interactions/armorofendlesswinter/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19",
+        "path": "images/interactions/armorofendlesswinter/0.png",
+        "replacementBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19"
+      },
+      {
+        "markerPath": "images/interactions/attack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1854502273891b7647172605d57723c57803b0b8",
+        "path": "images/interactions/attack/0.png",
+        "replacementBlob": "1854502273891b7647172605d57723c57803b0b8"
+      },
+      {
+        "markerPath": "images/interactions/backstab/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c",
+        "path": "images/interactions/backstab/0.png",
+        "replacementBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c"
+      },
+      {
+        "markerPath": "images/interactions/barrier/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04",
+        "path": "images/interactions/barrier/0.png",
+        "replacementBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04"
+      },
+      {
+        "markerPath": "images/interactions/bloodlash/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5",
+        "path": "images/interactions/bloodlash/0.png",
+        "replacementBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5"
+      },
+      {
+        "markerPath": "images/interactions/bloodthirst/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fbb552b780851651f574f49d1394b110f15feba2",
+        "path": "images/interactions/bloodthirst/0.png",
+        "replacementBlob": "fbb552b780851651f574f49d1394b110f15feba2"
+      },
+      {
+        "markerPath": "images/interactions/chloroform/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8",
+        "path": "images/interactions/chloroform/0.png",
+        "replacementBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8"
+      },
+      {
+        "markerPath": "images/interactions/deathstrike/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044",
+        "path": "images/interactions/deathstrike/0.png",
+        "replacementBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044"
+      },
+      {
+        "markerPath": "images/interactions/devour/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369",
+        "path": "images/interactions/devour/0.png",
+        "replacementBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369"
+      },
+      {
+        "markerPath": "images/interactions/doubleattack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981",
+        "path": "images/interactions/doubleattack/0.png",
+        "replacementBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981"
+      },
+      {
+        "markerPath": "images/interactions/endlesspain/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de",
+        "path": "images/interactions/endlesspain/0.png",
+        "replacementBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de"
+      },
+      {
+        "markerPath": "images/interactions/lethalpoison/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85",
+        "path": "images/interactions/lethalpoison/0.png",
+        "replacementBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85"
+      },
+      {
+        "markerPath": "images/interactions/magicmissile/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "674269a5d6d1ceff668e00ee470a73805de2b770",
+        "path": "images/interactions/magicmissile/0.png",
+        "replacementBlob": "674269a5d6d1ceff668e00ee470a73805de2b770"
+      },
+      {
+        "markerPath": "images/interactions/shadowbolt/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a",
+        "path": "images/interactions/shadowbolt/0.png",
+        "replacementBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a"
+      },
+      {
+        "markerPath": "images/interactions/sneakattack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a",
+        "path": "images/interactions/sneakattack/0.png",
+        "replacementBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a"
+      },
+      {
+        "markerPath": "images/interactions/strike/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d",
+        "path": "images/interactions/strike/0.png",
+        "replacementBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d"
+      },
+      {
+        "markerPath": "images/item.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "21983e50f30024b0333356c7a20193d283d487e3",
+        "path": "images/item.png",
+        "replacementBlob": "21983e50f30024b0333356c7a20193d283d487e3"
+      },
+      {
+        "markerPath": "images/items/potions/bless/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b376e0642913165abcb73d2a76fde4d51d950527",
+        "path": "images/items/potions/bless/0.png",
+        "replacementBlob": "b376e0642913165abcb73d2a76fde4d51d950527"
+      },
+      {
+        "markerPath": "images/items/potions/life/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664",
+        "path": "images/items/potions/life/0.png",
+        "replacementBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664"
+      },
+      {
+        "markerPath": "images/items/potions/mana/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf",
+        "path": "images/items/potions/mana/0.png",
+        "replacementBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf"
+      },
+      {
+        "markerPath": "images/items/potions/poison/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8",
+        "path": "images/items/potions/poison/0.png",
+        "replacementBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8"
+      },
+      {
+        "markerPath": "images/items/weapons/bladeofdarkdreams/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434",
+        "path": "images/items/weapons/bladeofdarkdreams/0.png",
+        "replacementBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434"
+      },
+      {
+        "markerPath": "images/items/weapons/broadsword/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666",
+        "path": "images/items/weapons/broadsword/0.png",
+        "replacementBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666"
+      },
+      {
+        "markerPath": "images/items/weapons/dagger/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7",
+        "path": "images/items/weapons/dagger/0.png",
+        "replacementBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7"
+      },
+      {
+        "markerPath": "images/items/weapons/daggerofvileheart/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "51e254e364a33007dba5512a76cda69986c998c0",
+        "path": "images/items/weapons/daggerofvileheart/0.png",
+        "replacementBlob": "51e254e364a33007dba5512a76cda69986c998c0"
+      },
+      {
+        "markerPath": "images/items/weapons/knife/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f66d560da00a647405ff5e71ea424f8702f6e804",
+        "path": "images/items/weapons/knife/0.png",
+        "replacementBlob": "f66d560da00a647405ff5e71ea424f8702f6e804"
+      },
+      {
+        "markerPath": "images/items/weapons/longsword/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65",
+        "path": "images/items/weapons/longsword/0.png",
+        "replacementBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65"
+      },
+      {
+        "markerPath": "images/items/weapons/shadowblade/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a97aad74c237a557366d26980b894f240b399c68",
+        "path": "images/items/weapons/shadowblade/0.png",
+        "replacementBlob": "a97aad74c237a557366d26980b894f240b399c68"
+      },
+      {
+        "markerPath": "images/items/weapons/shortstaff/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4",
+        "path": "images/items/weapons/shortstaff/0.png",
+        "replacementBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4"
+      },
+      {
+        "markerPath": "images/items/weapons/shortsword/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fed1f8ed826387842228997efe12b0602dfda251",
+        "path": "images/items/weapons/shortsword/0.png",
+        "replacementBlob": "fed1f8ed826387842228997efe12b0602dfda251"
+      },
+      {
+        "markerPath": "images/items/weapons/staff/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d",
+        "path": "images/items/weapons/staff/0.png",
+        "replacementBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d"
+      },
+      {
+        "markerPath": "images/items/weapons/staffoftheabyss/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5",
+        "path": "images/items/weapons/staffoftheabyss/0.png",
+        "replacementBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5"
+      },
+      {
+        "markerPath": "images/items/weapons/stiletto/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90",
+        "path": "images/items/weapons/stiletto/0.png",
+        "replacementBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90"
+      },
+      {
+        "markerPath": "images/items/weapons/void/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7",
+        "path": "images/items/weapons/void/0.png",
+        "replacementBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7"
+      },
+      {
+        "markerPath": "images/items/weapons/wand/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f",
+        "path": "images/items/weapons/wand/0.png",
+        "replacementBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f"
+      },
+      {
+        "markerPath": "images/loading.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "70d235c7051fd25ecfd49317c2587fc3f3c120f2",
+        "path": "images/loading.png",
+        "provenance": "synthesized visible 32px placeholder; original artwork unavailable; unverified",
+        "replacementBlob": "e384ae14edd1594f9e20ec5f5ebb4d47f5f25292"
+      },
+      {
+        "markerPath": "images/monsters/octobogz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5f06daf397276dc5e6d23caadd25ae65076434cb",
+        "path": "images/monsters/octobogz/0.png",
+        "replacementBlob": "5f06daf397276dc5e6d23caadd25ae65076434cb"
+      },
+      {
+        "markerPath": "images/monsters/octobogz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e93d2d3d5167abf3dfe9e86f6a87e98124521f0d",
+        "path": "images/monsters/octobogz/1.png",
+        "replacementBlob": "e93d2d3d5167abf3dfe9e86f6a87e98124521f0d"
+      },
+      {
+        "markerPath": "images/monsters/pritz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9",
+        "path": "images/monsters/pritz/0.png",
+        "replacementBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9"
+      },
+      {
+        "markerPath": "images/monsters/pritz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc",
+        "path": "images/monsters/pritz/1.png",
+        "replacementBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf",
+        "path": "images/monsters/pritzmage/0.png",
+        "replacementBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2d8bd66481b709af6b6b10323c348ae0de332563",
+        "path": "images/monsters/pritzmage/1.png",
+        "replacementBlob": "2d8bd66481b709af6b6b10323c348ae0de332563"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/2.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72553fb5737309749539c6a2cc74022b2a11844c",
+        "path": "images/monsters/pritzmage/2.png",
+        "replacementBlob": "72553fb5737309749539c6a2cc74022b2a11844c"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/3.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a",
+        "path": "images/monsters/pritzmage/3.png",
+        "replacementBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a"
+      },
+      {
+        "markerPath": "images/players/assasin/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650",
+        "path": "images/players/assasin/0.png",
+        "replacementBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650"
+      },
+      {
+        "markerPath": "images/players/sorcerer/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d",
+        "path": "images/players/sorcerer/0.png",
+        "replacementBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d"
+      },
+      {
+        "markerPath": "images/players/warrior/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c",
+        "path": "images/players/warrior/0.png",
+        "replacementBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c"
+      },
+      {
+        "markerPath": "images/tiles/mountain/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "203d08f3f0f153b2fffca654b4049c483906be11",
+        "path": "images/tiles/mountain/0.png",
+        "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).",
+        "replacementBlob": "85d6d5c7c94cab2a5982376341fecaabdba4f4e5"
+      },
+      {
+        "markerPath": "images/tiles/road/0.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "6a0a6e63b9334f8bce62485daaf6b3dfa0df7a71",
+        "path": "images/tiles/road/0.png",
+        "provenance": "unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).",
+        "replacementBlob": "926e710abc6016a76dbfb9ccd2c9fd035a65e327"
+      },
+      {
+        "markerPath": "interactions/interaction.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "0b0a9c19112914c23dcd4a6e2e032f335f7abf76",
+        "path": "interactions/interaction.cpp",
+        "provenance": "Missing #150 Interaction body inferred from native-verified #97 implementation and exact #150 surviving header: public/default/copy constructors, ListItem ordering and Effect state serialization added. Removed undeclared legacy setAnimation override, retaining inherited real resource loading. Historical ordering/effect persistence parity unverified.",
+        "replacementBlob": "4407036d97c31cfc977a71a25b88a1761033bbc8"
+      },
+      {
+        "markerPath": "json/json_batchallocator.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "66cb117a2777beb98242c62e3e2251fe32be7b21",
+        "path": "json/json_batchallocator.h",
+        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "replacementBlob": "87ea5ed80785bb82eda9ae4df1177bc58e1f0c41"
+      },
+      {
+        "markerPath": "json/json_internalarray.inl.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2b3d859c1a55c676b8417c4ff6cb7cde70b7c696",
+        "path": "json/json_internalarray.inl",
+        "replacementBlob": "2b3d859c1a55c676b8417c4ff6cb7cde70b7c696"
+      },
+      {
+        "markerPath": "json/json_internalmap.inl.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "8e60b46e00f870a083e05d3ed9d874c55aaeee22",
+        "path": "json/json_internalmap.inl",
+        "replacementBlob": "8e60b46e00f870a083e05d3ed9d874c55aaeee22"
+      },
+      {
+        "markerPath": "json/json_reader.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "747ff61ca4584f1f590e1b53cde7d8c76f7c233b",
+        "path": "json/json_reader.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "replacementBlob": "4eb2d11fd3150081a7a80c2e1bf137cc052049c6"
+      },
+      {
+        "markerPath": "json/json_value.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "a4d8a073ec7f9740f34934d641d03dad185f1116",
+        "path": "json/json_value.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "replacementBlob": "573205f13e2cb4a98262c9b5f563de7264660fb6"
+      },
+      {
+        "markerPath": "json/json_valueiterator.inl.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0c4dd67c8166f7851d4eac904db54b7bb8936751",
+        "path": "json/json_valueiterator.inl",
+        "replacementBlob": "0c4dd67c8166f7851d4eac904db54b7bb8936751"
+      },
+      {
+        "markerPath": "json/json_writer.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "764261ab77886a275a2cbf7bf3a622d13355d97e",
+        "path": "json/json_writer.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
+        "replacementBlob": "cdf4188f2ec9be07e3bb7b248ff48ac98f71e497"
+      },
+      {
+        "markerPath": "json/reader.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818",
+        "path": "json/reader.h",
+        "replacementBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818"
+      },
+      {
+        "markerPath": "json/value.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5",
+        "path": "json/value.h",
+        "replacementBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5"
+      },
+      {
+        "markerPath": "json/writer.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "98c613957f29174649c620f16c67fa001989a613",
+        "path": "json/writer.h",
+        "replacementBlob": "98c613957f29174649c620f16c67fa001989a613"
+      },
+      {
+        "markerPath": "map/map.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "422070eaff81ebcab20d94eb117a782dbc78d85a",
+        "path": "map/map.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b4a58e68d4c29bf64898559c5c0f2dd86f498412 (previous version of map/map.cpp)",
+        "replacementBlob": "adf9da88b62f8995342362b56c5d11364e880450"
+      },
+      {
+        "markerPath": "stats/stats.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "4ff9f45b2f23d26fc69280d6c0df542e02efa223",
+        "path": "stats/stats.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter",
+        "replacementBlob": "b54bd87d6d0b399fdf29f58ed03a2637aeaf24c0"
+      },
+      {
+        "markerPath": "view/gamescene.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "a46487e910e445d28ba0f82365095257061634c2",
+        "path": "view/gamescene.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; from the 466fd0ff reconstruction: no per-map tile size is configured (same-commit map.h)",
+        "replacementBlob": "db7ff056a20d84dba3f1b6e70236edd87c8bdb61"
+      },
+      {
+        "markerPath": "view/gameview.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "8a3884eea3f1479e3ebbd252e0982dfc082e7f56",
+        "path": "view/gameview.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; from the previous gameview reconstruction: equipped items are slot-mapped and their surviving PlayerEquippedView is still a stub, so no list view is created for them",
+        "replacementBlob": "0939543080585b9fe9c0f72fb6541affb6f7fc8f"
+      },
+      {
+        "markerPath": "view/mapview.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "7476f6bac498deb69ac2f9eb80963e8cab3c5705",
+        "path": "view/mapview.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; from the 6e75afae reconstruction plus loadTiles and the tiles list declared in the same-commit mapview.h: editor tiles come from config/tiles.json and the space key also cycles to them",
+        "replacementBlob": "f75c86674a6b7b2c2beb3da4ebbccd3213e09544"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "json/LICENSE",
+        "provenance": "https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license",
+        "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
+      }
+    ],
+    "restoredFilesFingerprint": "e657ece2ca69848cbf2df1034ffd2ec0b9bc9d55b399f0ec9f76418967349c68",
+    "sourceCommit": "d27f773772f47adafa4a9077b9c9e2b1ab67f091",
+    "sourceTree": "35a3d321720be5f8bc07e4414d60e52d2c0db737",
+    "status": "complete",
+    "submodules": [],
+    "unresolved": []
+  },
+  "runtimePreparation": {
+    "directories": [
+      {
+        "created": true,
+        "path": "save",
+        "preservedExisting": false
+      }
+    ],
+    "identity": {
+      "directories": [
+        {
+          "path": "save",
+          "requiredBy": [
+            {
+              "line": 51,
+              "operation": "fopen(\"save/game.sav\", \"w+\")",
+              "sha256": "ac2b4e0d0949bcb4453124c7c184bb2ae7aeea700e6fd8b636b62cab306f7221",
+              "source": "view/gamescene.cpp"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "ready"
+  },
+  "smoke": {
+    "command": [
+      "xvfb-run",
+      "-a",
+      "--server-args=-screen 0 1920x1080x24",
+      "env",
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-19cne_r8/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-19cne_r8/build/RecoveryGame"
+    ],
+    "log": "/home/user/work2/verify/snapshot-19cne_r8/smoke/startup.log",
+    "returnCode": 0,
+    "seconds": 0.164,
+    "startup": {
+      "checks": {
+        "editor": true,
+        "eventLoop": true,
+        "map": true,
+        "renderedFrame": true
+      },
+      "frame": {
+        "height": 718,
+        "path": "/home/user/work2/verify/snapshot-19cne_r8/smoke/startup.png",
+        "sha256": "ee1ac794aea62ca5d7f17230ec2c6f0b9008646a819927de595c0ad553318aa4",
+        "width": 1264
+      },
+      "mode": "editor",
+      "reason": "",
+      "schemaVersion": 1,
+      "status": "ready",
+      "validationBoundary": "Authored editor startup; gameplay and player are unverified"
+    },
+    "startupReport": "/home/user/work2/verify/snapshot-19cne_r8/smoke/startup.json",
+    "status": "success",
+    "timedOut": false
+  },
+  "sourceCommit": "d27f773772f47adafa4a9077b9c9e2b1ab67f091",
+  "sourceCommits": [
+    "d27f773772f47adafa4a9077b9c9e2b1ab67f091"
+  ],
+  "sourcePreparation": {
+    "identity": {
+      "implementationSha256": "2ce6f08f4127a903ed0dae25db9bd46ffa10b52fbaab9bef40b66c675dbe5f9d"
+    },
+    "outputs": [],
+    "status": "not-required",
+    "steps": []
+  },
+  "sourceTree": "35a3d321720be5f8bc07e4414d60e52d2c0db737",
+  "startupMode": "editor",
+  "startupSelection": {
+    "boundary": "Authored editor startup; gameplay and player are unverified",
+    "mode": "editor",
+    "originalInputs": [
+      {
+        "blob": "a5dbc25ccbd39604d0bdbd60293431660f7890d7",
+        "path": "main.cpp",
+        "sha256": "25c1c0d44c34b2f6299c730d4321040c9628e09d7af71dce1a21d8f92a9186a4"
+      },
+      {
+        "blob": "fe5f0e6cde96919c8b08122396f7de8595937a9c",
+        "path": "config/init.json",
+        "sha256": "b75d68a5227a54e76c2363c5a016dd5eb7d64308edfe7a14bfaa6de2bf7d0b5f"
+      }
+    ]
+  },
+  "status": "success",
+  "toolchain": {
+    "compilerCommand": {
+      "path": "/usr/bin/g++-5",
+      "version": "g++-5 (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609\nCopyright (C) 2015 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    },
+    "makeCommand": {
+      "path": "/usr/bin/make",
+      "version": "GNU Make 4.1\nBuilt for x86_64-pc-linux-gnu\nCopyright (C) 1988-2014 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n"
+    },
+    "qmakeCommand": {
+      "path": "/usr/lib/x86_64-linux-gnu/qt5/bin/qmake",
+      "version": "QMake version 3.0\nUsing Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu\n"
+    }
+  },
+  "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d"
+}

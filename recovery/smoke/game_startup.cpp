@@ -2,6 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // This observer is linked into the actual historical game; its original main remains active.
 #include "recovery_smoke_config.h"
+#ifndef GAME_RECOVERY_CLOSE_BEFORE_EXIT
+#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 0
+#endif
+#ifndef GAME_RECOVERY_SCENE_PLAYER
+#define GAME_RECOVERY_SCENE_PLAYER 0
+#endif
+#ifndef GAME_RECOVERY_AWAIT_POOL
+#define GAME_RECOVERY_AWAIT_POOL 0
+#endif
 #include GAME_RECOVERY_SCENE_HEADER
 #include GAME_RECOVERY_VIEW_HEADER
 #include GAME_RECOVERY_MAP_HEADER
@@ -20,6 +29,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSaveFile>
+#include <QThreadPool>
 #include <QTimer>
 #if GAME_RECOVERY_OPENGL
 #include <QtOpenGL/QGLWidget>
@@ -32,6 +42,11 @@ using RecoveryView = GAME_RECOVERY_VIEW_TYPE;
 class RecoveryStartupProbe : public QObject {
   public:
     explicit RecoveryStartupProbe(const QString &reportPath) : QObject(qApp), reportPath(reportPath) {
+        bool valid = false;
+        const qint64 budget = qgetenv("GAME_RECOVERY_READY_BUDGET_MS").toLongLong(&valid);
+        if (valid && budget > 0) {
+            readyBudget = budget;
+        }
         elapsed.start();
         timer.setInterval(25);
         QObject::connect(&timer, &QTimer::timeout, this, [this]() { inspect(); });
@@ -87,11 +102,22 @@ class RecoveryStartupProbe : public QObject {
             QCoreApplication::exit(42);
             return;
         }
+#if GAME_RECOVERY_CLOSE_BEFORE_EXIT
+        // The original stdin console loops while the game window is visible; close it as a player would and
+        // let that thread stop before the original destructors delete the scene it still queries.
+        if (view) {
+            view->close();
+        }
+        if (!QThreadPool::globalInstance()->waitForDone(10000)) {
+            QCoreApplication::exit(43);
+            return;
+        }
+#endif
         QCoreApplication::exit(success ? 0 : 41);
     }
 
     void inspect() {
-        if (elapsed.elapsed() > 20000) {
+        if (elapsed.elapsed() > readyBudget) {
 #if GAME_RECOVERY_EDITOR
             finish(false, "Editor map and rendered frame did not become ready");
 #else
@@ -105,7 +131,7 @@ class RecoveryStartupProbe : public QObject {
                 if (view) {
                     view->setWindowState(Qt::WindowNoState);
                     view->QWidget::resize(1280, 720);
-                    view->show();
+                    view->QWidget::show();
                     view->viewport()->installEventFilter(this);
                     break;
                 }
@@ -123,6 +149,12 @@ class RecoveryStartupProbe : public QObject {
         if (!view || !view->isVisible()) {
             return;
         }
+#if GAME_RECOVERY_AWAIT_POOL
+        // The game loads its map on the thread pool through the main thread; inspect only after that load.
+        if (QThreadPool::globalInstance()->activeThreadCount() > 0) {
+            return;
+        }
+#endif
         RecoveryScene *scene = dynamic_cast<RecoveryScene *>(view->QGraphicsView::scene());
         if (!scene) {
             return;
@@ -134,6 +166,8 @@ class RecoveryStartupProbe : public QObject {
 #else
 #if GAME_RECOVERY_STATIC_PLAYER
         auto *player = RecoveryScene::getPlayer();
+#elif GAME_RECOVERY_SCENE_PLAYER
+        auto *player = scene->getPlayer();
 #else
         auto *player = map ? map->getPlayer() : nullptr;
 #endif
@@ -194,6 +228,7 @@ class RecoveryStartupProbe : public QObject {
     RecoveryView *view = nullptr;
     QTimer timer;
     QElapsedTimer elapsed;
+    qint64 readyBudget = 20000;
     bool menuActivated = false;
     bool mapReady = false;
 #if GAME_RECOVERY_EDITOR

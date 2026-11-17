@@ -16,6 +16,9 @@ import xml.etree.ElementTree as ET
 try:
     from scripts import history_source_prep as source_prep
     from scripts.verify_history import (
+        CONSOLE_LOOP_SOURCE,
+        CONSOLE_LOOPS,
+        CONSOLE_SHUTDOWN_BOUNDARY,
         EDITOR_CHECKS,
         REQUIRED_CHECKS,
         VerificationError,
@@ -24,7 +27,16 @@ try:
     )
 except ModuleNotFoundError:
     import history_source_prep as source_prep
-    from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
+    from verify_history import (
+        CONSOLE_LOOP_SOURCE,
+        CONSOLE_LOOPS,
+        CONSOLE_SHUTDOWN_BOUNDARY,
+        EDITOR_CHECKS,
+        REQUIRED_CHECKS,
+        VerificationError,
+        validatePng,
+        verifiedStartupMode,
+    )
 
 
 def requireIdentity(value, length, name):
@@ -152,6 +164,186 @@ def coordinateHashAttachments(report: dict, preparation: dict, evidence_dir: Pat
     }
 
 
+def resourceAliasAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.aliases_prep
+    compatibility = preparation.get("identity", {}).get("resourceAliases", {})
+    replay = Path(helper.__file__).read_bytes()
+    aliases = compatibility.get("aliases", {})
+    if (
+        {key: value for key, value in compatibility.items() if key != "aliases"}
+        != {
+            "inputs": helper.INPUTS,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "renamedResourceAliases"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+        or set(aliases) != set(helper.ALIASES)
+        or any(
+            aliases[target] != {"source": source, "sha256": helper.INPUTS[source]}
+            for target, source in helper.ALIASES.items()
+        )
+    ):
+        raise VerificationError("Resource alias compatibility differs from its reviewed original inputs or boundary")
+    outputs = {
+        entry.get("path"): entry.get("after")
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in helper.ALIASES
+    }
+    if outputs != {target: {"kind": "file", "sha256": aliases[target]["sha256"]} for target in helper.ALIASES}:
+        raise VerificationError("Resource alias compatibility outputs lack their exact preparation fingerprints")
+    return {"recovery/prepare_resource_aliases.py": replay}
+
+
+def conflictResolutionAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.conflicts_prep
+    recorded = preparation.get("identity", {}).get("conflictResolution", {})
+    replay = Path(helper.__file__).read_bytes()
+    files = recorded.get("files", {})
+    if (
+        {key: value for key, value in recorded.items() if key not in ("files", "supplied")}
+        != {
+            "side": helper.SIDE,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "whitespaceConflictResolution"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+        or set(files) != set(helper.INPUTS)
+        or any(files[name].get("beforeSha256") != digest for name, digest in helper.INPUTS.items())
+        or recorded.get("supplied")
+        not in ({}, {helper.SUPPLIED_PATH: {"sha256": helper.SUPPLIED_SHA256, "sourceCommit": helper.SUPPLIED_COMMIT}})
+    ):
+        raise VerificationError("Conflict resolution differs from its reviewed original inputs or boundary")
+    outputs = {
+        entry.get("path"): (entry.get("before"), entry.get("after"))
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in helper.INPUTS or entry.get("path") == helper.SUPPLIED_PATH
+    }
+    expected = {
+        name: (
+            {"kind": "file", "sha256": files[name]["beforeSha256"]},
+            {"kind": "file", "sha256": files[name]["afterSha256"]},
+        )
+        for name in helper.INPUTS
+    }
+    if recorded["supplied"]:
+        expected[helper.SUPPLIED_PATH] = (None, {"kind": "file", "sha256": helper.SUPPLIED_SHA256})
+    if outputs != expected:
+        raise VerificationError("Conflict resolution outputs lack their exact preparation fingerprints")
+    return {"recovery/prepare_conflict_resolution.py": replay}
+
+
+def forwarderAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.forwarders_prep
+    recorded = preparation.get("identity", {}).get("forwardingHeaders", {})
+    replay = Path(helper.__file__).read_bytes()
+    state = helper.STATES.get(recorded.get("state"), {})
+    forwarders = recorded.get("forwarders", {})
+    if (
+        not state
+        or {key: value for key, value in recorded.items() if key not in ("state", "forwarders")}
+        != {
+            "inputs": {**helper.INCLUDERS, **state["targets"]},
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "mergedHeaderForwarders"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+        or sorted(forwarders) != state["forwarders"]
+        or any(
+            forwarders[name]
+            != {
+                "includes": list(helper.FORWARDERS[name]),
+                "sha256": hashlib.sha256(helper.forwarderBytes(name)).hexdigest(),
+            }
+            for name in forwarders
+        )
+    ):
+        raise VerificationError("Forwarding headers differ from their reviewed original inputs or boundary")
+    outputs = {
+        entry.get("path"): entry.get("after")
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in helper.FORWARDERS
+    }
+    if outputs != {name: {"kind": "file", "sha256": forwarders[name]["sha256"]} for name in forwarders}:
+        raise VerificationError("Forwarding headers lack their exact preparation fingerprints")
+    return {"recovery/prepare_forwarding_headers.py": replay}
+
+
+def refactorAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.refactor_prep
+    recorded = preparation.get("identity", {}).get("refactorCompletion", {})
+    replay = Path(helper.__file__).read_bytes()
+    files = helper.STATES.get(recorded.get("state"), {})
+    expected_files = {
+        name: {"beforeSha256": spec["sha256"], "lines": [list(line) for line in spec["lines"]]}
+        for name, spec in files.items()
+    }
+    recorded_files = recorded.get("files", {})
+    if (
+        not files
+        or {key: value for key, value in recorded.items() if key not in ("state", "files")}
+        != {
+            "context": helper.CONTEXT.get(recorded.get("state"), {}),
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(replay).hexdigest(),
+        }
+        or {name: {k: v for k, v in entry.items() if k != "afterSha256"} for name, entry in recorded_files.items()}
+        != expected_files
+        or preparation.get("qmakeArguments")
+        or report.get("startupCompatibility") != "unfinishedRefactorCompletion"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Refactor completion differs from its reviewed original inputs, lines or boundary")
+    outputs = {
+        entry.get("path"): (entry.get("before"), entry.get("after"))
+        for entry in preparation.get("outputs", [])
+        if entry.get("path") in files
+    }
+    if outputs != {
+        name: (
+            {"kind": "file", "sha256": files[name]["sha256"]},
+            {"kind": "file", "sha256": recorded_files[name].get("afterSha256")},
+        )
+        for name in files
+    }:
+        raise VerificationError("Refactor completion lacks its exact preparation fingerprints")
+    return {"recovery/prepare_refactor_completion.py": replay}
+
+
+def consoleShutdown(report: dict) -> bool:
+    """True when the observer closed the window for a main.cpp holding the exact original stdin console loop."""
+    adapter = report.get("adapter", {})
+    shutdown = adapter.get("shutdown")
+    if shutdown is None:
+        return False
+    expected = {
+        "mode": "closeWindowAndJoinConsole",
+        "consoleLoopSource": CONSOLE_LOOP_SOURCE,
+        "validationBoundary": CONSOLE_SHUTDOWN_BOUNDARY,
+    }
+    main = shutdown.get("main", {})
+    if (
+        {key: value for key, value in shutdown.items() if key not in ("main", "consoleLoopSha256")} != expected
+        or shutdown.get("consoleLoopSha256") not in [hashlib.sha256(loop).hexdigest() for loop in CONSOLE_LOOPS]
+        or set(main) != {"path", "sha256"}
+        or main.get("path") != "src/main.cpp"
+        or adapter.get("mode") != "game"
+        or report.get("smoke", {}).get("stdin") != "open and silent until the readiness report"
+    ):
+        raise VerificationError("Console shutdown differs from its reviewed original console loop or boundary")
+    requireIdentity(main.get("sha256"), 64, "console main fingerprint")
+    return True
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -165,10 +357,18 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_resources = "supplementalResources" in names
     has_reflection = "reflectionRegistration" in names
     has_coordinates = "coordinatesHash" in names
+    has_aliases = "resourceAliases" in names
+    has_conflicts = "conflictResolution" in names
+    has_forwarders = "forwardingHeaders" in names
+    has_refactor = "refactorCompletion" in names
     expected_names = (
         (["supplementalResources"] if has_resources else [])
         + (["reflectionRegistration"] if has_reflection else [])
         + (["coordinatesHash"] if has_coordinates else [])
+        + (["resourceAliases"] if has_aliases else [])
+        + (["forwardingHeaders"] if has_forwarders else [])
+        + (["refactorCompletion"] if has_refactor else [])
+        + (["conflictResolution"] if has_conflicts else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -191,6 +391,14 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         attachments.update(reflectionRegistrationAttachments(report, preparation, evidence_dir))
     if has_coordinates:
         attachments.update(coordinateHashAttachments(report, preparation, evidence_dir))
+    if has_aliases:
+        attachments.update(resourceAliasAttachments(report, preparation))
+    if has_conflicts:
+        attachments.update(conflictResolutionAttachments(report, preparation))
+    if has_forwarders:
+        attachments.update(forwarderAttachments(report, preparation))
+    if has_refactor:
+        attachments.update(refactorAttachments(report, preparation))
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -228,6 +436,14 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
                 or (has_reflection and name == source_prep.reflection_prep.TARGET)
                 or (has_coordinates and name == source_prep.coordinates_prep.TARGET)
+                or (has_aliases and name in source_prep.aliases_prep.ALIASES)
+                or (has_conflicts and name in source_prep.conflicts_prep.INPUTS)
+                or (
+                    has_conflicts
+                    and name in preparation["identity"]["conflictResolution"].get("supplied", {})
+                )
+                or (has_forwarders and name in preparation["identity"]["forwardingHeaders"].get("forwarders", {}))
+                or (has_refactor and name in preparation["identity"]["refactorCompletion"].get("files", {}))
             )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
@@ -308,12 +524,24 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     resource_preparation = "recovery/supplemental_images.qrc" in preparation_files
     reflection_preparation = "recovery/prepare_reflection_registration.py" in preparation_files
     coordinates_preparation = "recovery/prepare_coordinates_hash.py" in preparation_files
+    alias_preparation = "recovery/prepare_resource_aliases.py" in preparation_files
+    conflict_preparation = "recovery/prepare_conflict_resolution.py" in preparation_files
+    forwarder_preparation = "recovery/prepare_forwarding_headers.py" in preparation_files
+    refactor_preparation = "recovery/prepare_refactor_completion.py" in preparation_files
+    console_shutdown = consoleShutdown(report)
+    conflict_supplied = bool(
+        report.get("sourcePreparation", {}).get("identity", {}).get("conflictResolution", {}).get("supplied")
+    )
     compatibility_modes = [
         name
         for enabled, name in (
             (resource_preparation, "supplementalQtResources"),
             (reflection_preparation, "parentReflectionRegistration"),
             (coordinates_preparation, "originalCoordinateHash"),
+            (alias_preparation, "renamedResourceAliases"),
+            (conflict_preparation, "whitespaceConflictResolution"),
+            (forwarder_preparation, "mergedHeaderForwarders"),
+            (refactor_preparation, "unfinishedRefactorCompletion"),
         )
         if enabled
     ]
@@ -384,7 +612,16 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
         prerequisites += f", with CPython {abi} development files and its matching Boost.Python library"
-    if include_preparation or resource_preparation or reflection_preparation or coordinates_preparation:
+    if (
+        include_preparation
+        or resource_preparation
+        or reflection_preparation
+        or coordinates_preparation
+        or alias_preparation
+        or conflict_preparation
+        or forwarder_preparation
+        or refactor_preparation
+    ):
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
         f"# Recovered {mode} snapshot",
@@ -451,6 +688,80 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             if coordinates_preparation
             else []
         ),
+        *(
+            [
+                "Startup used explicit build-only resource aliases. This commit renamed three monster `time.txt`",
+                "files to `time.json` without changing their bytes, but its unchanged original `creatures.qrc`",
+                "still names `time.txt`, so the original manifest cannot compile; the next commit updates it.",
+                "The attached helper supplies each manifest-named file with the exact bytes of its rename target,",
+                "as the parent commit held them. The original manifest, sources and images remain unchanged.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if alias_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used an explicit build-only resolution of original merge-conflict hunks. This commit",
+                "was recorded with unresolved conflict markers in seven files, so it cannot compile as committed;",
+                "in every hunk both sides differ only in whitespace. The attached helper keeps the origin/master",
+                "side, which equals the parent commit's file, after verifying each original and resolved hash.",
+                *(
+                    [
+                        "This commit also omitted `pathfinder/pathfindercache.cpp`, which its headers declare; the",
+                        "helper supplies the hash-pinned file the immediately following commit adds unchanged.",
+                    ]
+                    if conflict_supplied
+                    else []
+                ),
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if conflict_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used explicit build-only forwarding headers. This commit merged several class headers",
+                "into one header per family while its unchanged original sources still include the old names,",
+                "so it cannot compile as committed; a later commit rewrites those includes. Each forwarder only",
+                "includes the header that now declares the same classes. Original sources remain unchanged.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if forwarder_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used an explicit build-only completion of an unfinished original refactor. This commit",
+                "makes the scene's player, map and view accessors instance members while unchanged original",
+                "sources still call them statically or name a function it removes, so it cannot compile as",
+                "committed. The attached helper replaces only those lines, each with the developer's own line from",
+                "the following commit it records. Original sources remain unchanged in this snapshot.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if refactor_preparation
+            else []
+        ),
+        *(
+            [
+                "Shutdown used an explicit observer step. This version's `main.cpp` holds the developer's stdin",
+                "script console loop (original at catalog #204; reconstructions from #207 adapt only its",
+                "ScriptManager call and, from #224, its view test). It runs on a thread-pool thread while the",
+                "game window is visible, and the original view destructor deletes the scene that loop still",
+                "queries, so leaving the event loop with the window shown crashes. Standard input stayed open and",
+                "silent, like an idle console, until the frame and readiness report; then the observer closed the",
+                "game window as a player would, stdin reached end of file, and the observer waited for that",
+                "thread to stop. Sources are unchanged; the `main.cpp` and loop hashes are in the verification",
+                "metadata.",
+                "",
+            ]
+            if console_shutdown
+            else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -486,6 +797,10 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_supplemental_resources.py"] if resource_preparation else []),
         *(["python3 recovery/prepare_reflection_registration.py"] if reflection_preparation else []),
         *(["python3 recovery/prepare_coordinates_hash.py"] if coordinates_preparation else []),
+        *(["python3 recovery/prepare_resource_aliases.py"] if alias_preparation else []),
+        *(["python3 recovery/prepare_conflict_resolution.py"] if conflict_preparation else []),
+        *(["python3 recovery/prepare_forwarding_headers.py"] if forwarder_preparation else []),
+        *(["python3 recovery/prepare_refactor_completion.py"] if refactor_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

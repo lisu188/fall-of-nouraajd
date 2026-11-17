@@ -44,6 +44,44 @@ REVIEWED_EDITOR_MAIN_SHA256 = frozenset(
         "fa471718f3119672baf3b78564ccb3215351e4c69c637d4ca895b6513a98c5e1",  # #155
     }
 )
+# Catalog #204 ('stats properties') adds the developer's stdin script console on a thread-pool thread; it loops
+# while the game view is visible, and the original view destructor deletes the scene that loop still queries, so
+# leaving the event loop with the window shown races a use-after-free. Only for a main.cpp holding this exact
+# original loop does the observer close the game window as a player would and wait for that thread before exiting.
+CONSOLE_LOOP = (
+    b"        QTextStream streamIn(stdin);\n"
+    b"        QString script;\n"
+    b"        while((!GameScene::getView())||GameScene::getView()->isVisible()){\n"
+    b"            streamIn>>script;\n"
+    b"            ScriptManager::getInstance().executeScript(script.toStdString());\n"
+    b"        }\n"
+)
+# From #207 the surviving scriptmanager.h returns ScriptManager::getInstance() by pointer and executeScript takes a
+# QString; reconstructed mains keep the same loop with only that call adapted. From #224 GameScene::getView() is no
+# longer static, so they test the view main created instead.
+CONSOLE_LOOPS = (
+    CONSOLE_LOOP,
+    CONSOLE_LOOP.replace(
+        b"ScriptManager::getInstance().executeScript(script.toStdString());",
+        b"ScriptManager::getInstance()->executeScript(script);",
+    ),
+)
+CONSOLE_LOOPS += (
+    CONSOLE_LOOPS[1].replace(
+        b"        while((!GameScene::getView())||GameScene::getView()->isVisible()){\n",
+        b"        while(view.isVisible()){\n",
+    ),
+)
+CONSOLE_LOOP_SOURCE = {
+    "commit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+    "path": "src/main.cpp",
+    "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589",
+}
+CONSOLE_SHUTDOWN_BOUNDARY = (
+    "After the first frame and readiness report, the observer closes the game window as a player would and "
+    "waits for the original stdin script console thread to stop before exiting; stdin stays open and silent, "
+    "like an idle console, until that report and then reaches end of file; sources are unchanged"
+)
 
 
 class VerificationError(ValueError):
@@ -57,8 +95,19 @@ def writeJson(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
-def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeout: float, log_path: Path) -> dict:
-    """Drain output directly to a file and terminate the entire child group on timeout."""
+def runCommand(
+    command: list[str],
+    cwd: Path,
+    environment: dict[str, str],
+    timeout: float,
+    log_path: Path,
+    stdin_release: Path | None = None,
+) -> dict:
+    """Drain output directly to a file and terminate the entire child group on timeout.
+
+    Standard input is empty. With stdin_release, it instead stays open and silent, as an idle console's would,
+    until that file exists, and then reaches end of file.
+    """
     log_path.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     with log_path.open("wb") as log:
@@ -66,13 +115,25 @@ def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeo
             command,
             cwd=cwd,
             env=environment,
+            stdin=subprocess.DEVNULL if stdin_release is None else subprocess.PIPE,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=os.name == "posix",
         )
         timed_out = False
         try:
-            process.wait(timeout=timeout)
+            if stdin_release is None:
+                process.wait(timeout=timeout)
+            else:
+                while True:
+                    try:
+                        process.wait(timeout=0.05)
+                        break
+                    except subprocess.TimeoutExpired:
+                        if not process.stdin.closed and stdin_release.exists():
+                            process.stdin.close()
+                        if time.monotonic() - started > timeout:
+                            raise
         except subprocess.TimeoutExpired:
             timed_out = True
             if os.name == "posix":
@@ -83,6 +144,8 @@ def runCommand(command: list[str], cwd: Path, environment: dict[str, str], timeo
             else:
                 process.kill()
             process.wait()
+        if process.stdin is not None and not process.stdin.closed:
+            process.stdin.close()
     return {
         "command": command,
         "returnCode": process.returncode,
@@ -221,6 +284,7 @@ def runSmoke(
     timeout: float = 30,
     isolate: bool = True,
     startup_mode: str = "game",
+    console: bool = False,
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir.resolve() / "startup.json"
@@ -233,9 +297,12 @@ def runSmoke(
             return {"status": "blocked", "reason": "Isolated Linux startup requires xvfb-run and xauth"}
         command = ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", *command]
     child_environment = dict(os.environ if environment is None else environment)
+    # Readiness must be reported before the watchdog fires; loading time is not an original property.
+    ready_budget_ms = max(1000, int((timeout - 10) * 1000))
     child_environment.update(
         {
             "GAME_RECOVERY_SMOKE_REPORT": str(report_path),
+            "GAME_RECOVERY_READY_BUDGET_MS": str(ready_budget_ms),
             "SDL_VIDEODRIVER": "x11",
             "SDL_AUDIODRIVER": "dummy",
             "SDL_RENDER_DRIVER": "software",
@@ -244,7 +311,11 @@ def runSmoke(
             "QT_X11_NO_MITSHM": "1",
         }
     )
-    result = runCommand(command, cwd, child_environment, timeout, output_dir / "startup.log")
+    result = runCommand(
+        command, cwd, child_environment, timeout, output_dir / "startup.log", report_path if console else None
+    )
+    result["stdin"] = "open and silent until the readiness report" if console else "empty"
+    result["readyBudgetMs"] = ready_budget_ms
     result["status"] = "failed"
     if result["timedOut"]:
         result["reason"] = "Startup watchdog expired; a timeout is not successful readiness"
@@ -343,6 +414,24 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
     }
 
 
+def consoleShutdown(source_root: Path) -> dict | None:
+    """Recognize only a main.cpp that holds the developer's exact stdin console loop or its reviewed adaptation."""
+    path = source_root / "src/main.cpp"
+    if path.is_symlink() or not path.is_file():
+        return None
+    data = path.read_bytes()
+    loops = [loop for loop in CONSOLE_LOOPS if loop in data]
+    if len(loops) != 1 or data.count(loops[0]) != 1:
+        return None
+    return {
+        "mode": "closeWindowAndJoinConsole",
+        "main": {"path": "src/main.cpp", "sha256": hashlib.sha256(data).hexdigest()},
+        "consoleLoopSha256": hashlib.sha256(loops[0]).hexdigest(),
+        "consoleLoopSource": dict(CONSOLE_LOOP_SOURCE),
+        "validationBoundary": CONSOLE_SHUTDOWN_BOUNDARY,
+    }
+
+
 def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str = "game") -> dict:
     """Add a startup observer to the real target, retaining its original main function."""
     editor = startup_mode == "editor"
@@ -384,7 +473,15 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         raise VerificationError("Map needs a reviewed tile-readiness adapter")
     coords3 = contains.group(1).count(",") >= 2
     static_player = re.search(r"\bstatic\s+\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
-    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player else map_text)
+    # From #224 the scene owns the player as an instance member and the map has no player accessor yet.
+    scene_player = (
+        not static_player
+        and re.search(r"\b\w+\s*\*\s*getPlayer\s*\(", map_text) is None
+        and re.search(r"\b\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
+    )
+    player_getter = re.search(
+        r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player or scene_player else map_text
+    )
     player_name = player_getter.group(1) if player_getter else ("CPlayer" if prefixed else "Player")
     # Several Qt trees define CPlayer alongside CCreature in the same header.
     if editor:
@@ -416,6 +513,22 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
     ]
     if player_header is not None:
         config.append(f'#define GAME_RECOVERY_PLAYER_HEADER "{player_header.relative_to(source_root).as_posix()}"')
+    if scene_player and not editor:
+        config.append("#define GAME_RECOVERY_SCENE_PLAYER 1")
+    # From #226 the scene starts a LoadGameTask on the thread pool that fills the map through blocking calls to the
+    # main thread; readiness waits for it, since leaving the event loop mid-load would deadlock the pool.
+    scene_source = scene_header.with_suffix(".cpp")
+    pool_loading = (
+        not editor
+        and scene_source.is_file()
+        and re.search(r"globalInstance\(\)->start\(\s*new\s+LoadGameTask\b", scene_source.read_text(errors="replace"))
+        is not None
+    )
+    if pool_loading:
+        config.append("#define GAME_RECOVERY_AWAIT_POOL 1")
+    shutdown = None if editor else consoleShutdown(source_root)
+    if shutdown is not None:
+        config.append("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1")
     build_root.mkdir(parents=True, exist_ok=True)
     config_path = build_root / "recovery_smoke_config.h"
     config_path.write_text("\n".join(config) + "\n", encoding="utf-8")
@@ -426,6 +539,8 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         "config": str(config_path),
         "overlays": overlays,
         "configSha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        **({"shutdown": shutdown} if shutdown is not None else {}),
+        **({"loading": "threadPool"} if pool_loading else {}),
     }
 
 
@@ -819,6 +934,30 @@ def verifySnapshot(
                 raise VerificationError("Historical compatibility states unexpectedly overlap")
             startup["boundary"] = coordinates["validationBoundary"]
             result["startupCompatibility"] = "originalCoordinateHash"
+        resource_aliases = preparation["identity"].get("resourceAliases")
+        if resource_aliases:
+            if supplemental or reflection or coordinates:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = resource_aliases["validationBoundary"]
+            result["startupCompatibility"] = "renamedResourceAliases"
+        conflicts = preparation["identity"].get("conflictResolution")
+        if conflicts:
+            if supplemental or reflection or coordinates or resource_aliases:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = conflicts["validationBoundary"]
+            result["startupCompatibility"] = "whitespaceConflictResolution"
+        forwarders = preparation["identity"].get("forwardingHeaders")
+        if forwarders:
+            if supplemental or reflection or coordinates or resource_aliases or conflicts:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = forwarders["validationBoundary"]
+            result["startupCompatibility"] = "mergedHeaderForwarders"
+        refactor = preparation["identity"].get("refactorCompletion")
+        if refactor:
+            if supplemental or reflection or coordinates or resource_aliases or conflicts or forwarders:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = refactor["validationBoundary"]
+            result["startupCompatibility"] = "unfinishedRefactorCompletion"
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
@@ -971,6 +1110,7 @@ def verifySnapshot(
             environment=smoke_environment,
             timeout=timeout,
             startup_mode=startup["mode"],
+            console="shutdown" in adapter,
         )
         result["smoke"]["startupReport"] = str(artifact_dir / "startup.json")
         result["artifactDir"] = str(artifact_dir)

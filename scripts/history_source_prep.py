@@ -15,9 +15,17 @@ import re
 try:
     from scripts import history_prepare_reflection as reflection_prep
     from scripts import history_prepare_coordinates as coordinates_prep
+    from scripts import history_prepare_resource_aliases as aliases_prep
+    from scripts import history_prepare_conflicts as conflicts_prep
+    from scripts import history_prepare_forwarders as forwarders_prep
+    from scripts import history_prepare_refactor_lines as refactor_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
     import history_prepare_coordinates as coordinates_prep
+    import history_prepare_resource_aliases as aliases_prep
+    import history_prepare_conflicts as conflicts_prep
+    import history_prepare_forwarders as forwarders_prep
+    import history_prepare_refactor_lines as refactor_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
@@ -236,6 +244,10 @@ def preparationRequired(source_root: Path) -> bool:
         or supplementalResourcePlan(source_root) is not None
         or reflection_prep.reflectionPlan(source_root) is not None
         or coordinates_prep.coordinateHashPlan(source_root) is not None
+        or aliases_prep.resourceAliasPlan(source_root) is not None
+        or conflicts_prep.conflictResolutionPlan(source_root) is not None
+        or forwarders_prep.forwarderPlan(source_root) is not None
+        or refactor_prep.refactorLinesPlan(source_root) is not None
     )
 
 
@@ -270,6 +282,14 @@ def prepareSources(
     supplement = supplementalResourcePlan(source_root)
     reflection = reflection_prep.reflectionPlan(source_root)
     coordinates = coordinates_prep.coordinateHashPlan(source_root)
+    resource_aliases = aliases_prep.resourceAliasPlan(source_root)
+    conflicts = conflicts_prep.conflictResolutionPlan(source_root)
+    forwarders = forwarders_prep.forwarderPlan(source_root)
+    refactor = refactor_prep.refactorLinesPlan(source_root)
+    if conflicts and set(conflicts["files"]) & {overlay["path"] for overlay in include_overlays}:
+        raise ValueError("Conflict resolution and include separator preparation overlap")
+    if refactor and set(refactor["files"]) & {overlay["path"] for overlay in include_overlays}:
+        raise ValueError("Refactor completion and include separator preparation overlap")
     if coordinates:
         target = source_root / coordinates["path"]
         if target.is_symlink() or (
@@ -288,7 +308,17 @@ def prepareSources(
             raise ValueError("Supplemental Qt resource output is symlinked")
         if target.exists() and (not target.is_file() or target.read_bytes() != supplement["data"]):
             raise ValueError("Supplemental Qt resource output already exists with different bytes")
-    if not generator.is_file() and not include_overlays and not supplement and not reflection and not coordinates:
+    if (
+        not generator.is_file()
+        and not include_overlays
+        and not supplement
+        and not reflection
+        and not coordinates
+        and not resource_aliases
+        and not conflicts
+        and not forwarders
+        and not refactor
+    ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
     before = sourceManifest(source_root)
@@ -338,6 +368,66 @@ def prepareSources(
             {
                 "name": "coordinatesHash",
                 "command": ["history_source_prep.py", "prepare-coordinates-hash"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if resource_aliases:
+        aliases_prep.writeAliases(source_root, resource_aliases["data"])
+        identity = {key: value for key, value in resource_aliases.items() if key != "data"}
+        result["identity"]["resourceAliases"] = identity
+        log = output_root / "resource-aliases.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "resourceAliases",
+                "command": ["history_source_prep.py", "prepare-resource-aliases"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if forwarders:
+        forwarders_prep.writeForwarders(source_root, forwarders["data"])
+        identity = {key: value for key, value in forwarders.items() if key != "data"}
+        result["identity"]["forwardingHeaders"] = identity
+        log = output_root / "forwarding-headers.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "forwardingHeaders",
+                "command": ["history_source_prep.py", "prepare-forwarding-headers"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if refactor:
+        refactor_prep.writeCompletions(source_root, refactor["state"], refactor["data"])
+        identity = {key: value for key, value in refactor.items() if key != "data"}
+        result["identity"]["refactorCompletion"] = identity
+        log = output_root / "refactor-completion.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "refactorCompletion",
+                "command": ["history_source_prep.py", "complete-unfinished-refactor-lines"],
+                "returnCode": 0,
+                "timedOut": False,
+                "log": str(log),
+            }
+        )
+    if conflicts:
+        conflicts_prep.writeResolutions(source_root, conflicts["data"])
+        identity = {key: value for key, value in conflicts.items() if key != "data"}
+        result["identity"]["conflictResolution"] = identity
+        log = output_root / "conflict-resolution.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append(
+            {
+                "name": "conflictResolution",
+                "command": ["history_source_prep.py", "resolve-whitespace-conflicts"],
                 "returnCode": 0,
                 "timedOut": False,
                 "log": str(log),
@@ -396,7 +486,28 @@ def prepareSources(
                         else (
                             "coordinate hashing delegated to original CoordsHasher"
                             if name == coordinates_prep.TARGET
-                            else "Windows include separators on an isolated build-source copy"
+                            else (
+                                "manifest-named alias of an original renamed resource"
+                                if resource_aliases and name in aliases_prep.ALIASES
+                                else (
+                                    "original whitespace-only merge-conflict hunks resolved"
+                                    if conflicts and name in conflicts_prep.INPUTS
+                                    else (
+                                        "following commit's omitted source supplied"
+                                        if conflicts and name in conflicts["supplied"]
+                                        else (
+                                            "forwarding header for a merged-away original header"
+                                            if forwarders and name in forwarders["forwarders"]
+                                            else (
+                                                "unfinished-refactor lines completed with the developer's own "
+                                                "following lines"
+                                                if refactor and name in refactor["files"]
+                                                else "Windows include separators on an isolated build-source copy"
+                                            )
+                                        )
+                                    )
+                                )
+                            )
                         )
                     )
                 ),

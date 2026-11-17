@@ -163,7 +163,8 @@ def prep(ref: str, quiet: bool = False) -> Path:
         for item in report["restored"]:
             if item["method"] == "reconstruction" and item["path"].endswith(CODE + (".pro", ".py", ".json")):
                 marker = "WORK " if item["originalBlob"] in working else "     "
-                print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{item['provenance'][:70]}]")
+                provenance = str(item["provenance"])[:70]
+                print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{provenance}]")
         print(destination)
     return destination
 
@@ -249,7 +250,7 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         ]
         if aliases["aliases"]:
             configure += ["-after", "LIBS+=-L" + aliases["directory"]]
-        make = [*environment, recipe.get("makeCommand", "make"), "-k", f"-j{os.cpu_count() or 1}"]
+        make = [*environment, "timeout", "1500", recipe.get("makeCommand", "make"), "-k", f"-j{os.cpu_count() or 1}"]
         commands += [
             "cd " + shlex.quote(str(build_root)),
             shlex.join(configure) + ' > qmake.log 2>&1 || { rc=$?; cat qmake.log; exit "$rc"; }',
@@ -344,7 +345,7 @@ def verify(ref: str, recipe: str | None = None) -> str:
     extra = f"--recipe {recipe}" if recipe else ""
     result = docker(
         f"/opt/recovery/controller/bin/python3.12 {REPO}/scripts/verify_history.py --commit {commit} "
-        f"--overrides {overrides} --output-dir {output} --timeout 60 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
+        f"--overrides {overrides} --output-dir {output} --timeout 300 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
         f"/opt/recovery/controller/bin/python3.12 -c 'import json,sys; "
         f'r=json.load(open(sys.argv[1]))["results"][-1]; print(r["status"], r.get("reason",""))\' '
         f"{output}/summary-0.json",
@@ -354,16 +355,84 @@ def verify(ref: str, recipe: str | None = None) -> str:
     return result.stdout.split(" ", 1)[0]
 
 
+def accepted(commit: str) -> bool:
+    """True when exported success evidence still matches this commit's current restored inputs."""
+    report_path = REPO / "recovery/evidence" / commit / "verification.json"
+    if not report_path.is_file():
+        return False
+    report = json.loads(report_path.read_text())
+    if report.get("status") != "success":
+        return False
+    overrides = rh.loadOverrides(workbenchOverrides())
+    with rh.GitObjects(REPO) as objects:
+        try:
+            current = rh.prepareSnapshot(objects, CATALOG, commit, overrides)[1]["restoredFilesFingerprint"]
+        except rh.RecoveryError:
+            return False
+    return report.get("restoration", {}).get("restoredFilesFingerprint") == current
+
+
+def verifiedProjectDonor(number: int, path: str) -> str | None:
+    """The nearest earlier reconstruction of this project path that is not an unverified donor proposal."""
+    committed = {
+        entry["originalBlob"]: entry
+        for entry in json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+        if "originalBlob" in entry
+    }
+    working = notes()
+    for previous in reversed(ORDER[: number - 1]):
+        for earlier in missing(previous):
+            if earlier["path"] != path:
+                continue
+            blob = earlier["originalBlob"]
+            if (RECON / blob).exists():
+                return blob if not str(working.get(blob, "")).startswith("unverified") else None
+            entry = committed.get(blob)
+            if entry and not str(entry.get("provenance", "")).startswith("unverified"):
+                return blob
+    return None
+
+
+def regeneratedProject(number: int) -> str | None:
+    try:
+        return project(str(number))
+    except SystemExit as reason:
+        commit = ORDER[number - 1]
+        for entry in missing(commit):
+            if not entry["path"].endswith(".pro"):
+                continue
+            donor = verifiedProjectDonor(number, entry["path"])
+            if donor:
+                source = RECON / donor
+                if not source.exists():
+                    committed = {
+                        item["originalBlob"]: item
+                        for item in json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+                        if "originalBlob" in item
+                    }
+                    source = REPO / "recovery" / committed[donor]["source"]
+                (WORK / "src" / commit[:8] / entry["path"]).write_bytes(source.read_bytes())
+                print("carried project", entry["path"], "from", donor[:10], "-", reason)
+                return f"the previous verified project ({donor[:10]}) carried forward"
+        print("keeping the existing project proposal:", reason)
+        return None
+
+
 def auto(start: int, end: int, check: bool = False) -> None:
     for number in range(start, end + 1):
         commit = ORDER[number - 1]
+        if accepted(commit):
+            print(f"=== #{number} {commit[:8]} already accepted", flush=True)
+            continue
         print(f"=== #{number} {commit[:8]}", flush=True)
         prep(str(number), quiet=True)
         carried = carry(str(number))
         generated = [
-            (entry["path"], entry["originalBlob"], project(str(number)))
+            (entry["path"], entry["originalBlob"], summary)
             for entry in missing(commit)
             if entry["path"].endswith(".pro") and not reconstructed(entry["originalBlob"])
+            for summary in [regeneratedProject(number)]
+            if summary
         ]
         if not build(str(number), lines=25):
             print(f"STOP at #{number}")
@@ -455,6 +524,33 @@ def export() -> None:
             print("exported", commit[:8])
 
 
+def stale() -> list[str]:
+    """Commits with exported success evidence whose current restoration no longer matches it."""
+    overrides = rh.loadOverrides(workbenchOverrides())
+    result = []
+    with rh.GitObjects(REPO) as objects:
+        for report_path in sorted((REPO / "recovery/evidence").glob("*/verification.json")):
+            report = json.loads(report_path.read_text())
+            commit = report.get("sourceCommit")
+            if report.get("status") != "success" or commit not in TREE_OF or report_path.parent.name != commit:
+                continue
+            try:
+                current = rh.prepareSnapshot(objects, CATALOG, commit, overrides)[1]["restoredFilesFingerprint"]
+            except rh.RecoveryError:
+                current = None
+            if report.get("restoration", {}).get("restoredFilesFingerprint") != current:
+                result.append(commit)
+    return result
+
+
+def revalidate() -> None:
+    """Re-verify every previously accepted commit whose restored inputs changed since its evidence."""
+    for commit in stale():
+        number = ORDER.index(commit) + 1
+        print(f"#{number} {commit[:8]}", end=" ", flush=True)
+        verify(commit)
+
+
 def progress() -> None:
     """Summarize committed evidence in recovery/progress.json."""
     path = REPO / "recovery/progress.json"
@@ -523,6 +619,27 @@ def progress() -> None:
             if report.get("startupCompatibility") == "originalCoordinateHash":
                 item["startupCompatibility"] = "originalCoordinateHash"
                 item["validation"] = "build-and-startup-with-coordinate-hash-compatibility-passed"
+            if report.get("startupCompatibility") == "renamedResourceAliases":
+                item["startupCompatibility"] = "renamedResourceAliases"
+                item["validation"] = "build-and-startup-with-resource-alias-compatibility-passed"
+            if report.get("startupCompatibility") == "whitespaceConflictResolution":
+                item["startupCompatibility"] = "whitespaceConflictResolution"
+                item["validation"] = "build-and-startup-with-conflict-resolution-compatibility-passed"
+            if report.get("startupCompatibility") == "mergedHeaderForwarders":
+                item["startupCompatibility"] = "mergedHeaderForwarders"
+                item["validation"] = "build-and-startup-with-forwarding-header-compatibility-passed"
+            if report.get("startupCompatibility") == "unfinishedRefactorCompletion":
+                item["startupCompatibility"] = "unfinishedRefactorCompletion"
+                item["validation"] = "build-and-startup-with-refactor-completion-compatibility-passed"
+            if report.get("adapter", {}).get("shutdown"):
+                from recovery_readme import VerificationError as DocumentationError, consoleShutdown
+
+                try:
+                    consoleShutdown(report)
+                except DocumentationError:
+                    continue
+                item["shutdownCompatibility"] = "closeWindowAndJoinConsole"
+                item["validation"] = item["validation"].replace("-passed", "-with-console-shutdown-passed")
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])
@@ -580,6 +697,7 @@ def main() -> None:
     commands.add_parser("save")
     commands.add_parser("export")
     commands.add_parser("progress")
+    commands.add_parser("revalidate", help="re-verify accepted commits whose restored inputs changed")
     args = parser.parse_args()
     if args.command == "missing":
         for entry in missing(resolve(args.ref)):
@@ -602,6 +720,8 @@ def main() -> None:
         save()
     elif args.command == "progress":
         progress()
+    elif args.command == "revalidate":
+        revalidate()
     else:
         export()
 

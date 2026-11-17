@@ -1,0 +1,33 @@
+
+=== resourceAliases ===
+{
+  "aliases": {
+    "images/monsters/octobogz/time.txt": {
+      "sha256": "cf42b5494746314548e6a655cdc881e188260f1b2d500934b9d44893ca2f8d19",
+      "source": "images/monsters/octobogz/time.json"
+    },
+    "images/monsters/pritz/time.txt": {
+      "sha256": "cf42b5494746314548e6a655cdc881e188260f1b2d500934b9d44893ca2f8d19",
+      "source": "images/monsters/pritz/time.json"
+    },
+    "images/monsters/pritzmage/time.txt": {
+      "sha256": "519aa7377c37920c3c6b2f10e49d49ccc2ca889a92c52e00d031265480f4f561",
+      "source": "images/monsters/pritzmage/time.json"
+    }
+  },
+  "inputs": {
+    "animation/animationprovider.cpp": "c4e7844230f5b7f26ab7153e6377e15a66b8693015749b09135393e66fceae1c",
+    "creatures.qrc": "f09c147301607f7818a7c9742bc38bd1617c4a76da182d81b0606afb88411d0c",
+    "images/monsters/octobogz/time.json": "cf42b5494746314548e6a655cdc881e188260f1b2d500934b9d44893ca2f8d19",
+    "images/monsters/pritz/time.json": "cf42b5494746314548e6a655cdc881e188260f1b2d500934b9d44893ca2f8d19",
+    "images/monsters/pritzmage/time.json": "519aa7377c37920c3c6b2f10e49d49ccc2ca889a92c52e00d031265480f4f561"
+  },
+  "provenance": {
+    "manifestFixCommit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+    "operation": "Supply each manifest-named time.txt with the bytes of its original rename target; the parent commit held these exact files under the manifest-named paths",
+    "parentCommit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+    "sourceCommit": "856d7792e59d09f1e9cff08d9abb81052a47c7a3"
+  },
+  "replaySha256": "3e6a0dd74d935cad4ec003984edb50914bebf4e08a22982c117c209e05cef834",
+  "validationBoundary": "Game startup with build-only aliases for resources renamed after their unchanged original manifest; original manifest and sources unchanged"
+}

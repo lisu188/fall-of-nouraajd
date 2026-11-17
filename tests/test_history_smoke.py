@@ -60,6 +60,18 @@ class HistoricalSmokeTest(unittest.TestCase):
             "'frame': {'path': str(report.with_suffix('.png')), 'width': 2, 'height': 1}}))\n"
         )
 
+    def testReadinessBudgetFollowsTheWatchdog(self):
+        code = self.producer() + (
+            "report.with_name('budget').write_text(os.environ['GAME_RECOVERY_READY_BUDGET_MS'])\n"
+        )
+        result = self.runFixture(code, timeout=40)
+        self.assertEqual("success", result["status"])
+        self.assertEqual(30000, result["readyBudgetMs"])
+        self.assertEqual("30000", (Path(result["log"]).parent / "budget").read_text())
+        observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
+        self.assertIn('qgetenv("GAME_RECOVERY_READY_BUDGET_MS")', observer)
+        self.assertIn("elapsed.elapsed() > readyBudget", observer)
+
     def testCleanExitWithoutGameReadinessFails(self):
         result = self.runFixture("raise SystemExit(0)\n")
         self.assertEqual("failed", result["status"])
@@ -481,6 +493,53 @@ class HistoricalSmokeTest(unittest.TestCase):
             with self.assertRaisesRegex(verify.VerificationError, "cyclic"):
                 verify.selectProjects(root)
 
+    def testInstanceScenePlayerIsObservedThroughTheScene(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "src/gamescene.h").write_text(
+                "class GameScene : public QGraphicsScene { Player *getPlayer() const; Map *getMap() const; };\n"
+            )
+            (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
+            (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
+            (source / "src/player.h").write_text("class Player {};\n")
+            config = Path(verify.prepareSmokeAdapter(source, root / "observer")["config"]).read_text()
+            self.assertIn("#define GAME_RECOVERY_STATIC_PLAYER 0\n", config)
+            self.assertIn("#define GAME_RECOVERY_SCENE_PLAYER 1\n", config)
+            self.assertIn('GAME_RECOVERY_PLAYER_HEADER "src/player.h"', config)
+            (source / "src/map.h").write_text(
+                "class Map { Player *getPlayer(); bool contains(int x, int y, int z); };\n"
+            )
+            config = Path(verify.prepareSmokeAdapter(source, root / "map-player")["config"]).read_text()
+            self.assertNotIn("GAME_RECOVERY_SCENE_PLAYER", config)
+        self.assertIn("#elif GAME_RECOVERY_SCENE_PLAYER", verify.SMOKE_SOURCE.read_text(encoding="utf-8"))
+
+    def testPoolLoadedMapsAreAwaitedBeforeTheFirstFrame(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "src/gamescene.h").write_text(
+                "class GameScene : public QGraphicsScene { Player *getPlayer() const; Map *getMap() const; };\n"
+            )
+            (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
+            (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
+            (source / "src/player.h").write_text("class Player {};\n")
+            (source / "src/gamescene.cpp").write_text("void GameScene::startGame() { load(); }\n")
+            adapter = verify.prepareSmokeAdapter(source, root / "plain")
+            self.assertNotIn("loading", adapter)
+            self.assertNotIn("GAME_RECOVERY_AWAIT_POOL", Path(adapter["config"]).read_text())
+            (source / "src/gamescene.cpp").write_text(
+                "void GameScene::startGame() {\n  QThreadPool::globalInstance()->start(new LoadGameTask(map));\n}\n"
+            )
+            adapter = verify.prepareSmokeAdapter(source, root / "pool")
+            self.assertEqual("threadPool", adapter["loading"])
+            self.assertIn("#define GAME_RECOVERY_AWAIT_POOL 1\n", Path(adapter["config"]).read_text())
+        observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("activeThreadCount() > 0", observer)
+        self.assertIn("view->QWidget::show();", observer)
+
     def testPrefixedPlayerCanBeDefinedInTheCombinedCreatureHeader(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -513,6 +572,100 @@ class HistoricalSmokeTest(unittest.TestCase):
             self.assertEqual("prefixed-3d", adapter["id"])
             self.assertIn('GAME_RECOVERY_SCENE_HEADER "gamescene.h"', config)
             self.assertIn("GAME_RECOVERY_SCENE_TYPE CGameScene", config)
+
+    def testOnlyTheExactOriginalConsoleLoopClosesTheWindowBeforeExit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "src/gamescene.h").write_text(
+                "class GameScene : public QGraphicsScene { static Player* getPlayer(); Map *getMap(); };\n"
+            )
+            (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
+            (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
+            (source / "src/player.h").write_text("class Player {};\n")
+            altered = verify.CONSOLE_LOOP.replace(b"isVisible()", b"isVisible() && running")
+            (source / "src/main.cpp").write_bytes(b"int main() {\n" + altered + b"}\n")
+            plain = verify.prepareSmokeAdapter(source, root / "plain")
+            self.assertNotIn("shutdown", plain)
+            self.assertNotIn("GAME_RECOVERY_CLOSE_BEFORE_EXIT", Path(plain["config"]).read_text())
+            main = b"int main() {\n" + verify.CONSOLE_LOOP + b"}\n"
+            (source / "src/main.cpp").write_bytes(main)
+            adapter = verify.prepareSmokeAdapter(source, root / "console")
+            self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1\n", Path(adapter["config"]).read_text())
+            self.assertEqual(
+                {
+                    "mode": "closeWindowAndJoinConsole",
+                    "main": {"path": "src/main.cpp", "sha256": hashlib.sha256(main).hexdigest()},
+                    "consoleLoopSha256": hashlib.sha256(verify.CONSOLE_LOOP).hexdigest(),
+                    "consoleLoopSource": verify.CONSOLE_LOOP_SOURCE,
+                    "validationBoundary": verify.CONSOLE_SHUTDOWN_BOUNDARY,
+                },
+                adapter["shutdown"],
+            )
+            adapted = b"int main() {\n" + verify.CONSOLE_LOOPS[1] + b"}\n"
+            (source / "src/main.cpp").write_bytes(adapted)
+            self.assertIn(b"ScriptManager::getInstance()->executeScript(script);", verify.CONSOLE_LOOPS[1])
+            self.assertEqual(
+                hashlib.sha256(verify.CONSOLE_LOOPS[1]).hexdigest(),
+                verify.consoleShutdown(source)["consoleLoopSha256"],
+            )
+            (source / "src/main.cpp").write_bytes(main + verify.CONSOLE_LOOP)
+            self.assertIsNone(verify.consoleShutdown(source))
+            (source / "src/main.cpp").write_bytes(main + verify.CONSOLE_LOOPS[1])
+            self.assertIsNone(verify.consoleShutdown(source))
+            (source / "src/main.cpp").unlink()
+            (root / "elsewhere.cpp").write_bytes(main)
+            (source / "src/main.cpp").symlink_to(root / "elsewhere.cpp")
+            self.assertIsNone(verify.consoleShutdown(source))
+        observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 0", observer)
+        self.assertIn("waitForDone(10000)", observer)
+
+    def testTheConsoleLoopIsTheSurvivingOriginal(self):
+        source = verify.CONSOLE_LOOP_SOURCE
+        try:
+            original = subprocess.run(
+                ["git", "show", f"{source['commit']}:{source['path']}"],
+                cwd=verify.REPO_ROOT,
+                capture_output=True,
+                check=True,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("Original history is not available in this checkout")
+        self.assertEqual(source["sha256"], hashlib.sha256(original).hexdigest())
+        self.assertEqual(1, original.count(verify.CONSOLE_LOOP))
+
+    def testHistoricalProgramsReadAnEmptyStandardInput(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            code = "import sys\nsys.exit(0 if sys.stdin.read() == '' else 3)\n"
+            result = verify.runCommand([sys.executable, "-c", code], root, dict(os.environ), 10, root / "stdin.log")
+            self.assertEqual(0, result["returnCode"])
+
+    def testConsoleStandardInputStaysOpenUntilTheReadinessReport(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "ready"
+            code = (
+                "import sys, time\nfrom pathlib import Path\n"
+                "time.sleep(0.3)\nPath(sys.argv[1]).write_text('ready')\n"
+                "sys.exit(0 if sys.stdin.read() == '' else 3)\n"
+            )
+            result = verify.runCommand(
+                [sys.executable, "-c", code, str(report)], root, dict(os.environ), 10, root / "stdin.log", report
+            )
+            self.assertEqual(0, result["returnCode"])
+            self.assertFalse(result["timedOut"])
+            silent = verify.runCommand(
+                [sys.executable, "-c", "import sys\nsys.stdin.read()\n"],
+                root,
+                dict(os.environ),
+                1,
+                root / "silent.log",
+                root / "never",
+            )
+            self.assertTrue(silent["timedOut"])
 
     def testSubdirSnapshotBuildsLibraryBeforeObservedApplication(self):
         with tempfile.TemporaryDirectory() as directory:

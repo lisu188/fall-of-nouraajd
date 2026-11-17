@@ -1289,7 +1289,318 @@
       "published": false,
       "restoredFilesFingerprint": "e507c46e3a729f3cf6d8b64f3617eef275caf35193c20688c94d85695062927c",
       "startupMode": "game",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/5e000dca02a17e179719d99ae93d31687c9d2244",
+      "originalCommit": "5e000dca02a17e179719d99ae93d31687c9d2244",
+      "originalTree": "31217a2066f3e568d8701155f95e3c79bac7a596",
+      "published": false,
+      "restoredFilesFingerprint": "a9f2cdb2c006205ca04042a72fa29ebee3c22c0e67cd59a055e35140b00d048b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "originalCommit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "originalTree": "ca5a2edc1229cea216959feed80feb195c6feaa6",
+      "published": false,
+      "restoredFilesFingerprint": "0bb18011fe2da656416c355375d09638addf34d85076e0890a553785406c823b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/54fc8adfbe133d3eb4b92bc2a3770b5eafceaeee",
+      "originalCommit": "54fc8adfbe133d3eb4b92bc2a3770b5eafceaeee",
+      "originalTree": "ec5491ce057df1acb04bb77c08bf0850a2b2e811",
+      "published": false,
+      "restoredFilesFingerprint": "61b5a251ac0d03e3d390296a1d44309cd899a103aadac4bfe0237fa9403261dd",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/d8f5b95be817631a31ed0fe13ec64730613a56a4",
+      "originalCommit": "d8f5b95be817631a31ed0fe13ec64730613a56a4",
+      "originalTree": "2a4ef143c32d82865d342555a6fbca677b0c3a6c",
+      "published": false,
+      "restoredFilesFingerprint": "9f171d3c019293b32437b3042b4fea2dae70b2c9f3371730cc33adc1fa9a46d9",
+      "startupMode": "editor",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-editor-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/251c727c2a6957bcaca2335e2632bf2a60a772d3",
+      "originalCommit": "251c727c2a6957bcaca2335e2632bf2a60a772d3",
+      "originalTree": "be145d0bc5df25b8abc3418577089d2591788b61",
+      "published": false,
+      "restoredFilesFingerprint": "d1fcbaff37943b731225c55b34317adbc814175bdd7188b936aac50bc3c12316",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+      "originalCommit": "12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+      "originalTree": "5c1e61cf5ec289d3b3fe3f3b7e24d6a3ee77cef5",
+      "published": false,
+      "restoredFilesFingerprint": "3109f1d207dd32e38ce3587977068e95df5e5c435053a44c81d89260f5a73fab",
+      "startupMode": "editor",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-editor-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/1084dbc78cb2606f6740c61f03622b360206ce32",
+      "originalCommit": "1084dbc78cb2606f6740c61f03622b360206ce32",
+      "originalTree": "0d8b368a0e19a66249eef922b6f044b6d7f21e34",
+      "published": false,
+      "restoredFilesFingerprint": "8c16b1db3a6e9622a71ddf33f1fb9be7bb87073bd86240823c49420f379be1ec",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/bc243030d30e75591a3aff3702525f4472f37331",
+      "originalCommit": "bc243030d30e75591a3aff3702525f4472f37331",
+      "originalTree": "708e0a9cdb13df64e6bd4918027c8fd63485970c",
+      "published": false,
+      "restoredFilesFingerprint": "f2d444846209aebe03b198a3c5c2875c819b15904817452cd908af2cadef627c",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+      "originalCommit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+      "originalTree": "c1db9a17f125fb71d00903dd82f0e3b0c819bade",
+      "published": false,
+      "restoredFilesFingerprint": "f2d444846209aebe03b198a3c5c2875c819b15904817452cd908af2cadef627c",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/856d7792e59d09f1e9cff08d9abb81052a47c7a3",
+      "originalCommit": "856d7792e59d09f1e9cff08d9abb81052a47c7a3",
+      "originalTree": "c74b0751b7d4a1d6f83af069b05e2888e1c1ff4a",
+      "published": false,
+      "restoredFilesFingerprint": "2494793655551be3bce79cd8b77b363338fe0a9327f03f599b19312754c10e9a",
+      "startupCompatibility": "renamedResourceAliases",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-resource-alias-compatibility-passed"
+    },
+    {
+      "evidence": "recovery/evidence/bf32a4c93e396bd645769a9957eacd6a75106b62",
+      "originalCommit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+      "originalTree": "620875cb4254b3c73c14e7793d33671d1a6300b7",
+      "published": false,
+      "restoredFilesFingerprint": "a85ea43f197e10ccc0a7a96684bfd12785650f0cef07c3e0c75e13139b5497fd",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+      "originalCommit": "23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+      "originalTree": "5697c4f4f5351a42e29ec2924ef1e0cdce6840bb",
+      "published": false,
+      "restoredFilesFingerprint": "ed5e4a8fb9fa72773a405104029d13d9fd534f987e3f774585c877c3f9943cf1",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b24663bd7e3101a4043d4c79074f2897dcf2780c",
+      "originalCommit": "b24663bd7e3101a4043d4c79074f2897dcf2780c",
+      "originalTree": "c0b4a99062a2c3560284426447c546555e65443a",
+      "published": false,
+      "restoredFilesFingerprint": "7fbbf6aa92b4c899515842ae25248923277f1f964c76f01d3548ccbc616107d9",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d",
+      "originalCommit": "9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d",
+      "originalTree": "f60f92ad5d6a13a1a8e35ed5425b99fd85fc2759",
+      "published": false,
+      "restoredFilesFingerprint": "b5d54eba2201dd36360c34f2aed90b11226318aceab6bf7896981d7311eda75e",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/75f3d90ee67e43eca7d4b40afc4ad3132f2bf53e",
+      "originalCommit": "75f3d90ee67e43eca7d4b40afc4ad3132f2bf53e",
+      "originalTree": "fbeaae97577297ddc01bcc179495b233898e4eeb",
+      "published": false,
+      "restoredFilesFingerprint": "2a8850783f5405d17e74be817bbd385e4c4088308d2cd3743a14dfddf70d7e3f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/d27f773772f47adafa4a9077b9c9e2b1ab67f091",
+      "originalCommit": "d27f773772f47adafa4a9077b9c9e2b1ab67f091",
+      "originalTree": "35a3d321720be5f8bc07e4414d60e52d2c0db737",
+      "published": false,
+      "restoredFilesFingerprint": "e657ece2ca69848cbf2df1034ffd2ec0b9bc9d55b399f0ec9f76418967349c68",
+      "startupMode": "editor",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-editor-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/cdb285560097d679b94f693db0519c3cb83252fa",
+      "originalCommit": "cdb285560097d679b94f693db0519c3cb83252fa",
+      "originalTree": "81dfc3b5e7435b74cbb9763901b8b27b54279e0f",
+      "published": false,
+      "restoredFilesFingerprint": "253d5d18b126b4b18b4e40576fa869eefa0df5fa208945cde2c9d2c5d88c0888",
+      "startupMode": "editor",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-editor-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/026e63de89a691376462db46297f8564012c024c",
+      "originalCommit": "026e63de89a691376462db46297f8564012c024c",
+      "originalTree": "dd5aeb5dbca956517f1f91f718b6f6c9a29673e8",
+      "published": false,
+      "restoredFilesFingerprint": "a77a671557e5f949d3cb834d962da69a8f44dd696b68ba0b3d44e676ab27bab6",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/21ebd6611c521acf175ba29ab5247e6d221a5c87",
+      "originalCommit": "21ebd6611c521acf175ba29ab5247e6d221a5c87",
+      "originalTree": "ab33e8cc26da48da461ff44786a1816ca1029411",
+      "published": false,
+      "restoredFilesFingerprint": "af56fdf2c09a5273e7fe21880ee01e531d3d2239d5fcdfc166cff6ea8c289232",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/bf7e346c561ed955d7fb9b286cddd36e84d121f2",
+      "originalCommit": "bf7e346c561ed955d7fb9b286cddd36e84d121f2",
+      "originalTree": "058462c3d511df0d210565bd8c2ad0cb72ffbfa2",
+      "published": false,
+      "restoredFilesFingerprint": "37b59474ba7ca7cf745cc7f60abca47ba41a54b11f752eb7179497b3f57c16b7",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b4855c2e4b2628bb1ba4e9504de4400c4729603c",
+      "originalCommit": "b4855c2e4b2628bb1ba4e9504de4400c4729603c",
+      "originalTree": "43fdf5482a5a9001e145078f75e8d226ce9854aa",
+      "published": false,
+      "restoredFilesFingerprint": "04d87caa50f7a81cd4c2fe2b3b170b3356c1f919eeaadd321ce8ed739d2139ea",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/308cdda7906564428d9d9e2094f2b3f4f64157a6",
+      "originalCommit": "308cdda7906564428d9d9e2094f2b3f4f64157a6",
+      "originalTree": "5a66f2bd1028794eb1b8ac73b3a3e846f9f964a2",
+      "published": false,
+      "restoredFilesFingerprint": "7fb3ccbc17c29d2e2cafbf5dc91f3120ba87435d5c5113fc83bbe3de742a1206",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/50b044ed131403e4b9f39f3a41d2143bc39e104e",
+      "originalCommit": "50b044ed131403e4b9f39f3a41d2143bc39e104e",
+      "originalTree": "926636885c6b985e36be3e9690a09ee16ab47b48",
+      "published": false,
+      "restoredFilesFingerprint": "72e6c373396e156b3dff2e0b6e9eac447c9095139e252cf4825e0ffb134847db",
+      "startupMode": "editor",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-editor-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b81d72df5c6b006f640a3cccf1913b43a3f0c2e9",
+      "originalCommit": "b81d72df5c6b006f640a3cccf1913b43a3f0c2e9",
+      "originalTree": "70662e3228f7a367246745445823cea7375f50e8",
+      "published": false,
+      "restoredFilesFingerprint": "0d65acb43164cd113b26b0bbec9e4b2a0a2b37914bd3910ed6365f39962fe1b1",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/da88f7cdce4067cdf6507b85c538b85ec051a8eb",
+      "originalCommit": "da88f7cdce4067cdf6507b85c538b85ec051a8eb",
+      "originalTree": "5dded2cc130ebfac998cf7eb6d23cb82aee748da",
+      "published": false,
+      "restoredFilesFingerprint": "5db7cb1c49b347290330610dc71675bad1d8db659380863ca727aece2c43324a",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/863e7d1337a795f3ceeb5c8228ec5e7ab3410f79",
+      "originalCommit": "863e7d1337a795f3ceeb5c8228ec5e7ab3410f79",
+      "originalTree": "c14f94224e83bd52714a27a0e31fa63ae13b3b14",
+      "published": false,
+      "restoredFilesFingerprint": "7bf82f75f73fa63072ceddd242ce43191e5942c8d3f6225a358c3e4a75a5b8eb",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/171ce17f5546805f0dd08bd8ab311ccce7a7bd84",
+      "originalCommit": "171ce17f5546805f0dd08bd8ab311ccce7a7bd84",
+      "originalTree": "2783965eb6f1b57470e7cb572d5cedba5637ae56",
+      "published": false,
+      "restoredFilesFingerprint": "e852e022fb740bfcfea72c75b156b4fb851fbf3414842a27cc9ac2f048ee408b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b578c8359dacd1dc0fe6e03dd81eba10de4b5fb4",
+      "originalCommit": "b578c8359dacd1dc0fe6e03dd81eba10de4b5fb4",
+      "originalTree": "7a9b0b4abf27e007f2bc67ae40ae8a4e638463a8",
+      "published": false,
+      "restoredFilesFingerprint": "98cff48e43c1deb376fef39c0d7817779f7cb624d1a7d111b89a7defacebe3a1",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6ab63792d65354556cd2f0cd5e14ee999d80eadc",
+      "originalCommit": "6ab63792d65354556cd2f0cd5e14ee999d80eadc",
+      "originalTree": "bf568de6503df91dac56f8bd77d16cddf88ff37d",
+      "published": false,
+      "restoredFilesFingerprint": "4784992964b50f3ad8bfef26838d500fa7d197696d40cd10831b78da81a0ab50",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/04e2bc8707bfdffbbff422a64fd5d25b1503f49c",
+      "originalCommit": "04e2bc8707bfdffbbff422a64fd5d25b1503f49c",
+      "originalTree": "32d586a507a68334d782f3384afaf9e05998a024",
+      "published": false,
+      "restoredFilesFingerprint": "1530c26a2a9a90d9708cb576f5e15bc22b2db9c77458cb9a220236bbd304b07a",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/57a7605e74dde483f858ccbd3fc1a341ab7c7aa8",
+      "originalCommit": "57a7605e74dde483f858ccbd3fc1a341ab7c7aa8",
+      "originalTree": "9010d83ee7810a170d6795a651120ec5f3d123ee",
+      "published": false,
+      "restoredFilesFingerprint": "1a23ef02bbaed0bf05ed2f5ad82289a073c67fa1e0c840be39b96ff3a35bd37d",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-startup-passed"
     },
     {
@@ -1297,9 +1608,9 @@
       "originalCommit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
       "originalTree": "499f731a145cfb36da06de082a530c2e0e086176",
       "published": false,
-      "restoredFilesFingerprint": "c743b8f62b95e08c129d2aa8409e0a7a725aef4f81a2e041d21c0b36d019be18",
+      "restoredFilesFingerprint": "825f05f69554c52b17b9eeb80d385556cdd23032affda625d6f96862d13d7539",
       "startupMode": "game",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-startup-passed"
     },
     {
@@ -1307,10 +1618,10 @@
       "originalCommit": "169b592c32924654d830fbf0571e86c5de9dc692",
       "originalTree": "c0489a7f3585630b791c5619ae399cffdb83c169",
       "published": false,
-      "restoredFilesFingerprint": "48abfb3861c53a9b7eeee0f3674ecbb5443ff923639e786a8885a4d619d7ed8f",
+      "restoredFilesFingerprint": "bebd1026a519e5b9e46a1e4ec33b2cb611f28b5ef890dc8d344b92c1b18f9542",
       "startupCompatibility": "originalCoordinateHash",
       "startupMode": "game",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-startup-with-coordinate-hash-compatibility-passed"
     },
     {
@@ -1318,9 +1629,9 @@
       "originalCommit": "fd507cdac42337d763550ffe41334a39a1d0d954",
       "originalTree": "bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4",
       "published": false,
-      "restoredFilesFingerprint": "eea70f539063ccbde942701e529430b8281ea76e4968727d3b5229388e597a4a",
+      "restoredFilesFingerprint": "7d4f257a5d14176dc4257efa392aa2ffe50489efe239bf20c0596687f454ce1c",
       "startupMode": "game",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-startup-passed"
     },
     {
@@ -1328,9 +1639,9 @@
       "originalCommit": "80920f276d6aff53a2aa0dd237f4a26cb47cb60d",
       "originalTree": "f258b5917713c6e1eeebb2d39e5595d166d2d819",
       "published": false,
-      "restoredFilesFingerprint": "94804af0e3793af13fd8402fcc576a47c3bc3f117c9b5fb503fbd13d7244ec18",
+      "restoredFilesFingerprint": "f779d9a039aa006a0825bee83b762f3534122d3c30cdb3c8865b71adbb5c23db",
       "startupMode": "game",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-startup-passed"
     },
     {
@@ -1338,9 +1649,9 @@
       "originalCommit": "cb42b1415a317340d83d240b92e65bae631b7dea",
       "originalTree": "f6eb10b750fb51aca5dca992a2401c3b658b6374",
       "published": false,
-      "restoredFilesFingerprint": "6ff1ee78ab3a6af787859e9374ac0d9ce3a709325aa2a225f9c074627d35cd68",
+      "restoredFilesFingerprint": "c263ede5fc6e977a1d9465108561f050c49b51a0c064ad1e3a6f83dbb7b2f22b",
       "startupMode": "game",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-startup-passed"
     },
     {
@@ -1348,9 +1659,9 @@
       "originalCommit": "5258bb040f2780638a76c26b0a61bb9437cdaab5",
       "originalTree": "9c2893d3f24f2b2325e180f335f9d84d1bee3033",
       "published": false,
-      "restoredFilesFingerprint": "881244127211912e6b9ecb4d7468886728cad116e39660845b95246bc9f5572f",
+      "restoredFilesFingerprint": "573bcb0c6380c48453653541f85ccd90f179c7e82217e7c51c64b0c005bf84b8",
       "startupMode": "editor",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-editor-startup-passed"
     },
     {
@@ -1358,10 +1669,768 @@
       "originalCommit": "709535a6085c63fe1d26aebc3414ea2281529b3b",
       "originalTree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15",
       "published": false,
-      "restoredFilesFingerprint": "ac09f1d55a68940e2cc77d4810854dd247933a67eea2fa1c7ceba7c59e46db3b",
+      "restoredFilesFingerprint": "ffa7453cb8252bf09bb0146b2f26e1f1bcdbf8c632083029c358741c4b627202",
       "startupMode": "editor",
-      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
       "validation": "build-and-editor-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/152007b28631784d3c5e17f2686eb6ef9ff30e46",
+      "originalCommit": "152007b28631784d3c5e17f2686eb6ef9ff30e46",
+      "originalTree": "f9b16149815272e9ec71b4a69061479d1979e398",
+      "published": false,
+      "restoredFilesFingerprint": "aa91902dc04e27f8af2d9a0dae23cb746232f9de23212456a2bb83adf1aba204",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/8bb9add08cfde759541b3b35a5a2f9ad499654ed",
+      "originalCommit": "8bb9add08cfde759541b3b35a5a2f9ad499654ed",
+      "originalTree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6",
+      "published": false,
+      "restoredFilesFingerprint": "e4cacb347fdab233eeaf4ec762f3140d5444f88bfea7f49133e7ce56ee612412",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/a1102ac053605a68abd7f98eb8b714b5a00ac6ec",
+      "originalCommit": "a1102ac053605a68abd7f98eb8b714b5a00ac6ec",
+      "originalTree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca",
+      "published": false,
+      "restoredFilesFingerprint": "9dca15e42fd8abee041b88774d8f3208203bd87cafebba807f45ecb80691f705",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/cdc0be72f141da8414fa7c59baf24917a4897b75",
+      "originalCommit": "cdc0be72f141da8414fa7c59baf24917a4897b75",
+      "originalTree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0",
+      "published": false,
+      "restoredFilesFingerprint": "d7db9b15e4f87822e99143cb7226c1291ebad2a5961ba93455b856a0d63b3ef4",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/71a3432e36b5649aabdd63c7807a78e9a8a3749a",
+      "originalCommit": "71a3432e36b5649aabdd63c7807a78e9a8a3749a",
+      "originalTree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743",
+      "published": false,
+      "restoredFilesFingerprint": "f33a21a7e70cd7c1ef7e7724e194bdca662e880c95b37b2593b1f9daa0d362e1",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c90b86c5098927c1f123ad050632d9a220aa4604",
+      "originalCommit": "c90b86c5098927c1f123ad050632d9a220aa4604",
+      "originalTree": "2098f8082af66db6a3be9a9cb112eef7a7a15402",
+      "published": false,
+      "restoredFilesFingerprint": "32360c00e1d43c8e2c7abd34e0e71843303d46c0c5eddf574b931c07b5095217",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177",
+      "originalCommit": "a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177",
+      "originalTree": "15933f7c7d096db851eab42d42bf8dc3d177502f",
+      "published": false,
+      "restoredFilesFingerprint": "fa99b34ac9e9cc8ea2e3c92f3d6e6e8dfb0769a43bfa14eba5458463e5125b33",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b4d315b857f8df32b17422f64b381a36f3d90d1d",
+      "originalCommit": "b4d315b857f8df32b17422f64b381a36f3d90d1d",
+      "originalTree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f",
+      "published": false,
+      "restoredFilesFingerprint": "69cb75097fa5806586065ea42553bca26442057e35b2540ff5c78a53f8dc4dc2",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b51715bf9de3a0138b49e1a28e81e914268fb49a",
+      "originalCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a",
+      "originalTree": "3bb524fa1791d87e8131c549c380e30d114a7d3e",
+      "published": false,
+      "restoredFilesFingerprint": "c6e745c74465c68bacc2041d12a40546e635b185b3e0e48071bbaed6ee3eaaa6",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/0815aeac5f12dc58dd113d3fee1a837c06e39413",
+      "originalCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
+      "originalTree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865",
+      "published": false,
+      "restoredFilesFingerprint": "b70534317f0bd545975d9670eda7d78ccc817b3d1a41b2a2ec347e2824228922",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/cf4715fa2d6daa0658443374e35b9890a81ac801",
+      "originalCommit": "cf4715fa2d6daa0658443374e35b9890a81ac801",
+      "originalTree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723",
+      "published": false,
+      "restoredFilesFingerprint": "b70534317f0bd545975d9670eda7d78ccc817b3d1a41b2a2ec347e2824228922",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c1b8045a931f2712030e918f9af13bee52a69b18",
+      "originalCommit": "c1b8045a931f2712030e918f9af13bee52a69b18",
+      "originalTree": "39dccf4fe874311456e84985830f374b31f7e4bc",
+      "published": false,
+      "restoredFilesFingerprint": "a83678bfb81985f4eb8f6f0a89747faf0ec3a1f49435e17ed8bb7e8393ef70c7",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/78f01f818cc3d73e47af8af1b9946653eeb8b6bf",
+      "originalCommit": "78f01f818cc3d73e47af8af1b9946653eeb8b6bf",
+      "originalTree": "2934df35394ed0639015903c8b00c0f11d4936cf",
+      "published": false,
+      "restoredFilesFingerprint": "5e653a38a491f3656c20dea4beb6b01be427bf56673b2fec1b80276e481e1247",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2",
+      "originalCommit": "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2",
+      "originalTree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b",
+      "published": false,
+      "restoredFilesFingerprint": "216213ca3fb60140900a0eee94d3eb08c1ab9c402ba981608716d6a26635929d",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/fde9faf210ad1f0ef12b1b09a98b163a7efa6672",
+      "originalCommit": "fde9faf210ad1f0ef12b1b09a98b163a7efa6672",
+      "originalTree": "c525dc0cee9323bb5e60ae83531fb312cceb2460",
+      "published": false,
+      "restoredFilesFingerprint": "0d97a448a48500c818f0b4452df8681496afb2657380e8eb4f6263fac4b12f82",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/f1be75d6ad474f4841acef0388b3c5f47dc06119",
+      "originalCommit": "f1be75d6ad474f4841acef0388b3c5f47dc06119",
+      "originalTree": "9b5e0a2459a4e1941087b609114063bd18b1aae8",
+      "published": false,
+      "restoredFilesFingerprint": "0d97a448a48500c818f0b4452df8681496afb2657380e8eb4f6263fac4b12f82",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab",
+      "originalCommit": "fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab",
+      "originalTree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9",
+      "published": false,
+      "restoredFilesFingerprint": "0d97a448a48500c818f0b4452df8681496afb2657380e8eb4f6263fac4b12f82",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/8e8064fc1aecdee89fe581c3e6f46876859082bf",
+      "originalCommit": "8e8064fc1aecdee89fe581c3e6f46876859082bf",
+      "originalTree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e",
+      "published": false,
+      "restoredFilesFingerprint": "d2cafbb14291cfa8ecf03f0f385241a33a282d322adec022a9f49e8a027f9207",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "originalCommit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "originalTree": "f6b583fcab8d7da3b4fa077d1401da8eafeacbde",
+      "published": false,
+      "restoredFilesFingerprint": "c96e19f978c9b64617a95403c0260ea55248914306181f92fde3def3921d51b3",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7022f82ba68e4b740e85915b1710dd0502837efe",
+      "originalCommit": "7022f82ba68e4b740e85915b1710dd0502837efe",
+      "originalTree": "3a3959894ad4327a3cf53ae6a7cf3fbc23427748",
+      "published": false,
+      "restoredFilesFingerprint": "1dfb9bf9fedb6fc60f4d4d3f18dabbb05f7a3e112bc06d91563b42e291aa18d6",
+      "startupCompatibility": "whitespaceConflictResolution",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-conflict-resolution-compatibility-passed"
+    },
+    {
+      "evidence": "recovery/evidence/779fb803ff021de5e74ed3b24d7c31a9adcaa236",
+      "originalCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236",
+      "originalTree": "a9d54b7182ba8f32a34de4760d53601cd25f8b30",
+      "published": false,
+      "restoredFilesFingerprint": "4ce00e899c9da49b54ce24dca4afe98afd81a8b43af2bf829cf224ef9e8ba198",
+      "startupCompatibility": "whitespaceConflictResolution",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-conflict-resolution-compatibility-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b79e759b0babe370c4cee4508ba9c5cb566d9d33",
+      "originalCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33",
+      "originalTree": "089c528a35d35bd8552372f851b19db02097104f",
+      "published": false,
+      "restoredFilesFingerprint": "4fe7430791d2acc0939bdf2474543edfa40b25467655a09e6dbe4974e43dffe8",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/ebf0a64b9759e8a74655159986b8dfb1e85a3686",
+      "originalCommit": "ebf0a64b9759e8a74655159986b8dfb1e85a3686",
+      "originalTree": "b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17",
+      "published": false,
+      "restoredFilesFingerprint": "809065e1316aa01af30ca6f8650dced2985e2db306205a23a995f33d8177916a",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6cc78c34d64fdee43adca1b829ccf687daa62ced",
+      "originalCommit": "6cc78c34d64fdee43adca1b829ccf687daa62ced",
+      "originalTree": "87ea8580651c311e0a64397425faa080539fb701",
+      "published": false,
+      "restoredFilesFingerprint": "dca3cf71eed54d81bc85a2d1aa947be0ba8a6da17acfe9ea6cf85ed14e54af19",
+      "startupCompatibility": "mergedHeaderForwarders",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-forwarding-header-compatibility-passed"
+    },
+    {
+      "evidence": "recovery/evidence/8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
+      "originalCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
+      "originalTree": "2484bd2bc42338d995b06301f834ca2641fe5d5a",
+      "published": false,
+      "restoredFilesFingerprint": "3cdf7333c93c93bc53831e96058482d397ddbb3dc2f8444cc3739d6b1a8346ec",
+      "startupCompatibility": "mergedHeaderForwarders",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-forwarding-header-compatibility-passed"
+    },
+    {
+      "evidence": "recovery/evidence/09df518e2037d12f912da6c774635a91c886c097",
+      "originalCommit": "09df518e2037d12f912da6c774635a91c886c097",
+      "originalTree": "7db1a3f10ff2e6bb5c24f0219cde54e3ed76c133",
+      "published": false,
+      "restoredFilesFingerprint": "42fc4c6ca0eb1c3d5b0f43adabb80b20cf579b1ae4269ed135cd0d8d3154991f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
+      "originalCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
+      "originalTree": "c65f66a9510d49049e1ffc6e40d569c95e013ed6",
+      "published": false,
+      "restoredFilesFingerprint": "bd3465c901116ef53d31fa1a5279deb992bceec36bb35e5381a610080691b1e9",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/cc1597bad4b840bfcc2ad4663b410495fae038c1",
+      "originalCommit": "cc1597bad4b840bfcc2ad4663b410495fae038c1",
+      "originalTree": "b3d39756210c65ee5cfada2f6a4d361f772ff23a",
+      "published": false,
+      "restoredFilesFingerprint": "bd3465c901116ef53d31fa1a5279deb992bceec36bb35e5381a610080691b1e9",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/0a3d56f9013ffc2356697596c094d1b53efde28b",
+      "originalCommit": "0a3d56f9013ffc2356697596c094d1b53efde28b",
+      "originalTree": "1e5673b7f5083ab0286c0b402ca0d5716c798468",
+      "published": false,
+      "restoredFilesFingerprint": "8e50df0cc66fe39a7bf1117dfa6d40cdeff0e4a2f2a42f48bafe376e79f2c8fc",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/2d5108ed9acc3eea32b7d19b3450b876183f9b45",
+      "originalCommit": "2d5108ed9acc3eea32b7d19b3450b876183f9b45",
+      "originalTree": "eef536d975e242f821ea3d1c250bf0dd15679e80",
+      "published": false,
+      "restoredFilesFingerprint": "4ac22a03d3909a7f223737c93162da4df19407aedeecf0a9e36fc05e1529f7ab",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/413714c49abd549163bab41f6cda6c220af4fc77",
+      "originalCommit": "413714c49abd549163bab41f6cda6c220af4fc77",
+      "originalTree": "7cdcb76c6252a06c5ed25898a082079011d01593",
+      "published": false,
+      "restoredFilesFingerprint": "6783f1b43d2717f09ddfb1f5a3f7f32956fb9a65a8754f3fed27756e9961cd65",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/83a7cb12ef28dbcf6fe0e26029d01196ef657578",
+      "originalCommit": "83a7cb12ef28dbcf6fe0e26029d01196ef657578",
+      "originalTree": "eee661f5ea4a459713601a367830ed4cc9c6e3ba",
+      "published": false,
+      "restoredFilesFingerprint": "5e6b46eac9b8a4d0ff81622b581c99a178dcce68d32f61e4c4bcc69c2e39715b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/be9374978f350769c00621628815596901a63761",
+      "originalCommit": "be9374978f350769c00621628815596901a63761",
+      "originalTree": "c22fb7b5605b63fa8069d67c9f21de8f2c5e83e6",
+      "published": false,
+      "restoredFilesFingerprint": "4ecbfb2dd5145b415bf7373080e302441fd44429829598a1712149e4edc11c33",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/fec4f4525135e863c194bb07fe044ab161ae9709",
+      "originalCommit": "fec4f4525135e863c194bb07fe044ab161ae9709",
+      "originalTree": "0176fdfd407c6f7afd38f01bccdea9c2edc3ae87",
+      "published": false,
+      "restoredFilesFingerprint": "5fda18d2429601999de894dac210cdd1b33a32522a0d4b9989381f1c49f8dd2b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/e2e604b09cda43317530a1543d5ef8ae1cf3c3b0",
+      "originalCommit": "e2e604b09cda43317530a1543d5ef8ae1cf3c3b0",
+      "originalTree": "33e0d5ad348cef78e90cf06d0da4c49fec2cb825",
+      "published": false,
+      "restoredFilesFingerprint": "f10abed34d7dc4edc5fa7052fa433c1fab33b9128f31f621bd25e71a5572fcfe",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/cbad1c771874a73a57681687498f8ebc951f31ff",
+      "originalCommit": "cbad1c771874a73a57681687498f8ebc951f31ff",
+      "originalTree": "897f788bab4f5a138b293bbc8b7d0ec82ed25899",
+      "published": false,
+      "restoredFilesFingerprint": "f10abed34d7dc4edc5fa7052fa433c1fab33b9128f31f621bd25e71a5572fcfe",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/8a198c1f3e7b255f958b2dc2c8cc7640bb7f0afb",
+      "originalCommit": "8a198c1f3e7b255f958b2dc2c8cc7640bb7f0afb",
+      "originalTree": "1e94579ef43b2fe582056dad915f88e06c05ee27",
+      "published": false,
+      "restoredFilesFingerprint": "bfed35afe2f6e915486a534a468d9f1db15c368ccdb38878a6b7a4814d9956b8",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6465fa1050850af1836a4327c4edb14aceb7cd69",
+      "originalCommit": "6465fa1050850af1836a4327c4edb14aceb7cd69",
+      "originalTree": "01d9145c5d6863a582d645b874cde73b5d9f21db",
+      "published": false,
+      "restoredFilesFingerprint": "d7b2b03249a848d50540789085af897df21e435320bc204ff05c73da75ca442f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/17760db4ce0810e9d1f145e916f1ba78988c7149",
+      "originalCommit": "17760db4ce0810e9d1f145e916f1ba78988c7149",
+      "originalTree": "e32fb6d1f416bc264911c953505ace448054db47",
+      "published": false,
+      "restoredFilesFingerprint": "670ae3042ef1c56c26e108b437da87e5c9cd8e301b3528d3bd88f9b4f0058c8b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+      "originalCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+      "originalTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
+      "published": false,
+      "restoredFilesFingerprint": "670ae3042ef1c56c26e108b437da87e5c9cd8e301b3528d3bd88f9b4f0058c8b",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7555be4552788be476084397738baf36ca8cac95",
+      "originalCommit": "7555be4552788be476084397738baf36ca8cac95",
+      "originalTree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14",
+      "published": false,
+      "restoredFilesFingerprint": "ef17897dd345a3cf1ef65d94ca74f695ef4fb82cd81ec6018e6b859fa2115687",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb",
+      "originalCommit": "50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb",
+      "originalTree": "c6b7e935bed34fa316636826d7e283521aa5b1df",
+      "published": false,
+      "restoredFilesFingerprint": "ab7185d606815b02ea40921b6121a4ea7f24f9fd3403bc9c7080636724db8204",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7c1127cf428ae90028e13005e7fe4a78d727c678",
+      "originalCommit": "7c1127cf428ae90028e13005e7fe4a78d727c678",
+      "originalTree": "70cf9e3f6be89e501a0a74f6c5ec6a742d08c028",
+      "published": false,
+      "restoredFilesFingerprint": "ab7185d606815b02ea40921b6121a4ea7f24f9fd3403bc9c7080636724db8204",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c4154108da73e14df7694666a020281cf424a3ab",
+      "originalCommit": "c4154108da73e14df7694666a020281cf424a3ab",
+      "originalTree": "6d517da53cc090e578fee25ae7103b9f703c003d",
+      "published": false,
+      "restoredFilesFingerprint": "5640fbb38d04dea50b6a2f7c4927281c2fea76fd8fe563501dc64374c760a7bc",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/54f4e53ca1ffcb22eb1a7c49e1f8a2cf0c8d538c",
+      "originalCommit": "54f4e53ca1ffcb22eb1a7c49e1f8a2cf0c8d538c",
+      "originalTree": "8fbe1c6af577c7bdf85df3bc420721459a7e9a73",
+      "published": false,
+      "restoredFilesFingerprint": "5640fbb38d04dea50b6a2f7c4927281c2fea76fd8fe563501dc64374c760a7bc",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/a23be4699a956fdaac390af03c5fbbc1679f7481",
+      "originalCommit": "a23be4699a956fdaac390af03c5fbbc1679f7481",
+      "originalTree": "982f28924a8fb6aceacc9d39525a7e64bd5b4331",
+      "published": false,
+      "restoredFilesFingerprint": "5640fbb38d04dea50b6a2f7c4927281c2fea76fd8fe563501dc64374c760a7bc",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/e00a7c3e7babb948012584b298fab2f1e5abe351",
+      "originalCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351",
+      "originalTree": "8d5e571ff54c8bce2a5588efe01b59647e790e55",
+      "published": false,
+      "restoredFilesFingerprint": "5640fbb38d04dea50b6a2f7c4927281c2fea76fd8fe563501dc64374c760a7bc",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/c577f6225739c5e3e1cf90081a92e997eaed65a4",
+      "originalCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+      "originalTree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc",
+      "published": false,
+      "restoredFilesFingerprint": "2ece9597df759c9dfae651d60b0214a4a21d0e90409697228ebe6e1a75821aad",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/9b71b07e7cecb4f629bb61b2b2ca08737a9fc52e",
+      "originalCommit": "9b71b07e7cecb4f629bb61b2b2ca08737a9fc52e",
+      "originalTree": "c2d25aea2e47f049d61f8fd55df0d09ad8299225",
+      "published": false,
+      "restoredFilesFingerprint": "63cf785aac18283173528ce1dbc3fbf0cf5d65229e38870de9eb76e8178ff88a",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/07af2054088cb3aa440ef5594d2caa0179c420b6",
+      "originalCommit": "07af2054088cb3aa440ef5594d2caa0179c420b6",
+      "originalTree": "e7ba7d0616017f0411fc573dd57ea42ec47faf22",
+      "published": false,
+      "restoredFilesFingerprint": "3a73c023c5dd8e5811ec4d6c0703ed2d792acdb833a88a2e034ce37a0f6748df",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/3b0df86767a7483056dd3bfe71d3a19bf6268874",
+      "originalCommit": "3b0df86767a7483056dd3bfe71d3a19bf6268874",
+      "originalTree": "fd2b561df769eb7cd05a5b24810dc5354c9778ea",
+      "published": false,
+      "restoredFilesFingerprint": "5cc87889f89775ac544df521dfb6789ccc2314e6f875ea7f1492bb614545caa5",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/9b81f779b9cc98cdd721c97f060f9f8cafa43ceb",
+      "originalCommit": "9b81f779b9cc98cdd721c97f060f9f8cafa43ceb",
+      "originalTree": "970d79e1a0a337e627ab651f8f16e162e366f0b5",
+      "published": false,
+      "restoredFilesFingerprint": "f7eec30cce61db018853c9b2c949f9cdd4f1c67a9e192ed4a14fd1bfced5eb11",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/1209b99fb504d5015ad2202f561c84f857cab44e",
+      "originalCommit": "1209b99fb504d5015ad2202f561c84f857cab44e",
+      "originalTree": "32368c76d49dce6cedaa5102a7b3b1738cb6d6e4",
+      "published": false,
+      "restoredFilesFingerprint": "f7eec30cce61db018853c9b2c949f9cdd4f1c67a9e192ed4a14fd1bfced5eb11",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/76f6d79cfe9f016ccd9973965b6c68de4a544bde",
+      "originalCommit": "76f6d79cfe9f016ccd9973965b6c68de4a544bde",
+      "originalTree": "4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e",
+      "published": false,
+      "restoredFilesFingerprint": "3504d5fe283e769454834ba15e814fdb6972d578e7bef4c106a76b802d8d38f4",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/d3725a2e185c5e04069e053acfe7b3cd2e8df67a",
+      "originalCommit": "d3725a2e185c5e04069e053acfe7b3cd2e8df67a",
+      "originalTree": "15a718e0daa9f441fc4a76e523e4793e87bc40b6",
+      "published": false,
+      "restoredFilesFingerprint": "7cbd64028cf272273a37cb54f60460ebdc6de6903564c582988a81183623cf81",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/0d06c2f31f5bdbdc613c802fe595c9cfe0393057",
+      "originalCommit": "0d06c2f31f5bdbdc613c802fe595c9cfe0393057",
+      "originalTree": "244953898c6db9e61e71702cec0d7ce8da1cd6b7",
+      "published": false,
+      "restoredFilesFingerprint": "c18c94e433a683d5c4a3a22f9fb8aed82926d84c63a52a5e348c6b5837f6f71f",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/66975a887b903b121c4317d4497f0db83d9546d8",
+      "originalCommit": "66975a887b903b121c4317d4497f0db83d9546d8",
+      "originalTree": "6cda675213055a181f26aadeff457b40493b0b33",
+      "published": false,
+      "restoredFilesFingerprint": "0eca3b2cc1f973d303e0d45d2ab47bff57d410dc1651c32d683320768bfa5e58",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/f429df527fbb213c04f714c665e43949126739b7",
+      "originalCommit": "f429df527fbb213c04f714c665e43949126739b7",
+      "originalTree": "76c26c9ad2597c7e859be2956f9395c07f75fe75",
+      "published": false,
+      "restoredFilesFingerprint": "1b350f7d15ac9a02aeb3963c115fbbdf24bc6d2eced2c95fd12eec8475d55261",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/f558ee820b14da9543b9cb1a61da694e1b9422ad",
+      "originalCommit": "f558ee820b14da9543b9cb1a61da694e1b9422ad",
+      "originalTree": "a81291cfb57cbd6779f7dce349f4a792d431bc1d",
+      "published": false,
+      "restoredFilesFingerprint": "d368e5e1cef8e8193dc4d14054b757208c156d40a3882b872d59e08375432f18",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/7ab99221ecdafe4694b09b12242e8fbcf133c0c0",
+      "originalCommit": "7ab99221ecdafe4694b09b12242e8fbcf133c0c0",
+      "originalTree": "9e1ddf7620be9a1027c5027389309f54b9bf5679",
+      "published": false,
+      "restoredFilesFingerprint": "0240dbbeb3007b5f84799dc940e7382f6d8a2dddb1f5029a03388035d65a1394",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6d68d5737fc4968ba7e68852550042929f6b1e8b",
+      "originalCommit": "6d68d5737fc4968ba7e68852550042929f6b1e8b",
+      "originalTree": "4aa59cb0b7ebe91241838d17fa361dadd33400be",
+      "published": false,
+      "restoredFilesFingerprint": "118ba1efa09a6b69cc06ca66d172d927691b6476501109ddf164808ce1d10bb1",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/3c1d5cc7718cc139d004316be3bdf46e4360f7ea",
+      "originalCommit": "3c1d5cc7718cc139d004316be3bdf46e4360f7ea",
+      "originalTree": "0c51b84604a9f09dbc38adf85332eaa126754403",
+      "published": false,
+      "restoredFilesFingerprint": "118ba1efa09a6b69cc06ca66d172d927691b6476501109ddf164808ce1d10bb1",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/9fff22c0ae13c876bef60034ee46e4aeedfda2f6",
+      "originalCommit": "9fff22c0ae13c876bef60034ee46e4aeedfda2f6",
+      "originalTree": "6bc35e6867fa87a0f6e339688127e21e9f887664",
+      "published": false,
+      "restoredFilesFingerprint": "b56ecf16975e715121ad4172967628617c10e3d717330ed929f3d104f995727c",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/73a1cc82875e17a5e6fa5ec2325cb764dd967462",
+      "originalCommit": "73a1cc82875e17a5e6fa5ec2325cb764dd967462",
+      "originalTree": "b7b7093e61404d5bc716707d7b1d0723a2eb259e",
+      "published": false,
+      "restoredFilesFingerprint": "07105542e478bd5741ef21629de399d59f23e43878f3a1fa81e380b05823e3cd",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6ce8f8b619a5296b90446170218950ec8d16d3e3",
+      "originalCommit": "6ce8f8b619a5296b90446170218950ec8d16d3e3",
+      "originalTree": "2f029787846c2b52e14af89cfa57cf5b0ddaf48f",
+      "published": false,
+      "restoredFilesFingerprint": "b0aa6b35956d9a685583f2ff16e35e5e081624ad9e030e775a2ed01de8eab9ed",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/6bf599c01d6f92fa9809dfb753ac7a42dc85a2b9",
+      "originalCommit": "6bf599c01d6f92fa9809dfb753ac7a42dc85a2b9",
+      "originalTree": "e2e5b8fe893865e14a6034c2d58a17f9210a64df",
+      "published": false,
+      "restoredFilesFingerprint": "3693e510bf5b92d5d75f4c0edfcca21691e5b498a1fca4bda385a392af9e5833",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/b20a2bce816b58cae9d510bfdc390aaa2e4d73ec",
+      "originalCommit": "b20a2bce816b58cae9d510bfdc390aaa2e4d73ec",
+      "originalTree": "fa43f0fed2916f0f7d21a50ec61f1cd20111875c",
+      "published": false,
+      "restoredFilesFingerprint": "ff0495027f7751aeffe50dda09024fda6564693da4c2387ae957e0c43793e2bf",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/39356696f34ba87148a75f7ca6b8f808edf6303d",
+      "originalCommit": "39356696f34ba87148a75f7ca6b8f808edf6303d",
+      "originalTree": "76c32234a6944d6c2edf810df8c1db13de10c43c",
+      "published": false,
+      "restoredFilesFingerprint": "415bd7e226604089d87e90d414d648012d149097e84d44bf9f52151e56aa1e99",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupCompatibility": "unfinishedRefactorCompletion",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-refactor-completion-compatibility-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/38bba6a98d8a17324de69e30d7eee433da922962",
+      "originalCommit": "38bba6a98d8a17324de69e30d7eee433da922962",
+      "originalTree": "9141eb889fab0c0e2b062799f66facac274c39ed",
+      "published": false,
+      "restoredFilesFingerprint": "8391569b12d7346b8b701fa62a657fbe9195bbe700745cf593e23f8f3c09185c",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupCompatibility": "unfinishedRefactorCompletion",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-refactor-completion-compatibility-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/e43a91c0533f3ded4b560e92b0d735fc3613e8bf",
+      "originalCommit": "e43a91c0533f3ded4b560e92b0d735fc3613e8bf",
+      "originalTree": "d0f62efbb7e00916d3de43f78ff56f9722394488",
+      "published": false,
+      "restoredFilesFingerprint": "c77f0368eee8db1c0b144f6c5b3dd94ffc86210e05781aa713612b1532251a0f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/66ddef19cbebe949241a650f370744d7ba493b64",
+      "originalCommit": "66ddef19cbebe949241a650f370744d7ba493b64",
+      "originalTree": "3a4dfd70ac2ef1df5d52366fc5247f7e58dc7ea9",
+      "published": false,
+      "restoredFilesFingerprint": "c77f0368eee8db1c0b144f6c5b3dd94ffc86210e05781aa713612b1532251a0f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/42d793141f8206b0d6bbd3503b8b84d6e7a50e97",
+      "originalCommit": "42d793141f8206b0d6bbd3503b8b84d6e7a50e97",
+      "originalTree": "2e426b860681f7eb2c9051fd68433f7e0279948f",
+      "published": false,
+      "restoredFilesFingerprint": "a6f28f589e9ea1461ff2fc577f5c4840e48f98509c2a8d5d3fa746f955a886c4",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/db8ad1fc44af8f117e42c0853b2a2b57d01df8b2",
+      "originalCommit": "db8ad1fc44af8f117e42c0853b2a2b57d01df8b2",
+      "originalTree": "051d91e7ffb68561e15d446cd526f05a8cef0216",
+      "published": false,
+      "restoredFilesFingerprint": "942ae2cb6f03563371b0285feeb1b2c571a8dcfaea5b8523e617d54e0ef67b02",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
     },
     {
       "evidence": "recovery/evidence/2565fadfd42ef79564159dbea40ec7c47c1a57f0",
@@ -1620,11 +2689,10 @@
   "status": "in-progress",
   "targetCommitCount": 367,
   "targetTreeCount": 365,
-  "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "validatedCommitCount": 150,
-  "validatedEditorCommitCount": 6,
-  "validatedEditorTreeCount": 6,
-  "validatedGameCommitCount": 144,
-  "validatedGameTreeCount": 144,
-  "validatedTreeCount": 150
+  "validatedCommitCount": 254,
+  "validatedEditorCommitCount": 11,
+  "validatedEditorTreeCount": 11,
+  "validatedGameCommitCount": 243,
+  "validatedGameTreeCount": 243,
+  "validatedTreeCount": 254
 }

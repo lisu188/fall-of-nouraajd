@@ -1,0 +1,111 @@
+
+=== forwardingHeaders ===
+{
+  "forwarders": {
+    "src/buildings/cave.h": {
+      "includes": [
+        "src/buildings/building.h"
+      ],
+      "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+    },
+    "src/buildings/dungeon.h": {
+      "includes": [
+        "src/buildings/building.h"
+      ],
+      "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+    },
+    "src/buildings/teleporter.h": {
+      "includes": [
+        "src/buildings/building.h"
+      ],
+      "sha256": "a4268866119cda7b9b2eae9dc96cb9072377578629881d875267e664bf273683"
+    },
+    "src/items/armor.h": {
+      "includes": [
+        "src/items/item.h",
+        "src/interactions/interaction.h"
+      ],
+      "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+    },
+    "src/items/belt.h": {
+      "includes": [
+        "src/items/item.h"
+      ],
+      "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+    },
+    "src/items/boots.h": {
+      "includes": [
+        "src/items/item.h"
+      ],
+      "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+    },
+    "src/items/gloves.h": {
+      "includes": [
+        "src/items/item.h"
+      ],
+      "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+    },
+    "src/items/helmet.h": {
+      "includes": [
+        "src/items/item.h"
+      ],
+      "sha256": "b03e2d6bbd5d3b6d635a0aec548d1b8f09c9c7faf486e8fcde1a1a59773d67d5"
+    },
+    "src/items/smallweapon.h": {
+      "includes": [
+        "src/items/item.h",
+        "src/interactions/interaction.h"
+      ],
+      "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+    },
+    "src/items/weapon.h": {
+      "includes": [
+        "src/items/item.h",
+        "src/interactions/interaction.h"
+      ],
+      "sha256": "6204049b20d916c8e81176073466f82293cd50e4b4acc37ca4263b4d2c8d48e7"
+    },
+    "src/pathfinder/dumbpathfinder.h": {
+      "includes": [
+        "src/pathfinder/pathfinder.h"
+      ],
+      "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+    },
+    "src/pathfinder/randompathfinder.h": {
+      "includes": [
+        "src/pathfinder/pathfinder.h"
+      ],
+      "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+    },
+    "src/pathfinder/smartpathfinder.h": {
+      "includes": [
+        "src/pathfinder/pathfinder.h"
+      ],
+      "sha256": "613066213757a906c332a4487fa76001e154f70089a105b67986220450ae4a02"
+    },
+    "src/stats/damage.h": {
+      "includes": [
+        "src/stats/stats.h"
+      ],
+      "sha256": "0906ce468c8de13ca4a38605fbb30660e8385563639d2191a92112b562960cfd"
+    }
+  },
+  "inputs": {
+    "src/buildings/building.h": "102b07e24a3f7d4be7fbf31ab900ad7dd886838d6bd20c7f134c496220a07967",
+    "src/creatures/creature.h": "30d92e586109a7a5c29bb11310b634b5123e41391d41a2afbf06660a39f827c5",
+    "src/creatures/monster.cpp": "18742dbfecd4e6988fba3195b6cb7afb29abbd9e8e5194d53d3783589582da70",
+    "src/interactions/interaction.h": "19085596af03c3fd9f6399dc57b43b41d5e627bdca6ba803116a5a77e283c0e7",
+    "src/items/item.h": "9c8004f44df254caf6df774149dcd7062c1ef015fd5a0147ef14ad42a092c3db",
+    "src/main.cpp": "43c3b43b1ce639f8aba3c524230058b212f85bcef60fcadbb22b2bc2e6a017ff",
+    "src/pathfinder/pathfinder.h": "3455f3b943ce96f8c1d9882742fe1d6d6144ab6e054db963163aaae26b897743",
+    "src/stats/stats.h": "462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef",
+    "src/view/playerstatsview.cpp": "65063f51e5ab546d0c60c5d176435f7cfb6d9273a98912b9baaa43e19cda1fd5"
+  },
+  "provenance": {
+    "includeFixCommit": "09df518e2037d12f912da6c774635a91c886c097",
+    "operation": "Supply each header the unchanged original sources still include as a forwarder to the header that now declares the same classes, carrying the include set of the #179 header it replaces"
+  },
+  "replaySha256": "deaad6b6505d1a4098fb07380d7cd943b740cf62d2adc5e03564b1ac1d067b20",
+  "state": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
+  "validationBoundary": "Game startup with build-only forwarding headers for headers an original refactor merged away while its unchanged sources still include them; original sources unchanged"
+}

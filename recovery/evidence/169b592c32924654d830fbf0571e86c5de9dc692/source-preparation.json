@@ -90,7 +90,7 @@
         "history_source_prep.py",
         "prepare-coordinates-hash"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-e17q_9ya/preparation/coordinates-hash.log",
+      "log": "/home/user/work2/verify/snapshot-zv2v0ji7/preparation/coordinates-hash.log",
       "name": "coordinatesHash",
       "returnCode": 0,
       "timedOut": false
@@ -100,7 +100,7 @@
         "history_source_prep.py",
         "normalize-quoted-includes"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-e17q_9ya/preparation/include-separators.log",
+      "log": "/home/user/work2/verify/snapshot-zv2v0ji7/preparation/include-separators.log",
       "name": "windowsIncludeSeparators",
       "returnCode": 0,
       "timedOut": false

@@ -73,6 +73,36 @@ class RecoveryReadmeTest(unittest.TestCase):
         self.assertEqual("startup.png", metadata["smoke"]["startup"]["frame"]["path"])
         self.assertEqual("/original/build/startup.png", self.report["smoke"]["startup"]["frame"]["path"])
 
+    def testConsoleShutdownIsDescribedOnlyForTheReviewedOriginalLoop(self):
+        from scripts import verify_history
+
+        self.assertNotIn(b"Shutdown used", snapshotDocumentation(self.report, self.evidence)["README.md"])
+        shutdown = {
+            "mode": "closeWindowAndJoinConsole",
+            "main": {"path": "src/main.cpp", "sha256": "d" * 64},
+            "consoleLoopSha256": hashlib.sha256(verify_history.CONSOLE_LOOP).hexdigest(),
+            "consoleLoopSource": dict(verify_history.CONSOLE_LOOP_SOURCE),
+            "validationBoundary": verify_history.CONSOLE_SHUTDOWN_BOUNDARY,
+        }
+        self.report["adapter"] = {"mode": "game", "shutdown": shutdown}
+        with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.report["smoke"]["stdin"] = "open and silent until the readiness report"
+        readme = snapshotDocumentation(self.report, self.evidence)["README.md"].decode()
+        self.assertIn("closed the game window as a player would", readme.replace("\n", " "))
+        self.assertIn("open and silent, like an idle console", readme.replace("\n", " "))
+        shutdown["consoleLoopSha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
+            snapshotDocumentation(self.report, self.evidence)
+        shutdown["consoleLoopSha256"] = hashlib.sha256(verify_history.CONSOLE_LOOP).hexdigest()
+        shutdown["main"]["sha256"] = "not-a-hash"
+        with self.assertRaisesRegex(VerificationError, "console main fingerprint"):
+            snapshotDocumentation(self.report, self.evidence)
+        shutdown["main"]["sha256"] = "d" * 64
+        self.report["adapter"]["mode"] = "editor"
+        with self.assertRaisesRegex(VerificationError, "reviewed original console loop"):
+            snapshotDocumentation(self.report, self.evidence)
+
     def reflectionReport(self):
         helper = history_source_prep.reflection_prep
         compatibility = {
@@ -282,6 +312,278 @@ class RecoveryReadmeTest(unittest.TestCase):
             workbench.progress()
             progress = json.loads((repository / "recovery/progress.json").read_text())
             self.assertEqual(0, progress["validatedCommitCount"])
+
+    def aliasReport(self):
+        helper = history_source_prep.aliases_prep
+        compatibility = {
+            "aliases": {
+                target: {"source": source, "sha256": helper.INPUTS[source]}
+                for target, source in sorted(helper.ALIASES.items())
+            },
+            "inputs": helper.INPUTS,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {"path": target, "before": None, "after": {"kind": "file", "sha256": helper.INPUTS[source]}}
+            for target, source in sorted(helper.ALIASES.items())
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "resourceAliases",
+                    "command": ["prepare-resource-aliases"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "resourceAliases": compatibility, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "renamedResourceAliases"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Supplied manifest-named resource aliases\n")
+        return helper
+
+    def testResourceAliasCompatibilityHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.aliasReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_resource_aliases.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("The original manifest, sources and images remain unchanged.", readme)
+        self.assertIn("python3 recovery/prepare_resource_aliases.py", readme)
+
+    def testResourceAliasCompatibilityRejectsChangedInputsOutputsAndLabels(self):
+        helper = self.aliasReport()
+        metadata = self.report["sourcePreparation"]["identity"]["resourceAliases"]
+        original = dict(metadata["inputs"])
+        metadata["inputs"] = {**original, "creatures.qrc": "0" * 64}
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        metadata["inputs"] = original
+        target = sorted(helper.ALIASES)[0]
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = helper.INPUTS[helper.ALIASES[target]]
+        self.report["startupCompatibility"] = None
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def conflictReport(self):
+        helper = history_source_prep.conflicts_prep
+        files = {
+            name: {"beforeSha256": digest, "afterSha256": hashlib.sha256(name.encode()).hexdigest()}
+            for name, digest in sorted(helper.INPUTS.items())
+        }
+        recorded = {
+            "files": files,
+            "supplied": {helper.SUPPLIED_PATH: {"sha256": helper.SUPPLIED_SHA256, "sourceCommit": helper.SUPPLIED_COMMIT}},
+            "side": helper.SIDE,
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {
+                "path": name,
+                "before": {"kind": "file", "sha256": hashes["beforeSha256"]},
+                "after": {"kind": "file", "sha256": hashes["afterSha256"]},
+            }
+            for name, hashes in files.items()
+        ]
+        outputs.append(
+            {"path": helper.SUPPLIED_PATH, "before": None, "after": {"kind": "file", "sha256": helper.SUPPLIED_SHA256}}
+        )
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "conflictResolution",
+                    "command": ["resolve-whitespace-conflicts"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "conflictResolution": recorded, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "whitespaceConflictResolution"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Resolved whitespace-only conflict hunks\n")
+        return helper
+
+    def testConflictResolutionHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.conflictReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_conflict_resolution.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("in every hunk both sides differ only in whitespace", readme)
+        self.assertIn("python3 recovery/prepare_conflict_resolution.py", readme)
+        self.assertIn("also omitted `pathfinder/pathfindercache.cpp`", readme)
+
+    def testConflictResolutionRejectsChangedInputsOutputsAndSide(self):
+        helper = self.conflictReport()
+        recorded = self.report["sourcePreparation"]["identity"]["conflictResolution"]
+        recorded["side"] = "HEAD"
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        recorded["side"] = helper.SIDE
+        first = sorted(helper.INPUTS)[0]
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = recorded["files"][first]["afterSha256"]
+        recorded["files"][first]["beforeSha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def forwarderReport(self):
+        helper = history_source_prep.forwarders_prep
+        state = sorted(helper.STATES)[0]
+        names = helper.STATES[state]["forwarders"]
+        forwarders = {
+            name: {
+                "includes": list(helper.FORWARDERS[name]),
+                "sha256": hashlib.sha256(helper.forwarderBytes(name)).hexdigest(),
+            }
+            for name in names
+        }
+        recorded = {
+            "state": state,
+            "forwarders": forwarders,
+            "inputs": {**helper.INCLUDERS, **helper.STATES[state]["targets"]},
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {"path": name, "before": None, "after": {"kind": "file", "sha256": forwarders[name]["sha256"]}}
+            for name in names
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "forwardingHeaders",
+                    "command": ["prepare-forwarding-headers"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "forwardingHeaders": recorded, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "mergedHeaderForwarders"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Created forwarding headers\n")
+        return helper
+
+    def refactorReport(self):
+        helper = history_source_prep.refactor_prep
+        state = sorted(helper.STATES)[0]
+        files = {
+            name: {
+                "beforeSha256": spec["sha256"],
+                "afterSha256": hashlib.sha256(name.encode()).hexdigest(),
+                "lines": [list(line) for line in spec["lines"]],
+            }
+            for name, spec in helper.STATES[state].items()
+        }
+        recorded = {
+            "state": state,
+            "files": files,
+            "context": helper.CONTEXT[state],
+            "provenance": helper.PROVENANCE,
+            "validationBoundary": helper.BOUNDARY,
+            "replaySha256": hashlib.sha256(Path(helper.__file__).read_bytes()).hexdigest(),
+        }
+        outputs = [
+            {
+                "path": name,
+                "before": {"kind": "file", "sha256": entry["beforeSha256"]},
+                "after": {"kind": "file", "sha256": entry["afterSha256"]},
+                "purpose": "unfinished-refactor lines completed with the developer's own following lines",
+            }
+            for name, entry in sorted(files.items())
+        ]
+        preparation = {
+            "status": "success",
+            "steps": [
+                {
+                    "name": "refactorCompletion",
+                    "command": ["complete-unfinished-refactor-lines"],
+                    "returnCode": 0,
+                    "timedOut": False,
+                }
+            ],
+            "outputs": outputs,
+            "identity": {"implementationSha256": "d" * 64, "refactorCompletion": recorded, "outputs": outputs},
+        }
+        self.report["sourcePreparation"] = preparation
+        self.report["startupCompatibility"] = "unfinishedRefactorCompletion"
+        self.report["startupSelection"] = {"mode": "game", "boundary": helper.BOUNDARY}
+        (self.evidence / "source-preparation.json").write_text(json.dumps(preparation))
+        (self.evidence / "source-preparation.log").write_text("Completed the unfinished refactor lines\n")
+        return helper
+
+    def testRefactorCompletionHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.refactorReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_refactor_completion.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("developer's own line from", readme)
+        self.assertIn("python3 recovery/prepare_refactor_completion.py", readme)
+
+    def testRefactorCompletionRejectsChangedLinesOutputsAndState(self):
+        self.refactorReport()
+        recorded = self.report["sourcePreparation"]["identity"]["refactorCompletion"]
+        first = sorted(recorded["files"])[0]
+        lines = recorded["files"][first]["lines"]
+        recorded["files"][first]["lines"] = [[old, "changed", source] for old, _new, source in lines]
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs, lines"):
+            snapshotDocumentation(self.report, self.evidence)
+        recorded["files"][first]["lines"] = lines
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        self.refactorReport()
+        self.report["sourcePreparation"]["identity"]["refactorCompletion"]["state"] = "f" * 40
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs, lines"):
+            snapshotDocumentation(self.report, self.evidence)
+
+    def testForwarderCompatibilityHasExplicitBoundaryAndPortableCommand(self):
+        helper = self.forwarderReport()
+        files = snapshotDocumentation(self.report, self.evidence)
+        self.assertEqual(Path(helper.__file__).read_bytes(), files["recovery/prepare_forwarding_headers.py"])
+        readme = files["README.md"].decode()
+        self.assertIn("Each forwarder only", readme)
+        self.assertIn("python3 recovery/prepare_forwarding_headers.py", readme)
+
+    def testForwarderCompatibilityRejectsChangedInputsOutputsAndState(self):
+        helper = self.forwarderReport()
+        recorded = self.report["sourcePreparation"]["identity"]["forwardingHeaders"]
+        original = recorded["inputs"]
+        recorded["inputs"] = {**original, "src/main.cpp": "0" * 64}
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
+        recorded["inputs"] = original
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(VerificationError, "exact preparation fingerprints"):
+            snapshotDocumentation(self.report, self.evidence)
+        first = self.report["sourcePreparation"]["outputs"][0]["path"]
+        self.report["sourcePreparation"]["outputs"][0]["after"]["sha256"] = recorded["forwarders"][first]["sha256"]
+        recorded["state"] = "f" * 40
+        with self.assertRaisesRegex(VerificationError, "reviewed original inputs"):
+            snapshotDocumentation(self.report, self.evidence)
 
     def resourceReport(self):
         resource = (

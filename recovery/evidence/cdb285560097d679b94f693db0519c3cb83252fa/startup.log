@@ -1,0 +1,56 @@
+Loaded configuration: :/config/init.json 
+
+process 299: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: :/config/map.json 
+
+Loaded configuration: :/config/tiles.json 
+
+Loaded animation: :/images/tiles/road/ 
+
+Loaded configuration: :/config/items.json 
+
+Loaded animation: :/images/buildings/cave/ 
+
+Loaded animation: :/images/buildings/dungeon/ 
+
+Loaded animation: :/images/buildings/teleporter/ 
+
+Loaded configuration: :/config/interactions.json 
+
+Loaded configuration: :/config/creatures.json 
+
+Loaded animation: :/images/players/assasin/ 
+
+Loaded animation: :/images/interactions/attack/ 
+
+Loaded animation: :/images/interactions/sneakattack/ 
+
+Loaded configuration: :/images/monsters/pritz/time.json 
+
+Loaded animation: :/images/monsters/pritz/ 
+
+Loaded configuration: :/images/monsters/pritzmage/time.json 
+
+Loaded animation: :/images/monsters/pritzmage/ 
+
+Loaded animation: :/images/players/sorcerer/ 
+
+Loaded animation: :/images/interactions/magicmissile/ 
+
+Loaded animation: :/images/players/warrior/ 
+
+Loaded animation: :/images/interactions/strike/ 
+
+Loaded animation: :/images/tiles/grass/ 
+
+Loaded animation: :/images/tiles/ground/ 
+
+Loaded animation: :/images/tiles/mountain/ 
+
+Loaded animation: :/images/tiles/water/ 
+
+Loaded animation: :/images/arrows/right/ 
+
+Loaded animation: :/images/arrows/left/ 
+

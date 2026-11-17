@@ -1,6 +1,6 @@
 Loaded configuration: :/config/init.json 
 
-process 367: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+process 368: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
 See the manual page for dbus-uuidgen to correct this issue.
 Loaded configuration: :/config/map.json 
 
@@ -29,6 +29,26 @@ Loaded animation: :/images/buildings/dungeon/
 Loaded configuration: :/config/creatures.json 
 
 Loaded animation: :/images/buildings/teleporter/ 
+
+Loaded animation: :/images/players/assasin/ 
+
+Loaded configuration: :/images/monsters/octobogz/time.json 
+
+Loaded animation: :/images/monsters/octobogz/ 
+
+Loaded configuration: :/images/monsters/pritz/time.json 
+
+Loaded animation: :/images/monsters/pritz/ 
+
+Loaded animation: :/images/players/sorcerer/ 
+
+Loaded animation: :/images/players/warrior/ 
+
+Loaded animation: :/images/tiles/grass/ 
+
+Loaded animation: :/images/tiles/ground/ 
+
+Loaded animation: :/images/tiles/water/ 
 
 Loaded animation: :/images/arrows/right/ 
 

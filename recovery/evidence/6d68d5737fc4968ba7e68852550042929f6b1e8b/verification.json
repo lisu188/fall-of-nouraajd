@@ -1,0 +1,1148 @@
+{
+  "adapter": {
+    "config": "/home/user/work2/verify/snapshot-3xqh238a/observer/recovery_smoke_config.h",
+    "configSha256": "065754a172af408cbfed11109d53ef9932a1672af6edfcbcf8af9f9faa32f3d0",
+    "id": "classic-3d",
+    "mode": "game",
+    "overlays": [],
+    "shutdown": {
+      "consoleLoopSha256": "89a370cf6e2f1161302383ecc497db3db01f79bed663d17177b66c737bfcdc58",
+      "consoleLoopSource": {
+        "commit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+        "path": "src/main.cpp",
+        "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
+      },
+      "main": {
+        "path": "src/main.cpp",
+        "sha256": "5827a34372fe0e966d77748f83bc0c9ab46fb0594fa4593b063e53eab48ccd7a"
+      },
+      "mode": "closeWindowAndJoinConsole",
+      "validationBoundary": "After the first frame and readiness report, the observer closes the game window as a player would and waits for the original stdin script console thread to stop before exiting; stdin stays open and silent, like an idle console, until that report and then reaches end of file; sources are unchanged"
+    },
+    "source": "/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
+  },
+  "artifactDir": "/home/user/work2/verify/snapshot-3xqh238a/smoke",
+  "build": {
+    "command": [
+      "make",
+      "-j4"
+    ],
+    "log": "/home/user/work2/verify/snapshot-3xqh238a/build.log",
+    "returnCode": 0,
+    "seconds": 13.474,
+    "timedOut": false
+  },
+  "configure": {
+    "command": [
+      "qmake",
+      "/home/user/work2/verify/snapshot-3xqh238a/source/Game.pro",
+      "-o",
+      "/home/user/work2/verify/snapshot-3xqh238a/build/Makefile",
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional",
+      "-after",
+      "TARGET=RecoveryGame",
+      "DESTDIR=.",
+      "CONFIG-=app_bundle",
+      "SOURCES+=/home/user/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-3xqh238a/source",
+      "INCLUDEPATH+=/home/user/work2/verify/snapshot-3xqh238a/observer"
+    ],
+    "log": "/home/user/work2/verify/snapshot-3xqh238a/configure.log",
+    "returnCode": 0,
+    "seconds": 0.064,
+    "timedOut": false
+  },
+  "evidenceDir": "/home/user/work2/verify/evidence/e661857aef65184e750ed4d6df7c6deccfd1bdb5860d957f4e13f8ed0d5af298",
+  "fileLookup": {
+    "command": [
+      "g++-5",
+      "-shared",
+      "-fPIC",
+      "-O2",
+      "-std=c++11",
+      "-o",
+      "/home/user/work2/verify/snapshot-3xqh238a/observer/libwindowspaths.so",
+      "/home/user/fall-of-nouraajd/recovery/smoke/windows_paths.cpp",
+      "-ldl"
+    ],
+    "log": "/home/user/work2/verify/snapshot-3xqh238a/file-lookup.log",
+    "returnCode": 0,
+    "seconds": 0.215,
+    "semantics": "Windows-style case-insensitive file lookup for the game process",
+    "timedOut": false
+  },
+  "fingerprint": "e661857aef65184e750ed4d6df7c6deccfd1bdb5860d957f4e13f8ed0d5af298",
+  "libraryAliases": {
+    "aliases": {},
+    "directory": "/home/user/work2/verify/snapshot-3xqh238a/observer/library-aliases"
+  },
+  "project": "Game.pro",
+  "recipe": {
+    "compilerCommand": "g++-5",
+    "environment": {
+      "CPATH": "/opt/recovery/boost/py33/include:/opt/recovery/python/3.3.7/include/python3.3m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "LIBRARY_PATH": "/opt/recovery/boost/py33/lib:/opt/recovery/python/3.3.7/lib",
+      "PATH": "/opt/recovery/python/3.3.7/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.3.7",
+      "QT_OPENGL": "software",
+      "QT_X11_NO_MITSHM": "1"
+    },
+    "id": "qt5-python33",
+    "makeCommand": "make",
+    "pythonAbi": "3.3",
+    "qmakeArguments": [
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "QMAKE_CXXFLAGS+=-include functional"
+    ],
+    "qmakeCommand": "qmake",
+    "toolchainLock": {
+      "compatibility": [
+        "The original MinGW 4.8/Qt 5.2 headers made <functional> available transitively (several historical headers use std::function without including it); libstdc++ 5 does not, so every recipe force-includes <functional>."
+      ],
+      "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+      "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+      "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+      "schemaVersion": 1,
+      "sourceLock": "recovery/toolchains/sources.json",
+      "sourceLockSha256": "d94f274c60a4bd52aaeedfe01bc5d3e4a116c5181443def07ce6edd59c14d10f"
+    }
+  },
+  "restoration": {
+    "excluded": [
+      {
+        "markerPath": ".cproject.REMOVED.git-id",
+        "originalBlob": "c3f651c7df138658ffb46b789e10e68cfcbca966",
+        "path": ".cproject",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "7za.exe.REMOVED.git-id",
+        "originalBlob": "bd30a5167ed65d30b32e96536d50d2947fb04be3",
+        "path": "7za.exe",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "Game.pro.user.REMOVED.git-id",
+        "originalBlob": "b9c3a3e4d48892f8074c3295b8ab91ab6905bbb8",
+        "path": "Game.pro.user",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "Game.pro.user.f159572.REMOVED.git-id",
+        "originalBlob": "5ec2cfd933e698d5ceb4916323b834b9a562747c",
+        "path": "Game.pro.user.f159572",
+        "reason": "machine-specific IDE state"
+      },
+      {
+        "markerPath": "libraries/Qt5Core.dll.REMOVED.git-id",
+        "originalBlob": "9f72f4b70b102f538737131c1ac56c6156182c62",
+        "path": "libraries/Qt5Core.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Gui.dll.REMOVED.git-id",
+        "originalBlob": "4cdea0da2c57df0e40ff22a4f9d9fdb294acfefb",
+        "path": "libraries/Qt5Gui.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5OpenGL.dll.REMOVED.git-id",
+        "originalBlob": "51d7e55848f244e8d896bbec79b39c777f4b8fe3",
+        "path": "libraries/Qt5OpenGL.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/Qt5Widgets.dll.REMOVED.git-id",
+        "originalBlob": "30a4e9bd3bf8c82bf54eeee355b09b64b8726f50",
+        "path": "libraries/Qt5Widgets.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icudt52.dll.REMOVED.git-id",
+        "originalBlob": "fea36e8be4fec5a21b43d665d3dad680ad6bd714",
+        "path": "libraries/icudt52.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icuin52.dll.REMOVED.git-id",
+        "originalBlob": "1e11145337b3105a2860beb158edcebb16b98010",
+        "path": "libraries/icuin52.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/icuuc52.dll.REMOVED.git-id",
+        "originalBlob": "7df98402a98212d150a8f9f3e4073b71397b6156",
+        "path": "libraries/icuuc52.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libgcc_s_dw2-1.dll.REMOVED.git-id",
+        "originalBlob": "09aa39826d16d8a9381f0060230a2d20fc2b3880",
+        "path": "libraries/libgcc_s_dw2-1.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libstdc++-6.dll.REMOVED.git-id",
+        "originalBlob": "eccc00595085e96ea3fd6aeb891ed51565014c82",
+        "path": "libraries/libstdc++-6.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/libwinpthread-1.dll.REMOVED.git-id",
+        "originalBlob": "4ea37b2b12bba35d4a7db8f232f6dd3353f48bc0",
+        "path": "libraries/libwinpthread-1.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "libraries/platforms/qwindows.dll.REMOVED.git-id",
+        "originalBlob": "0af856f538b2a169168a1bf7f6346d3fe0737961",
+        "path": "libraries/platforms/qwindows.dll",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "scripts/hashlib.pyc.REMOVED.git-id",
+        "originalBlob": "d9265285cc7f4e3befe6d3306e57b6a397321783",
+        "path": "scripts/hashlib.pyc",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "scripts/random.pyc.REMOVED.git-id",
+        "originalBlob": "36f626e4760e31cb23c65849ad5375c507dfcc97",
+        "path": "scripts/random.pyc",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "scripts/types.pyc.REMOVED.git-id",
+        "originalBlob": "a350d2f06c52bd9fac56c5ae45a8667255925ee1",
+        "path": "scripts/types.pyc",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      },
+      {
+        "markerPath": "scripts/warnings.pyc.REMOVED.git-id",
+        "originalBlob": "9827c41ae66dee6a26767b5f440bd6d8283614d4",
+        "path": "scripts/warnings.pyc",
+        "reason": "generated binary, redistributable, or packaged artifact"
+      }
+    ],
+    "outputDir": "/home/user/work2/verify/snapshot-3xqh238a/source",
+    "restored": [
+      {
+        "markerPath": "Game.pro.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "7355f2394e6c7ac63dbb5489ba8c0fef9f6be84c",
+        "path": "Game.pro",
+        "provenance": "content reconstruction of the BFG-removed original; #216 'unix compatibility' project: the #215 project plus the unix Python linkage in the developer's later surviving form (-L/lib64/ -lpython3.3m and /usr/include/python3.3m, as at 1b30a291/e4a4821f), the Fedora CPython beside the Windows C:/Python34 (inference)",
+        "replacementBlob": "79bdd40a7ad18d51cb8180cde43e9b18e3ef968e"
+      },
+      {
+        "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "41a50c87bd079c82680581fb517b23a993bcdab7",
+        "path": "lib/base64/base64.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "50006d4f36e0b37d7c2aba3e2706dd427734dafb"
+      },
+      {
+        "markerPath": "lib/json/json_batchallocator.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "c2e32b9143d6b396973f1c43b810f28c4fd0957c",
+        "path": "lib/json/json_batchallocator.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "87ea5ed80785bb82eda9ae4df1177bc58e1f0c41"
+      },
+      {
+        "markerPath": "lib/json/json_internalarray.inl.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "9b985d2585faf61a4ca8a3a556dff7aa4ff6a48c",
+        "path": "lib/json/json_internalarray.inl",
+        "replacementBlob": "9b985d2585faf61a4ca8a3a556dff7aa4ff6a48c"
+      },
+      {
+        "markerPath": "lib/json/json_internalmap.inl.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "19771488d6b632c7e627d005439a025f5b739f75",
+        "path": "lib/json/json_internalmap.inl",
+        "replacementBlob": "19771488d6b632c7e627d005439a025f5b739f75"
+      },
+      {
+        "markerPath": "lib/json/json_reader.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "7cfd17d7b40fe21126f7c0a24a1de0750516fce3",
+        "path": "lib/json/json_reader.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "1b1d86edd91192a9e4ac5b2704d2dea28a665ce8"
+      },
+      {
+        "markerPath": "lib/json/json_value.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "2f0ef54467871c888bf16774f48f0f58912dcf2f",
+        "path": "lib/json/json_value.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved jsoncpp to lib/json and deleted its json_*.inl files; restored with the native-verified #179 upstream json_value.cpp with json_valueiterator.inl inlined at its include point (the internal-map .inl includes stay behind the undefined JSON_VALUE_USE_INTERNAL_MAP), includes rewritten to lib/ (inference)",
+        "replacementBlob": "ccc9a541cb1b7630d15e7929666dc6dd86772ef2"
+      },
+      {
+        "markerPath": "lib/json/json_valueiterator.inl.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "736e260ea0371cd762ebafc84e1b2a0769feff23",
+        "path": "lib/json/json_valueiterator.inl",
+        "replacementBlob": "736e260ea0371cd762ebafc84e1b2a0769feff23"
+      },
+      {
+        "markerPath": "lib/json/json_writer.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "2b3e1f42f7d997ead176d13ff5f50be463945e0c",
+        "path": "lib/json/json_writer.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "20931e8d36887416009fa3e5eefd685cc27f64fb"
+      },
+      {
+        "markerPath": "lib/json/reader.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "30ff25cc62d2dd6c3c3d06a6e126688c4a9775ca",
+        "path": "lib/json/reader.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818"
+      },
+      {
+        "markerPath": "lib/json/value.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "52ac7f41ad62b4a904abe3a44ffec73ee0841031",
+        "path": "lib/json/value.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5"
+      },
+      {
+        "markerPath": "lib/json/writer.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "5de428fdd451fc31d49759edeea7ea1bbf8a556d",
+        "path": "lib/json/writer.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "98c613957f29174649c620f16c67fa001989a613"
+      },
+      {
+        "markerPath": "lib/tinyxml/tinystr.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "128c9c3660e252f936471b322c96f154bfcbca81",
+        "path": "lib/tinyxml/tinystr.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "74b6b7e8150d6cd516a1b1450f3f66333e70bcc1"
+      },
+      {
+        "markerPath": "lib/tinyxml/tinyxml.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "e9351fed3dc2c1677fb6f0a917b13f4b67785e1d",
+        "path": "lib/tinyxml/tinyxml.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "9be6c6a66c3e357784c10541eca82ba64a715f28"
+      },
+      {
+        "markerPath": "lib/tinyxml/tinyxml.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "a0e9a5a5177614d8b0db293de2390162444c9ce3",
+        "path": "lib/tinyxml/tinyxml.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "01822911c75d4abb27e6d53b74ca053a6e3d3e94"
+      },
+      {
+        "markerPath": "lib/tinyxml/tinyxmlparser.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "e74ab282971aef03da2770d13feb5f6dd5bb6972",
+        "path": "lib/tinyxml/tinyxmlparser.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "666a4f757c4040247444d5fc3f3231d2efea7e21"
+      },
+      {
+        "markerPath": "lib/tmx/TmxLayer.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "466a85646e640b0180f36161024f3fa37fb87ece",
+        "path": "lib/tmx/TmxLayer.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "d997347fb3152908b5507db7021b4e005b71365e"
+      },
+      {
+        "markerPath": "lib/tmx/TmxLayer.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "761c80d541795423f1461f53c69019c0471767b0",
+        "path": "lib/tmx/TmxLayer.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba"
+      },
+      {
+        "markerPath": "lib/tmx/TmxMap.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "32ee50935909169facb4e0fa525c79c750e74946",
+        "path": "lib/tmx/TmxMap.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "a8e3a6ad413ceb367d599ab27e13587b0a0155e5"
+      },
+      {
+        "markerPath": "lib/tmx/TmxMap.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "5b6a0bf8babff3f266b322c77e9dafec5951e7fe",
+        "path": "lib/tmx/TmxMap.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5"
+      },
+      {
+        "markerPath": "lib/tmx/TmxObject.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "41448b96d7c0a16fe6d3a6ed356849010bf07996",
+        "path": "lib/tmx/TmxObject.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "8f4c511b4fc44a4c8812125d739f0c7162e04ca4"
+      },
+      {
+        "markerPath": "lib/tmx/TmxTileset.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "dd6a6b6abf936c6153b3ceb53097347942155d2a",
+        "path": "lib/tmx/TmxTileset.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "f9d1d2aca8d9769693ab6eb8c3471dfef02554c5"
+      },
+      {
+        "markerPath": "lib/zlib/adler32.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "221faa7f05440b2bc0fac2cbf753d9cc43576c52",
+        "path": "lib/zlib/adler32.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b"
+      },
+      {
+        "markerPath": "lib/zlib/crc32.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "125ff2b5f893bc42739f3d165731f8d400745df7",
+        "path": "lib/zlib/crc32.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "91be372d224da6833c03bd24d7158ff622ece35f"
+      },
+      {
+        "markerPath": "lib/zlib/crc32.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5faf5dbadf0355642db78521a837700c31c65973",
+        "path": "lib/zlib/crc32.h",
+        "replacementBlob": "5faf5dbadf0355642db78521a837700c31c65973"
+      },
+      {
+        "markerPath": "lib/zlib/deflate.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "4af03ef7d47ecfa80f7165227f173056b0748be2",
+        "path": "lib/zlib/deflate.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec"
+      },
+      {
+        "markerPath": "lib/zlib/deflate.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "44ac5f0a9fb0ba3225b3d6532460882c071ba779",
+        "path": "lib/zlib/deflate.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169"
+      },
+      {
+        "markerPath": "lib/zlib/gzguts.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "7c53fae0f0dd52ad8075423fcdb3884bb9e307cf",
+        "path": "lib/zlib/gzguts.h",
+        "replacementBlob": "7c53fae0f0dd52ad8075423fcdb3884bb9e307cf"
+      },
+      {
+        "markerPath": "lib/zlib/gzlib.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8",
+        "path": "lib/zlib/gzlib.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf"
+      },
+      {
+        "markerPath": "lib/zlib/gzread.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "906fd04f04f4cea091f6b4a933cdd1832d532c7b",
+        "path": "lib/zlib/gzread.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "548201ab0099b51556da32c4873d1dbb2d211b5a"
+      },
+      {
+        "markerPath": "lib/zlib/gzwrite.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "d0c918100d6534de11bfc3511da72af5e15db5fc",
+        "path": "lib/zlib/gzwrite.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "e8defc6887a186055f17597968c4fc5791332811"
+      },
+      {
+        "markerPath": "lib/zlib/infback.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "4811377b743c73a86d64b8fb755c76a7394fe4f4",
+        "path": "lib/zlib/infback.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1"
+      },
+      {
+        "markerPath": "lib/zlib/inffast.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "b4cae5f9af95ab738df1f14196305790009abb33",
+        "path": "lib/zlib/inffast.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "2f1d60b43b8a9deacf22bb5526a979dcc219a68f"
+      },
+      {
+        "markerPath": "lib/zlib/inffixed.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "aa055479c833b2cc29f72b90fcc8daab2bfe3ffd",
+        "path": "lib/zlib/inffixed.h",
+        "replacementBlob": "aa055479c833b2cc29f72b90fcc8daab2bfe3ffd"
+      },
+      {
+        "markerPath": "lib/zlib/inflate.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "5ede1d8b5b260796db8fc7ea95dba13586f34e4f",
+        "path": "lib/zlib/inflate.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "a8431abeacffd97e5028a9e54135a5f173528960"
+      },
+      {
+        "markerPath": "lib/zlib/inflate.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "81e7aadd693847c3e26c6b150a1b644329cd0b2d",
+        "path": "lib/zlib/inflate.h",
+        "replacementBlob": "81e7aadd693847c3e26c6b150a1b644329cd0b2d"
+      },
+      {
+        "markerPath": "lib/zlib/inftrees.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "4b267038746863b42c3f5bac514ab6e41a905396",
+        "path": "lib/zlib/inftrees.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5"
+      },
+      {
+        "markerPath": "lib/zlib/trees.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "f0e1d5e28e028b93033a5a084fd0e778910cd0e2",
+        "path": "lib/zlib/trees.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "56e9bb1c115e81082f58a89b003b766760e12a12"
+      },
+      {
+        "markerPath": "lib/zlib/trees.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a02c374a765d2692ecc2126a27470bf7edd71e90",
+        "path": "lib/zlib/trees.h",
+        "replacementBlob": "a02c374a765d2692ecc2126a27470bf7edd71e90"
+      },
+      {
+        "markerPath": "lib/zlib/zconf.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0887384a9e011c293daad2893176af5d952e3c9b",
+        "path": "lib/zlib/zconf.h",
+        "replacementBlob": "0887384a9e011c293daad2893176af5d952e3c9b"
+      },
+      {
+        "markerPath": "lib/zlib/zlib.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "081a326445af070ceb0925f9c3e5622e18c1c910",
+        "path": "lib/zlib/zlib.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69"
+      },
+      {
+        "markerPath": "lib/zlib/zutil.c.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "5b2aa6e7d8061e22ba8af1406d3587d772e75143",
+        "path": "lib/zlib/zutil.c",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1"
+      },
+      {
+        "markerPath": "lib/zlib/zutil.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "d034fb80b68479356bb4327b9e3314423b59a607",
+        "path": "lib/zlib/zutil.h",
+        "provenance": "content reconstruction of the BFG-removed original; #180 moved the vendored library under lib/ (surviving files there rewrite their includes to <lib/...>); restored with the same upstream content the native-verified #179 tree uses, with includes of vendored headers rewritten to the lib/ prefix",
+        "replacementBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0"
+      },
+      {
+        "markerPath": "res/config/map.tmx.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "e8d6f32d9ce274c3dd482e40644c8b8392392881",
+        "path": "res/config/map.tmx",
+        "provenance": "content reconstruction of the BFG-removed original; #215 Tiled map: the #186-#194 reconstruction plus the map layer's xBound 199 / yBound 111, the bounds the developer's own later copy of this map (55e6516e:maps/map1/map.json, the donor of its entry and placements) declares; this commit introduces the bounds and changes the map",
+        "replacementBlob": "c45f5afa9d4bd5763ba642398f8790a49cf5a0dd"
+      },
+      {
+        "markerPath": "res/config/object.json.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "555d8d2a303e3c50f0658665710e70632b1fe287",
+        "path": "res/config/object.json",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
+        "replacementBlob": "4117a53a7ba800f0afb5e958bc2e9e03f84a0ca6"
+      },
+      {
+        "markerPath": "res/config/terrain.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "af256839abbe479e65cd3f07ecbbdbed15c389d9",
+        "path": "res/config/terrain.png",
+        "replacementBlob": "af256839abbe479e65cd3f07ecbbdbed15c389d9"
+      },
+      {
+        "markerPath": "res/images/arrows/left/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8",
+        "path": "res/images/arrows/left/0.png",
+        "replacementBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8"
+      },
+      {
+        "markerPath": "res/images/arrows/right/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297",
+        "path": "res/images/arrows/right/0.png",
+        "replacementBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297"
+      },
+      {
+        "markerPath": "res/images/interactions/abyssalshadows/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a",
+        "path": "res/images/interactions/abyssalshadows/0.png",
+        "replacementBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a"
+      },
+      {
+        "markerPath": "res/images/interactions/armorofendlesswinter/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19",
+        "path": "res/images/interactions/armorofendlesswinter/0.png",
+        "replacementBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19"
+      },
+      {
+        "markerPath": "res/images/interactions/attack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1854502273891b7647172605d57723c57803b0b8",
+        "path": "res/images/interactions/attack/0.png",
+        "replacementBlob": "1854502273891b7647172605d57723c57803b0b8"
+      },
+      {
+        "markerPath": "res/images/interactions/backstab/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c",
+        "path": "res/images/interactions/backstab/0.png",
+        "replacementBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c"
+      },
+      {
+        "markerPath": "res/images/interactions/barrier/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04",
+        "path": "res/images/interactions/barrier/0.png",
+        "replacementBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04"
+      },
+      {
+        "markerPath": "res/images/interactions/bloodlash/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5",
+        "path": "res/images/interactions/bloodlash/0.png",
+        "replacementBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5"
+      },
+      {
+        "markerPath": "res/images/interactions/bloodthirst/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fbb552b780851651f574f49d1394b110f15feba2",
+        "path": "res/images/interactions/bloodthirst/0.png",
+        "replacementBlob": "fbb552b780851651f574f49d1394b110f15feba2"
+      },
+      {
+        "markerPath": "res/images/interactions/chloroform/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8",
+        "path": "res/images/interactions/chloroform/0.png",
+        "replacementBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8"
+      },
+      {
+        "markerPath": "res/images/interactions/deathstrike/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044",
+        "path": "res/images/interactions/deathstrike/0.png",
+        "replacementBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044"
+      },
+      {
+        "markerPath": "res/images/interactions/devour/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369",
+        "path": "res/images/interactions/devour/0.png",
+        "replacementBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369"
+      },
+      {
+        "markerPath": "res/images/interactions/doubleattack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981",
+        "path": "res/images/interactions/doubleattack/0.png",
+        "replacementBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981"
+      },
+      {
+        "markerPath": "res/images/interactions/endlesspain/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de",
+        "path": "res/images/interactions/endlesspain/0.png",
+        "replacementBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de"
+      },
+      {
+        "markerPath": "res/images/interactions/lethalpoison/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85",
+        "path": "res/images/interactions/lethalpoison/0.png",
+        "replacementBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85"
+      },
+      {
+        "markerPath": "res/images/interactions/magicmissile/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "674269a5d6d1ceff668e00ee470a73805de2b770",
+        "path": "res/images/interactions/magicmissile/0.png",
+        "replacementBlob": "674269a5d6d1ceff668e00ee470a73805de2b770"
+      },
+      {
+        "markerPath": "res/images/interactions/shadowbolt/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a",
+        "path": "res/images/interactions/shadowbolt/0.png",
+        "replacementBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a"
+      },
+      {
+        "markerPath": "res/images/interactions/sneakattack/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a",
+        "path": "res/images/interactions/sneakattack/0.png",
+        "replacementBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a"
+      },
+      {
+        "markerPath": "res/images/interactions/strike/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d",
+        "path": "res/images/interactions/strike/0.png",
+        "replacementBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d"
+      },
+      {
+        "markerPath": "res/images/item.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "21983e50f30024b0333356c7a20193d283d487e3",
+        "path": "res/images/item.png",
+        "replacementBlob": "21983e50f30024b0333356c7a20193d283d487e3"
+      },
+      {
+        "markerPath": "res/images/items/armors/chestplateofnorth/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "47675214733ae35679eed0082b10008b312c3055",
+        "path": "res/images/items/armors/chestplateofnorth/0.png",
+        "replacementBlob": "47675214733ae35679eed0082b10008b312c3055"
+      },
+      {
+        "markerPath": "res/images/items/belts/undestructiblebelt/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "3ad7119804b816c72822eed8451a1bb1300ab11a",
+        "path": "res/images/items/belts/undestructiblebelt/0.png",
+        "replacementBlob": "3ad7119804b816c72822eed8451a1bb1300ab11a"
+      },
+      {
+        "markerPath": "res/images/items/boots/eradicatorsboots/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "7159cddaef89234c8e6b2ff1091e3b39008ea5d1",
+        "path": "res/images/items/boots/eradicatorsboots/0.png",
+        "replacementBlob": "7159cddaef89234c8e6b2ff1091e3b39008ea5d1"
+      },
+      {
+        "markerPath": "res/images/items/gloves/glovesoftheassasin/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dcf0ee27c2c20a364319f922529ff749c2fe3435",
+        "path": "res/images/items/gloves/glovesoftheassasin/0.png",
+        "replacementBlob": "dcf0ee27c2c20a364319f922529ff749c2fe3435"
+      },
+      {
+        "markerPath": "res/images/items/helmets/crownofnightmares/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "caeb5680ab9f1145fdf1efadcad4342ec43936e9",
+        "path": "res/images/items/helmets/crownofnightmares/0.png",
+        "replacementBlob": "caeb5680ab9f1145fdf1efadcad4342ec43936e9"
+      },
+      {
+        "markerPath": "res/images/items/potions/bless/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b376e0642913165abcb73d2a76fde4d51d950527",
+        "path": "res/images/items/potions/bless/0.png",
+        "replacementBlob": "b376e0642913165abcb73d2a76fde4d51d950527"
+      },
+      {
+        "markerPath": "res/images/items/potions/life/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664",
+        "path": "res/images/items/potions/life/0.png",
+        "replacementBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664"
+      },
+      {
+        "markerPath": "res/images/items/potions/mana/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf",
+        "path": "res/images/items/potions/mana/0.png",
+        "replacementBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf"
+      },
+      {
+        "markerPath": "res/images/items/potions/poison/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8",
+        "path": "res/images/items/potions/poison/0.png",
+        "replacementBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8"
+      },
+      {
+        "markerPath": "res/images/items/scroll/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dea10d8587cba6db383b22badc3496ef94519def",
+        "path": "res/images/items/scroll/0.png",
+        "replacementBlob": "dea10d8587cba6db383b22badc3496ef94519def"
+      },
+      {
+        "markerPath": "res/images/items/weapons/bladeofdarkdreams/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434",
+        "path": "res/images/items/weapons/bladeofdarkdreams/0.png",
+        "replacementBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434"
+      },
+      {
+        "markerPath": "res/images/items/weapons/broadsword/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666",
+        "path": "res/images/items/weapons/broadsword/0.png",
+        "replacementBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666"
+      },
+      {
+        "markerPath": "res/images/items/weapons/dagger/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7",
+        "path": "res/images/items/weapons/dagger/0.png",
+        "replacementBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7"
+      },
+      {
+        "markerPath": "res/images/items/weapons/daggerofvileheart/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "51e254e364a33007dba5512a76cda69986c998c0",
+        "path": "res/images/items/weapons/daggerofvileheart/0.png",
+        "replacementBlob": "51e254e364a33007dba5512a76cda69986c998c0"
+      },
+      {
+        "markerPath": "res/images/items/weapons/knife/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f66d560da00a647405ff5e71ea424f8702f6e804",
+        "path": "res/images/items/weapons/knife/0.png",
+        "replacementBlob": "f66d560da00a647405ff5e71ea424f8702f6e804"
+      },
+      {
+        "markerPath": "res/images/items/weapons/longsword/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65",
+        "path": "res/images/items/weapons/longsword/0.png",
+        "replacementBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65"
+      },
+      {
+        "markerPath": "res/images/items/weapons/shadowblade/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a97aad74c237a557366d26980b894f240b399c68",
+        "path": "res/images/items/weapons/shadowblade/0.png",
+        "replacementBlob": "a97aad74c237a557366d26980b894f240b399c68"
+      },
+      {
+        "markerPath": "res/images/items/weapons/shortstaff/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4",
+        "path": "res/images/items/weapons/shortstaff/0.png",
+        "replacementBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4"
+      },
+      {
+        "markerPath": "res/images/items/weapons/shortsword/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fed1f8ed826387842228997efe12b0602dfda251",
+        "path": "res/images/items/weapons/shortsword/0.png",
+        "replacementBlob": "fed1f8ed826387842228997efe12b0602dfda251"
+      },
+      {
+        "markerPath": "res/images/items/weapons/staff/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d",
+        "path": "res/images/items/weapons/staff/0.png",
+        "replacementBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d"
+      },
+      {
+        "markerPath": "res/images/items/weapons/staffoftheabyss/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5",
+        "path": "res/images/items/weapons/staffoftheabyss/0.png",
+        "replacementBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5"
+      },
+      {
+        "markerPath": "res/images/items/weapons/stiletto/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90",
+        "path": "res/images/items/weapons/stiletto/0.png",
+        "replacementBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90"
+      },
+      {
+        "markerPath": "res/images/items/weapons/void/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7",
+        "path": "res/images/items/weapons/void/0.png",
+        "replacementBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7"
+      },
+      {
+        "markerPath": "res/images/items/weapons/wand/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f",
+        "path": "res/images/items/weapons/wand/0.png",
+        "replacementBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f"
+      },
+      {
+        "markerPath": "res/images/loading.png.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "70d235c7051fd25ecfd49317c2587fc3f3c120f2",
+        "path": "res/images/loading.png",
+        "provenance": "synthesized visible 32px placeholder; original artwork unavailable; unverified",
+        "replacementBlob": "67809c6f510b8418c9706a1691ed4ca7d14bf169"
+      },
+      {
+        "markerPath": "res/images/monsters/octobogz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5f06daf397276dc5e6d23caadd25ae65076434cb",
+        "path": "res/images/monsters/octobogz/0.png",
+        "replacementBlob": "5f06daf397276dc5e6d23caadd25ae65076434cb"
+      },
+      {
+        "markerPath": "res/images/monsters/octobogz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e93d2d3d5167abf3dfe9e86f6a87e98124521f0d",
+        "path": "res/images/monsters/octobogz/1.png",
+        "replacementBlob": "e93d2d3d5167abf3dfe9e86f6a87e98124521f0d"
+      },
+      {
+        "markerPath": "res/images/monsters/pritz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9",
+        "path": "res/images/monsters/pritz/0.png",
+        "replacementBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9"
+      },
+      {
+        "markerPath": "res/images/monsters/pritz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc",
+        "path": "res/images/monsters/pritz/1.png",
+        "replacementBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc"
+      },
+      {
+        "markerPath": "res/images/monsters/pritzmage/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf",
+        "path": "res/images/monsters/pritzmage/0.png",
+        "replacementBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf"
+      },
+      {
+        "markerPath": "res/images/monsters/pritzmage/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2d8bd66481b709af6b6b10323c348ae0de332563",
+        "path": "res/images/monsters/pritzmage/1.png",
+        "replacementBlob": "2d8bd66481b709af6b6b10323c348ae0de332563"
+      },
+      {
+        "markerPath": "res/images/monsters/pritzmage/2.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72553fb5737309749539c6a2cc74022b2a11844c",
+        "path": "res/images/monsters/pritzmage/2.png",
+        "replacementBlob": "72553fb5737309749539c6a2cc74022b2a11844c"
+      },
+      {
+        "markerPath": "res/images/monsters/pritzmage/3.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a",
+        "path": "res/images/monsters/pritzmage/3.png",
+        "replacementBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a"
+      },
+      {
+        "markerPath": "res/images/players/assasin/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650",
+        "path": "res/images/players/assasin/0.png",
+        "replacementBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650"
+      },
+      {
+        "markerPath": "res/images/players/sorcerer/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d",
+        "path": "res/images/players/sorcerer/0.png",
+        "replacementBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d"
+      },
+      {
+        "markerPath": "res/images/players/warrior/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c",
+        "path": "res/images/players/warrior/0.png",
+        "replacementBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c"
+      },
+      {
+        "markerPath": "src/creature.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "7935164cb1c409a279d0b570046478beb987021e",
+        "path": "src/creature.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+        "replacementBlob": "a189536e3068a4ac269b856e660526185ed26299"
+      },
+      {
+        "markerPath": "src/gamescript.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620",
+        "path": "src/gamescript.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+        "replacementBlob": "df0b6afdf3b30559777ac7d9f7474a2ca77b6d2c"
+      },
+      {
+        "markerPath": "src/gameview.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "79ced12581f3c0e03e7d325ca48f15026428bd00",
+        "path": "src/gameview.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+        "replacementBlob": "b14514dd58aee804bde44aeffaf2b2eac4b3b46c"
+      },
+      {
+        "markerPath": "src/interaction.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "6310500db9888ff5f46ff89988f7e7a8dbfedc8c",
+        "path": "src/interaction.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+        "replacementBlob": "0545033e45d5079430b4f453dd17e49a41f6bb3c"
+      },
+      {
+        "markerPath": "src/main.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "576194480f858d04fb5586a77e26efc1b0c3ec72",
+        "path": "src/main.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #213 'teleporter.py': the surviving building.h removes Teleporter, so the console main no longer registers it and object.json makes the teleporter a scripted Building (script teleporter.py, its exit read as a dynamic property); project and map.cpp carried from #208/#212",
+        "replacementBlob": "5a3683df64a6cc37f865a30cc6bc8e20fe61f14e"
+      },
+      {
+        "markerPath": "src/map.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "abd5ed9ed775b5cabc3152ee91af15cbb3d1b8f5",
+        "path": "src/map.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #215 'loading': the surviving creature.h replaces loseItem with removeFromInventory/removeFromEquipped and adds getAllItems/getItemAtSlot/getSlotWithItem, implemented as in the developer's later surviving CCreature (#366); the surviving map.h adds per-level boundaries, filled from each TMX layer's extent unless the layer names xBound/yBound as the developer's later loader reads; gameview.cpp carried",
+        "replacementBlob": "5201a74ee1d1a457ea95bc50ae0d3bbc63e61c04"
+      },
+      {
+        "markerPath": "src/pathfinder.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
+        "path": "src/pathfinder.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #224 GameScene instance refactor: the lost sources reach the scene's player, map and view through instance pointers (Map now loads its own Tiled file and owns ensureSize); the console main tests the view it created; the project adds the new MainWindow and PlayerAbstractView sources and form; the shared gamescript.cpp and pathfinder.cpp reach the scene through pointers valid under both the static (#207-#223) and instance (#224-#225) APIs (inference)",
+        "replacementBlob": "72a869253e27dbd5d07729c33ba29dd8d2537e07"
+      },
+      {
+        "markerPath": "src/stats.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "799d96674c084aeec8dba44e2b66c12b64f1d306",
+        "path": "src/stats.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+        "replacementBlob": "f623e523c1121dd0b41b8f8145e7d07ac2cc70a2"
+      },
+      {
+        "markerPath": "src/stats.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "2b903bcb0a401c1af4fc48295cfd3f7825deeab2",
+        "path": "src/stats.h",
+        "provenance": "content reconstruction of the BFG-removed original; #207 'python' (developer reformat): carried from #206; main.cpp adapts only the console's ScriptManager call to the surviving pointer accessor and QString executeScript; map.cpp drops MapObject::mousePressEvent, which the surviving map.h no longer declares",
+        "replacementBlob": "3836caed41f2725e37ebba6b0cd405214f6ae222"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "lib/json/LICENSE",
+        "provenance": "https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license",
+        "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "scripts/PSF_LICENSE",
+        "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
+        "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
+      }
+    ],
+    "restoredFilesFingerprint": "118ba1efa09a6b69cc06ca66d172d927691b6476501109ddf164808ce1d10bb1",
+    "sourceCommit": "6d68d5737fc4968ba7e68852550042929f6b1e8b",
+    "sourceTree": "4aa59cb0b7ebe91241838d17fa361dadd33400be",
+    "status": "complete",
+    "submodules": [],
+    "unresolved": []
+  },
+  "smoke": {
+    "command": [
+      "xvfb-run",
+      "-a",
+      "--server-args=-screen 0 1920x1080x24",
+      "env",
+      "LD_PRELOAD=/home/user/work2/verify/snapshot-3xqh238a/observer/libwindowspaths.so",
+      "/home/user/work2/verify/snapshot-3xqh238a/build/RecoveryGame"
+    ],
+    "log": "/home/user/work2/verify/snapshot-3xqh238a/smoke/startup.log",
+    "readyBudgetMs": 290000,
+    "returnCode": 0,
+    "seconds": 83.728,
+    "startup": {
+      "checks": {
+        "eventLoop": true,
+        "map": true,
+        "player": true,
+        "renderedFrame": true
+      },
+      "frame": {
+        "height": 718,
+        "path": "/home/user/work2/verify/snapshot-3xqh238a/smoke/startup.png",
+        "sha256": "e98ae7392768310c32d7f3f0ed45c89b0a2c66b15e508e42798f106914f99f4f",
+        "width": 1278
+      },
+      "mode": "game",
+      "reason": "",
+      "schemaVersion": 1,
+      "status": "ready"
+    },
+    "startupReport": "/home/user/work2/verify/snapshot-3xqh238a/smoke/startup.json",
+    "status": "success",
+    "stdin": "open and silent until the readiness report",
+    "timedOut": false
+  },
+  "sourceCommit": "6d68d5737fc4968ba7e68852550042929f6b1e8b",
+  "sourceCommits": [
+    "6d68d5737fc4968ba7e68852550042929f6b1e8b"
+  ],
+  "sourcePreparation": {
+    "identity": {
+      "implementationSha256": "6039c238e67da4d68d8dc734ec2165af66725b1843c41b7164bb8505d7ba7180"
+    },
+    "outputs": [],
+    "status": "not-required",
+    "steps": []
+  },
+  "sourceTree": "4aa59cb0b7ebe91241838d17fa361dadd33400be",
+  "startupMode": "game",
+  "startupSelection": {
+    "mode": "game"
+  },
+  "status": "success",
+  "toolchain": {
+    "compilerCommand": {
+      "path": "/usr/bin/g++-5",
+      "version": "g++-5 (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609\nCopyright (C) 2015 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    },
+    "makeCommand": {
+      "path": "/usr/bin/make",
+      "version": "GNU Make 4.1\nBuilt for x86_64-pc-linux-gnu\nCopyright (C) 1988-2014 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n"
+    },
+    "qmakeCommand": {
+      "path": "/usr/lib/x86_64-linux-gnu/qt5/bin/qmake",
+      "version": "QMake version 3.0\nUsing Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu\n"
+    }
+  },
+  "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d"
+}

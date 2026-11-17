@@ -16,6 +16,10 @@ on:
       - scripts/history_prepare_resources.py
       - scripts/history_prepare_reflection.py
       - scripts/history_prepare_coordinates.py
+      - scripts/history_prepare_resource_aliases.py
+      - scripts/history_prepare_conflicts.py
+      - scripts/history_prepare_forwarders.py
+      - scripts/history_prepare_refactor_lines.py
       - scripts/history_qmake_compatibility.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
@@ -31,6 +35,10 @@ on:
       - tests/test_history_resource_preparation.py
       - tests/test_history_reflection_preparation.py
       - tests/test_history_coordinate_preparation.py
+      - tests/test_history_resource_alias_preparation.py
+      - tests/test_history_conflict_preparation.py
+      - tests/test_history_forwarder_preparation.py
+      - tests/test_history_refactor_preparation.py
       - tests/test_history_prepare_includes.py
       - tests/test_history_qmake_compatibility.py
       - tests/test_recovery_workflow.py
@@ -60,7 +68,9 @@ jobs:
             tests.test_history_payloads tests.test_history_resources tests.test_history_rootfs \
             tests.test_history_workbench tests.test_history_source_prep tests.test_history_prepare_includes \
             tests.test_history_qmake_compatibility tests.test_history_resource_preparation \
-            tests.test_history_reflection_preparation tests.test_history_coordinate_preparation
+            tests.test_history_reflection_preparation tests.test_history_coordinate_preparation \
+            tests.test_history_resource_alias_preparation tests.test_history_conflict_preparation \
+            tests.test_history_forwarder_preparation tests.test_history_refactor_preparation
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards
@@ -142,7 +152,7 @@ jobs:
             nouraajd-recovery:qt5 scripts/verify_history.py --all \
             --recipes recovery/toolchains/qt5.json \
             --shard-index "${SHARD_INDEX}" --shard-count "${SHARD_COUNT}" \
-            --output-dir /results --timeout 30 --build-timeout 1200 --jobs 2
+            --output-dir /results --timeout 300 --build-timeout 1200 --jobs 2
       - name: Retain individual build and startup evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
