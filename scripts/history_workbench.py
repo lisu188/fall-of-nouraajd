@@ -173,23 +173,30 @@ def prep(ref: str, quiet: bool = False) -> Path:
     return destination
 
 
-def earlierReconstruction(path: str, index: int, available) -> tuple[str, str] | None:
-    """The nearest earlier reconstructed version of ``path``, following file moves.
+def survivesInGit(commit: str, path: str) -> bool:
+    return subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{commit}:{path}"], capture_output=True).returncode == 0
 
-    Same-path versions win. Otherwise the nearest earlier missing file with the same
-    basename (case-insensitively) is used, which follows the developer's directory
-    reorganisations such as ``creatures/creature.cpp`` -> ``src/creatures/creature.cpp``
-    -> ``src/creature.cpp``. Returns ``(originalBlob, earlierPath)``.
+
+def earlierReconstruction(path: str, index: int, available, survives=survivesInGit) -> tuple[str, str] | None:
+    """The nearest earlier version of ``path``: a reconstruction or a surviving original.
+
+    Walking back from ``index``, the first earlier tree that either has a reconstruction
+    for ``path`` or still contains the genuine file wins; a genuine file is returned as
+    ``original:<commit>``. Only when no earlier tree has the same path is the nearest
+    reconstruction with the same basename (case-insensitively) used, which follows the
+    developer's directory moves such as ``creatures/creature.cpp`` ->
+    ``src/creatures/creature.cpp`` -> ``src/creature.cpp``. Returns ``(donor, earlierPath)``.
     """
-    for same_path in (True, False):
-        for previous in reversed(ORDER[:index]):
-            for earlier in missing(previous):
-                if same_path:
-                    matches = earlier["path"] == path
-                else:
-                    matches = Path(earlier["path"]).name.lower() == Path(path).name.lower()
-                if matches and available(earlier["originalBlob"]):
-                    return earlier["originalBlob"], earlier["path"]
+    for previous in reversed(ORDER[:index]):
+        for earlier in missing(previous):
+            if earlier["path"] == path and available(earlier["originalBlob"]):
+                return earlier["originalBlob"], path
+        if not any(earlier["path"] == path for earlier in missing(previous)) and survives(previous, path):
+            return f"original:{previous}", path
+    for previous in reversed(ORDER[:index]):
+        for earlier in missing(previous):
+            if Path(earlier["path"]).name.lower() == Path(path).name.lower() and available(earlier["originalBlob"]):
+                return earlier["originalBlob"], earlier["path"]
     return None
 
 
@@ -205,6 +212,8 @@ def carry(ref: str) -> list[tuple[str, str, str]]:
     }
 
     def content(blob: str) -> bytes | None:
+        if blob.startswith("original:"):
+            return None
         if blob in working:
             return (RECON / blob).read_bytes()
         return committed[blob].read_bytes() if blob in committed else None
@@ -223,10 +232,19 @@ def carry(ref: str) -> list[tuple[str, str, str]]:
         found = earlierReconstruction(entry["path"], index, lambda blob: content(blob) is not None)
         if found:
             donor, earlier_path = found
-            (source / entry["path"]).write_bytes(content(donor))
-            moved = "" if earlier_path == entry["path"] else f" (moved from {earlier_path})"
-            print("carried", entry["path"], "from", donor[:10] + moved)
-            carried.append((entry["path"], entry["originalBlob"], donor + moved))
+            if donor.startswith("original:"):
+                previous = donor.split(":", 1)[1]
+                data = subprocess.run(
+                    ["git", "-C", str(REPO), "show", f"{previous}:{earlier_path}"], capture_output=True, check=True
+                ).stdout
+                label = f"surviving original {earlier_path} at {previous[:8]}"
+            else:
+                data = content(donor)
+                moved = "" if earlier_path == entry["path"] else f" (moved from {earlier_path})"
+                label = f"reconstruction {donor[:10]}{moved}"
+            (source / entry["path"]).write_bytes(data)
+            print("carried", entry["path"], "from", label)
+            carried.append((entry["path"], entry["originalBlob"], label))
         elif not entry["path"].startswith("json/"):
             print("no earlier reconstruction for", entry["path"])
     return carried
@@ -467,6 +485,26 @@ def adaptSettings(head: str, files: list[str], read) -> tuple[str, list[str]]:
     return head.rstrip(), adjustments
 
 
+QRC_FILE = re.compile(r"<file(?:\s[^>]*)?>([^<]+)</file>")
+
+
+def unresolvedResources(manifest: str, files: list[str], text: str) -> list[str]:
+    """Entries of a Qt resource manifest that do not exist in the tree (case-insensitively).
+
+    A manifest with missing entries cannot have been compiled by the original project,
+    so an inferred project leaves it out (for example the stale ``res/scripts.qrc`` once
+    scripts moved to a top-level ``scripts/`` directory loaded from disk).
+    """
+    present = {path.lower() for path in files}
+    base = Path(manifest).parent
+    missing_entries = []
+    for entry in QRC_FILE.findall(text):
+        name = os.path.normpath((base / entry.strip().replace("\\", "/")).as_posix()).replace(os.sep, "/")
+        if name.lower() not in present and not any(path.startswith(name.lower() + "/") for path in present):
+            missing_entries.append(entry.strip())
+    return missing_entries
+
+
 def project(ref: str) -> str:
     """Write a qmake project from the tree's surviving object_script listing and the nearest intact project."""
     commit = resolve(ref)
@@ -533,7 +571,12 @@ def project(ref: str) -> str:
         "HEADERS  += \\\n    " + " \\\n    ".join(headers),
         "",
     ]
-    resources = sorted(path for path in files if path.endswith(".qrc"))
+    resources = sorted(
+        path for path in files if path.endswith(".qrc") and not unresolvedResources(path, files, (source / path).read_text(errors="replace"))
+    )
+    stale = sorted(path for path in files if path.endswith(".qrc") and path not in resources)
+    if stale:
+        print("left out resource manifests listing files absent from this tree:", stale)
     if resources:
         lines += ["RESOURCES += \\\n    " + " \\\n    ".join(resources), ""]
     (source / name).write_text("\n".join(lines))
@@ -587,7 +630,7 @@ def auto(start: int, end: int, check: bool = False) -> None:
             return
         for path, blob, donor in carried:
             (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
-            note(blob, f"carried forward unchanged from the reconstruction of {donor} (previous version of {path})")
+            note(blob, f"carried forward unchanged from the {donor} (previous version of {path})")
         for path, blob, summary in generated:
             (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
             note(blob, "qmake project regenerated with " + summary)

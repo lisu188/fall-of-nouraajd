@@ -265,11 +265,19 @@ class EarlierReconstructionTest(unittest.TestCase):
         "c": [{"path": "src/creature.cpp", "originalBlob": "4" * 40}, {"path": "src/map.cpp", "originalBlob": "5" * 40}],
     }
 
-    def find(self, path, index, available):
+    def find(self, path, index, available, survivors=()):
         with mock.patch.object(workbench, "ORDER", list(self.TREES)), mock.patch.object(
             workbench, "missing", lambda commit: self.TREES[commit]
         ):
-            return workbench.earlierReconstruction(path, index, available)
+            return workbench.earlierReconstruction(
+                path, index, available, lambda commit, name: (commit, name) in survivors
+            )
+
+    def test_a_newer_surviving_original_beats_an_older_reconstruction(self):
+        everything = lambda blob: True  # noqa: E731
+        survivors = {("b", "src/creature.cpp")}
+        self.assertEqual(("original:b", "src/creature.cpp"), self.find("src/creature.cpp", 2, everything, survivors))
+        self.assertEqual(("3" * 40, "src/map.cpp"), self.find("src/map.cpp", 2, everything, {("a", "src/map.cpp")}))
 
     def test_prefers_same_path_then_nearest_moved_version(self):
         everything = lambda blob: True  # noqa: E731
@@ -297,6 +305,14 @@ class AdaptSettingsTest(unittest.TestCase):
     def test_keeps_settings_the_tree_needs(self):
         files = {"src/a.h": "Q_SLOT void f();\n", "src/script.cpp": "#include <Python.h>\n"}
         self.assertEqual((self.HEAD, []), workbench.adaptSettings(self.HEAD, list(files), files.get))
+
+
+class UnresolvedResourcesTest(unittest.TestCase):
+    def test_reports_entries_missing_from_the_tree(self):
+        files = ["res/scripts.qrc", "scripts/cave.py", "res/images/a.png", "res/config/Map.json"]
+        text = "<RCC><qresource prefix='/'><file>scripts/cave.py</file><file>images/a.png</file>"
+        text += "<file alias='m'>config/map.json</file></qresource></RCC>"
+        self.assertEqual(["scripts/cave.py"], workbench.unresolvedResources("res/scripts.qrc", files, text))
 
 if __name__ == "__main__":
     unittest.main()

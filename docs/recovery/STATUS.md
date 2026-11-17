@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **240 commits / 239 trees** against the
-restored inputs: **229 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **259 commits / 258 trees** against the
+restored inputs: **248 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -93,6 +93,18 @@ through `QObject::setProperty`) and `QT_NO_KEYWORDS` switch (#190). Inferred mem
 named in each reconstruction's provenance (for example `Creature::getCreature`,
 `MapObject::getMapObject`, `MapObject::loadFromProps`, `Map::getObjectByName`,
 `Map::removeTile`).
+It also accepted #205-#223 (scripted caves and teleporters, QString factories, the
+inventory API of #215 and the move of scripts/configs to disk at #219). Revision #204
+reaches readiness but cannot exit because its surviving `main.cpp` runs a stdin console
+script reader; the reconstructed `main.cpp` from #205 to #246 omits that reader, which
+is absent again from the next surviving `main.cpp` at #247 (removal point unknown).
+Revisions #224 and #225 are mid-refactor commits whose surviving files cannot compile
+(static `GameScene` calls after the instance refactor; a commented-out `RoadTile`).
+Diagnostics: `recovery/diagnostics/native-204-original-shutdown-defect-2026-11-17.json`
+and `recovery/diagnostics/native-224-225-original-build-defects-2026-11-18.json`.
+Carry-forward now seeds a missing file from the nearest earlier version even when that
+version is a surviving original, and inferred projects leave out Qt resource manifests
+whose listed files are absent.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -203,8 +215,9 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  The next blockers are #204 onward (from `Map::isEditor` removal through the
-  `CMapObject`/`CGamePanel` renames before #256); `recovery/progress.json` records the
+  The next blocker is #226 (instance-based `GameScene`, per-scene `Map` files, the
+  creature-based pathfinder API, the first Qt Designer form); later the
+  `CMapObject`/`CGamePanel` renames before #256. `recovery/progress.json` records the
   exact accepted set.
 - Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
   partial #176 conflict-adapter wiring.
