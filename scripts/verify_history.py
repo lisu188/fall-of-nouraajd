@@ -515,6 +515,17 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         config.append(f'#define GAME_RECOVERY_PLAYER_HEADER "{player_header.relative_to(source_root).as_posix()}"')
     if scene_player and not editor:
         config.append("#define GAME_RECOVERY_SCENE_PLAYER 1")
+    # From #226 the scene starts a LoadGameTask on the thread pool that fills the map through blocking calls to the
+    # main thread; readiness waits for it, since leaving the event loop mid-load would deadlock the pool.
+    scene_source = scene_header.with_suffix(".cpp")
+    pool_loading = (
+        not editor
+        and scene_source.is_file()
+        and re.search(r"globalInstance\(\)->start\(\s*new\s+LoadGameTask\b", scene_source.read_text(errors="replace"))
+        is not None
+    )
+    if pool_loading:
+        config.append("#define GAME_RECOVERY_AWAIT_POOL 1")
     shutdown = None if editor else consoleShutdown(source_root)
     if shutdown is not None:
         config.append("#define GAME_RECOVERY_CLOSE_BEFORE_EXIT 1")
@@ -529,6 +540,7 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         "overlays": overlays,
         "configSha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
         **({"shutdown": shutdown} if shutdown is not None else {}),
+        **({"loading": "threadPool"} if pool_loading else {}),
     }
 
 

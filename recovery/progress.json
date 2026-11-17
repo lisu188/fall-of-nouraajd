@@ -2381,6 +2381,28 @@
       "validation": "build-and-startup-with-refactor-completion-compatibility-with-console-shutdown-passed"
     },
     {
+      "evidence": "recovery/evidence/38bba6a98d8a17324de69e30d7eee433da922962",
+      "originalCommit": "38bba6a98d8a17324de69e30d7eee433da922962",
+      "originalTree": "9141eb889fab0c0e2b062799f66facac274c39ed",
+      "published": false,
+      "restoredFilesFingerprint": "8391569b12d7346b8b701fa62a657fbe9195bbe700745cf593e23f8f3c09185c",
+      "shutdownCompatibility": "closeWindowAndJoinConsole",
+      "startupCompatibility": "unfinishedRefactorCompletion",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-with-refactor-completion-compatibility-with-console-shutdown-passed"
+    },
+    {
+      "evidence": "recovery/evidence/e43a91c0533f3ded4b560e92b0d735fc3613e8bf",
+      "originalCommit": "e43a91c0533f3ded4b560e92b0d735fc3613e8bf",
+      "originalTree": "d0f62efbb7e00916d3de43f78ff56f9722394488",
+      "published": false,
+      "restoredFilesFingerprint": "c77f0368eee8db1c0b144f6c5b3dd94ffc86210e05781aa713612b1532251a0f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
       "evidence": "recovery/evidence/2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalCommit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalTree": "eae1fe5dfbfd25187a96bf7c957d358d5db121ee",
@@ -2637,10 +2659,10 @@
   "status": "in-progress",
   "targetCommitCount": 367,
   "targetTreeCount": 365,
-  "validatedCommitCount": 249,
+  "validatedCommitCount": 251,
   "validatedEditorCommitCount": 11,
   "validatedEditorTreeCount": 11,
-  "validatedGameCommitCount": 238,
-  "validatedGameTreeCount": 238,
-  "validatedTreeCount": 249
+  "validatedGameCommitCount": 240,
+  "validatedGameTreeCount": 240,
+  "validatedTreeCount": 251
 }

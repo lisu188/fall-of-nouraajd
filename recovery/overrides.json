@@ -97810,6 +97810,62 @@
       "provenance": "content reconstruction of the BFG-removed original; #220-#225 object descriptors: the #213 reconstruction without the Cave and Teleporter 'script' keys, which the surviving #220 building.cpp stops reading as scripts become modules named after each object's type (import Cave; Cave.onCreate)",
       "sha256": "89e43c10d48b44eb595e83283e6ba6f8db143a9c0bdc97db58817ae1714c5dd6",
       "source": "payloads/reconstructions/57/57078acb28515335ed4fa3f07359a8c9ee50e82f-object.json"
+    },
+    {
+      "originalBlob": "186ad502e0a4760e9000f8846d7be74c78125734",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #225: the surviving pathfinder.h makes path finders take the two creatures and canStep the map, and PathFinderWorker carry both creatures; the surviving map.h constructs Map from a GameScene; main.cpp carried from #224",
+      "sha256": "02914f4c51801d9d7b358f9354e857a8034095ca1ec93a3cce49334dc73e380f",
+      "source": "payloads/reconstructions/18/186ad502e0a4760e9000f8846d7be74c78125734-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "1a13d135f9791d13143c260e886c00e6dd347924",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #226 'ScriptEngine refactor. Loading.': each Map creates its ScriptEngine before its objects; script functions find their map through the __main__.map address the surviving ScriptEngine stores; GameView::show, which the surviving loading task invokes after the last tile, removes the loading image; the stdin console is dropped because its ScriptManager singleton no longer exists (the next surviving main, #247, has none); bounds and engine accessors as the surviving map.h declares (inference)",
+      "sha256": "a816ca4bccf6c3dae95061ff057c4a2b15b2de8eddc32b2d94e24c1f465abdce",
+      "source": "payloads/reconstructions/1a/1a13d135f9791d13143c260e886c00e6dd347924-creature.cpp"
+    },
+    {
+      "originalBlob": "1d9b2dea5f8051ca6f5bd1aca2e14330310eda0a",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #225: the surviving pathfinder.h makes path finders take the two creatures and canStep the map, and PathFinderWorker carry both creatures; the surviving map.h constructs Map from a GameScene; main.cpp carried from #224",
+      "sha256": "5b2de9897fd1911276e4a758d28a46f7c841f9e5758d92159142a9087a979797",
+      "source": "payloads/reconstructions/1d/1d9b2dea5f8051ca6f5bd1aca2e14330310eda0a-map.cpp"
+    },
+    {
+      "originalBlob": "30a4fad3e0324075b7afc887b87e9586bff9bd75",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #226 'ScriptEngine refactor. Loading.': each Map creates its ScriptEngine before its objects; script functions find their map through the __main__.map address the surviving ScriptEngine stores; GameView::show, which the surviving loading task invokes after the last tile, removes the loading image; the stdin console is dropped because its ScriptManager singleton no longer exists (the next surviving main, #247, has none); bounds and engine accessors as the surviving map.h declares (inference)",
+      "sha256": "67ae2fe06321d8eea6c209fcb3eb26f4d934738616b02e67a2666731364e9067",
+      "source": "payloads/reconstructions/30/30a4fad3e0324075b7afc887b87e9586bff9bd75-gamescript.cpp"
+    },
+    {
+      "originalBlob": "3c49a04c95ac5e68c262321e911c50a85d134b3d",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #226 'ScriptEngine refactor. Loading.': each Map creates its ScriptEngine before its objects; script functions find their map through the __main__.map address the surviving ScriptEngine stores; GameView::show, which the surviving loading task invokes after the last tile, removes the loading image; the stdin console is dropped because its ScriptManager singleton no longer exists (the next surviving main, #247, has none); bounds and engine accessors as the surviving map.h declares (inference)",
+      "sha256": "30d0aedd223bcb61f9a303d18aea7d14365532ec291f882e40ad275f81fd4da0",
+      "source": "payloads/reconstructions/3c/3c49a04c95ac5e68c262321e911c50a85d134b3d-gameview.cpp"
+    },
+    {
+      "originalBlob": "5778119f79b34270dad4d33b439a01b6409c696a",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #225: the surviving pathfinder.h makes path finders take the two creatures and canStep the map, and PathFinderWorker carry both creatures; the surviving map.h constructs Map from a GameScene; main.cpp carried from #224",
+      "sha256": "15c6878541a62dd82403cce661ca94d0a340759a78d28ad97f4266e272e51349",
+      "source": "payloads/reconstructions/57/5778119f79b34270dad4d33b439a01b6409c696a-main.cpp"
+    },
+    {
+      "originalBlob": "8062e7f1be57037cfbdcc840407815df7569afa3",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #226 'ScriptEngine refactor. Loading.': each Map creates its ScriptEngine before its objects; script functions find their map through the __main__.map address the surviving ScriptEngine stores; GameView::show, which the surviving loading task invokes after the last tile, removes the loading image; the stdin console is dropped because its ScriptManager singleton no longer exists (the next surviving main, #247, has none); bounds and engine accessors as the surviving map.h declares (inference)",
+      "sha256": "a1fd73d0ade3a0bcad648f201b8e2db42c01597898c2209d9e995b1b53891453",
+      "source": "payloads/reconstructions/80/8062e7f1be57037cfbdcc840407815df7569afa3-main.cpp"
+    },
+    {
+      "originalBlob": "a6e10fa8fae5a80db1c532c3bd411dc534dcb4e8",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #226 'ScriptEngine refactor. Loading.': each Map creates its ScriptEngine before its objects; script functions find their map through the __main__.map address the surviving ScriptEngine stores; GameView::show, which the surviving loading task invokes after the last tile, removes the loading image; the stdin console is dropped because its ScriptManager singleton no longer exists (the next surviving main, #247, has none); bounds and engine accessors as the surviving map.h declares (inference)",
+      "sha256": "bc8fadc4e57d0789653f2cbebda8de28cedb8a6689d88d1149018068329b2572",
+      "source": "payloads/reconstructions/a6/a6e10fa8fae5a80db1c532c3bd411dc534dcb4e8-map.cpp"
     }
   ],
   "schemaVersion": 1

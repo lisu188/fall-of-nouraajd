@@ -515,6 +515,31 @@ class HistoricalSmokeTest(unittest.TestCase):
             self.assertNotIn("GAME_RECOVERY_SCENE_PLAYER", config)
         self.assertIn("#elif GAME_RECOVERY_SCENE_PLAYER", verify.SMOKE_SOURCE.read_text(encoding="utf-8"))
 
+    def testPoolLoadedMapsAreAwaitedBeforeTheFirstFrame(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "src/gamescene.h").write_text(
+                "class GameScene : public QGraphicsScene { Player *getPlayer() const; Map *getMap() const; };\n"
+            )
+            (source / "src/gameview.h").write_text("class GameView : public QGraphicsView {};\n")
+            (source / "src/map.h").write_text("class Map { bool contains(int x, int y, int z); };\n")
+            (source / "src/player.h").write_text("class Player {};\n")
+            (source / "src/gamescene.cpp").write_text("void GameScene::startGame() { load(); }\n")
+            adapter = verify.prepareSmokeAdapter(source, root / "plain")
+            self.assertNotIn("loading", adapter)
+            self.assertNotIn("GAME_RECOVERY_AWAIT_POOL", Path(adapter["config"]).read_text())
+            (source / "src/gamescene.cpp").write_text(
+                "void GameScene::startGame() {\n  QThreadPool::globalInstance()->start(new LoadGameTask(map));\n}\n"
+            )
+            adapter = verify.prepareSmokeAdapter(source, root / "pool")
+            self.assertEqual("threadPool", adapter["loading"])
+            self.assertIn("#define GAME_RECOVERY_AWAIT_POOL 1\n", Path(adapter["config"]).read_text())
+        observer = verify.SMOKE_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("activeThreadCount() > 0", observer)
+        self.assertIn("view->QWidget::show();", observer)
+
     def testPrefixedPlayerCanBeDefinedInTheCombinedCreatureHeader(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

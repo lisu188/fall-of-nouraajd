@@ -8,6 +8,9 @@
 #ifndef GAME_RECOVERY_SCENE_PLAYER
 #define GAME_RECOVERY_SCENE_PLAYER 0
 #endif
+#ifndef GAME_RECOVERY_AWAIT_POOL
+#define GAME_RECOVERY_AWAIT_POOL 0
+#endif
 #include GAME_RECOVERY_SCENE_HEADER
 #include GAME_RECOVERY_VIEW_HEADER
 #include GAME_RECOVERY_MAP_HEADER
@@ -128,7 +131,7 @@ class RecoveryStartupProbe : public QObject {
                 if (view) {
                     view->setWindowState(Qt::WindowNoState);
                     view->QWidget::resize(1280, 720);
-                    view->show();
+                    view->QWidget::show();
                     view->viewport()->installEventFilter(this);
                     break;
                 }
@@ -146,6 +149,12 @@ class RecoveryStartupProbe : public QObject {
         if (!view || !view->isVisible()) {
             return;
         }
+#if GAME_RECOVERY_AWAIT_POOL
+        // The game loads its map on the thread pool through the main thread; inspect only after that load.
+        if (QThreadPool::globalInstance()->activeThreadCount() > 0) {
+            return;
+        }
+#endif
         RecoveryScene *scene = dynamic_cast<RecoveryScene *>(view->QGraphicsView::scene());
         if (!scene) {
             return;

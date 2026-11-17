@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **249 commits / 249 trees** against the
-restored inputs: **238 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **251 commits / 251 trees** against the
+restored inputs: **240 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -175,6 +175,14 @@ replaces just the offending lines, each with the developer's own line from #225 
 The lost `gamescript.cpp` and `pathfinder.cpp` blobs that span both APIs reach the scene
 through pointers, which compile under either (inference). From #224 the scene, not the
 map, owns the player, and the observer reads it there.
+
+Catalog #226 replaces the `ScriptManager` singleton with a per-map `ScriptEngine` that
+stores the map's address in Python's `__main__.map`; the lost script functions read it
+there, and the stdin console, whose singleton is gone, is dropped (the next surviving
+`main.cpp`, #247, has none; inference). Its scene loads the map's tiles on the thread pool
+through blocking calls to the main thread and then invokes `GameView::show`; for a scene
+that starts such a `LoadGameTask`, the observer waits for the pool to go idle before
+inspecting the scene, and it always shows the view through `QWidget::show`.
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`
