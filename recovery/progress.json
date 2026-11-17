@@ -2403,6 +2403,36 @@
       "validation": "build-and-startup-passed"
     },
     {
+      "evidence": "recovery/evidence/66ddef19cbebe949241a650f370744d7ba493b64",
+      "originalCommit": "66ddef19cbebe949241a650f370744d7ba493b64",
+      "originalTree": "3a4dfd70ac2ef1df5d52366fc5247f7e58dc7ea9",
+      "published": false,
+      "restoredFilesFingerprint": "c77f0368eee8db1c0b144f6c5b3dd94ffc86210e05781aa713612b1532251a0f",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/42d793141f8206b0d6bbd3503b8b84d6e7a50e97",
+      "originalCommit": "42d793141f8206b0d6bbd3503b8b84d6e7a50e97",
+      "originalTree": "2e426b860681f7eb2c9051fd68433f7e0279948f",
+      "published": false,
+      "restoredFilesFingerprint": "a6f28f589e9ea1461ff2fc577f5c4840e48f98509c2a8d5d3fa746f955a886c4",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
+      "evidence": "recovery/evidence/db8ad1fc44af8f117e42c0853b2a2b57d01df8b2",
+      "originalCommit": "db8ad1fc44af8f117e42c0853b2a2b57d01df8b2",
+      "originalTree": "051d91e7ffb68561e15d446cd526f05a8cef0216",
+      "published": false,
+      "restoredFilesFingerprint": "942ae2cb6f03563371b0285feeb1b2c571a8dcfaea5b8523e617d54e0ef67b02",
+      "startupMode": "game",
+      "toolchainImage": "sha256:1e30303b9d36b7086895bbfd066501481580d61b389eb027d9cc24c98ed4734d",
+      "validation": "build-and-startup-passed"
+    },
+    {
       "evidence": "recovery/evidence/2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalCommit": "2565fadfd42ef79564159dbea40ec7c47c1a57f0",
       "originalTree": "eae1fe5dfbfd25187a96bf7c957d358d5db121ee",
@@ -2659,10 +2689,10 @@
   "status": "in-progress",
   "targetCommitCount": 367,
   "targetTreeCount": 365,
-  "validatedCommitCount": 251,
+  "validatedCommitCount": 254,
   "validatedEditorCommitCount": 11,
   "validatedEditorTreeCount": 11,
-  "validatedGameCommitCount": 240,
-  "validatedGameTreeCount": 240,
-  "validatedTreeCount": 251
+  "validatedGameCommitCount": 243,
+  "validatedGameTreeCount": 243,
+  "validatedTreeCount": 254
 }

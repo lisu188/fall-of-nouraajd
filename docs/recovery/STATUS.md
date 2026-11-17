@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **251 commits / 251 trees** against the
-restored inputs: **240 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **254 commits / 254 trees** against the
+restored inputs: **243 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -182,7 +182,10 @@ there, and the stdin console, whose singleton is gone, is dropped (the next surv
 `main.cpp`, #247, has none; inference). Its scene loads the map's tiles on the thread pool
 through blocking calls to the main thread and then invokes `GameView::show`; for a scene
 that starts such a `LoadGameTask`, the observer waits for the pool to go idle before
-inspecting the scene, and it always shows the view through `QWidget::show`.
+inspecting the scene, and it always shows the view through `QWidget::show`. #229
+("BoostPython") initialises the script module through the Python 2 API, so from there the
+lost project embeds CPython 2.7 with Boost.Python, in the developer's later surviving form
+(`-lpython2.7 -lboost_python`, #266).
 
 Startup uses case-insensitive Windows file lookup only in the game process
 (`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`

@@ -1,0 +1,48 @@
+process 348: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: config/object.json 
+
+Loaded animation: images/buildings/cave/ 
+
+Set property monster of cave1 to Pritz 
+
+Set property chance of cave1 to 15 
+
+Set property monsters of cave1 to 5 
+
+Set property enabled of cave1 to True 
+
+Loaded animation: images/buildings/teleporter/ 
+
+Set property monster of cave2 to Pritz 
+
+Set property chance of cave2 to 15 
+
+Set property monsters of cave2 to 5 
+
+Set property enabled of cave2 to True 
+
+Loaded configuration: config/slots.json 
+
+Loaded animation: images/players/sorcerer/ 
+
+Loaded configuration: config/interactions.json 
+
+Loaded animation: images/interactions/attack/ 
+
+Loaded animation: images/arrows/right/ 
+
+Loaded animation: images/arrows/left/ 
+
+Loaded configuration: config/tiles.json 
+
+Loaded animation: images/tiles/grass/ 
+
+Loaded animation: images/tiles/mountain/ 
+
+Loaded animation: images/tiles/water/ 
+
+Loaded animation: images/tiles/ground/ 
+
+Loaded animation: images/tiles/road/ 
+

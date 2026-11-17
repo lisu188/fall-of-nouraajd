@@ -97866,6 +97866,41 @@
       "provenance": "content reconstruction of the BFG-removed original; #226 'ScriptEngine refactor. Loading.': each Map creates its ScriptEngine before its objects; script functions find their map through the __main__.map address the surviving ScriptEngine stores; GameView::show, which the surviving loading task invokes after the last tile, removes the loading image; the stdin console is dropped because its ScriptManager singleton no longer exists (the next surviving main, #247, has none); bounds and engine accessors as the surviving map.h declares (inference)",
       "sha256": "bc8fadc4e57d0789653f2cbebda8de28cedb8a6689d88d1149018068329b2572",
       "source": "payloads/reconstructions/a6/a6e10fa8fae5a80db1c532c3bd411dc534dcb4e8-map.cpp"
+    },
+    {
+      "originalBlob": "08ee2666ad1b94e88b72870dd69626d83ccbda4b",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 30a4fad3e0324075b7afc887b87e9586bff9bd75 (previous version of src/gamescript.cpp)",
+      "sha256": "67ae2fe06321d8eea6c209fcb3eb26f4d934738616b02e67a2666731364e9067",
+      "source": "payloads/reconstructions/08/08ee2666ad1b94e88b72870dd69626d83ccbda4b-gamescript.cpp"
+    },
+    {
+      "originalBlob": "137a435c8f14123bd8cc6b25d75bf1e8b07debd7",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with the previous verified project (9431385998) carried forward",
+      "sha256": "3a807da40b8b1b88fe212299e7858d68e139a0a126104b7305df325cf56410a5",
+      "source": "payloads/reconstructions/13/137a435c8f14123bd8cc6b25d75bf1e8b07debd7-Game.pro"
+    },
+    {
+      "originalBlob": "46cd1761be416d69617213702289f44c21f1a44b",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 08ee2666ad1b94e88b72870dd69626d83ccbda4b (previous version of src/gamescript.cpp)",
+      "sha256": "67ae2fe06321d8eea6c209fcb3eb26f4d934738616b02e67a2666731364e9067",
+      "source": "payloads/reconstructions/46/46cd1761be416d69617213702289f44c21f1a44b-gamescript.cpp"
+    },
+    {
+      "originalBlob": "4a5e2974834ab46235b6164f62822e7362376437",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; #229 'BoostPython': the surviving scriptmanager.cpp now initialises the Game module through the Python 2 API, so the project embeds CPython 2.7 with Boost.Python in the developer's later surviving unix form (-L/lib64/ -lpython2.7 -lboost_python, /usr/include/python2.7 as at #266; win32 C:/Python27 inferred) and the script functions use Python 2 string calls",
+      "sha256": "6dbccf6d3f60f8f5ec9c63e51507633c7b1f5d7d759b40efd21da49e406a1c3e",
+      "source": "payloads/reconstructions/4a/4a5e2974834ab46235b6164f62822e7362376437-Game.pro"
+    },
+    {
+      "originalBlob": "4f20eb1c2839f06baa29748f9627e558be0129e6",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; #229 'BoostPython': the surviving scriptmanager.cpp now initialises the Game module through the Python 2 API, so the project embeds CPython 2.7 with Boost.Python in the developer's later surviving unix form (-L/lib64/ -lpython2.7 -lboost_python, /usr/include/python2.7 as at #266; win32 C:/Python27 inferred) and the script functions use Python 2 string calls",
+      "sha256": "cc9f8113b8c25464b9baf4ef447ad26dbc9d0a0aecc0d88b5f813863451aee71",
+      "source": "payloads/reconstructions/4f/4f20eb1c2839f06baa29748f9627e558be0129e6-gamescript.cpp"
     }
   ],
   "schemaVersion": 1
