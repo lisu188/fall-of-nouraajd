@@ -38,7 +38,7 @@ jobs:
       native-needed: ${{ steps.change-classification.outputs.native-needed }}
       mcp-branch-matrix: ${{ steps.mcp-branch-plan.outputs.mcp-branch-matrix }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
       - name: Set up Python
@@ -116,7 +116,7 @@ jobs:
       GAME_XVFB_JOBS: "4"
       CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           submodules: recursive
       - name: Set up Python
@@ -317,7 +317,7 @@ jobs:
       GAME_XVFB_JOBS: "4"
       CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           submodules: recursive
       - name: Set up Python
@@ -420,7 +420,7 @@ jobs:
       VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
       VCPKG_TARGET_TRIPLET: x64-windows-release
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
@@ -719,7 +719,7 @@ jobs:
       runtime-ready: ${{ steps.mcp-runtime-upload.outcome == 'success' }}
     env: *windows-env
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           submodules: recursive
       - name: Set up Python
@@ -1009,7 +1009,7 @@ jobs:
       SDL_RENDER_DRIVER: software
       LIBGL_ALWAYS_SOFTWARE: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
@@ -1066,7 +1066,7 @@ jobs:
       SDL_RENDER_DRIVER: software
       LIBGL_ALWAYS_SOFTWARE: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
@@ -1109,7 +1109,7 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
