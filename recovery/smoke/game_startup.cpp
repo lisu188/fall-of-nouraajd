@@ -100,6 +100,11 @@ class RecoveryStartupProbe : public QObject {
     }
 
     void inspect() {
+        // Once genuine background work has been seen (even while the game keeps its view
+        // hidden), the longer loading deadline applies instead of the readiness deadline.
+        if (QThreadPool::globalInstance()->activeThreadCount() > 0) {
+            backgroundBusy = true;
+        }
         if (elapsed.elapsed() > (backgroundBusy ? loadDeadlineMs() : 20000)) {
 #if GAME_RECOVERY_EDITOR
             finish(false, "Editor map and rendered frame did not become ready");

@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/observer/recovery_smoke_config.h",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/observer/recovery_smoke_config.h",
     "configSha256": "fff0c7e3dfe94019a1a0dd37faf5745089f45df514b6a1e7d81ba0f0a9eb8465",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
     "source": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/smoke",
+  "artifactDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/smoke",
   "build": {
     "command": [
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/build.log",
     "returnCode": 0,
-    "seconds": 10.518,
+    "seconds": 8.957,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/source/Game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/source/Game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -33,15 +33,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/observer"
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/6cbde0b4d41f460951d5d0f1c88b495a0b10d1735cfd007defb4808298b705de",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/a22503d80b637314d1844c22ddf6354b6e8b4b252b21e8136824d83d61af2cd1",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/observer/libwindowspaths.so",
       "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.164,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "6cbde0b4d41f460951d5d0f1c88b495a0b10d1735cfd007defb4808298b705de",
+  "fingerprint": "a22503d80b637314d1844c22ddf6354b6e8b4b252b21e8136824d83d61af2cd1",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -187,7 +187,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -1016,12 +1016,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.415,
+    "seconds": 0.465,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1031,7 +1031,7 @@
       },
       "frame": {
         "height": 718,
-        "path": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/smoke/startup.png",
+        "path": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/smoke/startup.png",
         "sha256": "eae63896ad434dc703d3d1b15045b69f0d9c195f0d1b7c7adcabd85be4e36584",
         "width": 1278
       },
@@ -1040,7 +1040,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-6klp3pn1/smoke/startup.json",
+    "startupReport": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-8ujk9qhd/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },

@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **259 commits / 258 trees** against the
-restored inputs: **248 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **270 commits / 269 trees** against the
+restored inputs: **259 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -114,11 +114,19 @@ force a still-hidden game view visible while background tasks run (a view hidden
 thread pool is idle, so it never exits underneath genuine background loading. The
 workbench startup watchdog is configurable with `HISTORY_VERIFY_TIMEOUT` (default 60 s),
 and inferred projects list Qt Designer forms in `FORMS`.
-#226 builds and starts with reconstructions adapted to its instance-based `GameScene`,
-but is not accepted: its surviving `LoadGameTask` fills every map cell through the
-genuine `CoordsHasher`, which always returns 0 (unchanged up to #366), so loading the
-restored 200x200 map is quadratic and did not settle within 720 s. See
-`recovery/diagnostics/native-226-background-loading-2026-11-18.json`.
+#226-#236 are accepted with a documented long startup window. From #226 the surviving
+`LoadGameTask` fills every map cell through the genuine `CoordsHasher`, which always
+returns 0 (unchanged up to #366), so loading the restored 200x200 map is quadratic; it was
+confirmed to finish (about 279 s for the loading task in the verifier environment) and
+these trees verify with `HISTORY_VERIFY_TIMEOUT=1200` (recorded smoke durations of about
+700 s). The observer applies its loading deadline as soon as background work is seen,
+even while the game keeps its view hidden. Reconstructions follow the developer's switch
+to Python 2.7 (#229, `Py_InitModule`) and Boost.Python (#231: the ScriptEngine calls
+`init_Game`, so a `_Game` module exposing `Building`, the class the same-commit
+`Objects.py` imports, is reconstructed), the `ListItem`-into-`MapObject` merge (#231)
+and the per-map `LootProvider` (#233). Inferred projects switch borrowed Python 3
+libraries to 2.7 for the Python 2 module API and link Boost.Python when a tree includes
+it. See `recovery/diagnostics/native-226-background-loading-2026-11-18.json`.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -229,10 +237,10 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  The next blocker is the #226-#248 background map loading (see the #226 diagnostic):
-  establish whether the thread pool settles after `LoadGameTask`, then decide on the
-  map size or verification window; later the `CMapObject`/`CGamePanel` renames before
-  #256. `recovery/progress.json` records the exact accepted set.
+  The next blocker is #237 (interactions moved to Python scripts using `_Game.Damage`
+  and `_Game.Interaction`); #237-#248 still need the long startup window, and the
+  `CMapObject`/`CGamePanel` renames follow before #256. `recovery/progress.json` records
+  the exact accepted set.
 - Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
   partial #176 conflict-adapter wiring.
 - Replace later donor implementations that conflict with surviving APIs, including

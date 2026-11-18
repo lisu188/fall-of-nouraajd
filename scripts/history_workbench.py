@@ -465,6 +465,8 @@ def includedSources(units: list[str], files: list[str], present: list[str], dire
 
 
 QT_KEYWORDS = re.compile(r"^[ \t]*(?:(?:public|protected|private)[ \t]+)?(?:slots|signals)[ \t]*:", re.M)
+BOOST_PYTHON_USE = re.compile(r'#[ \t]*include[ \t]*[<"]boost/python')
+PYTHON2_API = re.compile(r"\bPy_InitModule\w*\s*\(")
 PYTHON_USE = re.compile(r'#[ \t]*include[ \t]*[<"](?:Python\.h|boost/python)')
 
 
@@ -481,6 +483,14 @@ def adaptSettings(head: str, files: list[str], read) -> tuple[str, list[str]]:
         head = re.sub(r"^([ \t]*DEFINES[ \t]*\+?=.*?)[ \t]*\bQT_NO_KEYWORDS\b", r"\1", head, flags=re.M)
         head = re.sub(r"^[ \t]*DEFINES[ \t]*\+?=[ \t]*$\n?", "", head, flags=re.M)
         adjustments.append("QT_NO_KEYWORDS dropped because this tree uses bare Qt keywords")
+    if re.search(r"python3", head, re.I) and any(PYTHON2_API.search(read(path) or "") for path in code):
+        head = re.sub(r"-lpython3\.\d+m?", "-lpython2.7", head)
+        head = re.sub(r"-lpython3\d+", "-lpython27", head)
+        adjustments.append("Python 3 libraries replaced by Python 2.7 because this tree uses the Python 2 module API")
+    if "boost_python" not in head and any(BOOST_PYTHON_USE.search(read(path) or "") for path in code):
+        library = "-lboost_python3" if re.search(r"-lpython3", head) else "-lboost_python"
+        head = head.rstrip() + "\nunix:LIBS += " + library
+        adjustments.append(f"{library} added because this tree includes Boost.Python")
     if re.search(r"python", head, re.I) and not any(PYTHON_USE.search(read(path) or "") for path in code):
         head = re.sub(r"^.*LIBS.*python.*$\n?", "", head, flags=re.M | re.I)
         adjustments.append("Python libraries dropped because this tree does not include Python")

@@ -302,6 +302,21 @@ class AdaptSettingsTest(unittest.TestCase):
         self.assertEqual("QT += core gui widgets\nINCLUDEPATH += . src", head)
         self.assertEqual(2, len(notes))
 
+    def test_switches_to_python_2_7_for_the_python_2_module_api(self):
+        files = {"src/a.h": "Q_SLOT void f();\n", "src/script.cpp": "#include <Python.h>\nPy_InitModule(\"Game\", m);\n"}
+        head, notes = workbench.adaptSettings(self.HEAD, list(files), files.get)
+        self.assertIn("unix:LIBS += -lpython2.7 -ldl -lutil", head)
+        self.assertIn("win32:LIBS += -lpython27", head)
+        self.assertEqual(1, len(notes))
+
+    def test_links_boost_python_for_the_tree_python_major(self):
+        files = {"src/a.h": "Q_SLOT void f();\n", "src/s.cpp": "#include <boost/python.hpp>\n#include <Python.h>\n"}
+        head, notes = workbench.adaptSettings(self.HEAD, list(files), files.get)
+        self.assertTrue(head.endswith("unix:LIBS += -lboost_python3"))
+        files["src/s.cpp"] += "Py_InitModule(\"Game\", m);\n"
+        head, notes = workbench.adaptSettings(self.HEAD, list(files), files.get)
+        self.assertTrue(head.endswith("unix:LIBS += -lboost_python"))
+
     def test_keeps_settings_the_tree_needs(self):
         files = {"src/a.h": "Q_SLOT void f();\n", "src/script.cpp": "#include <Python.h>\n"}
         self.assertEqual((self.HEAD, []), workbench.adaptSettings(self.HEAD, list(files), files.get))

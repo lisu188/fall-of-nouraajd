@@ -97600,6 +97600,237 @@
       "provenance": "content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed): Map(GameScene*, file) owns its ScriptEngine and loads the TMX file (inferred from the surviving GameScene::startGame), ensureSize() reads the scene's player, getScene returns GameScene*, per-level TMX layer sizes back the new getBounds/getCurrentXBound/getCurrentYBound, MapObject code reaches the scene through its map, and the player-follow animation centres the item's own scene view",
       "sha256": "51cc470b46309c13acd89d7c3541a10c8fa2a1995e2cb21024dddcf7f9e90bad",
       "source": "payloads/reconstructions/a6/a6e10fa8fae5a80db1c532c3bd411dc534dcb4e8-map.cpp"
+    },
+    {
+      "originalBlob": "08ee2666ad1b94e88b72870dd69626d83ccbda4b",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #226 reconstruction with its qDebug output removed, following the #227 commit (removed printing to std out), which changed only this file",
+      "sha256": "815fce12845a6fbf3e51220c663017dbc216d52935d3d204391173a47e7234ac",
+      "source": "payloads/reconstructions/08/08ee2666ad1b94e88b72870dd69626d83ccbda4b-gamescript.cpp"
+    },
+    {
+      "originalBlob": "0a605f458e5fef0dc5094bc53d932ffd0a52281f",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the surviving #231 map.h (through the #232 reconstruction); #233 made LootProvider per-map, so Map owns one (getLootProvider) and gains the templated createMapObject<T> the surviving lootprovider.cpp calls, inferred to cast the result of MapObject::createMapObject",
+      "sha256": "31483c696612a7f4b03d33a95f97c330bd5c9187ca50fc2d8df7162fd5395a64",
+      "source": "payloads/reconstructions/0a/0a605f458e5fef0dc5094bc53d932ffd0a52281f-map.h"
+    },
+    {
+      "originalBlob": "0ee051c7690753c66752e8df11a517e63d712550",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/interaction.cpp",
+      "sha256": "097d93364096feb78c8eae9915678d0f50af7b97e56e8cde0ad750820877a2e2",
+      "source": "payloads/reconstructions/0e/0ee051c7690753c66752e8df11a517e63d712550-interaction.cpp"
+    },
+    {
+      "originalBlob": "1246d1b48805e8ec8e0826f526b241da3b59bd94",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction f43b75fefb (previous version of src/map.cpp)",
+      "sha256": "36075f7c9f7a6354cec75dfd02e08ab893353aa3756ade98a6714c21096db269",
+      "source": "payloads/reconstructions/12/1246d1b48805e8ec8e0826f526b241da3b59bd94-map.cpp"
+    },
+    {
+      "originalBlob": "137a435c8f14123bd8cc6b25d75bf1e8b07debd7",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 69 sources inferred without a surviving object_script listing: reconstructed 66ddef19:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed 66ddef19:Game.pro",
+      "sha256": "fc6328a8d9db964996ad4a9a522c7e0a4b639553f30b02dbf2579e71c92b21e0",
+      "source": "payloads/reconstructions/13/137a435c8f14123bd8cc6b25d75bf1e8b07debd7-Game.pro"
+    },
+    {
+      "originalBlob": "164fdb97d391c869b099e4a9e870b5543740bfc1",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #231 reconstruction; loot comes from the map's LootProvider, and items are created through MapObject::createMapObject because the surviving #233 item.cpp no longer defines Item::createItem",
+      "sha256": "c8400d8522670b1855200eed80651abd989b62504f1426248c2ecd7beadee52c",
+      "source": "payloads/reconstructions/16/164fdb97d391c869b099e4a9e870b5543740bfc1-creature.cpp"
+    },
+    {
+      "originalBlob": "1883fd4034e68141b23ce32703181368f6e4e118",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 0a605f458e (previous version of src/map.h)",
+      "sha256": "31483c696612a7f4b03d33a95f97c330bd5c9187ca50fc2d8df7162fd5395a64",
+      "source": "payloads/reconstructions/18/1883fd4034e68141b23ce32703181368f6e4e118-map.h"
+    },
+    {
+      "originalBlob": "207f5a8fca090e32c7848555b459fa015f154e2b",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #230 reconstruction; #231 merged ListItem into MapObject: MapObject now carries the genuine #230 listitem.cpp behaviour (tooltip stats text set up in the constructor, setNumber, case-insensitive compare, hover handlers and toLower), copied from that surviving file",
+      "sha256": "a489561f5f15a80ef2a77704853d6db23287085aa584c982ad9fb84539994e42",
+      "source": "payloads/reconstructions/20/207f5a8fca090e32c7848555b459fa015f154e2b-map.cpp"
+    },
+    {
+      "originalBlob": "25fa7fd2e7a4d667520a028aaf4cc6e295b344b5",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated without a surviving object_script listing from the nearest reconstructed project, linking Boost.Python (-lboost_python for Python 2.7) because the tree now includes it",
+      "sha256": "caa3e52450ad9adb02dab6270d00b7d9c9ba402ea596517dbb03f09426c813bc",
+      "source": "payloads/reconstructions/25/25fa7fd2e7a4d667520a028aaf4cc6e295b344b5-Game.pro"
+    },
+    {
+      "originalBlob": "2b9de7a3e1697d344997b07c9b2924b67dccbf33",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro",
+      "sha256": "caa3e52450ad9adb02dab6270d00b7d9c9ba402ea596517dbb03f09426c813bc",
+      "source": "payloads/reconstructions/2b/2b9de7a3e1697d344997b07c9b2924b67dccbf33-Game.pro"
+    },
+    {
+      "originalBlob": "319a45db719878350beb5040a86dde2f6270c2a8",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 8062e7f1be (previous version of src/main.cpp)",
+      "sha256": "e069340c79b5494c0b0a31f1cae509f9326fc69262d0f25db6fc222ebf598709",
+      "source": "payloads/reconstructions/31/319a45db719878350beb5040a86dde2f6270c2a8-main.cpp"
+    },
+    {
+      "originalBlob": "36c67f1fc8b1f2013ea03bd28d2c17f7f4a96598",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 164fdb97d3 (previous version of src/creature.cpp)",
+      "sha256": "c8400d8522670b1855200eed80651abd989b62504f1426248c2ecd7beadee52c",
+      "source": "payloads/reconstructions/36/36c67f1fc8b1f2013ea03bd28d2c17f7f4a96598-creature.cpp"
+    },
+    {
+      "originalBlob": "3b4154f1b6418998fd8fc66e29e0aceb8afae472",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the surviving original src/map.h at 69812392 (previous version of src/map.h)",
+      "sha256": "ceeeb9bef453e47d57bcacfa02f9c093f87d8e8afdf3f0a0f813dbefe56c0baf",
+      "source": "payloads/reconstructions/3b/3b4154f1b6418998fd8fc66e29e0aceb8afae472-map.h"
+    },
+    {
+      "originalBlob": "417e72dcbcaee10cbd9fe4a0ed80d8df90131cf2",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 0ee051c769 (previous version of src/interaction.cpp)",
+      "sha256": "097d93364096feb78c8eae9915678d0f50af7b97e56e8cde0ad750820877a2e2",
+      "source": "payloads/reconstructions/41/417e72dcbcaee10cbd9fe4a0ed80d8df90131cf2-interaction.cpp"
+    },
+    {
+      "originalBlob": "46cd1761be416d69617213702289f44c21f1a44b",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 08ee2666ad (previous version of src/gamescript.cpp)",
+      "sha256": "815fce12845a6fbf3e51220c663017dbc216d52935d3d204391173a47e7234ac",
+      "source": "payloads/reconstructions/46/46cd1761be416d69617213702289f44c21f1a44b-gamescript.cpp"
+    },
+    {
+      "originalBlob": "4a5e2974834ab46235b6164f62822e7362376437",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated without a surviving object_script listing from the nearest reconstructed project, with Python 3.4 libraries replaced by Python 2.7 because the surviving #229 ScriptEngine uses the Python 2 module API",
+      "sha256": "6eb802dd1faf14e21954c6e71368038c619494a26cc7b89e865f6a9d83d7f874",
+      "source": "payloads/reconstructions/4a/4a5e2974834ab46235b6164f62822e7362376437-Game.pro"
+    },
+    {
+      "originalBlob": "4b4bee9142883401af79b0e17f0db7e8faa317b2",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 68 sources inferred without a surviving object_script listing: reconstructed ab3ba774:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed ab3ba774:Game.pro",
+      "sha256": "caa3e52450ad9adb02dab6270d00b7d9c9ba402ea596517dbb03f09426c813bc",
+      "source": "payloads/reconstructions/4b/4b4bee9142883401af79b0e17f0db7e8faa317b2-Game.pro"
+    },
+    {
+      "originalBlob": "4d648f252b6f62adb36bf3e024fd8964c782b89a",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #230 reconstruction; #231 merged ListItem into MapObject, so the view's item lists hold MapObjects",
+      "sha256": "ce8c64a362f4b22f1b96a2b3dbc3bbd5ef77cd4bf71843529e074d4defb41477",
+      "source": "payloads/reconstructions/4d/4d648f252b6f62adb36bf3e024fd8964c782b89a-gameview.cpp"
+    },
+    {
+      "originalBlob": "4f20eb1c2839f06baa29748f9627e558be0129e6",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #228 reconstruction and adapted to the #229 switch to the Python 2 C API (surviving scriptmanager.cpp uses Py_InitModule): the Python 3 module definition is dropped and the map pointer string is read with PyString_*; the Boost.Python _Game module declared by gamescript.h (extern \"C\" init_Game) is not reconstructed because nothing in #229 calls it",
+      "sha256": "e624cba735e5d66005d8dd23c12d65d8745babbcb22d2f4a227cb6c26163ddcc",
+      "source": "payloads/reconstructions/4f/4f20eb1c2839f06baa29748f9627e558be0129e6-gamescript.cpp"
+    },
+    {
+      "originalBlob": "570f98570960b4e32b8cb266fda9e6700a700226",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp",
+      "sha256": "5cd7f9e6ae0f0bd46c3baf1de82f7a7069cc90e1dc2ceab771989f290861e0f9",
+      "source": "payloads/reconstructions/57/570f98570960b4e32b8cb266fda9e6700a700226-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "5a913cc92d62774f9955472593d2e603223572d9",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #229 reconstruction; the surviving #231 ScriptEngine now calls init_Game, so BOOST_PYTHON_MODULE(_Game) is reconstructed, exposing only Building because the same-commit scripts/Objects.py draft imports Building from _Game (module contents otherwise inferred)",
+      "sha256": "7ec7e689127647a15dfd86a5da43d234cf537ec79cf2061807d4cf8c0fda062e",
+      "source": "payloads/reconstructions/5a/5a913cc92d62774f9955472593d2e603223572d9-gamescript.cpp"
+    },
+    {
+      "originalBlob": "7cf1f98a31769a5b8636e0021002ee0072d9b3f7",
+      "path": "src/stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 2b903bcb0a (previous version of src/stats.h)",
+      "sha256": "3af444c7a02f3d082836eab45c6ce024fcbc8b47fdc1b1d034bd1066ade32162",
+      "source": "payloads/reconstructions/7c/7cf1f98a31769a5b8636e0021002ee0072d9b3f7-stats.h"
+    },
+    {
+      "originalBlob": "7dde9c2a5eab3a46d6e4637034c5646937abe33e",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction ffe7250ca4 (previous version of src/gameview.cpp)",
+      "sha256": "ce8c64a362f4b22f1b96a2b3dbc3bbd5ef77cd4bf71843529e074d4defb41477",
+      "source": "payloads/reconstructions/7d/7dde9c2a5eab3a46d6e4637034c5646937abe33e-gameview.cpp"
+    },
+    {
+      "originalBlob": "a4bd8c9720beeb59166e388743ec293ff2ac453e",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 207f5a8fca (previous version of src/map.cpp)",
+      "sha256": "a489561f5f15a80ef2a77704853d6db23287085aa584c982ad9fb84539994e42",
+      "source": "payloads/reconstructions/a4/a4bd8c9720beeb59166e388743ec293ff2ac453e-map.cpp"
+    },
+    {
+      "originalBlob": "b5bb1610a7b754b80502c120ee352e060858532c",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp",
+      "sha256": "7ec7e689127647a15dfd86a5da43d234cf537ec79cf2061807d4cf8c0fda062e",
+      "source": "payloads/reconstructions/b5/b5bb1610a7b754b80502c120ee352e060858532c-gamescript.cpp"
+    },
+    {
+      "originalBlob": "bb50b7d400edb5379f649404e5dcd54c0afed0f9",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 799d96674c (previous version of src/stats.cpp)",
+      "sha256": "87c0f297cc265b035b4b200916172595cf583e17d747290ccd048c689b8331b8",
+      "source": "payloads/reconstructions/bb/bb50b7d400edb5379f649404e5dcd54c0afed0f9-stats.cpp"
+    },
+    {
+      "originalBlob": "be7365fb94129390f3388d8d9cc59d209e3ddfe9",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 5a913cc92d (previous version of src/gamescript.cpp)",
+      "sha256": "7ec7e689127647a15dfd86a5da43d234cf537ec79cf2061807d4cf8c0fda062e",
+      "source": "payloads/reconstructions/be/be7365fb94129390f3388d8d9cc59d209e3ddfe9-gamescript.cpp"
+    },
+    {
+      "originalBlob": "d864bf48481e93fa6b63e95061838c32b32ad42a",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #230 reconstruction; #231 merged ListItem into MapObject, so Creature constructs its MapObject base directly",
+      "sha256": "80ef01970675165b4633173fc2d513e1c18a18a5424b7eec2e162ecbee1c7375",
+      "source": "payloads/reconstructions/d8/d864bf48481e93fa6b63e95061838c32b32ad42a-creature.cpp"
+    },
+    {
+      "originalBlob": "db913a9c67f62ae5d2d4525b8de9f1391468b661",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction b5bb1610a7 (previous version of src/gamescript.cpp)",
+      "sha256": "7ec7e689127647a15dfd86a5da43d234cf537ec79cf2061807d4cf8c0fda062e",
+      "source": "payloads/reconstructions/db/db913a9c67f62ae5d2d4525b8de9f1391468b661-gamescript.cpp"
+    },
+    {
+      "originalBlob": "ed4e8f5226df83720c3739b583ae320465697846",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction db913a9c67 (previous version of src/gamescript.cpp)",
+      "sha256": "7ec7e689127647a15dfd86a5da43d234cf537ec79cf2061807d4cf8c0fda062e",
+      "source": "payloads/reconstructions/ed/ed4e8f5226df83720c3739b583ae320465697846-gamescript.cpp"
+    },
+    {
+      "originalBlob": "ede3e4258919d50c8523c6aacc67ced69e4a17ee",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 570f985709 (previous version of src/pathfinder.cpp)",
+      "sha256": "5cd7f9e6ae0f0bd46c3baf1de82f7a7069cc90e1dc2ceab771989f290861e0f9",
+      "source": "payloads/reconstructions/ed/ede3e4258919d50c8523c6aacc67ced69e4a17ee-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "f43b75fefb5f741b23a0ce1586001f4281384a1e",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #232 reconstruction; the map constructs its LootProvider after its ScriptEngine (inferred) and returns it from getLootProvider",
+      "sha256": "36075f7c9f7a6354cec75dfd02e08ab893353aa3756ade98a6714c21096db269",
+      "source": "payloads/reconstructions/f4/f43b75fefb5f741b23a0ce1586001f4281384a1e-map.cpp"
+    },
+    {
+      "originalBlob": "ffe7250ca47d9cba2d33ab93326675892c2e3596",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp",
+      "sha256": "ce8c64a362f4b22f1b96a2b3dbc3bbd5ef77cd4bf71843529e074d4defb41477",
+      "source": "payloads/reconstructions/ff/ffe7250ca47d9cba2d33ab93326675892c2e3596-gameview.cpp"
     }
   ],
   "schemaVersion": 1
