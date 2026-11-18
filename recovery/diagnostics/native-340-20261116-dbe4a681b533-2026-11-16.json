@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "originalBlob": "841fb7d442db3ed84e5e83cbd103336c4d8a52d0",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #340 CItem body carried from #339 reconstructed real inventory/use/drag/click behavior because same-commit genuine CItem.h and mouse-action contracts are unchanged. This does not repair or conceal the separate surviving CReflection.h constructor/metatype mismatch; native verification must expose that issue. Not exact original; pending native verification.",
+      "sha256": "cf4d0b76fa1569ef2364dda336385e06b02b5aa143f115168d5fc8cd4ad06c6a",
+      "source": "recovery/payloads/reconstructions/84/841fb7d442db3ed84e5e83cbd103336c4d8a52d0-CItem.cpp",
+      "validatedByOriginalCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 139,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 340,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/dbe4a681b53378870b0f4b2d86dba2bc6781edf8301f8278d1b93716a816c833",
+    "fingerprint": "dbe4a681b53378870b0f4b2d86dba2bc6781edf8301f8278d1b93716a816c833",
+    "sourceCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f",
+    "sourceTree": "4bbb080d2497e1f9bf2bffa0ac27ce54a4744589",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

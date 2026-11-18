@@ -1,0 +1,59 @@
+{
+  "entries": [
+    {
+      "originalBlob": "2ab927e15a84c7ccf841f30e031c95b6287eb951",
+      "path": "config/interactions.json",
+      "provenance": "Missing #353 donor-based reconstruction, not exact original. Uses intact55e6516 config/interactions.json bytes with genuine game_object decorators/plain registered class names, matching actual #353 scripts/game/__init__.py and original config migration. Existing donor action/configuration bodies retained including authored unfinished methods; no invented gameplay mechanics. Pending native verification; surviving original bytes unchanged.",
+      "sha256": "0a3d2d18056d698cdabb1dedeecf441a4e2391fbfb73383989219445658237e3",
+      "source": "recovery/payloads/reconstructions/2a/2ab927e15a84c7ccf841f30e031c95b6287eb951-interactions.json",
+      "validatedByOriginalCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39"
+    },
+    {
+      "originalBlob": "b383f9b8c860de19efc1dda19a379169f46d577e",
+      "path": "game.pro",
+      "provenance": "Missing #358 reconstruction, not exact original. Preserves all prior game and bundled Boost translation units; already inlined historical Boost source list, so deletion of boost/python/python.pro needs no source exclusion or external Boost replacement. Pending real native verification.",
+      "sha256": "d994bbe2b3b9ff5772354dbfce76a8b33f9dee90b9816c2c9e52cf326ceea32f",
+      "source": "recovery/payloads/reconstructions/b3/b383f9b8c860de19efc1dda19a379169f46d577e-game.pro",
+      "validatedByOriginalCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39"
+    },
+    {
+      "originalBlob": "b96a40c8a6ea6adcf4d8a31bc9741f56e32a53fd",
+      "path": "CMap.cpp",
+      "provenance": "Missing #359 map reconstruction, not exact original. Preserves verified351 JSON loader/map ownership because genuine CMap.h remains byte-identical; genuine359 handler implementation is restored exact original. Pending ordinary native verification.",
+      "sha256": "e017f6194aafa6934c780de2b1fd08708f7b97bc756812257e66c80a6daa7dd5",
+      "source": "recovery/payloads/reconstructions/b9/b96a40c8a6ea6adcf4d8a31bc9741f56e32a53fd-CMap.cpp",
+      "validatedByOriginalCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39"
+    },
+    {
+      "originalBlob": "06114efa94e9b30aa367f0ec89ee44aaa9fc483c",
+      "path": "scripts/game/interaction.py",
+      "provenance": "Missing #360 interaction script uses exact intact365 donor script bytes, not claimed exact original missing blob; same game_object registry/declarations and configuration resource IDs. Original360 GameScript/Creature files are exact original and untouched. Pending ordinary native verification.",
+      "sha256": "5dfd6e94822f576fc5763dfc7ed801513f6762a1f303c9e233d7ef143e1d3cd5",
+      "source": "recovery/payloads/reconstructions/06/06114efa94e9b30aa367f0ec89ee44aaa9fc483c-interaction.py",
+      "validatedByOriginalCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 142,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 360,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/7281a1c8aa9410b5f6b139c0eebd0fa830f61032bc653a18f01f984ce735f441",
+    "fingerprint": "7281a1c8aa9410b5f6b139c0eebd0fa830f61032bc653a18f01f984ce735f441",
+    "sourceCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39",
+    "sourceTree": "68e8923fb35c01e4cd759311e25067f3d9972bd8",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

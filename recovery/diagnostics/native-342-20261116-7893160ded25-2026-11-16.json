@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "originalBlob": "7ae532045937fe2e4c67b8e3b908f8948f0959d0",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #342 reconstruction, not exact original. Prior verified #339 view implementation with only setDraggable definition removed because genuine #342 CPlayerView.h removes that declaration; #344 shares the same missing originalBlob. Pending native verification; all surviving original bytes retained.",
+      "sha256": "5af9bfbbdc4e753f7944942c94196446cf7f0826e2fdfca1bfb0ff94b7501501",
+      "source": "recovery/payloads/reconstructions/7a/7ae532045937fe2e4c67b8e3b908f8948f0959d0-CPlayerView.cpp",
+      "validatedByOriginalCommit": "333a2d91122b9033cb19280f5d8b5c19d7a2b8f7"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 138,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 342,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "333a2d91122b9033cb19280f5d8b5c19d7a2b8f7",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/7893160ded251b5d9162a2fbe46d9918f73953b7c96e758e81daf7085b05dcaf",
+    "fingerprint": "7893160ded251b5d9162a2fbe46d9918f73953b7c96e758e81daf7085b05dcaf",
+    "sourceCommit": "333a2d91122b9033cb19280f5d8b5c19d7a2b8f7",
+    "sourceTree": "4f9ce58b703b989ec88d83183c9c75033a23cabe",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

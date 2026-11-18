@@ -1,8 +1,9 @@
 # Historical recovery status
 
-Work in progress on recovering the BFG-damaged history. The tooling branch is
-`recovery/bfg-history` (draft PR #1653); follow-up increments are stacked on it.
-Existing branches, tags, and `main` are preserved.
+Work in progress on recovering the BFG-damaged history. Recovery tooling and the
+93-snapshot checkpoint were merged through PR #1660. PR #1659 connected the
+65 published recovered commits to main ancestry. The resumed checkpoint is on
+`codex/resume-bfg-recovery-20261116`. Existing branches and tags are preserved.
 
 ## Objective and acceptance
 
@@ -29,32 +30,121 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain has now revalidated the earlier checkpoint and accepted
-**81 commits / 81 trees** against the current restored inputs (catalog #1–#80 and
-#367). Each accepted tree compiled and started its real game under isolated Xvfb,
-with map/player, rendered frame and clean shutdown. Matching hashes, compiler logs,
-startup records and screenshots are retained in `recovery/evidence/<commit>/`.
-`recovery/progress.json` is the authoritative current count; it rejects evidence
-whose restored fingerprint or explicit toolchain image identity no longer matches.
+The pinned local toolchain currently accepts **280 commits / 278 trees** against the
+restored inputs: **269 game startups and 11 authored editor startups**. Each accepted
+tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
+under isolated Xvfb. Game startups also require a loaded map and healthy player;
+editor startups follow the surviving original editor entrypoint. Matching hashes,
+compiler logs, startup records and screenshots are retained in
+`recovery/evidence/<commit>/`. `recovery/progress.json` is authoritative and rejects
+evidence with a different restored fingerprint or toolchain image identity.
 
-**65 verified commits (#1–#64 plus #367) are published** under new refs:
+Revision #98 has an original resource-manifest omission: genuine configuration
+requests 21 interaction images that are already present in the same tree but absent
+from its unchanged manifest. A hash-pinned supplemental qrc is generated only in an
+isolated build copy. Its evidence and README explicitly identify this compatibility
+boundary; it must not be reported as unmodified authored startup. Compilation and
+startup evidence do not establish historical gameplay parity.
 
-- `recovery/bfg/2026-11-15/e1131adb2c47336c7dbe62dee0246216feb554eb`
-- `recovery/bfg/2026-11-15/108bdcbeda04cefeba5e1895f91df023cea8487f`
+Revision #151 needs a hash-pinned build-only `std::hash<Coords>` specialization
+that delegates to its genuine `CoordsHasher`; #152 supplies the authored fix.
+Revision #340 needs the genuine parent reflection registration macro because its
+unchanged macro calls a nonexistent constructor. Both compatibility paths retain
+original bytes and export their exact generated headers and replay checks.
+The reconstructed #114 project force-includes its genuine CharView header for a
+missing declaration; #115 retains that redundant include and its newer original header.
 
-`recovery/mappings/2026-11-15-prefix.json` records original-to-recovered identities.
-A 14,437,423-byte portable bundle was independently cloned without alternates and
-passed strict fsck, topology/identity checks and documentation/frame verification.
-Its SHA-256 is `e5a86fa8f5d69a74fb2727ae8c49ba70a0eb18f1cb3bb9e2d590a6baac4d5ad6`;
-compact verification and publication records accompany the mapping. Existing
-branches/tags are unchanged. The continuation PR is draft #1658, stacked on the
-explicitly approved PR #1655 branch; it has not been merged.
+**109 verified commits (#1–#108 plus #367) are published** under new refs:
+
+- `recovery/bfg/2026-11-16/998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0`
+- `recovery/bfg/2026-11-16/108bdcbeda04cefeba5e1895f91df023cea8487f`
+
+`recovery/mappings/2026-11-16-prefix.json` records original-to-recovered identities.
+All 65 previously published recovered commit IDs are unchanged. The 17,964,845-byte
+portable bundle passed an independent clone without alternates and strict fsck of
+2,113 reachable objects, plus parent-order, identity, original-file/mode and
+README/frame checks. Its SHA-256 is
+`bb630b209f4cce4ffd875a9c644c50fafc8a7271552a96e70bf97508e9758401`.
+Compact verification accompanies the mapping; the earlier refs/bundle remain intact.
+
+The first 65 recovered commits are already ancestors of main through merge commit
+`c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
+`9acf3570ced5f0dcd8a9192184e169172d52ac28`. The additional 44 commits are published;
+connecting their ancestry to main requires retaining the recovery branch's merge
+parent. Squash or rebase merging would discard that connection. The owner waived
+queued CI only for PRs #1659 and #1660; that waiver does not apply to this checkpoint.
+
+The 2026-11-17 continuation accepted #177-#179, #183-#185, #194, #198-#199 and #200-#203
+(an earlier commit message listed #194-#197 instead of #178, #194, #198 and #199; #195-#197
+were already accepted). Rebuilt qmake projects for trees without an object listing now
+follow `#include` chains into vendored directories, borrow settings from the
+best-matching nearby reconstructed project (dropping `QT_NO_KEYWORDS` and Python
+libraries when the earlier tree does not need them), and carry reconstructions across
+file moves without ever replacing exact originals. The verifier treats a cached
+success whose artifacts have moved as a cache miss instead of a startup failure.
+Revisions #180-#182 are mid-refactor commits that cannot compile from their committed
+contents (deleted per-class headers still included, missing jsoncpp `.inl` companions);
+see `recovery/diagnostics/native-180-182-original-build-defects-2026-11-17.json`.
+Their reconstructions are kept for carrying; no compatibility step exists for them yet.
+The same continuation then accepted #186-#193 through the developer's serialization
+refactor (#186: name-keyed `loadFromJson`, static factories, no saving), property
+system (#187: per-kind configs merged into `config/object.json`, TMX properties applied
+through `QObject::setProperty`) and `QT_NO_KEYWORDS` switch (#190). Inferred members are
+named in each reconstruction's provenance (for example `Creature::getCreature`,
+`MapObject::getMapObject`, `MapObject::loadFromProps`, `Map::getObjectByName`,
+`Map::removeTile`).
+It also accepted #205-#223 (scripted caves and teleporters, QString factories, the
+inventory API of #215 and the move of scripts/configs to disk at #219). Revision #204
+reaches readiness but cannot exit because its surviving `main.cpp` runs a stdin console
+script reader; the reconstructed `main.cpp` from #205 to #246 omits that reader, which
+is absent again from the next surviving `main.cpp` at #247 (removal point unknown).
+Revisions #224 and #225 are mid-refactor commits whose surviving files cannot compile
+(static `GameScene` calls after the instance refactor; a commented-out `RoadTile`).
+Diagnostics: `recovery/diagnostics/native-204-original-shutdown-defect-2026-11-17.json`
+and `recovery/diagnostics/native-224-225-original-build-defects-2026-11-18.json`.
+Carry-forward now seeds a missing file from the nearest earlier version even when that
+version is a surviving original, and inferred projects leave out Qt resource manifests
+whose listed files are absent.
+The verifier now treats a cached success whose artifacts moved as a cache miss, and
+the startup observer gained three narrowly scoped behaviours, re-checked against
+accepted #193, #223, #258 and #340: it reads the player from the scene instance when the
+scene declares a non-static `getPlayer()` and the map has none (#226+); it does not
+force a still-hidden game view visible while background tasks run (a view hidden after
+5 s with an idle pool is shown as before); and it reports success only once the global
+thread pool is idle, so it never exits underneath genuine background loading. The
+workbench startup watchdog is configurable with `HISTORY_VERIFY_TIMEOUT` (default 60 s),
+and inferred projects list Qt Designer forms in `FORMS`.
+#226-#236 are accepted with a documented long startup window. From #226 the surviving
+`LoadGameTask` fills every map cell through the genuine `CoordsHasher`, which always
+returns 0 (unchanged up to #366), so loading the restored 200x200 map is quadratic; it was
+confirmed to finish (about 279 s for the loading task in the verifier environment) and
+these trees verify with `HISTORY_VERIFY_TIMEOUT=1200` (recorded smoke durations of about
+700 s). The observer applies its loading deadline as soon as background work is seen,
+even while the game keeps its view hidden. Reconstructions follow the developer's switch
+to Python 2.7 (#229, `Py_InitModule`) and Boost.Python (#231: the ScriptEngine calls
+`init_Game`, so a `_Game` module exposing `Building`, the class the same-commit
+`Objects.py` imports, is reconstructed), the `ListItem`-into-`MapObject` merge (#231)
+and the per-map `LootProvider` (#233). Inferred projects switch borrowed Python 3
+libraries to 2.7 for the Python 2 module API and link Boost.Python when a tree includes
+it. See `recovery/diagnostics/native-226-background-loading-2026-11-18.json`.
+#237-#246 follow the developer's move of interactions into Python: actions leave the C++
+table as the same-commit `interaction.h` stops declaring them and run from the map's
+ScriptEngine; `_Game` (renamed `_game` at #241) also exposes `Damage`, `Interaction` and
+`Coords` because the same-commit scripts import them and, from #239, the ScriptEngine's
+`PY_UNSAFE` makes import failures fatal; `MapObject` expands the #241 `PROPERTY_ACCESSOR`
+macro; at #245 interactions become Python classes (`performAction`/`configureEffect`),
+the factory attaches the map before loading (as the genuine `Player(Map*, name)` does),
+and the surviving `LoadGameTask` stops filling the whole map, so startups are fast again.
+#246 adds the main window; after the developer's case-only `Game.pro` -> `game.pro`
+rename the active `game.pro` carries `GAME_RECOVERY_APPLICATION = true`. Saving the
+stale uppercase `Game.pro` reconstruction (active only for #241-#245) changed the inputs
+of #256-#259, which were re-verified under the current inputs.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
 Most later replacements remain unverified donor proposals. The chronological walk
-has passed #79 using a recorded Linux build-copy translation of the surviving
-Windows include path and an empty save-directory prerequisite. Reconstructions are derived from same-version headers,
+uses recorded Linux build-copy translations of surviving Windows include paths
+and an empty save-directory prerequisite where required. Reconstructions are derived from same-version headers,
 callers and configuration; underdetermined formulas, map transitions and layouts
 are labeled as inference. Compilation/startup do not prove historical gameplay parity.
 
@@ -138,7 +228,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 81 367 --verify  # stop at the first failure
+python3 scripts/history_workbench.py auto 108 367 --verify  # stop at the first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -159,11 +249,15 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  Continue from #80 using the recorded #79 include and save-directory prerequisites.
+  The next blocker is #247 (the C-prefixed class rename and reflection system, with a new
+  `gamepanel.cpp`), then #248-#255 before the accepted #256. `recovery/progress.json`
+  records the exact accepted set.
+- Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
+  partial #176 conflict-adapter wiring.
 - Replace later donor implementations that conflict with surviving APIs, including
-  the whole-game blockers at #260/#266. Object compilation and generator preparation
+  the remaining whole-game blockers around #257/#266. Object compilation and generator preparation
   are supporting evidence only.
-- Extend verified replay/publication beyond the 65-commit prefix and verify another
+- Extend verified replay/publication beyond the 109-commit publication and verify another
   independent portable bundle when ready. Preserve prior recovery publications.
 - Obtain successful current-head GitHub build, full-suite and coverage evidence;
   the current queued jobs have supplied none yet. Keep the PR draft while acceptance

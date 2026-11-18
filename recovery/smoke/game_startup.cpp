@@ -20,6 +20,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSaveFile>
+#include <QThreadPool>
 #include <QTimer>
 #if GAME_RECOVERY_OPENGL
 #include <QtOpenGL/QGLWidget>
@@ -90,8 +91,21 @@ class RecoveryStartupProbe : public QObject {
         QCoreApplication::exit(success ? 0 : 41);
     }
 
+    // Background loading may legitimately take longer than the readiness deadline; the
+    // verifier passes how long it will wait (its watchdog minus a margin).
+    static qint64 loadDeadlineMs() {
+        bool ok = false;
+        const qint64 value = qgetenv("GAME_RECOVERY_LOAD_DEADLINE_MS").toLongLong(&ok);
+        return ok && value > 20000 ? value : 50000;
+    }
+
     void inspect() {
-        if (elapsed.elapsed() > 20000) {
+        // Once genuine background work has been seen (even while the game keeps its view
+        // hidden), the longer loading deadline applies instead of the readiness deadline.
+        if (QThreadPool::globalInstance()->activeThreadCount() > 0) {
+            backgroundBusy = true;
+        }
+        if (elapsed.elapsed() > (backgroundBusy ? loadDeadlineMs() : 20000)) {
 #if GAME_RECOVERY_EDITOR
             finish(false, "Editor map and rendered frame did not become ready");
 #else
@@ -102,6 +116,13 @@ class RecoveryStartupProbe : public QObject {
         if (!view) {
             for (QWidget *widget : QApplication::topLevelWidgets()) {
                 view = dynamic_cast<RecoveryView *>(widget);
+                // A game that shows its view only after background loading (#226 LoadGameTask)
+                // must not be shown early; a still-hidden view is shown once the game is idle.
+                if (view && !view->isVisible() &&
+                    (elapsed.elapsed() < 5000 || QThreadPool::globalInstance()->activeThreadCount() > 0)) {
+                    view = nullptr;
+                    continue;
+                }
                 if (view) {
                     view->setWindowState(Qt::WindowNoState);
                     view->QWidget::resize(1280, 720);
@@ -134,6 +155,8 @@ class RecoveryStartupProbe : public QObject {
 #else
 #if GAME_RECOVERY_STATIC_PLAYER
         auto *player = RecoveryScene::getPlayer();
+#elif defined(GAME_RECOVERY_SCENE_PLAYER) && GAME_RECOVERY_SCENE_PLAYER
+        auto *player = scene->getPlayer();
 #else
         auto *player = map ? map->getPlayer() : nullptr;
 #endif
@@ -156,6 +179,12 @@ class RecoveryStartupProbe : public QObject {
             return;
         }
         if (!painted) {
+            return;
+        }
+        // Historical background loading (for example LoadGameTask from #226) blocks on the
+        // event loop; exiting before it settles would deadlock the original thread pool.
+        if (QThreadPool::globalInstance()->activeThreadCount() > 0) {
+            backgroundBusy = true;
             return;
         }
         QImage frame;
@@ -195,6 +224,7 @@ class RecoveryStartupProbe : public QObject {
     QTimer timer;
     QElapsedTimer elapsed;
     bool menuActivated = false;
+    bool backgroundBusy = false;
     bool mapReady = false;
 #if GAME_RECOVERY_EDITOR
     bool editorReady = false;

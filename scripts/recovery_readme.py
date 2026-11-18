@@ -11,8 +11,11 @@ import json
 from pathlib import Path
 import re
 import shlex
+import xml.etree.ElementTree as ET
 
 try:
+    from scripts import history_source_prep as source_prep
+    from scripts import history_static_lto as static_lto
     from scripts.verify_history import (
         EDITOR_CHECKS,
         REQUIRED_CHECKS,
@@ -21,6 +24,8 @@ try:
         verifiedStartupMode,
     )
 except ModuleNotFoundError:
+    import history_source_prep as source_prep
+    import history_static_lto as static_lto
     from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
 
 
@@ -41,6 +46,266 @@ def successfulCommand(command, name):
         raise VerificationError(f"Recovered README requires successful {name} evidence")
 
 
+def supplementalResourceAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    supplement = preparation.get("identity", {}).get("supplementalResources", {})
+    expected_inputs = {**source_prep.SUPPLEMENTAL_INPUTS, **source_prep.SUPPLEMENTAL_IMAGES}
+    boundary = "Game startup with supplemental Qt resource compatibility; original manifest unchanged"
+    if (
+        report.get("startupCompatibility") != "supplementalQtResources"
+        or report.get("startupSelection", {}).get("boundary") != boundary
+        or supplement.get("validationBoundary") != boundary
+        or supplement.get("path") != source_prep.SUPPLEMENTAL_QRC
+        or supplement.get("qmakeArgument") != source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT
+        or preparation.get("qmakeArguments") != [source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT]
+        or supplement.get("inputs") != expected_inputs
+        or supplement.get("provenance") != source_prep.SUPPLEMENTAL_PROVENANCE
+    ):
+        raise VerificationError("Supplemental resource evidence differs from the reviewed original inputs and boundary")
+    helper = Path(__file__).with_name("history_prepare_resources.py").read_bytes()
+    if hashlib.sha256(helper).hexdigest() != supplement.get("resourceReplaySha256"):
+        raise VerificationError("Portable supplemental resource helper differs from verified semantics")
+    resource = evidence_dir / "supplemental_images.qrc"
+    if not resource.is_file() or resource.is_symlink():
+        raise VerificationError("Supplemental resource attachment is absent or symlinked")
+    data = resource.read_bytes()
+    if hashlib.sha256(data).hexdigest() != supplement.get("sha256"):
+        raise VerificationError("Supplemental resource attachment differs from its verified output")
+    try:
+        document = ET.fromstring(data)
+    except ET.ParseError as error:
+        raise VerificationError("Supplemental resource attachment is not a valid manifest") from error
+    groups = document.findall("qresource")
+    if (
+        document.tag != "RCC"
+        or len(groups) != 1
+        or groups[0].attrib != {"prefix": "/"}
+        or any(node.tag != "file" or node.attrib for node in groups[0])
+        or len(groups[0]) != len(source_prep.SUPPLEMENTAL_IMAGES)
+        or {node.text for node in groups[0]} != set(source_prep.SUPPLEMENTAL_IMAGES)
+    ):
+        raise VerificationError("Supplemental resource aliases differ from the original image inputs")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == source_prep.SUPPLEMENTAL_QRC]
+    if len(outputs) != 1 or outputs[0].get("after", {}).get("sha256") != supplement["sha256"]:
+        raise VerificationError("Supplemental resource output lacks its exact preparation fingerprint")
+    return {"recovery/supplemental_images.qrc": data, "recovery/prepare_supplemental_resources.py": helper}
+
+
+def reflectionRegistrationAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    helper = source_prep.reflection_prep
+    compatibility = preparation.get("identity", {}).get("reflectionRegistration", {})
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "path": helper.TARGET,
+        "sha256": hashlib.sha256(helper.HEADER).hexdigest(),
+        "inputs": helper.INPUTS,
+        "qmakeArgument": helper.ARGUMENT,
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        compatibility != expected
+        or preparation.get("qmakeArguments") != [helper.ARGUMENT]
+        or report.get("startupCompatibility") != "parentReflectionRegistration"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Reflection compatibility differs from its reviewed inputs, macro or boundary")
+    header = evidence_dir / helper.ATTACHMENT
+    if header.is_symlink() or not header.is_file() or header.read_bytes() != helper.HEADER:
+        raise VerificationError("Reflection compatibility attachment differs from the reviewed header bytes")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if len(outputs) != 1 or outputs[0].get("after") != {"kind": "file", "sha256": expected["sha256"]}:
+        raise VerificationError("Reflection compatibility output lacks its exact preparation fingerprint")
+    return {
+        "recovery/" + helper.ATTACHMENT: helper.HEADER,
+        "recovery/prepare_reflection_registration.py": replay,
+    }
+
+
+def coordinateHashAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    helper = source_prep.coordinates_prep
+    compatibility = preparation.get("identity", {}).get("coordinatesHash", {})
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "path": helper.TARGET,
+        "sha256": hashlib.sha256(helper.HEADER).hexdigest(),
+        "inputs": helper.INPUTS,
+        "qmakeArgument": helper.ARGUMENT,
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        compatibility != expected
+        or preparation.get("qmakeArguments") != [helper.ARGUMENT]
+        or report.get("startupCompatibility") != "originalCoordinateHash"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Coordinate hash compatibility differs from its reviewed inputs, macro or boundary")
+    header = evidence_dir / helper.ATTACHMENT
+    if header.is_symlink() or not header.is_file() or header.read_bytes() != helper.HEADER:
+        raise VerificationError("Coordinate hash compatibility attachment differs from the reviewed header bytes")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if len(outputs) != 1 or outputs[0].get("after") != {"kind": "file", "sha256": expected["sha256"]}:
+        raise VerificationError("Coordinate hash compatibility output lacks its exact preparation fingerprint")
+    return {
+        "recovery/" + helper.ATTACHMENT: helper.HEADER,
+        "recovery/prepare_coordinates_hash.py": replay,
+    }
+
+
+def legacyTileAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    helper = source_prep.legacy_tiles_prep
+    compatibility = preparation.get("identity", {}).get("legacyTileConfiguration", {})
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "path": helper.TARGET,
+        "sha256": helper.OUTPUT_SHA256,
+        "inputs": helper.INPUTS,
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        compatibility != expected
+        or preparation.get("qmakeArguments", [])
+        or report.get("startupCompatibility") != "legacyTileConfiguration"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Legacy tile compatibility differs from its reviewed inputs, output or boundary")
+    attachment = evidence_dir / helper.ATTACHMENT
+    if (
+        attachment.is_symlink()
+        or not attachment.is_file()
+        or hashlib.sha256(attachment.read_bytes()).hexdigest() != helper.OUTPUT_SHA256
+    ):
+        raise VerificationError("Legacy tile configuration attachment differs from its reviewed derived bytes")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if (
+        len(outputs) != 1
+        or outputs[0].get("before") is not None
+        or outputs[0].get("after") != {"kind": "file", "sha256": helper.OUTPUT_SHA256}
+    ):
+        raise VerificationError("Legacy tile compatibility output lacks its exact new-file preparation fingerprint")
+    return {
+        "recovery/" + helper.ATTACHMENT: attachment.read_bytes(),
+        "recovery/prepare_legacy_tile_configuration.py": replay,
+    }
+
+
+def mapsManifestAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    helper = source_prep.maps_manifest_prep
+    compatibility = preparation.get("identity", {}).get("mapsManifest", {})
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "path": helper.TARGET,
+        "sha256": helper.OUTPUT_SHA256,
+        "inputs": helper.INPUTS,
+        "absentInputs": helper.ABSENT_INPUTS,
+        "qmakeArguments": helper.ARGUMENTS,
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        compatibility != expected
+        or preparation.get("qmakeArguments") != helper.ARGUMENTS
+        or report.get("startupCompatibility") != "authoredMapsManifest"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError(
+            "Maps manifest compatibility differs from its reviewed inputs, absence state or boundary"
+        )
+    attachment = evidence_dir / helper.ATTACHMENT
+    if (
+        attachment.is_symlink()
+        or not attachment.is_file()
+        or hashlib.sha256(attachment.read_bytes()).hexdigest() != helper.OUTPUT_SHA256
+    ):
+        raise VerificationError("Maps manifest compatibility attachment differs from its authored corrected bytes")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if (
+        len(outputs) != 1
+        or outputs[0].get("before") is not None
+        or outputs[0].get("after") != {"kind": "file", "sha256": helper.OUTPUT_SHA256}
+    ):
+        raise VerificationError("Maps manifest compatibility output lacks its exact new-file preparation fingerprint")
+    return {
+        "recovery/" + helper.ATTACHMENT: attachment.read_bytes(),
+        "recovery/prepare_maps_manifest.py": replay,
+    }
+
+
+def teleporterSerializationAttachments(report: dict, preparation: dict, evidence_dir: Path) -> dict[str, bytes]:
+    compatibility = preparation.get("identity", {}).get("teleporterSerialization", {})
+    helper = source_prep.teleporterHelper(compatibility.get("inputs"))
+    expected = helper.reviewedIdentity(compatibility.get("inputs"))
+    if (
+        expected is None
+        or compatibility != expected
+        or preparation.get("qmakeArguments") != helper.ARGUMENTS
+        or report.get("startupCompatibility") != "teleporterSerialization"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError(
+            "Teleporter serialization differs from its reviewed source, header, JsonCpp or boundary"
+        )
+    attachment = evidence_dir / helper.ATTACHMENT
+    if (
+        attachment.is_symlink()
+        or not attachment.is_file()
+        or hashlib.sha256(attachment.read_bytes()).hexdigest() != expected["sha256"]
+    ):
+        raise VerificationError("Teleporter serialization attachment differs from its reviewed derived source")
+    outputs = [entry for entry in preparation.get("outputs", []) if entry.get("path") == helper.TARGET]
+    if (
+        len(outputs) != 1
+        or outputs[0].get("before") is not None
+        or outputs[0].get("after") != {"kind": "file", "sha256": expected["sha256"]}
+    ):
+        raise VerificationError("Teleporter serialization output lacks its exact new-file preparation fingerprint")
+    attachments = {
+        "recovery/" + helper.ATTACHMENT: attachment.read_bytes(),
+        "recovery/prepare_teleporter_serialization.py": Path(helper.__file__).read_bytes(),
+    }
+    if helper is source_prep.teleporter_conflicts_prep:
+        attachments["recovery/history_prepare_teleporter.py"] = Path(source_prep.teleporter_prep.__file__).read_bytes()
+        attachments["recovery/history_prepare_conflicts.py"] = Path(source_prep.conflicts_prep.__file__).read_bytes()
+    return attachments
+
+
+def legacyTimingAttachments(report: dict, preparation: dict) -> dict[str, bytes]:
+    helper = source_prep.timing_prep
+    outputs_sha = {name.removesuffix(".json") + ".txt": sha for name, sha in helper.RENAMED_INPUTS.items()}
+    replay = Path(helper.__file__).read_bytes()
+    expected = {
+        "paths": sorted(outputs_sha),
+        "sha256": outputs_sha,
+        "inputs": {**helper.INPUTS, **helper.RENAMED_INPUTS},
+        "absentInputs": sorted(outputs_sha),
+        "provenance": helper.PROVENANCE,
+        "validationBoundary": helper.BOUNDARY,
+        "replaySha256": hashlib.sha256(replay).hexdigest(),
+    }
+    if (
+        preparation.get("identity", {}).get("legacyTimingResources") != expected
+        or preparation.get("qmakeArguments", [])
+        or report.get("startupCompatibility") != "legacyTimingResources"
+        or report.get("startupSelection", {}).get("boundary") != helper.BOUNDARY
+    ):
+        raise VerificationError("Legacy timing resources differ from their reviewed original inputs or boundary")
+    outputs = preparation.get("outputs", [])
+    if len(outputs) != len(outputs_sha) or {entry.get("path") for entry in outputs} != set(outputs_sha):
+        raise VerificationError("Legacy timing resource output paths differ from the three reviewed aliases")
+    for entry in outputs:
+        if entry.get("before") is not None or entry.get("after") != {
+            "kind": "file",
+            "sha256": outputs_sha[entry["path"]],
+        }:
+            raise VerificationError("Legacy timing resources lack exact new-file preparation fingerprints")
+    return {"recovery/prepare_legacy_timing.py": replay}
+
+
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
@@ -51,8 +316,25 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     names = [step.get("name") for step in steps]
     has_includes = "windowsIncludeSeparators" in names
     has_generator = "generator" in names
-    expected_names = (["windowsIncludeSeparators"] if has_includes else []) + (
-        ["interpreter", "generator"] if has_generator else []
+    has_resources = "supplementalResources" in names
+    has_reflection = "reflectionRegistration" in names
+    has_coordinates = "coordinatesHash" in names
+    has_legacy_tiles = "legacyTileConfiguration" in names
+    has_maps_manifest = "mapsManifest" in names
+    has_teleporter = "teleporterSerialization" in names
+    has_timing = "legacyTimingResources" in names
+    has_conflicts = "trivialConflicts" in names
+    expected_names = (
+        (["supplementalResources"] if has_resources else [])
+        + (["reflectionRegistration"] if has_reflection else [])
+        + (["coordinatesHash"] if has_coordinates else [])
+        + (["legacyTileConfiguration"] if has_legacy_tiles else [])
+        + (["mapsManifest"] if has_maps_manifest else [])
+        + (["teleporterSerialization"] if has_teleporter else [])
+        + (["legacyTimingResources"] if has_timing else [])
+        + (["trivialConflicts"] if has_conflicts else [])
+        + (["windowsIncludeSeparators"] if has_includes else [])
+        + (["interpreter", "generator"] if has_generator else [])
     )
     if not expected_names or names != expected_names:
         raise VerificationError("Recovered README requires recorded source preparation execution evidence")
@@ -68,7 +350,30 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     if not has_generator and (inputs or "interpreter" in identity):
         raise VerificationError("Include-only preparation cannot claim a historical Python generator")
     include_files = {}
-    attachments = {}
+    attachments = supplementalResourceAttachments(report, preparation, evidence_dir) if has_resources else {}
+    if has_reflection:
+        attachments.update(reflectionRegistrationAttachments(report, preparation, evidence_dir))
+    if has_coordinates:
+        attachments.update(coordinateHashAttachments(report, preparation, evidence_dir))
+    if has_legacy_tiles:
+        attachments.update(legacyTileAttachments(report, preparation, evidence_dir))
+    if has_maps_manifest:
+        attachments.update(mapsManifestAttachments(report, preparation, evidence_dir))
+    if has_teleporter:
+        attachments.update(teleporterSerializationAttachments(report, preparation, evidence_dir))
+    if has_timing:
+        attachments.update(legacyTimingAttachments(report, preparation))
+    if has_conflicts:
+        helper = source_prep.conflicts_prep
+        try:
+            helper.validatePreparation(preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        if report.get("buildCompatibility") != "trivialConflicts":
+            raise VerificationError("Whitespace-only conflict preparation lacks its build boundary")
+        attachments["recovery/prepare_trivial_conflicts.py"] = Path(helper.__file__).read_bytes()
+    elif report.get("buildCompatibility"):
+        raise VerificationError("Recovered build compatibility lacks preparation evidence")
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -99,7 +404,19 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         if (
             path.is_absolute()
             or ".." in path.parts
-            or not (name == "gen/prop.h" or (name.startswith("src/") and name.endswith(".h")) or name in include_files)
+            or not (
+                name == "gen/prop.h"
+                or (name.startswith("src/") and name.endswith(".h"))
+                or name in include_files
+                or (has_conflicts and name in source_prep.conflicts_prep.FILES)
+                or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
+                or (has_reflection and name == source_prep.reflection_prep.TARGET)
+                or (has_coordinates and name == source_prep.coordinates_prep.TARGET)
+                or (has_legacy_tiles and name == source_prep.legacy_tiles_prep.TARGET)
+                or (has_maps_manifest and name == source_prep.maps_manifest_prep.TARGET)
+                or (has_teleporter and name == source_prep.teleporter_prep.TARGET)
+                or (has_timing and name in identity["legacyTimingResources"]["paths"])
+            )
         ):
             raise VerificationError("Recovered source preparation has unexpected derived output paths")
         for stage in ("before", "after"):
@@ -176,6 +493,30 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     if not startup_path.is_file() or json.loads(startup_path.read_text(encoding="utf-8")) != startup:
         raise VerificationError("Copied startup report differs from the recorded native game result")
     preparation_files = sourcePreparationAttachments(report, evidence_dir)
+    resource_preparation = "recovery/supplemental_images.qrc" in preparation_files
+    reflection_preparation = "recovery/prepare_reflection_registration.py" in preparation_files
+    coordinates_preparation = "recovery/prepare_coordinates_hash.py" in preparation_files
+    legacy_tile_preparation = "recovery/prepare_legacy_tile_configuration.py" in preparation_files
+    maps_manifest_preparation = "recovery/prepare_maps_manifest.py" in preparation_files
+    teleporter_preparation = "recovery/prepare_teleporter_serialization.py" in preparation_files
+    timing_preparation = "recovery/prepare_legacy_timing.py" in preparation_files
+    conflicts_preparation = "recovery/prepare_trivial_conflicts.py" in preparation_files
+    compatibility_modes = [
+        name
+        for enabled, name in (
+            (resource_preparation, "supplementalQtResources"),
+            (reflection_preparation, "parentReflectionRegistration"),
+            (coordinates_preparation, "originalCoordinateHash"),
+            (legacy_tile_preparation, "legacyTileConfiguration"),
+            (maps_manifest_preparation, "authoredMapsManifest"),
+            (teleporter_preparation, "teleporterSerialization"),
+            (timing_preparation, "legacyTimingResources"),
+        )
+        if enabled
+    ]
+    expected_compatibility = compatibility_modes[0] if compatibility_modes else None
+    if len(compatibility_modes) > 1 or report.get("startupCompatibility") != expected_compatibility:
+        raise VerificationError("Recovered startup compatibility lacks its explicit preparation evidence")
     generator_preparation = "generator" in [
         step.get("name") for step in report.get("sourcePreparation", {}).get("steps", [])
     ]
@@ -217,7 +558,40 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             description = str(entry.get("provenance", "Recorded reconstructed replacement")).replace("\n", " ")
             provenance.append(f"- `{path}`: {description}")
     compiler_flags = report.get("recipe", {}).get("qmakeArguments", [])
-    reviewed_flags = {"QMAKE_CXXFLAGS+=-include functional", "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"}
+    reviewed_flags = {
+        static_lto.ARGUMENT,
+        "QMAKE_CXXFLAGS+=-include functional",
+        "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider",
+        source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT,
+        source_prep.reflection_prep.ARGUMENT,
+        source_prep.coordinates_prep.ARGUMENT,
+        *source_prep.maps_manifest_prep.ARGUMENTS,
+        *source_prep.teleporter_prep.ARGUMENTS,
+    }
+    if resource_preparation != (source_prep.SUPPLEMENTAL_QMAKE_ARGUMENT in compiler_flags):
+        raise VerificationError("Supplemental resource qmake argument and attached preparation differ")
+    if reflection_preparation != (source_prep.reflection_prep.ARGUMENT in compiler_flags):
+        raise VerificationError("Reflection compatibility qmake argument and attached preparation differ")
+    if coordinates_preparation != (source_prep.coordinates_prep.ARGUMENT in compiler_flags):
+        raise VerificationError("Coordinate hash compatibility qmake argument and attached preparation differ")
+    manifest_flags = source_prep.maps_manifest_prep.ARGUMENTS
+    if maps_manifest_preparation:
+        if compiler_flags[-len(manifest_flags) :] != manifest_flags or any(
+            compiler_flags.count(flag) != 1 for flag in manifest_flags
+        ):
+            raise VerificationError("Maps manifest qmake arguments differ from the exact reviewed replacement order")
+    elif any(flag in compiler_flags for flag in manifest_flags[1:]):
+        raise VerificationError("Maps manifest qmake arguments lack attached preparation evidence")
+    teleporter_flags = source_prep.teleporter_prep.ARGUMENTS
+    if teleporter_preparation:
+        if compiler_flags[-len(teleporter_flags) :] != teleporter_flags or any(
+            compiler_flags.count(flag) != 1 for flag in teleporter_flags
+        ):
+            raise VerificationError(
+                "Teleporter qmake arguments differ from the exact reviewed source replacement order"
+            )
+    elif any(flag in compiler_flags for flag in teleporter_flags[1:]):
+        raise VerificationError("Teleporter qmake arguments lack attached preparation evidence")
     if any(
         not isinstance(flag, str) or (flag not in reviewed_flags and not re.fullmatch(r"[A-Za-z0-9_+=./:-]+", flag))
         for flag in compiler_flags
@@ -228,7 +602,15 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
         prerequisites += f", with CPython {abi} development files and its matching Boost.Python library"
-    if include_preparation:
+    if (
+        include_preparation
+        or resource_preparation
+        or reflection_preparation
+        or coordinates_preparation
+        or maps_manifest_preparation
+        or teleporter_preparation
+        or timing_preparation
+    ):
         prerequisites += ", and Python 3 for the hash-pinned build-source preparation helper"
     lines = [
         f"# Recovered {mode} snapshot",
@@ -256,6 +638,114 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             else []
         ),
         "",
+        *(
+            [
+                "Startup used supplemental Qt resource compatibility. The original manifest omitted 21 interaction",
+                "images required by the original animation loader. Verification generated a separate manifest from",
+                "the existing original images using the immediately following original commit's resource entries.",
+                "The original manifest, provider and configuration remain unchanged. Their exact hashes, the image",
+                "hashes, generated manifest and compatibility boundary are recorded in the attached preparation proof.",
+                "This result establishes startup with that recorded compatibility step.",
+                "",
+            ]
+            if resource_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used an explicit build-only reflection registration compatibility header. The original",
+                "registration macro passes a class name to a constructor that accepts no arguments and omits",
+                "the Qt metatype declarations needed by its original factory. The forced include restores only",
+                "the immediate parent's registration macro. Every original source file and translation unit is",
+                "preserved. Exact input/header hashes and donor provenance are attached in the preparation proof.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if reflection_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used an explicit build-only coordinate hashing compatibility header. The original",
+                "pathfinder instantiates std::unordered_map<Coords, int> without a std::hash<Coords> specialization.",
+                "The forced include delegates that standard interface to the existing original CoordsHasher;",
+                "the original hash algorithm and all original source files remain unchanged. Exact input/header",
+                "hashes and the compatibility boundary are attached in the preparation proof. This establishes",
+                "startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if coordinates_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used a derived legacy tile configuration on an isolated build copy. The unchanged original",
+                "CTile loader reads `config/tiles.json`, while the unchanged original tile data moved to",
+                "`config/objects/tiles.json`. The attached hash-pinned helper flattens each exact original properties",
+                "object, renames `animation` to `path`, and preserves `canStep`. It creates only the missing legacy",
+                "configuration and refuses to replace existing data. Original source and configuration bytes remain",
+                "unchanged. This is explicitly inferred compatibility, not recovery of a deleted original file;",
+                "the input/output hashes and preparation proof are attached. Gameplay parity remains unverified.",
+                "",
+            ]
+            if legacy_tile_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used a separate build-only maps resource manifest. The original manifest still references",
+                "a trigger configuration that the original commit deleted. The attached helper removes only that",
+                "entry, reproducing the later authored correction exactly, and selects the derived manifest only",
+                "after the project is read. The original manifest, source files and translation units remain unchanged.",
+                "Exact input/output hashes, the required absence state and the compatibility boundary are attached.",
+                "This establishes startup with that recorded compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if maps_manifest_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup and shutdown used explicit teleporter serialization compatibility. The original save",
+                "method writes coordinate array entries and then a named enabled field, which its JsonCpp rejects.",
+                "A separate derived translation unit changes only the save/load bodies to inverse JSON objects",
+                "containing x, y, z and enabled. All other teleporter methods retain their original bytes; the original",
+                "source file and header remain unchanged. Legacy coordinate arrays preserve the current enabled value,",
+                "initialized to true by every reviewed original header. The attached hash-pinned helper selects only",
+                "that derived unit after reading the project, preserving teleporting and ordinary save/shutdown paths.",
+                "Exact source/header/JsonCpp hashes and the semantic compatibility boundary are attached.",
+                "This establishes startup and shutdown with that compatibility step; gameplay parity is unverified.",
+                "",
+            ]
+            if teleporter_preparation
+            else []
+        ),
+        *(
+            [
+                "Startup used three legacy timing resource aliases on an isolated build copy. This original",
+                "commit renamed the timing files to `time.json` without changing their bytes, while its unchanged",
+                "resource manifest and animation provider still name `time.txt`. The attached hash-pinned helper",
+                "copies only those 21 surviving bytes under the three absent legacy filenames. Original manifest,",
+                "provider and renamed files remain unchanged. The later authored revision changes both manifest",
+                "and provider to JSON; this compatibility step preserves the earlier provider and its original",
+                "timing limitations. This proves startup with recorded resource compatibility; animation timing",
+                "and gameplay parity remain unverified. Exact input/output hashes and absence proof are attached.",
+                "",
+            ]
+            if timing_preparation
+            else []
+        ),
+        *(
+            [
+                "The isolated build copy resolves exact-pinned original merge conflicts only where the two",
+                "alternatives differ in whitespace. Five compiled files retain the reviewed HEAD alternative;",
+                "the derived teleporter unit also resolves its whitespace-only conflict. Original Git inputs",
+                "remain unchanged. Exact before/after hashes and portable replay helpers document this build",
+                "compatibility separately from teleporter serialization semantics; gameplay parity is unverified.",
+                "",
+            ]
+            if conflicts_preparation else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -288,6 +778,14 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         "Build from this snapshot's root directory:",
         "",
         "```sh",
+        *(["python3 recovery/prepare_supplemental_resources.py"] if resource_preparation else []),
+        *(["python3 recovery/prepare_reflection_registration.py"] if reflection_preparation else []),
+        *(["python3 recovery/prepare_coordinates_hash.py"] if coordinates_preparation else []),
+        *(["python3 recovery/prepare_legacy_tile_configuration.py"] if legacy_tile_preparation else []),
+        *(["python3 recovery/prepare_maps_manifest.py"] if maps_manifest_preparation else []),
+        *(["python3 recovery/prepare_teleporter_serialization.py"] if teleporter_preparation else []),
+        *(["python3 recovery/prepare_legacy_timing.py"] if timing_preparation else []),
+        *(["python3 recovery/prepare_trivial_conflicts.py"] if conflicts_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

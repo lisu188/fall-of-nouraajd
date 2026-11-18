@@ -1,0 +1,57 @@
+{
+  "linuxAllocatedBytesReleased": 87851008,
+  "removed": [
+    {
+      "allocatedBytes": 163840,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-1mi4698i/build",
+      "removedBytes": 158281,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 20660224,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-yd59os8j/build",
+      "removedBytes": 20449459,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 331776,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-ma9j8912/build",
+      "removedBytes": 321313,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 24387584,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-7l3orgrg/build",
+      "removedBytes": 24173699,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 540672,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-wfaz0r_s/build",
+      "removedBytes": 522958,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 393216,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-_dnt2kt2/build",
+      "removedBytes": 378366,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 16986112,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-t4e2u43w/build",
+      "removedBytes": 16885564,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    },
+    {
+      "allocatedBytes": 24387584,
+      "path": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-nr2xgmyr/build",
+      "removedBytes": 24173939,
+      "retained": "Original/prepared source, compiler/configure/startup logs, frames, runtime saves and frozen proof remain outside build/."
+    }
+  ],
+  "removedBytes": 87063579,
+  "retained": "Recovery payloads, all Git metadata/refs, source/failure diagnostics, saves, rootfs/toolchain, portable bundles and verification clone.",
+  "schemaVersion": 1,
+  "windowsAllocationReclaimed": 0
+}

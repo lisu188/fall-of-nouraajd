@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "originalBlob": "fadffa17076c55f9bfc705548f355e69c7a56248",
+      "path": "map/map.cpp",
+      "provenance": "Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited.",
+      "sha256": "4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722",
+      "source": "recovery/payloads/reconstructions/fa/fadffa17076c55f9bfc705548f355e69c7a56248-map.cpp"
+    },
+    {
+      "originalBlob": "f50450a42a588a0a036ebff412b6ff245a8222cc",
+      "path": "view/gamescene.cpp",
+      "provenance": "Missing body inferred by carrying accepted #159 reconstruction 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.",
+      "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+      "source": "recovery/payloads/reconstructions/f5/f50450a42a588a0a036ebff412b6ff245a8222cc-gamescene.cpp"
+    },
+    {
+      "originalBlob": "e197feb3953c9c65e51587a60fc2fe66155a063e",
+      "path": "map/map.cpp",
+      "provenance": "Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited.",
+      "sha256": "4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722",
+      "source": "recovery/payloads/reconstructions/e1/e197feb3953c9c65e51587a60fc2fe66155a063e-map.cpp"
+    }
+  ],
+  "schemaVersion": 1
+}

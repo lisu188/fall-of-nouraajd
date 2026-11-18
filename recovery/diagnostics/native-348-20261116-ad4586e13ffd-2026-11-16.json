@@ -1,0 +1,51 @@
+{
+  "entries": [
+    {
+      "originalBlob": "8bdd5bff7533ea36bd971a9373f2575f43b242a1",
+      "path": "CPathFinder.cpp",
+      "provenance": "Missing #348 reconstruction, not exact original. Genuine #348 CPathFinder.h removes old smart-finder member helpers/state. Backports intact surviving #350 CPathFinder.cpp free-helper search algorithm to actual older creature-pointer findPath ABI, with original callers requiring a relative next-step delta. Prior random/dumb algorithms retained. Exact missing #348/#349 algorithms are unknown; this is a documented donor-based implementation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "195c2bbe2bf9bdac842391604cf8da581486fdfbb8676e7290ec5311ccce4116",
+      "source": "recovery/payloads/reconstructions/8b/8bdd5bff7533ea36bd971a9373f2575f43b242a1-CPathFinder.cpp",
+      "validatedByOriginalCommit": "a1b7375b0e1208e59908eccdef9060397c5d7d59"
+    },
+    {
+      "originalBlob": "5b45427029f5d10b4a44a21056986ad67d6c5218",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #348 reconstruction, not exact original. Preserves prior creature implementation/header donor and actual existing callbacks; same-commit genuine Monster changes only smart-finder selection. Exact missing changes unknown; native compilation/startup provides bounded validation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "recovery/payloads/reconstructions/5b/5b45427029f5d10b4a44a21056986ad67d6c5218-CCreature.cpp",
+      "validatedByOriginalCommit": "a1b7375b0e1208e59908eccdef9060397c5d7d59"
+    },
+    {
+      "originalBlob": "f338285e3b3947e1e20f8dd1a49a7c8be92d054c",
+      "path": "object/CCreature.h",
+      "provenance": "Missing #348 reconstruction, not exact original. Preserves prior creature implementation/header donor and actual existing callbacks; same-commit genuine Monster changes only smart-finder selection. Exact missing changes unknown; native compilation/startup provides bounded validation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "e0bc02e3272515774ac858f63c09144f615ad72e9aba9eea040e35d3e2bcb536",
+      "source": "recovery/payloads/reconstructions/f3/f338285e3b3947e1e20f8dd1a49a7c8be92d054c-CCreature.h",
+      "validatedByOriginalCommit": "a1b7375b0e1208e59908eccdef9060397c5d7d59"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 142,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 348,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "a1b7375b0e1208e59908eccdef9060397c5d7d59",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/ad4586e13ffd3ae1746f189e8de4cbda34eb5816e3cd9d7d9b8ea4fc8f3e3fad",
+    "fingerprint": "ad4586e13ffd3ae1746f189e8de4cbda34eb5816e3cd9d7d9b8ea4fc8f3e3fad",
+    "sourceCommit": "a1b7375b0e1208e59908eccdef9060397c5d7d59",
+    "sourceTree": "5bf591d14636d1ea7b1cb73bf4a9176d46239013",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

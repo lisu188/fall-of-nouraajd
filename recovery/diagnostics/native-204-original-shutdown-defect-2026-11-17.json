@@ -1,0 +1,24 @@
+{
+ "catalogOrder": 204,
+ "checkedStdin": [
+  "inherited EOF stdin",
+  "idle never-closed pipe"
+ ],
+ "compatibilityStatus": "No adapter; original bytes unchanged. Reconstructions for this tree are kept so #205 onward carry them.",
+ "observedReadiness": {
+  "checks": {
+   "eventLoop": true,
+   "map": true,
+   "player": true,
+   "renderedFrame": true
+  },
+  "status": "ready"
+ },
+ "originalSourceGitBlob": "b2d2e2f0b00876831898fab4af2a9bf6b930faea",
+ "reason": "The surviving main.cpp starts a QThreadPool task that loops reading Python scripts from stdin while the view is visible. The game reaches readiness (map, player, rendered frame), but after the observer requests exit the global thread pool waits for that task, which blocks on an idle stdin or spins on EOF, so the process never exits and the startup watchdog expires. The genuine main.cpp is BFG-removed from #205 to #246 and has no stdin reader again at #247, so the removal point is unknown.",
+ "schemaVersion": 1,
+ "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+ "sourceSha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589",
+ "startupFrameSha256": "62cbb7b389f3674955d729b7cd793ddca8a93774b2c93b9d37ae2e671c660017",
+ "status": "original-runtime-defect-not-accepted"
+}
