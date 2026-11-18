@@ -94076,8 +94076,8 @@
     {
       "originalBlob": "75ea3f5ea6cd94a23c5a2666cd62465a53ed7057",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "172e389df2cc25436782d807cd70e3aa102a05ff968ebbec088912f83aa7b186",
+      "provenance": "content reconstruction of the BFG-removed original; active project after the developer's case-only rename (the stale uppercase Game.pro blob stops changing at #241), marked GAME_RECOVERY_APPLICATION for project selection; regenerated like the verified #241-#245 projects from the best-matching nearby reconstructed project and this tree's files (Python 2.7, Boost.Python, Qt Designer form, bare Qt keywords because the surviving mainwindow.h uses private slots), replacing an unverified reconstruction that took settings from #266 and omitted the vendored libraries",
+      "sha256": "f6f86908203c98f94bf1ba64f515ff87b5b6a0164446a56fff92c83f1c554a5b",
       "source": "payloads/reconstructions/75/75ea3f5ea6cd94a23c5a2666cd62465a53ed7057-game.pro"
     },
     {
@@ -94174,8 +94174,8 @@
     {
       "originalBlob": "7f69d62d4b5196e3c5f877434e5c35a846b9a6a8",
       "path": "src/gamescript.cpp",
-      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #246 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
-      "sha256": "3477b36debde42595c03a955de7325ac7e295adc7320b338cc338522dd2f56b8",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the verified #245 reconstruction (Boost.Python _game module), replacing an unverified reconstruction adapted from a later GameScript.cpp donor that assumed Map/MapObject members absent from this lineage",
+      "sha256": "d54c823b677e3692023063810845f4acc7fad0cf5891e0733db90b2f4af09bb8",
       "source": "payloads/reconstructions/7f/7f69d62d4b5196e3c5f877434e5c35a846b9a6a8-gamescript.cpp"
     },
     {
@@ -97625,7 +97625,7 @@
     {
       "originalBlob": "1246d1b48805e8ec8e0826f526b241da3b59bd94",
       "path": "src/map.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction f43b75fefb (previous version of src/map.cpp)",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.cpp",
       "sha256": "36075f7c9f7a6354cec75dfd02e08ab893353aa3756ade98a6714c21096db269",
       "source": "payloads/reconstructions/12/1246d1b48805e8ec8e0826f526b241da3b59bd94-map.cpp"
     },
@@ -97681,7 +97681,7 @@
     {
       "originalBlob": "36c67f1fc8b1f2013ea03bd28d2c17f7f4a96598",
       "path": "src/creature.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 164fdb97d3 (previous version of src/creature.cpp)",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/creature.cpp",
       "sha256": "c8400d8522670b1855200eed80651abd989b62504f1426248c2ecd7beadee52c",
       "source": "payloads/reconstructions/36/36c67f1fc8b1f2013ea03bd28d2c17f7f4a96598-creature.cpp"
     },
@@ -97751,14 +97751,14 @@
     {
       "originalBlob": "7cf1f98a31769a5b8636e0021002ee0072d9b3f7",
       "path": "src/stats.h",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 2b903bcb0a (previous version of src/stats.h)",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.h",
       "sha256": "3af444c7a02f3d082836eab45c6ce024fcbc8b47fdc1b1d034bd1066ade32162",
       "source": "payloads/reconstructions/7c/7cf1f98a31769a5b8636e0021002ee0072d9b3f7-stats.h"
     },
     {
       "originalBlob": "7dde9c2a5eab3a46d6e4637034c5646937abe33e",
       "path": "src/gameview.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction ffe7250ca4 (previous version of src/gameview.cpp)",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp",
       "sha256": "ce8c64a362f4b22f1b96a2b3dbc3bbd5ef77cd4bf71843529e074d4defb41477",
       "source": "payloads/reconstructions/7d/7dde9c2a5eab3a46d6e4637034c5646937abe33e-gameview.cpp"
     },
@@ -97779,7 +97779,7 @@
     {
       "originalBlob": "bb50b7d400edb5379f649404e5dcd54c0afed0f9",
       "path": "src/stats.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 799d96674c (previous version of src/stats.cpp)",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.cpp",
       "sha256": "87c0f297cc265b035b4b200916172595cf583e17d747290ccd048c689b8331b8",
       "source": "payloads/reconstructions/bb/bb50b7d400edb5379f649404e5dcd54c0afed0f9-stats.cpp"
     },
@@ -97814,7 +97814,7 @@
     {
       "originalBlob": "ede3e4258919d50c8523c6aacc67ced69e4a17ee",
       "path": "src/pathfinder.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 570f985709 (previous version of src/pathfinder.cpp)",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp",
       "sha256": "5cd7f9e6ae0f0bd46c3baf1de82f7a7069cc90e1dc2ceab771989f290861e0f9",
       "source": "payloads/reconstructions/ed/ede3e4258919d50c8523c6aacc67ced69e4a17ee-pathfinder.cpp"
     },
@@ -97831,6 +97831,237 @@
       "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp",
       "sha256": "ce8c64a362f4b22f1b96a2b3dbc3bbd5ef77cd4bf71843529e074d4defb41477",
       "source": "payloads/reconstructions/ff/ffe7250ca47d9cba2d33ab93326675892c2e3596-gameview.cpp"
+    },
+    {
+      "originalBlob": "0d43afd19b6309fc621b099890fc68db304130bf",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp",
+      "sha256": "5cd7f9e6ae0f0bd46c3baf1de82f7a7069cc90e1dc2ceab771989f290861e0f9",
+      "source": "payloads/reconstructions/0d/0d43afd19b6309fc621b099890fc68db304130bf-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "1007e85832fee5b55b33457d60b1a95c2f7917f6",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #244 reconstruction and adapted to #245 (interactions became Python classes): onAction calls the new virtual performAction (empty in C++, overridden by Python subclasses) and, for a configured effect, creates Effect(type, caster, victim) when configureEffect accepts it; Effect records its victim; the name-based Python function lookup and getInteraction are dropped (inferred)",
+      "sha256": "3a3f987cfeb77e43d3ff3dd34ebe84de7f0d07d282d0ee0f77e49f0c9155e67e",
+      "source": "payloads/reconstructions/10/1007e85832fee5b55b33457d60b1a95c2f7917f6-interaction.cpp"
+    },
+    {
+      "originalBlob": "13fc1760db4811e2ad9ddd6499b1484ba76271ad",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #244 reconstruction; the object factory attaches the map pointer before loadFromJson, and the TMX loader and generated dungeon gates create objects through the map",
+      "sha256": "bda0072e5c4029079cfc123b054685edbea839023724fb355d7cd46f6e8b5973",
+      "source": "payloads/reconstructions/13/13fc1760db4811e2ad9ddd6499b1484ba76271ad-map.cpp"
+    },
+    {
+      "originalBlob": "17dbb16b3b2e37bbdd0296322bcc491ef3f68982",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.cpp",
+      "sha256": "36075f7c9f7a6354cec75dfd02e08ab893353aa3756ade98a6714c21096db269",
+      "source": "payloads/reconstructions/17/17dbb16b3b2e37bbdd0296322bcc491ef3f68982-map.cpp"
+    },
+    {
+      "originalBlob": "293b4f5db544adc5eacdfd0f9b1d903ce4218555",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp",
+      "sha256": "5cd7f9e6ae0f0bd46c3baf1de82f7a7069cc90e1dc2ceab771989f290861e0f9",
+      "source": "payloads/reconstructions/29/293b4f5db544adc5eacdfd0f9b1d903ce4218555-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "3b1916a685e4cf37238b6f492b640771ab6bde6b",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp",
+      "sha256": "d54c823b677e3692023063810845f4acc7fad0cf5891e0733db90b2f4af09bb8",
+      "source": "payloads/reconstructions/3b/3b1916a685e4cf37238b6f492b640771ab6bde6b-gamescript.cpp"
+    },
+    {
+      "originalBlob": "40634c3c9401682ab4c9406700e16267167f1630",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #241 reconstruction; Map::createMapObject<T> accepts QString (surviving lootprovider.cpp) and std::string (surviving #245 item.cpp), and MapObject gains a factory overload that attaches the map before loading because the genuine #245 Item::loadFromJson reaches its map (pattern of the surviving Player(Map*, name) constructor)",
+      "sha256": "b353e3eb54e4a1f03b63529735ff87fb629edef04e0918c65be585d25503c946",
+      "source": "payloads/reconstructions/40/40634c3c9401682ab4c9406700e16267167f1630-map.h"
+    },
+    {
+      "originalBlob": "431f5d5fe817b85d90d897fb496b945acb2c4cc6",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.h",
+      "sha256": "4f563bb70bce12c9a1bdc0fc0597e28c953c0b96b4b2e8c6fbd024d632543eef",
+      "source": "payloads/reconstructions/43/431f5d5fe817b85d90d897fb496b945acb2c4cc6-map.h"
+    },
+    {
+      "originalBlob": "4b89a1068f06e2bee4249c23eae8a970e81ac72e",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #240 reconstruction; the C++ action table keeps only the actions the same-commit interaction.h still declares (#241 moved Devour to Python)",
+      "sha256": "5ea267d0255364f1519cfad43908847a1d0c55c515de07670b18b66f0e0674bf",
+      "source": "payloads/reconstructions/4b/4b89a1068f06e2bee4249c23eae8a970e81ac72e-interaction.cpp"
+    },
+    {
+      "originalBlob": "5350385f44c78269db75ebd21e99e935f2eb3c96",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #238 reconstruction; _Game also exposes Coords (constructor from x, y, z and the x/y/z fields), which the same-commit scripts/Objects.py imports and uses; from #239 the ScriptEngine's PY_UNSAFE makes such import failures fatal",
+      "sha256": "e2bb037495046d7f60bd1910f362fcf7d75926c2a1189fe24dc0365b2c72b981",
+      "source": "payloads/reconstructions/53/5350385f44c78269db75ebd21e99e935f2eb3c96-gamescript.cpp"
+    },
+    {
+      "originalBlob": "60455252e9129d64ccd128e8e0c9d6b9dc1564ec",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro",
+      "sha256": "caa3e52450ad9adb02dab6270d00b7d9c9ba402ea596517dbb03f09426c813bc",
+      "source": "payloads/reconstructions/60/60455252e9129d64ccd128e8e0c9d6b9dc1564ec-Game.pro"
+    },
+    {
+      "originalBlob": "65066fcd82d552433dc0c6a2c987f58b4e148ec2",
+      "path": "src/stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.h",
+      "sha256": "3af444c7a02f3d082836eab45c6ce024fcbc8b47fdc1b1d034bd1066ade32162",
+      "source": "payloads/reconstructions/65/65066fcd82d552433dc0c6a2c987f58b4e148ec2-stats.h"
+    },
+    {
+      "originalBlob": "655c93b205dcb6764678e7cc9b4b08670efa22a7",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp",
+      "sha256": "d54c823b677e3692023063810845f4acc7fad0cf5891e0733db90b2f4af09bb8",
+      "source": "payloads/reconstructions/65/655c93b205dcb6764678e7cc9b4b08670efa22a7-gamescript.cpp"
+    },
+    {
+      "originalBlob": "6f9c9d7af7a5d5ff18c42a74932093a15501e312",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro",
+      "sha256": "49daff638c27f619281338d0786f44aaba41ed700db2b3ca360e7851e4d83359",
+      "source": "payloads/reconstructions/6f/6f9c9d7af7a5d5ff18c42a74932093a15501e312-Game.pro"
+    },
+    {
+      "originalBlob": "7104085102b4cbf740d90e273d24b60e82441cd8",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.h",
+      "sha256": "65f8deac35ef9e2edc95369bb5ad531d93471ebadfa1a4c330478d05b4fe003b",
+      "source": "payloads/reconstructions/71/7104085102b4cbf740d90e273d24b60e82441cd8-map.h"
+    },
+    {
+      "originalBlob": "72545e11da00c5ba569d51e99a749a2ac0fad378",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.cpp",
+      "sha256": "36075f7c9f7a6354cec75dfd02e08ab893353aa3756ade98a6714c21096db269",
+      "source": "payloads/reconstructions/72/72545e11da00c5ba569d51e99a749a2ac0fad378-map.cpp"
+    },
+    {
+      "originalBlob": "77c2e67d4d6397d724692a180531a4b57d0d6ff9",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #238 reconstruction; the C++ action table keeps only the actions the same-commit interaction.h still declares (#239 moved ChaosBlast to Python, which onAction reaches through the ScriptEngine)",
+      "sha256": "1d09aeeb5a16ade5443585eddf25be57c6bc5fe552ae1961e8e9eff5b06fc2b5",
+      "source": "payloads/reconstructions/77/77c2e67d4d6397d724692a180531a4b57d0d6ff9-interaction.cpp"
+    },
+    {
+      "originalBlob": "824dfb007281e508430dda02c809a17e22469d7a",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro",
+      "sha256": "49daff638c27f619281338d0786f44aaba41ed700db2b3ca360e7851e4d83359",
+      "source": "payloads/reconstructions/82/824dfb007281e508430dda02c809a17e22469d7a-Game.pro"
+    },
+    {
+      "originalBlob": "8aa054cdae52901b9098a0d4e495710424253dfe",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #245 reconstruction; GameView takes the map file and player type (#246 gameview.h) and starts the scene with both",
+      "sha256": "a52b84aeab5115eed7a36172b77a3134445353274ca9dbfad3d53db6e9e7872c",
+      "source": "payloads/reconstructions/8a/8aa054cdae52901b9098a0d4e495710424253dfe-gameview.cpp"
+    },
+    {
+      "originalBlob": "9ecb6c43f5b859bbc12ec72f3cf3f84d196b282e",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.h",
+      "sha256": "31483c696612a7f4b03d33a95f97c330bd5c9187ca50fc2d8df7162fd5395a64",
+      "source": "payloads/reconstructions/9e/9ecb6c43f5b859bbc12ec72f3cf3f84d196b282e-map.h"
+    },
+    {
+      "originalBlob": "a9c57dec59b4d717a8ef0eea0dd345fb0b5c34df",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/main.cpp",
+      "sha256": "e069340c79b5494c0b0a31f1cae509f9326fc69262d0f25db6fc222ebf598709",
+      "source": "payloads/reconstructions/a9/a9c57dec59b4d717a8ef0eea0dd345fb0b5c34df-main.cpp"
+    },
+    {
+      "originalBlob": "b2d71d663b89e4a8ec60af83f682bc059dc08f32",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #237 reconstruction; Creature::addEffect takes an Effect object as declared in #244 and stores it",
+      "sha256": "2f0014703127ca8bbc72bfa0e31dc32c017cac89a11d9903416f4424c8b37cab",
+      "source": "payloads/reconstructions/b2/b2d71d663b89e4a8ec60af83f682bc059dc08f32-creature.cpp"
+    },
+    {
+      "originalBlob": "bac9fca5e4a6c77e28cff0763e971c22b75ff5fd",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp",
+      "sha256": "da7ff8e53c8b89a8c28966885a164a2ab6332f2e46c6636fff9854147f68f8c4",
+      "source": "payloads/reconstructions/ba/bac9fca5e4a6c77e28cff0763e971c22b75ff5fd-gameview.cpp"
+    },
+    {
+      "originalBlob": "bb8dd0a77e4090e78fbfc48f0122b1efd31e1844",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #245 reconstruction; the slot-configuration local is renamed because #246 builds with Qt keywords (the surviving mainwindow.h uses private slots), where slots is a macro",
+      "sha256": "1d3c89ece30fc8f5f06be50595277c9cf170cb712687439cb84e0d55caec9d20",
+      "source": "payloads/reconstructions/bb/bb8dd0a77e4090e78fbfc48f0122b1efd31e1844-creature.cpp"
+    },
+    {
+      "originalBlob": "bc5c8722f74b0159e44778a5d3410a727245c24f",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #241 reconstruction; #244 removed the C++ action table and the effect member (interaction.h), so every action runs as the same-named Python function from the map's ScriptEngine and the C++ action functions are dropped; effect handlers stay because interaction.h still declares them",
+      "sha256": "142da75357f12757a1a6af10283fc8574375bde773e21235bcb174b3d122dbbd",
+      "source": "payloads/reconstructions/bc/bc5c8722f74b0159e44778a5d3410a727245c24f-interaction.cpp"
+    },
+    {
+      "originalBlob": "c35b131f5ace771e6c9bb19570448776f8ffaf4b",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp",
+      "sha256": "24d29484c54a607b620a6b22eb5706f91e0562ab494baee34c99030ea35f5d1a",
+      "source": "payloads/reconstructions/c3/c35b131f5ace771e6c9bb19570448776f8ffaf4b-gamescript.cpp"
+    },
+    {
+      "originalBlob": "d3f99688161171b3228268a73e7351fc9a514d11",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #236 reconstruction; _Game also exposes Damage (fire/frost/thunder/normal/shadow properties over its accessors) and Interaction, which the same-commit scripts/Interactions.py imports (module contents otherwise inferred)",
+      "sha256": "24d29484c54a607b620a6b22eb5706f91e0562ab494baee34c99030ea35f5d1a",
+      "source": "payloads/reconstructions/d3/d3f99688161171b3228268a73e7351fc9a514d11-gamescript.cpp"
+    },
+    {
+      "originalBlob": "d423845e659fc9c9045491a23bf9789717fa2baf",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.cpp",
+      "sha256": "36075f7c9f7a6354cec75dfd02e08ab893353aa3756ade98a6714c21096db269",
+      "source": "payloads/reconstructions/d4/d423845e659fc9c9045491a23bf9789717fa2baf-map.cpp"
+    },
+    {
+      "originalBlob": "d77bb56d3ca9bf8990e644f86a259341694d0518",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #240 reconstruction; #241 renamed the Boost.Python module to _game (gamescript.h declares init_game; scripts/game/__init__.py imports _game), and Building exposes the PY_PROPERTY_ACCESSOR methods from the surviving util.h that scripts/game/object.py calls",
+      "sha256": "d54c823b677e3692023063810845f4acc7fad0cf5891e0733db90b2f4af09bb8",
+      "source": "payloads/reconstructions/d7/d77bb56d3ca9bf8990e644f86a259341694d0518-gamescript.cpp"
+    },
+    {
+      "originalBlob": "d8c7e4cf258450c1bb840f25402cbe472431ce0a",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/interaction.cpp",
+      "sha256": "34734e8f4d05ba8c02c316450cb4325f9a9680c964551501469bc8cc0560a7cc",
+      "source": "payloads/reconstructions/d8/d8c7e4cf258450c1bb840f25402cbe472431ce0a-interaction.cpp"
+    },
+    {
+      "originalBlob": "dda34767121dfd4eb46758e9b53c275ae3410e91",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #245 reconstruction; main shows the new MainWindow, whose start button creates the GameView (surviving #246 mainwindow.cpp), as the next surviving main.cpp (#247) does",
+      "sha256": "76866f9a83513d11736d23f4018599b49abc76e4f8f57411cba81fb8ac28b218",
+      "source": "payloads/reconstructions/dd/dda34767121dfd4eb46758e9b53c275ae3410e91-main.cpp"
+    },
+    {
+      "originalBlob": "f9430cd72d6cadd4a229be215bbe1f0ba34c9de9",
+      "path": "src/main.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/main.cpp",
+      "sha256": "bfa2250e7fd80b55ba06eb82a3ec6e9858c23943b3780837a8b31ab31429395d",
+      "source": "payloads/reconstructions/f9/f9430cd72d6cadd4a229be215bbe1f0ba34c9de9-main.cpp"
+    },
+    {
+      "originalBlob": "faf42f873d667f44e1937e5db65d8c9f673557a1",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #239 reconstruction; #240 retired the C-API Game module (gamescript.h and the surviving ScriptEngine no longer declare or create it), so only the Boost.Python _Game module remains (Building, Damage, Interaction, Coords)",
+      "sha256": "464d1b37a4e5438611d8136a1c2ec7a10abeb0e85ff5f1c1f2858575248268c2",
+      "source": "payloads/reconstructions/fa/faf42f873d667f44e1937e5db65d8c9f673557a1-gamescript.cpp"
     }
   ],
   "schemaVersion": 1

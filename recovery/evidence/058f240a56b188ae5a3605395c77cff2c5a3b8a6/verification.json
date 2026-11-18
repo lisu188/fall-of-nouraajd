@@ -1,29 +1,29 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/observer/recovery_smoke_config.h",
-    "configSha256": "5f2354ff648d00dd1631d04ef96ab276ca6aea520a1d0ca5a1e4315f59eb52b4",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/observer/recovery_smoke_config.h",
+    "configSha256": "ee72b2bd8ff18650c2700d482710849db589d80f01f85c6db3a34564d0d3e514",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
+    "source": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp"
   },
-  "artifactDir": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/smoke",
+  "artifactDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/smoke",
   "build": {
     "command": [
       "make",
-      "-j4"
+      "-j8"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/build.log",
     "returnCode": 0,
-    "seconds": 25.539,
+    "seconds": 23.863,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/source/game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/source/game.pro",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -32,16 +32,16 @@
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/source",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/observer"
+      "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/observer"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/configure.log",
     "returnCode": 0,
-    "seconds": 0.033,
+    "seconds": 0.032,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-later/verify/evidence/014a0cd233ad2c190cd4bd9dd7392dff9590ee13b8db4ec0ff6b228d4d0d274d",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/5e6e1bf76959bc7e7165d6a7ea2609122a0d8ce744e1ceb201959faad8b1732a",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -50,20 +50,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/observer/libwindowspaths.so",
-      "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.214,
+    "seconds": 0.264,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "014a0cd233ad2c190cd4bd9dd7392dff9590ee13b8db4ec0ff6b228d4d0d274d",
+  "fingerprint": "5e6e1bf76959bc7e7165d6a7ea2609122a0d8ce744e1ceb201959faad8b1732a",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -102,15 +102,15 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "6f9c9d7af7a5d5ff18c42a74932093a15501e312",
         "path": "Game.pro",
-        "provenance": "unverified donor reconstruction; 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; headerMatch=0; apiOverlap=0/10000; distance=7",
-        "replacementBlob": "7ef41b395ea6f0eb7d65349c5638148e39a78ebc"
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro",
+        "replacementBlob": "1f055297111800aabf5b9558df1d3c255f572c74"
       },
       {
         "markerPath": "config/objects/interactions.json.REMOVED.git-id",
@@ -133,7 +133,7 @@
         "method": "reconstruction",
         "originalBlob": "6b8bae413c7f17afc471946989a4e9208a81684f",
         "path": "config/objects/weapons.json",
-        "provenance": "working reconstruction",
+        "provenance": "Replace unrelated tile-config donor for missing weapons.json with intact55e6516e:config/weapons.json blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5. Original weapon image identities, CWeapon API and authored ChaosSword/Staff/Dagger references support the donor; add original CTypeHandler schema. Numeric donor stats are inferred, not exact recovered target balance.",
         "replacementBlob": "1101738c32845828729cefd6a24f65eca58f6faa"
       },
       {
@@ -149,7 +149,7 @@
         "method": "reconstruction",
         "originalBlob": "3059c5de88b726b70736b936ebf8e360f82fec09",
         "path": "game.pro",
-        "provenance": "working reconstruction",
+        "provenance": "Refine missing application .pro reconstruction with all33 supplied Tmx/base64/tinyxml/zlib C/C++ translation units and lib include path. Actual reconstructed map now invokes the parser, exposing fail-before unresolved Tmx link symbols. Preserve Python2.7 ABI, unique reconstructed application marker, and existing path guards; no surviving project edits or new production dependency.",
         "replacementBlob": "3d30f8fda45f7cc69935001261973a112054f97d"
       },
       {
@@ -637,7 +637,7 @@
         "method": "reconstruction",
         "originalBlob": "221faa7f05440b2bc0fac2cbf753d9cc43576c52",
         "path": "lib/zlib/adler32.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b"
       },
       {
@@ -645,7 +645,7 @@
         "method": "reconstruction",
         "originalBlob": "125ff2b5f893bc42739f3d165731f8d400745df7",
         "path": "lib/zlib/crc32.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "91be372d224da6833c03bd24d7158ff622ece35f"
       },
       {
@@ -660,7 +660,7 @@
         "method": "reconstruction",
         "originalBlob": "4af03ef7d47ecfa80f7165227f173056b0748be2",
         "path": "lib/zlib/deflate.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 deflate.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec"
       },
       {
@@ -668,7 +668,7 @@
         "method": "reconstruction",
         "originalBlob": "4eac53fb2dac6f9d4cc9c2b0c67e9650dd7c8620",
         "path": "lib/zlib/deflate.h",
-        "provenance": "working reconstruction",
+        "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
         "replacementBlob": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169"
       },
       {
@@ -676,7 +676,7 @@
         "method": "reconstruction",
         "originalBlob": "f39c7a58c2a5066e15cb7c3aaec9cae2c2f91885",
         "path": "lib/zlib/gzguts.h",
-        "provenance": "working reconstruction",
+        "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
         "replacementBlob": "0f8fb79f87d4f65e7f5667129c763e3a361199f2"
       },
       {
@@ -684,7 +684,7 @@
         "method": "reconstruction",
         "originalBlob": "b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8",
         "path": "lib/zlib/gzlib.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 gzlib.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf"
       },
       {
@@ -692,7 +692,7 @@
         "method": "reconstruction",
         "originalBlob": "906fd04f04f4cea091f6b4a933cdd1832d532c7b",
         "path": "lib/zlib/gzread.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 gzread.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "548201ab0099b51556da32c4873d1dbb2d211b5a"
       },
       {
@@ -700,7 +700,7 @@
         "method": "reconstruction",
         "originalBlob": "d0c918100d6534de11bfc3511da72af5e15db5fc",
         "path": "lib/zlib/gzwrite.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 gzwrite.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "e8defc6887a186055f17597968c4fc5791332811"
       },
       {
@@ -708,7 +708,7 @@
         "method": "reconstruction",
         "originalBlob": "4811377b743c73a86d64b8fb755c76a7394fe4f4",
         "path": "lib/zlib/infback.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 infback.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1"
       },
       {
@@ -716,7 +716,7 @@
         "method": "reconstruction",
         "originalBlob": "b4cae5f9af95ab738df1f14196305790009abb33",
         "path": "lib/zlib/inffast.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 inffast.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "2f1d60b43b8a9deacf22bb5526a979dcc219a68f"
       },
       {
@@ -731,7 +731,7 @@
         "method": "reconstruction",
         "originalBlob": "5ede1d8b5b260796db8fc7ea95dba13586f34e4f",
         "path": "lib/zlib/inflate.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 inflate.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "a8431abeacffd97e5028a9e54135a5f173528960"
       },
       {
@@ -746,7 +746,7 @@
         "method": "reconstruction",
         "originalBlob": "4b267038746863b42c3f5bac514ab6e41a905396",
         "path": "lib/zlib/inftrees.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 inftrees.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5"
       },
       {
@@ -754,7 +754,7 @@
         "method": "reconstruction",
         "originalBlob": "f0e1d5e28e028b93033a5a084fd0e778910cd0e2",
         "path": "lib/zlib/trees.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 trees.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "56e9bb1c115e81082f58a89b003b766760e12a12"
       },
       {
@@ -776,7 +776,7 @@
         "method": "reconstruction",
         "originalBlob": "236315b730bbedbbded53605ba20b984204ae41e",
         "path": "lib/zlib/zlib.h",
-        "provenance": "working reconstruction",
+        "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
         "replacementBlob": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69"
       },
       {
@@ -784,7 +784,7 @@
         "method": "reconstruction",
         "originalBlob": "5b2aa6e7d8061e22ba8af1406d3587d772e75143",
         "path": "lib/zlib/zutil.c",
-        "provenance": "working reconstruction",
+        "provenance": "Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.",
         "replacementBlob": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1"
       },
       {
@@ -792,7 +792,7 @@
         "method": "reconstruction",
         "originalBlob": "e84852a3ca7b5bd6b76889beaf8ce183586037d6",
         "path": "lib/zlib/zutil.h",
-        "provenance": "working reconstruction",
+        "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
         "replacementBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0"
       },
       {
@@ -800,7 +800,7 @@
         "method": "reconstruction",
         "originalBlob": "78efddd0cf63a22ebb6ca3b360c1d7b5ba74cd9b",
         "path": "maps/map.tmx",
-        "provenance": "working reconstruction",
+        "provenance": "Missing TMX map reconstructed from the prior converted later-map donor, removing only Market and StartEvent objects unsupported by the genuine 2014-09-09 target APIs/configuration/scripts. The original target misc.json defines Event only, buildings.json defines Cave/Teleporter, CBuilding.h has no Market, and the original scripts/game/object.py defines Cave/Teleporter only. No fake classes/events or empty script substitutes. All tile geometry, tilesets, layer metadata, entry coordinates and six supported Cave/Teleporter/ChaosSword objects are preserved. Exact original map bytes and its lost event content remain unavailable; this is an inferred donor adaptation.",
         "replacementBlob": "3c12abcebe2cfc864d1c98af8d32afc10d933c23"
       },
       {
@@ -816,7 +816,7 @@
         "method": "reconstruction",
         "originalBlob": "961203efe5c083e5d4ca2a29f0dad37071fd5192",
         "path": "src/CCreature.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Reconstructed combined header differs only by genuine CPlayer(CMap*,QString) constructor; implement delegation/map/load behavior. Use original int Stats::getMain rather than future getMainValue and apply actual main-stat selector explicitly. Keep declared null equipment slots.",
         "replacementBlob": "c8bf884efbd8b5c8f847e40e859825c74ac39d95"
       },
       {
@@ -832,7 +832,7 @@
         "method": "reconstruction",
         "originalBlob": "b2b8e3310ec27589e5a6878be9919bb815942b88",
         "path": "src/CGamePanel.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CGamePanel.h is byte-identical; actual panel interfaces retained.",
         "replacementBlob": "3b80b3f9cf6c361f4a3cf35c45fc3f59a0e11d0d"
       },
       {
@@ -840,7 +840,7 @@
         "method": "reconstruction",
         "originalBlob": "a5bd0c343ccedc175855b76239bd468010a470c2",
         "path": "src/CGameView.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Inferred reconstruction adapted from intact CGameView.cpp donors and same-commit CGameView.h/CGameScene.cpp. The genuine #257 menu makes the view a QWidget child and hides itself; #258 changes to QObject parenting. Reconstructed show() promotes only a non-window child to Qt::Window before showNormal(), preserving the menu and all surviving source bytes. Actual #257 before/after frame plus new #258/#259 ordinary native proofs are attached. Both fresh adjacent proofs pass full compile/link and map/player/frame/clean exit; gameplay and exact source remain unverified.",
         "replacementBlob": "ace66044f90e9377a5066b50c4e18645e2e8988c"
       },
       {
@@ -848,7 +848,7 @@
         "method": "reconstruction",
         "originalBlob": "4ca68f3c92b35de3f8070d7e2493c20049508f0d",
         "path": "src/CInteraction.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Generated missing-body reconstruction for genuine #260 CInteraction.h Effect (non-QObject constructor/callback map) ABI. Use intact #290 CInteraction.cpp blob98248e766f1e2921c117dbc064325ddb8824e70a mouse/action/effect lifecycle as adapted donor; invoke actual #260 scripts/game/interaction.py functions, not later class instances. Native Effect callbacks transcribe intact #331beef9d87 scripts/game/effect.py blob2ba257597feba52e3ba108b1056e3a5443b8ba1c arithmetic/return semantics using original Effect/Stats-pointer APIs. Barrier false and ArmorOfEndlessWinter missing restriction are genuine donor behavior/limitation. Maps original StunEffect spelling to genuine Stun config entry. saveToJson field shape is reconstructed and unverified; no whole-game or gameplay parity claim.",
         "replacementBlob": "a61ca054b846355b257cce1ebb953ee1c32b182b"
       },
       {
@@ -856,7 +856,7 @@
         "method": "reconstruction",
         "originalBlob": "51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5",
         "path": "src/CItem.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Generated adaptation of intact #2475fe60e7c:src/item.cpp blob6776325d5546af8c14a14c3433c5021eeac82566 and potion.cpp blob465840edb9a59f0e82e7b72fd12cd109f0da9e13. Combine genuine #260 item classes, apply C-prefix/QString/default constructor changes, retain real pickup/equip/unequip/mouse-use/health-mana potion behavior, load JSON properties from actual config/objects layout and use original getStats()->addBonus/removeBonus API. No future GUI handler or event API, no surviving source edits. Accept both genuine target flat item/armor configuration and nested property descriptors while preserving their actual stats/equip/potion behavior.",
         "replacementBlob": "651f4401e6de3b5e33ed9126d6b23b53a52ac652"
       },
       {
@@ -864,7 +864,7 @@
         "method": "reconstruction",
         "originalBlob": "b6ca211b1ba2c5a6a02491f90af4fa427c4e2971",
         "path": "src/CMap.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CMap API is unchanged apart from virtual destructor annotation. Actual Tmx property guard and bounded layer/object semantics retained; procedural behavior remains inferred.",
         "replacementBlob": "c2d7f1618bc066f99682d4f5d1eb2ce46edeacda"
       },
       {
@@ -872,7 +872,7 @@
         "method": "reconstruction",
         "originalBlob": "8d5b72a24089899954852a9ace26217a7c95d8e4",
         "path": "src/CMapObject.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original #259 CMapObject.h lacks the #260 explicit destructor declaration; omit that definition. Preserve genuine four-argument moveTo/no-argument callbacks/Tmx property APIs.",
         "replacementBlob": "82f24060e908d74edb631522d93b3bafba7551c2"
       },
       {
@@ -880,7 +880,7 @@
         "method": "reconstruction",
         "originalBlob": "9631c0f070eec913f47a3b5b8f0404a0a42a321f",
         "path": "src/CObjectHandler.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CObjectHandler/CTypeHandler APIs are byte-identical; support actual flat and nested object descriptors, no stand-in types. Native #259 clean-exit regression and diagnostic backtrace exposed QWidget destruction through an invalid non-widget QObject parent. Actual CAnimatedObject inherits QWidget, so give it the genuine owning CGameView QWidget; graphics ownership remains in original scene/item hierarchy.",
         "replacementBlob": "124311fc3920df6202338c117b7cea2ae40307f8"
       },
       {
@@ -888,7 +888,7 @@
         "method": "reconstruction",
         "originalBlob": "25e5e0271690584dff5aeaa1f00de5e7535a28cf",
         "path": "src/CPathFinder.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CPathFinder.h is byte-identical; cardinal/random/cost-field behavior and performance remain unverified.",
         "replacementBlob": "45ea828d2d06dc8b455993dc177577f4dc9fb1f5"
       },
       {
@@ -896,7 +896,7 @@
         "method": "reconstruction",
         "originalBlob": "1852ba9d4689f6cebcce47680c86b0b579748f89",
         "path": "src/CPlayerView.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CPlayerView.h is byte-identical; actual PNG paths and initialized stats-view pointer retained. The actual #259 arrow assets are directory/0.png, unlike #260 flat PNGs; retain directory-slash paths after the native startup failure exposed this boundary.",
         "replacementBlob": "5069aedae2ecbfba06935c68dc5ce7d94c69d928"
       },
       {
@@ -904,7 +904,7 @@
         "method": "reconstruction",
         "originalBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
         "path": "src/GameScript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "Retain reconstructed missing #258\u2013259 Boost.Python module and exact init_game/Python2.7 ABI. Actual target script imports Interaction and calls Stats.getDamage; expose real CInteraction alias and genuine generated Stats getter, as native-proven #260 does. No stand-in or no-op binding.",
         "replacementBlob": "15beba69e1ca585dae1827e4b742a9ad5713ad3c"
       },
       {
@@ -920,7 +920,7 @@
         "method": "reconstruction",
         "originalBlob": "2b9ab73b866e9b6c8f6252dcea6bb2d86a618ba5",
         "path": "src/Stats.h",
-        "provenance": "working reconstruction",
+        "provenance": "Infer missing #258\u2013259 Stats.h from nearest pre-deletion Stats header plus all22 exact fields emitted by genuine #257 generator/descriptors (retained generated-prop.h). Inline actual PROP rows using same-commit original Util.h macro; gen/ was genuinely deleted in #258, so no missing generated include remains. Preserve older int getMain/pointer-main Stats API, unlike #260 QString getMain/getMainValue. Not exact original source.",
         "replacementBlob": "850cdbf537f234049096d1444ffe2ea0af9c3ae7"
       },
       {
@@ -930,7 +930,7 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "d49ec0428871c910e24628ae667502d6a851cf8bb8e65802c9c9429a821fee6f",
+    "restoredFilesFingerprint": "f562cc4072a302ac2ea482453462105d4eb995024bd0540406ba60defb645d4b",
     "sourceCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6",
     "sourceTree": "57633b78ddf8623c6bf470a00d849ed1bed6b787",
     "status": "complete",
@@ -943,12 +943,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/observer/libwindowspaths.so",
-      "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.715,
+    "seconds": 1.418,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -958,8 +958,8 @@
       },
       "frame": {
         "height": 718,
-        "path": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/smoke/startup.png",
-        "sha256": "c059f8c9156fd5ac3b5fb817be155c31e911af377c0e29f4120ac00862bf9aaf",
+        "path": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/smoke/startup.png",
+        "sha256": "0166a48c3882afa512f28858d4561fa400fce529ceabe4e37e19682cf3196d5c",
         "width": 1278
       },
       "mode": "game",
@@ -967,7 +967,7 @@
       "schemaVersion": 1,
       "status": "ready"
     },
-    "startupReport": "/tmp/nouraajd-bfg-recovery/native-later/verify/snapshot-u6zqgn4q/smoke/startup.json",
+    "startupReport": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-5rd3_zlv/smoke/startup.json",
     "status": "success",
     "timedOut": false
   },
@@ -977,7 +977,7 @@
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "2ce6f08f4127a903ed0dae25db9bd46ffa10b52fbaab9bef40b66c675dbe5f9d"
+      "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092"
     },
     "outputs": [],
     "status": "not-required",

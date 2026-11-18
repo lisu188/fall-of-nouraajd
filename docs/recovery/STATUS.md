@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **270 commits / 269 trees** against the
-restored inputs: **259 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **280 commits / 278 trees** against the
+restored inputs: **269 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -127,6 +127,18 @@ to Python 2.7 (#229, `Py_InitModule`) and Boost.Python (#231: the ScriptEngine c
 and the per-map `LootProvider` (#233). Inferred projects switch borrowed Python 3
 libraries to 2.7 for the Python 2 module API and link Boost.Python when a tree includes
 it. See `recovery/diagnostics/native-226-background-loading-2026-11-18.json`.
+#237-#246 follow the developer's move of interactions into Python: actions leave the C++
+table as the same-commit `interaction.h` stops declaring them and run from the map's
+ScriptEngine; `_Game` (renamed `_game` at #241) also exposes `Damage`, `Interaction` and
+`Coords` because the same-commit scripts import them and, from #239, the ScriptEngine's
+`PY_UNSAFE` makes import failures fatal; `MapObject` expands the #241 `PROPERTY_ACCESSOR`
+macro; at #245 interactions become Python classes (`performAction`/`configureEffect`),
+the factory attaches the map before loading (as the genuine `Player(Map*, name)` does),
+and the surviving `LoadGameTask` stops filling the whole map, so startups are fast again.
+#246 adds the main window; after the developer's case-only `Game.pro` -> `game.pro`
+rename the active `game.pro` carries `GAME_RECOVERY_APPLICATION = true`. Saving the
+stale uppercase `Game.pro` reconstruction (active only for #241-#245) changed the inputs
+of #256-#259, which were re-verified under the current inputs.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -237,10 +249,9 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  The next blocker is #237 (interactions moved to Python scripts using `_Game.Damage`
-  and `_Game.Interaction`); #237-#248 still need the long startup window, and the
-  `CMapObject`/`CGamePanel` renames follow before #256. `recovery/progress.json` records
-  the exact accepted set.
+  The next blocker is #247 (the C-prefixed class rename and reflection system, with a new
+  `gamepanel.cpp`), then #248-#255 before the accepted #256. `recovery/progress.json`
+  records the exact accepted set.
 - Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
   partial #176 conflict-adapter wiring.
 - Replace later donor implementations that conflict with surviving APIs, including
