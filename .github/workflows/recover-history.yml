@@ -12,6 +12,8 @@ on:
       - scripts/history_rootfs.py
       - scripts/history_workbench.py
       - scripts/history_source_prep.py
+      - scripts/history_prepare_pathfinder_cache.py
+      - scripts/history_runtime_configs.py
       - scripts/history_prepare_includes.py
       - scripts/history_prepare_resources.py
       - scripts/history_prepare_reflection.py
@@ -34,6 +36,7 @@ on:
       - tests/test_history_rootfs.py
       - tests/test_history_workbench.py
       - tests/test_history_source_prep.py
+      - tests/test_history_runtime_transitions.py
       - tests/test_history_resource_preparation.py
       - tests/test_history_reflection_preparation.py
       - tests/test_history_coordinate_preparation.py
@@ -80,7 +83,7 @@ jobs:
             tests.test_history_reflection_preparation tests.test_history_maps_manifest tests.test_history_coordinate_preparation \
             tests.test_history_legacy_tiles tests.test_history_teleporter_preparation \
             tests.test_history_legacy_timing tests.test_history_legacy_timing_integration \
-            tests.test_history_static_lto tests.test_history_movement_completion
+            tests.test_history_static_lto tests.test_history_movement_completion tests.test_history_runtime_transitions
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

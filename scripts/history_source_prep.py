@@ -20,6 +20,7 @@ try:
     from scripts import history_prepare_teleporter as teleporter_prep
     from scripts import history_prepare_legacy_timing as timing_prep
     from scripts import history_prepare_conflicts as conflicts_prep
+    from scripts import history_prepare_pathfinder_cache as cache_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -29,6 +30,7 @@ except ModuleNotFoundError:
     import history_prepare_teleporter as teleporter_prep
     import history_prepare_legacy_timing as timing_prep
     import history_prepare_conflicts as conflicts_prep
+    import history_prepare_pathfinder_cache as cache_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -284,7 +286,8 @@ def sourceManifest(source_root: Path) -> dict:
 
 
 def prepareSources(
-    source_root: Path, output_root: Path, recipe: dict, environment: dict, run_command, timeout: float = 120
+    source_root: Path, output_root: Path, recipe: dict, environment: dict, run_command, timeout: float = 120,
+    *, source_commit: str | None = None, repo_root: Path | None = None,
 ) -> dict:
     """Record derived build outputs without changing the restored-input identity."""
     implementation = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -304,6 +307,9 @@ def prepareSources(
     teleporter = teleporterPlan(source_root)
     timing = timing_prep.legacyTimingPlan(source_root)
     conflicts = conflicts_prep.conflictPlan(source_root)
+    child_cache = source_commit == cache_prep.COMMIT
+    if child_cache and (not conflicts or not teleporter):
+        raise ValueError("Pathfinder cache preparation requires the reviewed #176 build inputs")
     if teleporter and teleporter_prep.containedPath(source_root, teleporter["path"]).exists():
         raise ValueError("Teleporter compatibility requires a new derived source, preserving existing files")
     if maps_manifest and (source_root / maps_manifest["path"]).exists():
@@ -467,6 +473,17 @@ def prepareSources(
             "command": ["history_source_prep.py", "resolve-reviewed-whitespace-conflicts"],
             "returnCode": 0, "timedOut": False, "log": str(log),
         })
+    if child_cache:
+        data = cache_prep.donorBytes(repo_root or Path(__file__).resolve().parents[1])
+        cache_prep.apply(source_root, data)
+        identity = cache_prep.identity()
+        result["identity"]["childPathfinderCache"] = identity
+        log = output_root / "child-pathfinder-cache.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "childPathfinderCache", "command": ["history_source_prep.py", "prepare-child-pathfinder-cache"],
+            "returnCode": 0, "timedOut": False, "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -553,6 +570,8 @@ def prepareSources(
                 or (timing and name in timing["paths"])
             )
         ]
+        if child_cache:
+            next(entry for entry in outputs if entry["path"] == cache_prep.TARGET)["purpose"] = cache_prep.PURPOSE
         result.update({"status": "success", "outputs": outputs})
         result["identity"]["outputs"] = outputs
         return result
@@ -652,6 +671,7 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--recipes", required=True, type=Path)
     parser.add_argument("--recipe", required=True)
+    parser.add_argument("--source-commit")
     args = parser.parse_args()
     try:
         from scripts import verify_history as verify
@@ -660,7 +680,7 @@ def main() -> int:
     recipes = verify.loadRecipes(args.recipes)
     recipe = verify.selectRecipe(recipes, args.source_root, args.recipe)
     environment = {**os.environ, **recipe.get("environment", {})}
-    result = prepareSources(args.source_root, args.output_dir, recipe, environment, verify.runCommand)
+    result = prepareSources(args.source_root, args.output_dir, recipe, environment, verify.runCommand, source_commit=args.source_commit)
     verify.writeJson(args.output_dir / "preparation.json", result)
     print(json.dumps({key: result[key] for key in ("status", "outputs")}))
     return 0 if result["status"] in ("success", "not-required") else 1

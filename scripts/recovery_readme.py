@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 
 try:
     from scripts import history_source_prep as source_prep
+    from scripts import history_runtime_configs as runtime_configs
     from scripts import history_static_lto as static_lto
     from scripts.verify_history import (
         EDITOR_CHECKS,
@@ -25,6 +26,7 @@ try:
     )
 except ModuleNotFoundError:
     import history_source_prep as source_prep
+    import history_runtime_configs as runtime_configs
     import history_static_lto as static_lto
     from verify_history import EDITOR_CHECKS, REQUIRED_CHECKS, VerificationError, validatePng, verifiedStartupMode
 
@@ -309,6 +311,8 @@ def legacyTimingAttachments(report: dict, preparation: dict) -> dict[str, bytes]
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
+        if report.get("sourceCommit") == source_prep.cache_prep.COMMIT:
+            raise VerificationError("Missing pathfinder cache preparation for catalog #176")
         return {}
     if preparation.get("status") != "success":
         raise VerificationError("Recovered README requires successful source preparation")
@@ -324,6 +328,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_teleporter = "teleporterSerialization" in names
     has_timing = "legacyTimingResources" in names
     has_conflicts = "trivialConflicts" in names
+    has_cache = "childPathfinderCache" in names
+    if has_cache != (report.get("sourceCommit") == source_prep.cache_prep.COMMIT):
+        raise VerificationError("Pathfinder cache preparation differs from the catalog commit")
     expected_names = (
         (["supplementalResources"] if has_resources else [])
         + (["reflectionRegistration"] if has_reflection else [])
@@ -333,6 +340,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["teleporterSerialization"] if has_teleporter else [])
         + (["legacyTimingResources"] if has_timing else [])
         + (["trivialConflicts"] if has_conflicts else [])
+        + (["childPathfinderCache"] if has_cache else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -374,6 +382,17 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         attachments["recovery/prepare_trivial_conflicts.py"] = Path(helper.__file__).read_bytes()
     elif report.get("buildCompatibility"):
         raise VerificationError("Recovered build compatibility lacks preparation evidence")
+    if has_cache:
+        helper = source_prep.cache_prep
+        try:
+            helper.validate(preparation)
+            data = helper.containedPath(evidence_dir, helper.ATTACHMENT).read_bytes()
+        except (ValueError, OSError) as error:
+            raise VerificationError(str(error)) from error
+        if hashlib.sha256(data).hexdigest() != helper.SHA256 or not (has_conflicts and has_teleporter):
+            raise VerificationError("Pathfinder cache differs from the reviewed #176 compatibility inputs")
+        attachments["recovery/" + helper.ATTACHMENT] = data
+        attachments["recovery/prepare_pathfinder_cache.py"] = Path(helper.__file__).read_bytes()
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -409,6 +428,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (name.startswith("src/") and name.endswith(".h"))
                 or name in include_files
                 or (has_conflicts and name in source_prep.conflicts_prep.FILES)
+                or (has_cache and name == source_prep.cache_prep.TARGET)
                 or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
                 or (has_reflection and name == source_prep.reflection_prep.TARGET)
                 or (has_coordinates and name == source_prep.coordinates_prep.TARGET)
@@ -501,10 +521,24 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     teleporter_preparation = "recovery/prepare_teleporter_serialization.py" in preparation_files
     timing_preparation = "recovery/prepare_legacy_timing.py" in preparation_files
     conflicts_preparation = "recovery/prepare_trivial_conflicts.py" in preparation_files
+    cache_preparation = "recovery/prepare_pathfinder_cache.py" in preparation_files
+    runtime_config = report.get("runtimeConfiguration")
+    if (commit in runtime_configs.INPUT_PINS) != bool(runtime_config):
+        raise VerificationError("Runtime configuration evidence is required for this transition")
+    if runtime_config:
+        helper = Path(runtime_configs.__file__).read_bytes()
+        try:
+            runtime_configs.validateIdentity(commit, runtime_config)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        if report["startupSelection"].get("boundary") != runtime_configs.BOUNDARY:
+            raise VerificationError("Missing runtime configuration startup boundary")
+        preparation_files["recovery/prepare_runtime_configs.py"] = helper
     compatibility_modes = [
         name
         for enabled, name in (
             (resource_preparation, "supplementalQtResources"),
+            (runtime_config, "transitionalRuntimeConfiguration"),
             (reflection_preparation, "parentReflectionRegistration"),
             (coordinates_preparation, "originalCoordinateHash"),
             (legacy_tile_preparation, "legacyTileConfiguration"),
@@ -746,6 +780,20 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             ]
             if conflicts_preparation else []
         ),
+        *(
+            ["The runtime copy combines the split object tables, copies the flat tile table to its legacy path,",
+             "and supplies empty arrays for missing timing files so the original animation loader selects 250 ms.", ""]
+            if runtime_config else []
+        ),
+        *(
+            [
+                "The reconstructed qmake project also requires pathfinder/pathfindercache.cpp. The original",
+                "revision omitted that file. The isolated build uses the exact file added by immediate child",
+                "779fb803, the sole change in that child. The attached helper verifies the donor and its inputs.",
+                "",
+            ]
+            if cache_preparation else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -786,10 +834,12 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_teleporter_serialization.py"] if teleporter_preparation else []),
         *(["python3 recovery/prepare_legacy_timing.py"] if timing_preparation else []),
         *(["python3 recovery/prepare_trivial_conflicts.py"] if conflicts_preparation else []),
+        *(["python3 recovery/prepare_pathfinder_cache.py"] if cache_preparation else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,
         'make -j"$(nproc)"',
+        *(["python3 recovery/prepare_runtime_configs.py"] if runtime_config else []),
         *(["mkdir -p save"] if save_directory else []),
         "./RecoveryGame",
         "```",

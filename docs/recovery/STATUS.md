@@ -2,8 +2,8 @@
 
 Work in progress on recovering the BFG-damaged history. Recovery tooling and the
 93-snapshot checkpoint were merged through PR #1660. PR #1659 connected the
-65 published recovered commits to main ancestry. The resumed checkpoint is on
-`codex/resume-bfg-recovery-20261116`. Existing branches and tags are preserved.
+65 published recovered commits to main ancestry. The November 23 continuation on
+`recovery/bfg-247-continuation` includes the November 16 checkpoint from draft PR #1662.
 
 ## Objective and acceptance
 
@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **281 commits / 279 trees** against the
-restored inputs: **270 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **290 commits / 288 trees** against the
+restored inputs: **279 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -66,6 +66,15 @@ portable bundle passed an independent clone without alternates and strict fsck o
 README/frame checks. Its SHA-256 is
 `bb630b209f4cce4ffd875a9c644c50fafc8a7271552a96e70bf97508e9758401`.
 Compact verification accompanies the mapping; the earlier refs/bundle remain intact.
+
+The November 23 local bundle extends the verified ancestry through #179 and includes
+the independently rooted #367. Its 180 commits preserve all 109 published IDs.
+An independent bare clone with no alternates passed strict fsck across 3,551 reachable
+objects. The check compared parent order, identities, file modes and bytes, README
+evidence and startup frames. The 21,116,789-byte bundle has SHA-256
+`4f6c5c6091bf059005e9b243d2229bce966830362269437f16b0637f5994196f`.
+The mapping and verification are in `recovery/mappings/2026-11-23-prefix*.json`.
+The 71 additional IDs are local to the verified bundle.
 
 The first 65 recovered commits are already ancestors of main through merge commit
 `c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
@@ -147,6 +156,22 @@ when shown is inferred. The active lowercase qmake project builds the new panel.
 The verification record includes the loaded map and player, rendered frame and
 clean exit.
 
+Revisions #248–#253 build and start with reconstructed sources following the class
+and panel renames, the genuine property generator where present, and the joined
+player views and item hierarchy. At #254–#255 the surviving Qt JSON callers still
+request flat configuration paths. The verifier merges the ten restored object tables,
+copies the existing tiles table, and supplies 15 empty timing arrays so the original
+animation provider selects its 250 ms default. These files are generated in the
+isolated runtime copy. At #255 the reconstructed map dispatches Python building
+classes through the map's script engine and weapon types through the item factory.
+That dispatch is inferred. The retained startup log shows Cave and Teleporter loaded.
+
+Revision #176 now builds after the documented trivial conflict resolution and one
+build-copy addition. Its project lists `pathfinder/pathfindercache.cpp`, introduced as
+the sole change in its immediate child #177. The verifier pins the donor, the project
+and header inputs, exports the exact donor source with the evidence, and leaves the
+restored #176 tree intact. #177 also passed a separate control build and startup.
+
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
 Most later replacements remain unverified donor proposals. The chronological walk
@@ -167,12 +192,12 @@ dependencies. Reconstructed projects resolve the historical case-only project
 rename; intact projects are unchanged. Combined creature/player headers and
 Python 2.7 binding reconstructions now follow the surviving APIs. The reconstructed
 binding compiles as a real native object at #260 and #266 and exports `init_game`;
-those whole games still fail on other unverified donor sources and are not accepted.
+both games subsequently passed the native startup verifier as recorded in the ledger.
 
 Where surviving `preprocessor.py` generates property headers, verification runs
 that exact generator under pinned Python 2.7.18 in the private build-source copy.
 Inputs, outputs and hashes are recorded separately from the restored snapshot.
-The real generators at #250 and #257 succeeded; this proves preparation only.
+The accepted startups at #250 and #257 also carry the generator evidence.
 
 A real two-process save/reload regression exposed equipment bonuses being saved
 as base stats in the missing Creature implementation (#71–#79). The corrected
@@ -186,8 +211,8 @@ recovered 44 missing original commits without replacing refs. The 1,432 unique
 original tips are pinned under new local preservation refs. The clone still uses
 read-only object alternates, which must be retained.
 
-GitHub's build and Historical recovery jobs for the latest pushed checkpoint
-remain pending. No GitHub compilation, full-suite or coverage success is claimed.
+The acceptance totals above come from the local pinned toolchain. GitHub workflow
+results are tracked separately on the continuation pull request.
 
 ## How reconstruction works
 
@@ -235,7 +260,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 248 255 --verify  # stop at the first failure
+python3 scripts/history_workbench.py auto 269 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -255,15 +280,13 @@ exported evidence before removing reproducible build scratch.
 
 ## Remaining work
 
-- Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  At #248 the panel, creature, map and scripting reconstructions still target
-  incompatible class APIs. Work through #248-#255 before the accepted #256. `recovery/progress.json`
-  records the exact accepted set.
-- Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
-  partial #176 conflict-adapter wiring.
-- Continue native verification across the remaining #269-#330, #352-#359 and #366 gaps.
-- Extend verified replay/publication beyond the 109-commit publication and verify another
-  independent portable bundle when ready. Preserve prior recovery publications.
-- Obtain successful current-head GitHub build, full-suite and coverage evidence;
-  the current queued jobs have supplied none yet. Keep the PR draft while acceptance
-  is incomplete.
+- #180–#182 are the first gap in the replay ancestry. Reproduce their documented
+  build defects and evaluate a narrowly pinned build-copy repair before extending
+  the bundle beyond #179.
+- #204 still needs a clean shutdown. #224–#225 need repairs for their documented
+  mid-refactor build defects.
+- Continue the native walk at #269–#330, then #352–#359 and #366. The ledger
+  lists 77 catalog commits awaiting native acceptance.
+- The published historical refs still cover 109 commits. Further publication is
+  a separate operation. Keep the continuation PR open for review and track its
+  GitHub build, suite and coverage results there.

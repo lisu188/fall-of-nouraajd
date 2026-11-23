@@ -278,6 +278,8 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
                     str(REPO / "recovery/toolchains/qt5.json"),
                     "--recipe",
                     recipe["id"],
+                    "--source-commit",
+                    commit,
                 ]
             )
         )
@@ -725,6 +727,7 @@ def export() -> None:
                 "legacy_tiles.json",
                 "maps_manifest.qrc",
                 "teleporter_serialization.cpp",
+                "pathfindercache.cpp",
             ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
@@ -773,7 +776,8 @@ def progress() -> None:
                     continue
             except vh.VerificationError:
                 continue
-            if report.get("startupCompatibility") in (
+            requires_replay = commit == vh.source_prep.cache_prep.COMMIT or commit in vh.runtime_configs.INPUT_PINS
+            if requires_replay or report.get("startupCompatibility") in (
                 "parentReflectionRegistration",
                 "originalCoordinateHash",
                 "legacyTileConfiguration",
@@ -820,6 +824,11 @@ def progress() -> None:
             if report.get("startupCompatibility") == "legacyTimingResources":
                 item["startupCompatibility"] = "legacyTimingResources"
                 item["validation"] = "build-and-startup-with-legacy-timing-resource-compatibility-passed"
+            if commit == vh.source_prep.cache_prep.COMMIT:
+                item["buildCompatibility"] = ["trivialConflicts", "childPathfinderCache"]
+            if commit in vh.runtime_configs.INPUT_PINS:
+                item["startupCompatibility"] = "transitionalRuntimeConfiguration"
+                item["validation"] = "build-and-startup-with-runtime-configuration-compatibility-passed"
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])

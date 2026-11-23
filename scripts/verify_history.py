@@ -21,10 +21,12 @@ import zlib
 
 try:
     from scripts import history_source_prep as source_prep
+    from scripts import history_runtime_configs as runtime_configs
     from scripts import history_static_lto as static_lto
     from scripts.history_qmake_compatibility import recipeForSource
 except ModuleNotFoundError:
     import history_source_prep as source_prep
+    import history_runtime_configs as runtime_configs
     import history_static_lto as static_lto
     from history_qmake_compatibility import recipeForSource
 
@@ -811,6 +813,13 @@ def exportEvidence(result: dict, output_root: Path) -> None:
         helper.validatePreparation(result["sourcePreparation"])
         if result.get("buildCompatibility") != "trivialConflicts":
             raise VerificationError("Whitespace-only conflict preparation lacks its explicit build boundary")
+    if result["sourceCommit"] == source_prep.cache_prep.COMMIT:
+        helper = source_prep.cache_prep
+        helper.validate(result["sourcePreparation"])
+        target = helper.containedPath(Path(result["restoration"]["outputDir"]), helper.TARGET)
+        if hashlib.sha256(target.read_bytes()).hexdigest() != helper.SHA256:
+            raise VerificationError("Pathfinder cache build input differs from the pinned child source")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
     timing = result.get("sourcePreparation", {}).get("identity", {}).get("legacyTimingResources")
     if timing:
         helper = source_prep.timing_prep
@@ -882,7 +891,8 @@ def verifySnapshot(
         startup = selectStartupMode(repo_root, source_commit, source_root)
         result.update(startupMode=startup["mode"], startupSelection=startup)
         preparation = source_prep.prepareSources(
-            source_root, work_root / "preparation", recipe, environment, runCommand, min(build_timeout, 120)
+            source_root, work_root / "preparation", recipe, environment, runCommand, min(build_timeout, 120),
+            source_commit=source_commit, repo_root=repo_root,
         )
         result["sourcePreparation"] = preparation
         if preparation["status"] == "failed":
@@ -929,6 +939,11 @@ def verifySnapshot(
             result["startupCompatibility"] = "legacyTimingResources"
         if preparation["identity"].get("trivialConflicts"):
             result["buildCompatibility"] = "trivialConflicts"
+        config_plan = runtime_configs.plan(source_root, source_commit)
+        if config_plan:
+            result["runtimeConfiguration"] = config_plan[0]
+            result["startupCompatibility"] = "transitionalRuntimeConfiguration"
+            startup["boundary"] = runtime_configs.BOUNDARY
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
@@ -949,6 +964,8 @@ def verifySnapshot(
             # The exact restored file set; unrelated override edits must not invalidate verified results.
             "restoredFiles": result["restoration"]["restoredFilesFingerprint"],
         }
+        if config_plan:
+            identity["runtimeConfiguration"] = config_plan[0]
         fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         result.update(
             {
@@ -1070,6 +1087,8 @@ def verifySnapshot(
             result["runtimePreparation"] = source_prep.prepareRuntimeDirectories(
                 projects["application"].parent, runtime_directories
             )
+        if config_plan:
+            runtime_configs.writeOutputs(source_root, config_plan[1])
         result["smoke"] = runSmoke(
             ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
             projects["application"].parent,

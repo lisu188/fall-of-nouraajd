@@ -94104,15 +94104,15 @@
     {
       "originalBlob": "9597e896cd261a70d461bdd451808e031e50dd8a",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "2f2b5a5ed9dff037a0742944192b666d8cd4519f36cb3ef7245bd9ff5cbd21aa",
+      "provenance": "content reconstruction of the BFG-removed original; Retain verified #249 qmake units. In stats.cpp retain hand-written stats behavior and copy construction; use getters/setters from #251\u2019s exact Python 2 generator instead of defining duplicate accessors.",
+      "sha256": "28832167c2b4b680b644406908cc4c6c1045b3620b9caaa54405f4ef5588baf3",
       "source": "payloads/reconstructions/95/9597e896cd261a70d461bdd451808e031e50dd8a-game.pro"
     },
     {
       "originalBlob": "4fe204b5a652a47eee6fcb5ca0e847ef69900392",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "77910376cf7dea51ee5e0590b7bbf80703608eff16479fef09f8ee5acccd8226",
+      "provenance": "content reconstruction of the BFG-removed original; Adapt the #249 map bodies, factory and qmake inventory to the surviving #252 CTile and CTypeHandler headers and the rename in CAnimationProvider; retain the #251 generated stats API.",
+      "sha256": "6cf239340d29aeaa45d2ffa8e1075279b6a3b4bf1cfa0d37021ac005b838ee27",
       "source": "payloads/reconstructions/4f/4fe204b5a652a47eee6fcb5ca0e847ef69900392-game.pro"
     },
     {
@@ -94125,8 +94125,8 @@
     {
       "originalBlob": "267e7b62b2e9cb6678276b8e319bba55f59403d1",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "e9349725b9d29a7dad04ee21ef28d04b0d1dba143ae81a766b74f5bb2627ab52",
+      "provenance": "content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.",
+      "sha256": "244583a559709798c2bd57415ab112b9a3d88ee65a773da95270ac8619ebe1d7",
       "source": "payloads/reconstructions/26/267e7b62b2e9cb6678276b8e319bba55f59403d1-game.pro"
     },
     {
@@ -94419,8 +94419,8 @@
     {
       "originalBlob": "64d8991a94cb6878a704c1e574f75bffb4792270",
       "path": "src/CMap.h",
-      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
-      "sha256": "a416c8c29b299c0d2b026dbb4a7459dd9de53d9a1e9524b2c651e25d961a50c8",
+      "provenance": "content reconstruction of the BFG-removed original; Adapt the #249 map bodies, factory and qmake inventory to the surviving #252 CTile and CTypeHandler headers and the rename in CAnimationProvider; retain the #251 generated stats API.",
+      "sha256": "6589ddc33bfb631d9182a3ef0a291ec96057a8810364e76ec5d4fb26e50b58b8",
       "source": "payloads/reconstructions/64/64d8991a94cb6878a704c1e574f75bffb4792270-CMap.h"
     },
     {
@@ -98307,6 +98307,97 @@
       "provenance": "content reconstruction of the BFG-removed original; Adapted the verified #249 logic to the #253 headers, CPlayer/CItem naming, typed Comparer containers and scripted action configs. The original CMap.h declares ensureTile inline, so its moc dispatcher is included with its definition.",
       "sha256": "4e01c83bcda444853534caafd21059c6528c4db659106489a865a6167d88a073",
       "source": "payloads/reconstructions/b9/b92003352a61872de8cd3b5c6eca70d283be6b0b-CGameView.cpp"
+    },
+    {
+      "commit": "70dc75ede4bbdda080775689a32f1f9edfe75ffa",
+      "path": "src/CInteraction.cpp",
+      "provenance": "Revision-scoped reconstruction from the validated #256 interaction: #254 uses the map-owned CScriptEngine and its getObject lookup, as declared by the surviving headers.",
+      "sha256": "1eb3b52c4e158993303f2a7beece526de3941dbfa8fe1893736b597deebcf3b6",
+      "source": "payloads/reconstructions/70/70dc75ed-CInteraction.cpp"
+    },
+    {
+      "originalBlob": "1e163ca592c82ef686f72f07a8b119de6a0e252b",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.",
+      "sha256": "f8ad62c0b7c29c5d753b4fb755e2684a92fc6288e39b7552cb2ba6f24d3a74e9",
+      "source": "payloads/reconstructions/1e/1e163ca592c82ef686f72f07a8b119de6a0e252b-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "326f551ca1f338b2d7e5080c92f60331cbdee456",
+      "path": "src/Util.h",
+      "provenance": "content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.",
+      "sha256": "867f9ea68dda60c3f48489a38195eacbe00656d55d9bf6eb9783198f4141970b",
+      "source": "payloads/reconstructions/32/326f551ca1f338b2d7e5080c92f60331cbdee456-Util.h"
+    },
+    {
+      "originalBlob": "8239a3221a75f680553d29c86b497101103e7810",
+      "path": "src/CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.",
+      "sha256": "62186e7c784b80f1bc518ea9c987a77b34f2f72452dcf9b45a63b2652d3223e4",
+      "source": "payloads/reconstructions/82/8239a3221a75f680553d29c86b497101103e7810-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "8c4bf0d9e5e8dc42bcb9b913805bbad437c7ed09",
+      "path": "src/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.",
+      "sha256": "492a4c47fb156b02e77f1b76955435b1e71e5754e2907e86b7e3b67eea50b792",
+      "source": "payloads/reconstructions/8c/8c4bf0d9e5e8dc42bcb9b913805bbad437c7ed09-CCreature.cpp"
+    },
+    {
+      "originalBlob": "9b8e4095f4c373f94d0a5cece562f166eca29024",
+      "path": "src/CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.",
+      "sha256": "fb1dac5c393a5b69a85b490fc75769cf95458a571f7e60c0b9449b366dc395e7",
+      "source": "payloads/reconstructions/9b/9b8e4095f4c373f94d0a5cece562f166eca29024-CItem.cpp"
+    },
+    {
+      "originalBlob": "e265b38a119cffb544be21376a7c61079c10936f",
+      "path": "src/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.",
+      "sha256": "d49001d14705177a868787a5cfaac8ecc945120e30aa624d0ef44c2e7f1e1117",
+      "source": "payloads/reconstructions/e2/e265b38a119cffb544be21376a7c61079c10936f-CMap.cpp"
+    },
+    {
+      "commit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+      "path": "src/CInteraction.cpp",
+      "provenance": "The #255 map owns CScriptEngine, as at #254. Use the same script callback lookup. Later revisions use a singleton.",
+      "sha256": "1eb3b52c4e158993303f2a7beece526de3941dbfa8fe1893736b597deebcf3b6",
+      "source": "payloads/reconstructions/70/70dc75ed-CInteraction.cpp"
+    },
+    {
+      "commit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+      "path": "src/CItem.cpp",
+      "provenance": "Adapt the #256 item donor to the original #255 two-argument CTypeHandler::create. The shared original-blob reconstruction remains available for the later one-argument API.",
+      "sha256": "f52e6d3b9e76ae1b4dd656ecc49e2ed07b4f7a5e0af679f43d2ed2271030b722",
+      "source": "payloads/reconstructions/d1/d1a71d96-CItem.cpp"
+    },
+    {
+      "originalBlob": "5aef9b8af955e09d3c07ee1d6aa851993ec589a8",
+      "path": "src/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Inferred transitional dispatch from #254, #256 and the surviving #255 APIs: invoke the map-owned script engine for classes in buildings.json, then load their authored properties, create weapon placements with the item factory and use CObjectHandler for other types. The handler-only donor aborts on the authored Cave; no map actors are removed.",
+      "sha256": "450bbd9f2caabdbbcf0f1a81ac37c154c02c738c44044e1ccb0452317aea7385",
+      "source": "payloads/reconstructions/5a/5aef9b8af955e09d3c07ee1d6aa851993ec589a8-CMap.cpp"
+    },
+    {
+      "originalBlob": "98bb6539ea18f6a938806ce229f5e7267e78092c",
+      "path": "src/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the verified child #256 bodies to the surviving #255 map-owned script engine, draft CObjectHandler and CTypeHandler create signatures; Qt JSON tables retain their flat layouts where present.",
+      "sha256": "2dca0ab6a8cffb6c0676e68bbfbe0d81d65877678572964b8e81381749eff0a7",
+      "source": "payloads/reconstructions/98/98bb6539ea18f6a938806ce229f5e7267e78092c-CCreature.cpp"
+    },
+    {
+      "originalBlob": "952e9058bec14da72f86bc5aa1d4299b8079283e",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Retain verified #249 qmake units. In stats.cpp retain hand-written stats behavior and copy construction; use getters/setters from #251\u2019s exact Python 2 generator instead of defining duplicate accessors.",
+      "sha256": "e92d79401ff5d0d3c54f032ed2ffb96d1e928d38cd125309e23027fc9f56e3a9",
+      "source": "payloads/reconstructions/95/952e9058bec14da72f86bc5aa1d4299b8079283e-stats.cpp"
+    },
+    {
+      "originalBlob": "c5ba327b4cb8f399ed6ee68f6c611b4fd4c63cfd",
+      "path": "src/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapt the #249 map bodies, factory and qmake inventory to the surviving #252 CTile and CTypeHandler headers and the rename in CAnimationProvider; retain the #251 generated stats API.",
+      "sha256": "fb44cbbfbc58e1193b7b1c574e2c101cea3acdaf6f71e6cdbad442594dabb9aa",
+      "source": "payloads/reconstructions/c5/c5ba327b4cb8f399ed6ee68f6c611b4fd4c63cfd-CMap.cpp"
     }
   ],
   "schemaVersion": 1

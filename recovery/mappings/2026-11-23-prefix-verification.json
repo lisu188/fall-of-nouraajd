@@ -1,26 +1,26 @@
 {
   "bundle": {
-    "bytes": 21224797,
-    "name": "nouraajd-bfg-2026-11-23-prefix.bundle",
+    "bytes": 21116789,
+    "name": "nouraajd-bfg-2026-11-23-through-179.bundle",
     "recoveryRefs": {
       "refs/heads/recovery/bfg/2026-11-23/108bdcbeda04cefeba5e1895f91df023cea8487f": "c71ee387c03b31954c72ae1538ff075028aeca2d",
-      "refs/heads/recovery/bfg/2026-11-23/fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f": "0473ca0aa31fac3f4af697059d395b2640f95f84"
+      "refs/heads/recovery/bfg/2026-11-23/ebf0a64b9759e8a74655159986b8dfb1e85a3686": "8b73f03ddba84e95731c51a86154589f5855c3e9"
     },
-    "sha256": "5e5956bade2c091d8705b49e5fd8d96116f38c4d18a5c62933185405f4489ffd"
+    "sha256": "4f6c5c6091bf059005e9b243d2229bce966830362269437f16b0637f5994196f"
   },
   "independentTransportVerification": {
     "fsck": "git fsck --full --strict",
     "noAlternates": true,
-    "reachableCommitCount": 176,
-    "reachableObjectCount": 3376,
+    "reachableCommitCount": 180,
+    "reachableObjectCount": 3551,
     "status": "passed"
   },
   "mainUpdated": false,
-  "mappedCommitCount": 176,
-  "mappingSha256": "05e97fd3a683d2ab457fcbaa32568163270b45c3e602845f07194945f6e5a7c1",
+  "mappedCommitCount": 180,
+  "mappingSha256": "f03468d6778e8a22168750ba269ed4887b89c17caaa5f597c5fd4fdd25ef5f71",
   "matchingDocumentationAndStartupFramePresent": true,
   "messagesPreservedWithRecoveryFooter": true,
-  "newlyMappedCommitCount": 67,
+  "newlyMappedCommitCount": 71,
   "parentOrderAndIdentitiesPreserved": true,
   "preservedPreviouslyPublishedCommitCount": 109,
   "previouslyPublishedFramePreserved": {
