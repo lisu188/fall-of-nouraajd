@@ -1,0 +1,12 @@
+
+=== textPanelShutdown ===
+{
+  "files": {
+    "game/CScriptEngine.cpp": [
+      "aa5c41e293fc0bf1e9356a85c9eeaeac7302736fa365bf038c22ad4f5ae5ccc4",
+      "8c5c4c8db69b59b01885200cb87267b5013773ff1cf35dc4f5cffabadcc2e654"
+    ]
+  },
+  "replaySha256": "b1113dbcf93ac7bf1640f16ac4e678a3df6cc853cf7897076e573c7e39605982",
+  "sourceCommit": "23add7278f50e9ad1c7b232eb7717597ff3ea0ae"
+}

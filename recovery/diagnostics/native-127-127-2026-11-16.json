@@ -1,0 +1,73 @@
+{
+  "entries": [
+    {
+      "commit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+      "firstCatalogOrder": 127,
+      "originalBlob": "915be7d54b67b686307ecc7945a6316ea5674210",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #125 Creature reconstruction to genuine #126 newly concrete Creature and Qt metatype default/copy constructor declarations. Copy reconstruction resets from className using exactly the genuine same-commit Monster and Player copy-constructor pattern, rather than copying QObject/graphics state. Default initializes the actual Creature state with empty configuration for metatype inspection; generic base has no autonomous movement or entry action, while original Monster/Player overrides retain all actual turn/combat behavior. Empty base event policy and exact default state are inferred; existing empty generic loot has no class-specific drop table. Prior formulas/collection-cast ABI limitations remain. No surviving original changed; ordinary gameplay parity is unverified.",
+      "sha256": "2cca56b89f774beb1af1da0fd047fff0f3cc2aea722dc847e0c0597108b8fba4",
+      "source": "recovery/payloads/reconstructions/91/915be7d54b67b686307ecc7945a6316ea5674210-creature.cpp"
+    },
+    {
+      "commit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+      "firstCatalogOrder": 127,
+      "originalBlob": "3554e240c210442f6eb1ffd50cad7687608df550",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0fa59fba8ca22ca6821f5c0df8f8f4daea80dde2 (previous version of interactions/interaction.cpp)",
+      "sha256": "4c0d5059e8b1ae235cea442136b39495f0c10fcc72fd53c943d87efd4b51ae36",
+      "source": "recovery/payloads/reconstructions/35/3554e240c210442f6eb1ffd50cad7687608df550-interaction.cpp"
+    },
+    {
+      "commit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+      "firstCatalogOrder": 127,
+      "originalBlob": "eae9cd274b5d4a9a3f170c150538fb57198c5870",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6d3dc7979db57f360f46edde7bc13ba319208e62 (previous version of map/map.cpp)",
+      "sha256": "ccbe86ed79c5a92693d711cce04aa3f757d61200838602a8420efd8539197dd0",
+      "source": "recovery/payloads/reconstructions/ea/eae9cd274b5d4a9a3f170c150538fb57198c5870-map.cpp"
+    },
+    {
+      "commit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+      "firstCatalogOrder": 127,
+      "originalBlob": "6e75afaeab0370015b8d4ec5bc0a6e29a714dbe3",
+      "path": "view/mapview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 27eb10ea230c1cf4b8bb45432fc6a83f81a74751 (previous version of view/mapview.cpp)",
+      "sha256": "227f6d6efb791853eb272757d8f786c8d420acd689a0365228f80b9036c4f96d",
+      "source": "recovery/payloads/reconstructions/6e/6e75afaeab0370015b8d4ec5bc0a6e29a714dbe3-mapview.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "bd5e51e17499ff66fbb4d6c34fd3f4cbbbe30025284d6b7cff9aadc1d802f099",
+        "sourceCommit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+        "sourceTree": "c1db9a17f125fb71d00903dd82f0e3b0c819bade",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

@@ -1,0 +1,20 @@
+
+=== effectTransition ===
+{
+  "files": {
+    "game/CGameView.cpp": [
+      "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+      "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+    ],
+    "game/CMapObject.cpp": [
+      "c6caca2440285f2076c3f6e04a7f7822ea8d7bb180e9a524546bab78d50a1961",
+      "c304cdc03afaa0febbd316874ab74e34073ba23bf4b905800247a2f3b3784be5"
+    ],
+    "game/CScriptEngine.cpp": [
+      "2349dd540d6dfefc3011726bd3a88fbf6d727a14dcacee0883f6ae37d366201d",
+      "263e2828b0a38343092589f048715de6a31a7306c8cbf58ba2fca560bd7cd001"
+    ]
+  },
+  "replaySha256": "2d7256ddfa42c0ff55b7a2107de1034e2df697589c416198aed3b50cc3dc49c2",
+  "sourceCommit": "86487a820bd6d2130e684d4d6b0c5681dbb6b561"
+}

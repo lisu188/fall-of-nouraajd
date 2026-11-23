@@ -1,0 +1,64 @@
+{
+  "identity": {
+    "implementationSha256": "048a14360d36125a1a49c58d4f5ac8a5fd61cfa6431c74b18dd57a89de454520",
+    "inputs": {
+      "classes.json": {
+        "kind": "file",
+        "sha256": "174a45a1ed4bc03b5359c17205da277413ab292fe52d87a9b58afbec5353d252"
+      },
+      "preprocessor.py": {
+        "kind": "file",
+        "sha256": "9776cf40b38ed00621e0f12235758629c1301109ab9a4322bff8c178a742c530"
+      }
+    },
+    "interpreter": "Python 2.7.18",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "348b8176f5eb2cba4b42509ec9f4fc1ad7fef10cd0d4bbd819728fc5eae44d7c"
+        },
+        "before": null,
+        "path": "gen/prop.h",
+        "purpose": "historical property generation"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "348b8176f5eb2cba4b42509ec9f4fc1ad7fef10cd0d4bbd819728fc5eae44d7c"
+      },
+      "before": null,
+      "path": "gen/prop.h",
+      "purpose": "historical property generation"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "/opt/recovery/python/2.7.18/bin/python2.7",
+        "--version"
+      ],
+      "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/preparation/interpreter.log",
+      "name": "interpreter",
+      "returnCode": 0,
+      "seconds": 0.001,
+      "timedOut": false
+    },
+    {
+      "command": [
+        "/opt/recovery/python/2.7.18/bin/python2.7",
+        "-B",
+        "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/source/preprocessor.py"
+      ],
+      "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/preparation/generator.log",
+      "name": "generator",
+      "returnCode": 0,
+      "seconds": 0.008,
+      "timedOut": false
+    }
+  ]
+}

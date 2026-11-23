@@ -1,0 +1,19 @@
+{
+  "checks": {
+    "editor": true,
+    "eventLoop": true,
+    "map": true,
+    "renderedFrame": true
+  },
+  "frame": {
+    "height": 704,
+    "path": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p9zii020/smoke/startup.png",
+    "sha256": "360cd25a0a6b4dbd8c4a0b2f4b75280d79fde1b59907bed70b94b3e98f63fb35",
+    "width": 1264
+  },
+  "mode": "editor",
+  "reason": "",
+  "schemaVersion": 1,
+  "status": "ready",
+  "validationBoundary": "Authored editor startup; gameplay and player are unverified"
+}

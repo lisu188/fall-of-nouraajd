@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "originalBlob": "f59850bc2948c48c34f05161ff83bf840234b80b",
+      "path": "map/map.cpp",
+      "provenance": "Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited.",
+      "sha256": "4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722",
+      "source": "recovery/payloads/reconstructions/f5/f59850bc2948c48c34f05161ff83bf840234b80b-map.cpp"
+    },
+    {
+      "originalBlob": "2e11b4ac70d1dd42150a0e3265af39cbe00d0955",
+      "path": "view/gamescene.cpp",
+      "provenance": "Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.",
+      "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+      "source": "recovery/payloads/reconstructions/2e/2e11b4ac70d1dd42150a0e3265af39cbe00d0955-gamescene.cpp"
+    },
+    {
+      "originalBlob": "9112a47e26e740f03f986aba28a3ee50251d4978",
+      "path": "Game.pro",
+      "provenance": "Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed.",
+      "sha256": "df25b36bdcd749b2213884ba0a7e3f78f548849a57e05cc14ef8bfce5a53d485",
+      "source": "recovery/payloads/reconstructions/91/9112a47e26e740f03f986aba28a3ee50251d4978-Game.pro"
+    }
+  ],
+  "schemaVersion": 1
+}

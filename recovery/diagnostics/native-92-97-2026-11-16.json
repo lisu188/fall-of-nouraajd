@@ -1,0 +1,166 @@
+{
+  "entries": [
+    {
+      "commit": "bc84e08dccf3b1f823d058411611908c9cd5a6b0",
+      "firstCatalogOrder": 92,
+      "originalBlob": "6a2c626e84df7fa30e1903164a4e7d29f087d686",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #91 body to genuine #92 hoverEnterEvent/hoverLeaveEvent replacing mouse handlers. Tooltip visibility and placement follow intact ListItem handlers using the existing MapObject::statsView; displayed class/HP/mana text and hover enabling are inferred. Original handler behavior unavailable. Prior config/persistence inference retained; surviving originals unchanged.",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "recovery/payloads/reconstructions/6a/6a2c626e84df7fa30e1903164a4e7d29f087d686-creature.cpp"
+    },
+    {
+      "commit": "bc84e08dccf3b1f823d058411611908c9cd5a6b0",
+      "firstCatalogOrder": 92,
+      "originalBlob": "544a06e9770f1ba147d48e4734e013a7f57f3a8b",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #91 body to genuine #92 Player::setMap(Map*) and original ListItem::setNumber, which now dereferences getMap()->getTileSize(). A real startup trace located null Map at ListItem::setNumber via constructor updateViews. Defer panel layout until map assignment, propagate the genuine map to inventory/equipment/actions before layout, and attach existing player panels to owning GameScene instead of constructor singleton. Exact original attachment policy remains inferred; surviving source unchanged. Prior persistence provenance retained.",
+      "sha256": "f73e5fee2f7d1666ea671b481e9c869c205ae03fcf409c42fc47e5344b081a63",
+      "source": "recovery/payloads/reconstructions/54/544a06e9770f1ba147d48e4734e013a7f57f3a8b-player.cpp"
+    },
+    {
+      "commit": "bc84e08dccf3b1f823d058411611908c9cd5a6b0",
+      "firstCatalogOrder": 92,
+      "originalBlob": "d8eebeb95fdc4734ed2094dc13c298671c8b0529",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; genuine #92 header/callers require no further body change. Original internal delta unavailable; prior reconstruction provenance retained.",
+      "sha256": "6a64f77947027d73148c6be8215fd54775f447b03bfc479ef305dde455e72d40",
+      "source": "recovery/payloads/reconstructions/d8/d8eebeb95fdc4734ed2094dc13c298671c8b0529-interaction.cpp"
+    },
+    {
+      "commit": "bc84e08dccf3b1f823d058411611908c9cd5a6b0",
+      "firstCatalogOrder": 92,
+      "originalBlob": "3b42528aeb65a9c7563ec3cbb228a646f5aa7265",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; genuine #92 header/callers require no further body change. Original internal delta unavailable; prior reconstruction provenance retained.",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "recovery/payloads/reconstructions/3b/3b42528aeb65a9c7563ec3cbb228a646f5aa7265-map.cpp"
+    },
+    {
+      "commit": "dab88827988058b36a37287249ffab0fcfbe0bc8",
+      "firstCatalogOrder": 96,
+      "originalBlob": "49ce48b5b1b1d941cf3e648b6abc0371a1683ccf",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6a2c626e84df7fa30e1903164a4e7d29f087d686 (previous version of creatures/creature.cpp)",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "recovery/payloads/reconstructions/49/49ce48b5b1b1d941cf3e648b6abc0371a1683ccf-creature.cpp"
+    },
+    {
+      "commit": "dab88827988058b36a37287249ffab0fcfbe0bc8",
+      "firstCatalogOrder": 96,
+      "originalBlob": "43066470fdc285e47dbba103f369c056e67904ad",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3b42528aeb65a9c7563ec3cbb228a646f5aa7265 (previous version of map/map.cpp)",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "recovery/payloads/reconstructions/43/43066470fdc285e47dbba103f369c056e67904ad-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 6
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "caf212d30f84b34c3d6fad878c16b841d1f547250dafe70518dd06c7cfa8d074",
+        "sourceCommit": "bc84e08dccf3b1f823d058411611908c9cd5a6b0",
+        "sourceTree": "caaf8160198fa62439883758671443ce2852908a",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "7be9a5934930d9e0bb0e209e3092ca235e388611a12fbee367e954ce92e122a5",
+        "sourceCommit": "35e6d471d572775548df5865f08560621c823b35",
+        "sourceTree": "dbf438aeaf0b2dc6ab86e3623240131b97ab98b2",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "4ad1a5e9dc7b470c939e5446b5654ef0b1ffefc93b0d844a30990a45654c7470",
+        "sourceCommit": "075f2684d49ee713f49de0d88aff3a4480ddd6a6",
+        "sourceTree": "322a459b5b620ec08ad3770d36fc0e01022c8891",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0a53587cd145902686f32aaca30941ff981f8b4d07e83ea44b5c74a1929ca6b4",
+        "sourceCommit": "2dcbea7ad0f259bec3444db698b8e6a741f35f51",
+        "sourceTree": "13ff681576a96cf072f18fc2ee8bceb58443639b",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "544a314c75da6a11b41978e008d18f677153c4d57b3e726c4c6ea2570cb7cf4f",
+        "sourceCommit": "dab88827988058b36a37287249ffab0fcfbe0bc8",
+        "sourceTree": "930d6fae85ce0ba81dc9ed556aba9f67278624a2",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "3652d73a6ed85936570acdd797ffd85931f432b6bd378d209ffb063e7f50af4e",
+        "sourceCommit": "dd491c463722a689dcc62c279d9f595d6c01def6",
+        "sourceTree": "5fb3675b948238a5d0d66571a3fe29ea06b17ef1",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

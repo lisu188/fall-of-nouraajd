@@ -1,0 +1,244 @@
+{
+  "acceptance": "Full compile/link and real headless startup only for #260; no cross-tree acceptance, full gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "b66230c41829f31714540c37bb9b9fff05b22c36821a387911096d617d5a5dfb"
+    },
+    "startup.log": {
+      "bytes": 1744,
+      "sha256": "91b780421d3c89f2bd9a79a4fd93ada5f6b570ccd2d1e89122150c6075174a60"
+    },
+    "startup.png": {
+      "bytes": 174091,
+      "sha256": "196b4136f17f6365a8ee1218f71773499e16cdae0eadeb9ff47058cf71b327f1"
+    }
+  },
+  "entries": [
+    {
+      "originalBlob": "125ff2b5f893bc42739f3d165731f8d400745df7",
+      "path": "lib/zlib/crc32.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
+      "source": "recovery/payloads/reconstructions/12/125ff2b5f893bc42739f3d165731f8d400745df7-crc32.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "221faa7f05440b2bc0fac2cbf753d9cc43576c52",
+      "path": "lib/zlib/adler32.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
+      "source": "recovery/payloads/reconstructions/22/221faa7f05440b2bc0fac2cbf753d9cc43576c52-adler32.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "236315b730bbedbbded53605ba20b984204ae41e",
+      "path": "lib/zlib/zlib.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "recovery/payloads/reconstructions/23/236315b730bbedbbded53605ba20b984204ae41e-zlib.h",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "2fb6d3f750cb02eab89f696962666606246db62d",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Content reconstruction from intact #247 5fe60e7c playerlistview.cpp, playerequippedview.cpp, playerstatsview.cpp and scrollobject.cpp; merge into original #260 CPlayerView.h combined classes, apply same-commit C-prefix names and templated Comparer<CMapObject>. Replace removed Map::getTileSize with genuine same-commit 50-pixel scale from untouched CItemSlot.cpp and CTile.cpp. Preserve actual inventory/equipment/health/mana/experience rendering and scrolling behavior; no stand-in UI. Match actual surviving arrow/item PNG paths rather than obsolete animation directories, and initialize the no-argument PlayerStatsView player pointer to null before the original setPlayer callback.",
+      "sha256": "1c1e87e8d37a840190aa6f76a5fb53cadcaad456112c5449c3d17a478eadd4a7",
+      "source": "recovery/payloads/reconstructions/2f/2fb6d3f750cb02eab89f696962666606246db62d-CPlayerView.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "3059c5de88b726b70736b936ebf8e360f82fec09",
+      "path": "game.pro",
+      "provenance": "Refine missing application .pro reconstruction with all33 supplied Tmx/base64/tinyxml/zlib C/C++ translation units and lib include path. Actual reconstructed map now invokes the parser, exposing fail-before unresolved Tmx link symbols. Preserve Python2.7 ABI, unique reconstructed application marker, and existing path guards; no surviving project edits or new production dependency.",
+      "sha256": "fa84d16f037e636e3c4567aa575a93d21620f8ed10a19653f54bc2b1812ca468",
+      "source": "recovery/payloads/reconstructions/30/3059c5de88b726b70736b936ebf8e360f82fec09-game.pro",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "4811377b743c73a86d64b8fb755c76a7394fe4f4",
+      "path": "lib/zlib/infback.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
+      "source": "recovery/payloads/reconstructions/48/4811377b743c73a86d64b8fb755c76a7394fe4f4-infback.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "4af03ef7d47ecfa80f7165227f173056b0748be2",
+      "path": "lib/zlib/deflate.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
+      "source": "recovery/payloads/reconstructions/4a/4af03ef7d47ecfa80f7165227f173056b0748be2-deflate.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "4b267038746863b42c3f5bac514ab6e41a905396",
+      "path": "lib/zlib/inftrees.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
+      "source": "recovery/payloads/reconstructions/4b/4b267038746863b42c3f5bac514ab6e41a905396-inftrees.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "4eac53fb2dac6f9d4cc9c2b0c67e9650dd7c8620",
+      "path": "lib/zlib/deflate.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "recovery/payloads/reconstructions/4e/4eac53fb2dac6f9d4cc9c2b0c67e9650dd7c8620-deflate.h",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5",
+      "path": "src/CItem.cpp",
+      "provenance": "Generated adaptation of intact #2475fe60e7c:src/item.cpp blob6776325d5546af8c14a14c3433c5021eeac82566 and potion.cpp blob465840edb9a59f0e82e7b72fd12cd109f0da9e13. Combine genuine #260 item classes, apply C-prefix/QString/default constructor changes, retain real pickup/equip/unequip/mouse-use/health-mana potion behavior, load JSON properties from actual config/objects layout and use original getStats()->addBonus/removeBonus API. No future GUI handler or event API, no surviving source edits. Accept both genuine target flat item/armor configuration and nested property descriptors while preserving their actual stats/equip/potion behavior.",
+      "sha256": "e822732e58fba6d44ed213d112eded34794404e66f3f421e0ec5df8f4e51e725",
+      "source": "recovery/payloads/reconstructions/51/51d51c15d380cb7d72d08a0d54eaed62e7cbfaa5-CItem.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "5a949ff899495dfbb4b29ce40386cb9c98e12dda",
+      "path": "src/CCreature.cpp",
+      "provenance": "Generated missing-body reconstruction: retain intact55e6516e object/CCreature.cpp arithmetic for experience, damage, health/mana, equipment and statistics, adapted to genuine #260 pointer containers/Stats pointer/no-argument callbacks. Combined CPlayer/CMonster methods from intact #247 5fe60e7c src/player.cpp (b18c9ab09ac9225e896e0b8d98a184d7104cd8c8) and monster.cpp (cf3f3ceaf75dba3b8bd9ec980aad7785071bd03c), with same-commit C-prefix names, QString and direct scene APIs. JSON loading bridges actual monsters properties/config to original declared loadFromJson API. Initial scalar state is reconstructed explicitly. Retains historical default/custom-comparator pointer container bridges as found in original247 Player::getLoot; full-game runtime and cross-tree compatibility remain unverified. Native #260 startup regression exposed intact CItemSlot::update using map::at for every equipment slot. Initialize each genuine config/slots.json ID with a null empty slot before loading occupied equipment; preserve original ItemSlot and configuration bytes.",
+      "sha256": "1016536c81a643ccaf2991b7a0f042f8bfdbd552c2f6f89aa996aef4ca06a5c5",
+      "source": "recovery/payloads/reconstructions/5a/5a949ff899495dfbb4b29ce40386cb9c98e12dda-CCreature.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "5aa8ae6eb8c38b618d00ad0050111b84444a7b34",
+      "path": "src/CMapObject.cpp",
+      "provenance": "Missing CMapObject body adapted from surviving6367c691:src/CMapObject.cpp to original #260 header: four-argument moveTo with silent relocation, exact50-pixel coordinate scale, typed Tmx properties, direct map removal and genuine Event script callbacks. No surviving source edit or later event-handler API.",
+      "sha256": "5ebb8936aa128917f4188f9a2c2e3bcbdf8095e306f9d01a4390ce7f5ea34ae7",
+      "source": "recovery/payloads/reconstructions/5a/5aa8ae6eb8c38b618d00ad0050111b84444a7b34-CMapObject.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "5b2aa6e7d8061e22ba8af1406d3587d772e75143",
+      "path": "lib/zlib/zutil.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
+      "source": "recovery/payloads/reconstructions/5b/5b2aa6e7d8061e22ba8af1406d3587d772e75143-zutil.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "5ede1d8b5b260796db8fc7ea95dba13586f34e4f",
+      "path": "lib/zlib/inflate.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
+      "source": "recovery/payloads/reconstructions/5e/5ede1d8b5b260796db8fc7ea95dba13586f34e4f-inflate.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "618f28ee5808e9ccb829314e1eec436909af7065",
+      "path": "src/CMap.cpp",
+      "provenance": "Generated missing monolithic CMap implementation for genuine #260 CMap.h, CGameScene/CTile callers and vendored Tmx API. Transcribe surviving later55e6516e CMapLoader.cpp layer/tileset/object-property/entry semantics to Tmx::Map; retain direct scene, CObjectHandler, CLootProvider, set-of-objects and currentMap interfaces. Movement uses original no-argument callbacks and CompletionListener. Missing default/bound properties use available GrassTile/map dimensions, checking HasProperty because the supplied Tmx library returns a nonempty error string for absent literal properties; procedural river/road bodies are explicit generated implementations, not recovered original behavior. Native #260 startup acceptance only, not gameplay parity.",
+      "sha256": "91f1aa2add767fd56ee3506235e30ba5ab22e8712df1f043a34af26e2e40b588",
+      "source": "recovery/payloads/reconstructions/61/618f28ee5808e9ccb829314e1eec436909af7065-CMap.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "6b8bae413c7f17afc471946989a4e9208a81684f",
+      "path": "config/objects/weapons.json",
+      "provenance": "Replace unrelated tile-config donor for missing weapons.json with intact55e6516e:config/weapons.json blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5. Original weapon image identities, CWeapon API and authored ChaosSword/Staff/Dagger references support the donor; add original CTypeHandler schema. Numeric donor stats are inferred, not exact recovered target balance.",
+      "sha256": "b818341b5fa7908d948c2dc06b7eff3a4510bd453f27ece71fe5c47a087de136",
+      "source": "recovery/payloads/reconstructions/6b/6b8bae413c7f17afc471946989a4e9208a81684f-weapons.json",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "755d145cf21e338ffcdb2f4fc969387c81b6eb85",
+      "path": "src/CObjectHandler.cpp",
+      "provenance": "Generated missing object factory matching original CObjectHandler.h and CTypeHandler/Reflection APIs. Loads actual config/objects, supports surviving flat and nested property descriptors, constructs true registered C-prefixed or qualified Python types, sets map/type identity before original loadFromJson callbacks, converts actual Stats property fields, rejects unknown or duplicate configurations. No stand-in types.",
+      "sha256": "b0c8621cece8eee0dfe25da5e1a271855c1b70d4d5ce5a700ab3062abdd2b1e7",
+      "source": "recovery/payloads/reconstructions/75/755d145cf21e338ffcdb2f4fc969387c81b6eb85-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "78efddd0cf63a22ebb6ca3b360c1d7b5ba74cd9b",
+      "path": "maps/map.tmx",
+      "provenance": "Missing TMX map reconstructed from the prior converted later-map donor, removing only Market and StartEvent objects unsupported by the genuine 2014-09-09 target APIs/configuration/scripts. The original target misc.json defines Event only, buildings.json defines Cave/Teleporter, CBuilding.h has no Market, and the original scripts/game/object.py defines Cave/Teleporter only. No fake classes/events or empty script substitutes. All tile geometry, tilesets, layer metadata, entry coordinates and six supported Cave/Teleporter/ChaosSword objects are preserved. Exact original map bytes and its lost event content remain unavailable; this is an inferred donor adaptation.",
+      "sha256": "09d122d84eac8cc3c31ec4355ddc3e1bdfa4dab54714e9923416074e65e529ef",
+      "source": "recovery/payloads/reconstructions/78/78efddd0cf63a22ebb6ca3b360c1d7b5ba74cd9b-map.tmx",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "906fd04f04f4cea091f6b4a933cdd1832d532c7b",
+      "path": "lib/zlib/gzread.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
+      "source": "recovery/payloads/reconstructions/90/906fd04f04f4cea091f6b4a933cdd1832d532c7b-gzread.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "b4cae5f9af95ab738df1f14196305790009abb33",
+      "path": "lib/zlib/inffast.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "recovery/payloads/reconstructions/b4/b4cae5f9af95ab738df1f14196305790009abb33-inffast.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8",
+      "path": "lib/zlib/gzlib.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
+      "source": "recovery/payloads/reconstructions/b5/b55e1e0b22607ea7c94fd65b18ca4bcfcc48f6d8-gzlib.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "d0c918100d6534de11bfc3511da72af5e15db5fc",
+      "path": "lib/zlib/gzwrite.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
+      "source": "recovery/payloads/reconstructions/d0/d0c918100d6534de11bfc3511da72af5e15db5fc-gzwrite.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "d42ca23c99de51bec9ffe012e48506ac6aa33a9a",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "Generated missing source matching original CPathFinder.h creature-pointer API, Cell/cost/neighbor declarations, PathFinderWorker and CompletionListener signals. Cardinal/random movement and reverse cost-field search adapt genuine later pathfinder structure to finite actual map bounds, with Qt queued relative movement. Native startup compiles/links this API; pathfinding behavior/performance and concurrent turns remain unverified.",
+      "sha256": "5b2ac46cc066dfa55c481777dff162ffd9c039052a887ce541f5ff2e5be3c7da",
+      "source": "recovery/payloads/reconstructions/d4/d42ca23c99de51bec9ffe012e48506ac6aa33a9a-CPathFinder.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "d59b1fb1b9c5d957efe4284a887026060ac53395",
+      "path": "src/GameScript.cpp",
+      "provenance": "Unverified missing-module reconstruction; adapted intact Boost binding 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp to original #260-268 no-argument callbacks and CMap/CMapObject/CBuilding/CItem/CInteraction/CTile/CScriptEngine APIs; Creature/Player/Monster API from intact #247 headers with source-era C-prefix renames; Stats/Damage typed-property API from intact #257 Stats.h/cpp. Preserves Python2.7 BOOST_PYTHON_MODULE(_game) -> init_game; UTF8 QString conversion supports Python2 str/unicode. CPotion wrapper deduces the native void/bool onUse return type across original #266 transition and always calls the real fallback. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance. Native #260 runtime exposed original scripts/game/interaction.py importing Interaction and calling Stats.getDamage; export an alias of the real CInteraction binding and bind the genuine Stats::getDamage method. No fake type or no-op binding; exact init_game/Python2.7 ABI retained.",
+      "sha256": "6eb81b62721310c7ec71c6be88a42e9184d5f5409c67f318f8d6849d6fb55e93",
+      "source": "recovery/payloads/reconstructions/d5/d59b1fb1b9c5d957efe4284a887026060ac53395-GameScript.cpp",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "e84852a3ca7b5bd6b76889beaf8ce183586037d6",
+      "path": "lib/zlib/zutil.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "recovery/payloads/reconstructions/e8/e84852a3ca7b5bd6b76889beaf8ce183586037d6-zutil.h",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "f0e1d5e28e028b93033a5a084fd0e778910cd0e2",
+      "path": "lib/zlib/trees.c",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
+      "source": "recovery/payloads/reconstructions/f0/f0e1d5e28e028b93033a5a084fd0e778910cd0e2-trees.c",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    },
+    {
+      "originalBlob": "f39c7a58c2a5066e15cb7c3aaec9cae2c2f91885",
+      "path": "lib/zlib/gzguts.h",
+      "provenance": "Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "recovery/payloads/reconstructions/f3/f39c7a58c2a5066e15cb7c3aaec9cae2c2f91885-gzguts.h",
+      "validatedByOriginalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+    }
+  ],
+  "fingerprint": "e5bd75a9bd11afdd8a10d442089d1ca516baf4f90782937f6395bfc532b047ec",
+  "limitations": [
+    "Exact original map/events and original weapon balance remain unavailable.",
+    "Later donor effects and generated procedural/pathfinding bodies are not gameplay-parity verified.",
+    "Source-era original CLootProvider still references config/object.json; combat/loot is not covered by startup."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "8e473d40bec4dd0ef75314e9e6f4b24305bdf51288af98e21008d23ae148e002",
+  "originalCommit": "7443e0fde387641ad9d02b7d8ef0a6c429d1001e"
+}

@@ -1,0 +1,112 @@
+{
+  "identity": {
+    "implementationSha256": "6127605a708465f4996c98b71d1244bd6112a08f94d2bbe2fbe525562037e825",
+    "importHook": {
+      "files": {
+        "game/CGameView.cpp": [
+          "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+          "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+        ],
+        "game/CMapObject.cpp": [
+          "c6caca2440285f2076c3f6e04a7f7822ea8d7bb180e9a524546bab78d50a1961",
+          "c304cdc03afaa0febbd316874ab74e34073ba23bf4b905800247a2f3b3784be5"
+        ],
+        "game/CScriptEngine.cpp": [
+          "5411d923d8acddc06f8ad1a62a680f8bc997accbdb8e778b3705b168595c893b",
+          "e7acfd9636ac0617c656e2581009e4f676efff07b33cd36de70d7f7f12741ba8"
+        ]
+      },
+      "replaySha256": "0490940735b1f9da977ede7411fe17e7840c77861f1c21b9818e9eb7001a86e1",
+      "sourceCommit": "b18ba43aca75315aeee3f07bd2ca269a0060d1ce"
+    },
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7"
+        },
+        "path": "game/CGameView.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "c304cdc03afaa0febbd316874ab74e34073ba23bf4b905800247a2f3b3784be5"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "c6caca2440285f2076c3f6e04a7f7822ea8d7bb180e9a524546bab78d50a1961"
+        },
+        "path": "game/CMapObject.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "e7acfd9636ac0617c656e2581009e4f676efff07b33cd36de70d7f7f12741ba8"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "5411d923d8acddc06f8ad1a62a680f8bc997accbdb8e778b3705b168595c893b"
+        },
+        "path": "game/CScriptEngine.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7"
+      },
+      "path": "game/CGameView.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "c304cdc03afaa0febbd316874ab74e34073ba23bf4b905800247a2f3b3784be5"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "c6caca2440285f2076c3f6e04a7f7822ea8d7bb180e9a524546bab78d50a1961"
+      },
+      "path": "game/CMapObject.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "e7acfd9636ac0617c656e2581009e4f676efff07b33cd36de70d7f7f12741ba8"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "5411d923d8acddc06f8ad1a62a680f8bc997accbdb8e778b3705b168595c893b"
+      },
+      "path": "game/CScriptEngine.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-import-hook"
+      ],
+      "log": "/tmp/nouraajd-284-import-final/verify/snapshot-f6ebr133/preparation/import-hook.log",
+      "name": "importHook",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

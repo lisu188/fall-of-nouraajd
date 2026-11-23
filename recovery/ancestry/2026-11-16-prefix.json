@@ -1,0 +1,21 @@
+{
+  "additionalRecoveredCommitCount": 44,
+  "baseMain": "9acf3570ced5f0dcd8a9192184e169172d52ac28",
+  "checkpointParent": "a77e98767c59efe228ad34a5b09b196a9e4df599",
+  "historicalParent": "8d728761901b4bc2a02ef6fd32faa57daa781fb0",
+  "intent": "Connect the additional 44 verified recovered commits while preserving the current game tree.",
+  "mainUpdated": false,
+  "mapping": "recovery/mappings/2026-11-16-prefix.json",
+  "previouslyConnectedCount": 65,
+  "protectedPathsChanged": 0,
+  "protectedTreeEntries": {
+    "CMakeLists.txt": "a59c66caefa18cdfe94a980e7f2d9fdddaad58b3",
+    "random-dungeon-generator": "7818e6dc4c60f9b08ba6ed1921a40051ee40eea5",
+    "res": "19989a8cce94eb3c4e75cf743229998df891aabf",
+    "src": "4a58913485095fdc5633e8bc7d9d64e847482bc0",
+    "vstd": "01a67405b9831f67c8c34890b0c15ddae30aabcf"
+  },
+  "requiredMergeMethod": "Merge commit; squash and rebase would discard the recovery ancestry.",
+  "schemaVersion": 1,
+  "totalRecoveredCommitCount": 109
+}

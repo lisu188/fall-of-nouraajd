@@ -1,0 +1,70 @@
+{
+  "entries": [
+    {
+      "originalBlob": "f68945ca869f9b7f409a3a5bb3058647ea43a859",
+      "originalInputs": [
+        {
+          "blob": "3c0d5d1211339fbc3ced8f82c7560d24c13e00c9",
+          "path": "handler/CQuestHandler.cpp",
+          "sha256": "1bcffb7e1125e50ec721057a06834bba07cc8cf3404ed68f251502fd1815f4c1"
+        },
+        {
+          "blob": "15c20b68877654fecea79c60acb292ac8cea5787",
+          "path": "object/CQuest.cpp",
+          "sha256": "ef608ba6e28944610bf8cf86ffe0801c1f1a5b114c55495b1348e64ba838e8b2"
+        },
+        {
+          "blob": "7860573a8374bb92522be2664e0fdefd96e78d81",
+          "path": "handler/CQuestHandler.h",
+          "sha256": "b7788e67ad30f8e0b4239fca52cbf1ef5d68e3da224207f9cd9fb8b48896af2f"
+        },
+        {
+          "blob": "419b879170286b712b97dd6bc15b6ddaa2dc63b5",
+          "path": "object/CQuest.h",
+          "sha256": "8ef2a2b1e3bc15164bc33e7b8140b6edc583a1e98ba1a46f98909863a4643b1e"
+        }
+      ],
+      "path": "game.pro",
+      "provenance": "Missing #334 project reconstructed byte-preserving from genuine immediate predecessor #333 game.pro settings/source/header/resource lists, with only the four new genuine same-commit Quest/QuestHandler source/header paths appended. No surviving original project or code edited. Not an exact original.",
+      "sha256": "538dbba4e847ce39d49b63c5d85e2727ced4f52840d323f4dfa03b5f4bbd3209",
+      "source": "recovery/payloads/reconstructions/f6/f68945ca869f9b7f409a3a5bb3058647ea43a859-game.pro",
+      "validatedByOriginalCommit": "d3a5fad2738ec66a752c41c02d0dab0bfb24f508"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 136,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 334,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "d3a5fad2738ec66a752c41c02d0dab0bfb24f508"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "recovery/payloads/resources/de9e3b066277e5db8e01074a06e43a0c28ddb518-images.qrc",
+      "tree": "de9e3b066277e5db8e01074a06e43a0c28ddb518"
+    }
+  ],
+  "sourceCommit": "d3a5fad2738ec66a752c41c02d0dab0bfb24f508",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/b03a430c41df8f93665403afb5b3c9d5d1bc676aa7ab824b782c3734bff28d86",
+    "fingerprint": "b03a430c41df8f93665403afb5b3c9d5d1bc676aa7ab824b782c3734bff28d86",
+    "sourceCommit": "d3a5fad2738ec66a752c41c02d0dab0bfb24f508",
+    "sourceTree": "de9e3b066277e5db8e01074a06e43a0c28ddb518",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

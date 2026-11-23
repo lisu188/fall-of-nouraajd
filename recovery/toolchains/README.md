@@ -89,6 +89,14 @@ player or gameplay claim; they cannot satisfy a game-mode verification. The
 original editor configuration and entrypoint are preserved. Unknown entrypoint
 shapes or reconstructed editor flags fail rather than selecting a weaker check.
 
+The exact original #98 resource omission is handled by a separate generated qrc,
+using the 21 original image files and the immediately following original commit's
+manifest delta. The original manifest, animation provider and configuration stay
+unchanged. Preparation pins all 24 inputs, the generated output and its portable
+replay helper; the qmake argument and startup compatibility boundary are recorded.
+This proof is explicitly labeled startup with supplemental resource compatibility.
+Earlier and already repaired manifests keep their ordinary recipes.
+
 The image digest and critical compiler/Qt packages are fixed. Transitive Ubuntu
 packages come from the archived repository and their resolved versions are recorded
 in `/opt/recovery-installed-packages.txt`; the workflow shares the identical built
