@@ -1,0 +1,26 @@
+{
+  "entries": [],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 138,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 344,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "40a8022001be0850e6d2ac8a5ec77de9bb0bd45b",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/adfb0c1d69e7e46a5664b35730e35e080d39e90b6fa574c6756673bd1c840e70",
+    "fingerprint": "adfb0c1d69e7e46a5664b35730e35e080d39e90b6fa574c6756673bd1c840e70",
+    "sourceCommit": "40a8022001be0850e6d2ac8a5ec77de9bb0bd45b",
+    "sourceTree": "eba367cac27d3690381015910ba302cfe98528cb",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

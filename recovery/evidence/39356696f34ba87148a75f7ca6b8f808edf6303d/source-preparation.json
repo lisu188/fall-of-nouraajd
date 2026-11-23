@@ -1,0 +1,140 @@
+{
+  "identity": {
+    "implementationSha256": "ab044e3b06df446a03eb4e953d151e980c253cdfa57c59f97b1878b3393c1dbf",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "8e79abbf2a8a14c56ffef1e0ede9356afab0cd46fb81dd3a651bb668b78f4b27"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "feedbb1eef266498fdbf9e25ae9f31fa12ca2847c37fb50d53f9f90f25ae96bc"
+        },
+        "path": "src/monster.cpp",
+        "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "8a810437fb2b205c820c8e4520827b59ab894ab61d928c61fceb81ff36deffc8"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "83fe471fe11c1d3e34f5744ed26dfdccb677678e8522b1e234a971054fb7a8b1"
+        },
+        "path": "src/playerlistview.cpp",
+        "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "0b08bf394ca299e2d81dbc3e91c0ed94cfa78bb89be98c03bf14324e990f0056"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "e1e9e10c30b8c739ea6ef2eee58083874151d0ae6df979f0fd8979d93ef7134c"
+        },
+        "path": "src/tile.cpp",
+        "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "3da739c8a7c74a4442529931dcda128c0f2729c44b6e993a6f53e6235a8b1400"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "302f8e20585fcef72032b0596f349702dbf33f43d99d0f045100cfd9a96af844"
+        },
+        "path": "src/tile.h",
+        "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+      }
+    ],
+    "sceneTransition": {
+      "files": {
+        "src/monster.cpp": [
+          "feedbb1eef266498fdbf9e25ae9f31fa12ca2847c37fb50d53f9f90f25ae96bc",
+          "8e79abbf2a8a14c56ffef1e0ede9356afab0cd46fb81dd3a651bb668b78f4b27"
+        ],
+        "src/playerlistview.cpp": [
+          "83fe471fe11c1d3e34f5744ed26dfdccb677678e8522b1e234a971054fb7a8b1",
+          "8a810437fb2b205c820c8e4520827b59ab894ab61d928c61fceb81ff36deffc8"
+        ],
+        "src/tile.cpp": [
+          "e1e9e10c30b8c739ea6ef2eee58083874151d0ae6df979f0fd8979d93ef7134c",
+          "0b08bf394ca299e2d81dbc3e91c0ed94cfa78bb89be98c03bf14324e990f0056"
+        ],
+        "src/tile.h": [
+          "302f8e20585fcef72032b0596f349702dbf33f43d99d0f045100cfd9a96af844",
+          "3da739c8a7c74a4442529931dcda128c0f2729c44b6e993a6f53e6235a8b1400"
+        ]
+      },
+      "replaySha256": "350f0298c7ac19d547b149aa967a50863ae0381e8a7788a89a7bc9366f938c30",
+      "sourceCommit": "39356696f34ba87148a75f7ca6b8f808edf6303d"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "8e79abbf2a8a14c56ffef1e0ede9356afab0cd46fb81dd3a651bb668b78f4b27"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "feedbb1eef266498fdbf9e25ae9f31fa12ca2847c37fb50d53f9f90f25ae96bc"
+      },
+      "path": "src/monster.cpp",
+      "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "8a810437fb2b205c820c8e4520827b59ab894ab61d928c61fceb81ff36deffc8"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "83fe471fe11c1d3e34f5744ed26dfdccb677678e8522b1e234a971054fb7a8b1"
+      },
+      "path": "src/playerlistview.cpp",
+      "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "0b08bf394ca299e2d81dbc3e91c0ed94cfa78bb89be98c03bf14324e990f0056"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "e1e9e10c30b8c739ea6ef2eee58083874151d0ae6df979f0fd8979d93ef7134c"
+      },
+      "path": "src/tile.cpp",
+      "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "3da739c8a7c74a4442529931dcda128c0f2729c44b6e993a6f53e6235a8b1400"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "302f8e20585fcef72032b0596f349702dbf33f43d99d0f045100cfd9a96af844"
+      },
+      "path": "src/tile.h",
+      "purpose": "Refresh surviving call sites for the instance scene or restore the authored RoadTile no-op"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-scene-transition"
+      ],
+      "log": "/tmp/nouraajd-224-embedded/verify/snapshot-hqiftwa1/preparation/scene-transition.log",
+      "name": "sceneTransition",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

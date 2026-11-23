@@ -1,0 +1,27 @@
+{
+ "boundary": "Static inspection of surviving original Git trees; native reconstruction builds of these trees stopped on the surviving files named here.",
+ "compatibilityStatus": "No adapter; original bytes unchanged. Reconstructions are adapted from #226 onward.",
+ "schemaVersion": 1,
+ "status": "original-build-defect-not-accepted",
+ "trees": [
+  {
+   "catalogOrder": 224,
+   "files": {
+    "src/gamescene.h": "b4df65a877ffe38dce55a0d357646306fe641bbe",
+    "src/monster.cpp": "d027e5b845c8005f645f77bc537cc4f349e23ca4",
+    "src/playerlistview.cpp": "95c4e64f2f11be68927cac497eb5efb5367bb16c"
+   },
+   "reason": "GameScene getPlayer/getMap/getView became instance members in the same-commit gamescene.h, but the surviving monster.cpp and playerlistview.cpp still call them statically; #225 updates both files.",
+   "sourceCommit": "39356696f34ba87148a75f7ca6b8f808edf6303d"
+  },
+  {
+   "catalogOrder": 225,
+   "files": {
+    "src/tile.cpp": "64bbbf2070ae663cf0ecd3fc8a0cebd47639bf6f",
+    "src/tile.h": "0aae310c3f032eb183e05115918981b8148f8a3d"
+   },
+   "reason": "The surviving tile.cpp registers &RoadTile while both its definition (tile.cpp) and declaration (tile.h) are commented out; #226 removes the registration.",
+   "sourceCommit": "38bba6a98d8a17324de69e30d7eee433da922962"
+  }
+ ]
+}

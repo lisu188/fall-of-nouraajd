@@ -1,0 +1,39 @@
+Loaded configuration: :/config/items.json 
+
+Loaded configuration: :/config/interactions.json 
+
+Loaded animation: :/images/interactions/chaosblast/ 
+
+Loaded animation: :/images/items/weapons/chaossword/ 
+
+Loaded configuration: :/config/creatures.json 
+
+Loaded configuration: :/config/slots.json 
+
+Loaded animation: :/images/players/sorcerer/ 
+
+Loaded animation: :/images/interactions/attack/ 
+
+Loaded animation: :/images/items/armors/leatherarmor/ 
+
+Sorcerer equipped ChaosSword 
+
+Sorcerer equipped LeatherArmor 
+
+Sorcerer equipped ChaosSword 
+
+Sorcerer equipped LeatherArmor 
+
+Sorcerer unequipped ChaosSword 
+
+Sorcerer equipped LeatherArmor 
+
+Sorcerer equipped ChaosSword 
+
+Sorcerer unequipped LeatherArmor 
+
+Sorcerer equipped ChaosSword 
+
+Loaded animation: :/images/buildings/teleporter/ 
+
+{"status":"success","checks":{"mapInventoryTransfer":true,"equipmentAndStatsRoundtrip":true,"unequippedSlotsRoundtrip":true,"realTeleporterActorsRoundtrip":true}}

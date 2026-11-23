@@ -1,0 +1,52 @@
+{
+  "identity": {
+    "implementationSha256": "587ac3c7378c133e43857ddd8f4b25e9fc8c83c629a1133b2a532f59619e2763",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "17b426746455720c21e236e156e8fd7e28323a387451c277d36abd8a09510fcf"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "d33fbe171fadebafc6c54b8c74e3ba2e9b8f949beb1669149598a9bd62f89b06"
+        },
+        "path": "scripts/game/__init__.py",
+        "purpose": "Preserve the class returned by the historical trigger decorator"
+      }
+    ],
+    "triggerDecorator": {
+      "inputSha256": "d33fbe171fadebafc6c54b8c74e3ba2e9b8f949beb1669149598a9bd62f89b06",
+      "outputSha256": "17b426746455720c21e236e156e8fd7e28323a387451c277d36abd8a09510fcf",
+      "replaySha256": "96dc6463bd3c2fd68658917442ebe75b89cd72373c5199cd8f4adb581c3d8136",
+      "sourceCommit": "4c0be0149008787ff79b4479307f1945b28c9507"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "17b426746455720c21e236e156e8fd7e28323a387451c277d36abd8a09510fcf"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "d33fbe171fadebafc6c54b8c74e3ba2e9b8f949beb1669149598a9bd62f89b06"
+      },
+      "path": "scripts/game/__init__.py",
+      "purpose": "Preserve the class returned by the historical trigger decorator"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-trigger-decorator"
+      ],
+      "log": "/tmp/nouraajd-352-final/verify/snapshot-vaxytw5e/preparation/trigger-decorator.log",
+      "name": "triggerDecorator",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

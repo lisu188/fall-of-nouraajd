@@ -1,0 +1,51 @@
+{
+  "entries": [
+    {
+      "originalBlob": "bc789dea83f80c2465dc4ce0ae56a29ef6a5dcb1",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #345 reconstruction, not exact original. Actual #345 CPlayerView.h changes view ownership from CGameView to AGamePanel and adds base CPlayerView::dropEvent; constructor/drop bodies come from intact55e6516 CPlayerView.cpp and dispatch to genuine same-commit AGamePanel::handleDrop. Other real inventory/equipment/interaction bodies preserved; scene access uses genuine AGamePanel::getView(). Pending native verification; all surviving original bytes retained.",
+      "sha256": "48db811391a8313f3dbca27f4292b9587909fb23e027b9c194040dde1eb309c8",
+      "source": "recovery/payloads/reconstructions/bc/bc789dea83f80c2465dc4ce0ae56a29ef6a5dcb1-CPlayerView.cpp",
+      "validatedByOriginalCommit": "5a308a75c3d6e05d1282aad4f8aa9d2c73476d56"
+    },
+    {
+      "originalBlob": "73b2bf2457f354f7712bd9182ab4f0f8bbbc3817",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "Missing #345 reconstruction, not exact original. Prior fight rendering/action implementation changes only player skills view constructor to genuine #345 AGamePanel owner, matching actual CCharPanel/CTradePanel callers. Pending native verification; all surviving original bytes retained.",
+      "sha256": "030c71d0a80e6400b632899148fbbf719d52339d27f8ca66576632a90c5e4a2e",
+      "source": "recovery/payloads/reconstructions/73/73b2bf2457f354f7712bd9182ab4f0f8bbbc3817-CFightPanel.cpp",
+      "validatedByOriginalCommit": "5a308a75c3d6e05d1282aad4f8aa9d2c73476d56"
+    },
+    {
+      "originalBlob": "0d79d3dec229b93544ef643cac8e3ceeb6506c90",
+      "path": "game.pro",
+      "provenance": "Missing #345 reconstruction, not exact original. Prior project adds only genuine #345 newly split Util.cpp and panel/CGamePanel.cpp translation units; no surviving original file is excluded. Pending native verification; all surviving original bytes retained.",
+      "sha256": "9602dc2c1a099d088be9eba1eab30b02787f50eaacb195752bd5e712f1748b18",
+      "source": "recovery/payloads/reconstructions/0d/0d79d3dec229b93544ef643cac8e3ceeb6506c90-game.pro",
+      "validatedByOriginalCommit": "5a308a75c3d6e05d1282aad4f8aa9d2c73476d56"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 140,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 345,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "5a308a75c3d6e05d1282aad4f8aa9d2c73476d56",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/6da54d08da075a3e30feda8d227ab188a3a52fa507a90d4e56061a8bbfa43d82",
+    "fingerprint": "6da54d08da075a3e30feda8d227ab188a3a52fa507a90d4e56061a8bbfa43d82",
+    "sourceCommit": "5a308a75c3d6e05d1282aad4f8aa9d2c73476d56",
+    "sourceTree": "a640c99d8e8e9f8c44b248d2538a88757189d4fb",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

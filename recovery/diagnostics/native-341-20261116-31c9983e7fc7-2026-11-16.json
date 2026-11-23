@@ -1,0 +1,67 @@
+{
+  "entries": [
+    {
+      "originalBlob": "3968c09b12382444650ad9713871a9e86728ca7e",
+      "path": "CMap.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior staged map plus actual same-commit CMap.h lazy getMouseHandler() using genuine CMouseHandler(CMap*) constructor. Pending native verification; original bytes preserved.",
+      "sha256": "c957de989d21516ef391cb322d593e9f1881980823bc6fe0e54fd4e34de172a1",
+      "source": "recovery/payloads/reconstructions/39/3968c09b12382444650ad9713871a9e86728ca7e-CMap.cpp",
+      "validatedByOriginalCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283"
+    },
+    {
+      "originalBlob": "71b1304e8d51e21d427cfafd57b55242bff69b1a",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Preserves prior real config/property loading and CTypeHandler/PyTypeHandler instances; genuine CTypeHandler.cpp now owns its explicit native constructor registry instead of old Qt reflection. Pending native verification; original bytes preserved.",
+      "sha256": "f96f940562b62725deeb8582dced4615a880bd66ad3c36ebb85bd5d876f53eed",
+      "source": "recovery/payloads/reconstructions/71/71b1304e8d51e21d427cfafd57b55242bff69b1a-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283"
+    },
+    {
+      "originalBlob": "f66ce18162e34a082260dd41a7f9370fa69e83f2",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior staged actual inventory/combat/loot/factory bodies preserved against unchanged creature header and genuine newly restored Stats.h; no invented gameplay mechanics. Pending native verification; original bytes preserved.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "recovery/payloads/reconstructions/f6/f66ce18162e34a082260dd41a7f9370fa69e83f2-CCreature.cpp",
+      "validatedByOriginalCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283"
+    },
+    {
+      "originalBlob": "93f2b270b116a4f949ae106b2fec56a0ae2bc285",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior fight rendering plus genuine intact55e6516 onClickAction body selects real CInteraction after checking real player mana; genuine same-donor empty panel mousePressEvent override retained. Matches actual same-commit CClickAction(CGameObject*) interface. Pending native verification; original bytes preserved.",
+      "sha256": "5b52a2a18af6c8d8727b1cf8958d27967587bcd6f038c46c4c221689c9f95636",
+      "source": "recovery/payloads/reconstructions/93/93f2b270b116a4f949ae106b2fec56a0ae2bc285-CFightPanel.cpp",
+      "validatedByOriginalCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283"
+    },
+    {
+      "originalBlob": "e0aa328ce54cf3f590714b0645b3708318005de1",
+      "path": "game.pro",
+      "provenance": "Missing #341 reconstruction, not exact original. Prior project removes only CReflection.cpp/.h and ReflectTypes.cpp paths because those genuine files are deleted in this commit; no surviving original translation unit is excluded. Pending native verification; original bytes preserved.",
+      "sha256": "543eabd78ee3bce17321f06602c14b984dd8077d6c5dd994768ce0e1e0b10708",
+      "source": "recovery/payloads/reconstructions/e0/e0aa328ce54cf3f590714b0645b3708318005de1-game.pro",
+      "validatedByOriginalCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 137,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 341,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/31c9983e7fc7aad49547d9070886543eb5bb5682e837ce82b8c35c664036dde5",
+    "fingerprint": "31c9983e7fc7aad49547d9070886543eb5bb5682e837ce82b8c35c664036dde5",
+    "sourceCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283",
+    "sourceTree": "c57ee901e77b1288117b56605bffeda22e2746c4",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}
