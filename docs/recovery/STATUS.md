@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **280 commits / 278 trees** against the
-restored inputs: **269 game startups and 11 authored editor startups**. Each accepted
+The pinned local toolchain currently accepts **281 commits / 279 trees** against the
+restored inputs: **270 game startups and 11 authored editor startups**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -140,6 +140,13 @@ rename the active `game.pro` carries `GAME_RECOVERY_APPLICATION = true`. Saving 
 stale uppercase `Game.pro` reconstruction (active only for #241-#245) changed the inputs
 of #256-#259, which were re-verified under the current inputs.
 
+At #247 the surviving reflection table registers the renamed classes, and the
+scripts import `CBuilding` from the native module. The reconstructed game panel
+uses the layouts of the earlier character and fight views. Refreshing their lists
+when shown is inferred. The active lowercase qmake project builds the new panel.
+The verification record includes the loaded map and player, rendered frame and
+clean exit.
+
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
 Most later replacements remain unverified donor proposals. The chronological walk
@@ -228,7 +235,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 108 367 --verify  # stop at the first failure
+python3 scripts/history_workbench.py auto 248 255 --verify  # stop at the first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -249,14 +256,12 @@ exported evidence before removing reproducible build scratch.
 ## Remaining work
 
 - Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  The next blocker is #247 (the C-prefixed class rename and reflection system, with a new
-  `gamepanel.cpp`), then #248-#255 before the accepted #256. `recovery/progress.json`
+  At #248 the panel, creature, map and scripting reconstructions still target
+  incompatible class APIs. Work through #248-#255 before the accepted #256. `recovery/progress.json`
   records the exact accepted set.
 - Decide whether #180-#182 get a reviewed build-copy compatibility step, and finish the
   partial #176 conflict-adapter wiring.
-- Replace later donor implementations that conflict with surviving APIs, including
-  the remaining whole-game blockers around #257/#266. Object compilation and generator preparation
-  are supporting evidence only.
+- Continue native verification across the remaining #269-#330, #352-#359 and #366 gaps.
 - Extend verified replay/publication beyond the 109-commit publication and verify another
   independent portable bundle when ready. Preserve prior recovery publications.
 - Obtain successful current-head GitHub build, full-suite and coverage evidence;

@@ -94083,8 +94083,8 @@
     {
       "originalBlob": "b25dfc11ef699553ff570e025cbbeabc2eaf51e8",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "38a2457135baa70b5983ba5595df1bdfd6f844644f152635e8e697ab454333fe",
+      "provenance": "content reconstruction of the BFG-removed original; active project after the case-only rename, marked GAME_RECOVERY_APPLICATION; regenerated like the verified #246 game.pro for this tree's files (adds the new gamepanel.cpp, drops the deleted views), replacing an unverified reconstruction with settings from #266",
+      "sha256": "0af6a64decf8d99bc940beb7fc6a6228cdeb66a2a14e91e2f2013eed18f050a3",
       "source": "payloads/reconstructions/b2/b25dfc11ef699553ff570e025cbbeabc2eaf51e8-game.pro"
     },
     {
@@ -94181,8 +94181,8 @@
     {
       "originalBlob": "c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c",
       "path": "src/gamescript.cpp",
-      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #247 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
-      "sha256": "da6f905599c1c3568507f2fb1f6c3671cbed30452b6503d96f3a4e5d39fcf73d",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the verified #246 reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); the _game module keeps the Python name CBuilding that the same-commit scripts/game/object.py imports, and includes scriptmanager.h because #247 deleted gamescript.h (init_game is now declared there); replaces an unverified later-donor reconstruction",
+      "sha256": "56f49fd07d0c6698394f34d04f735e4d05e7d7e64c6d5ad93b17bbc6ea2bde62",
       "source": "payloads/reconstructions/c4/c45b2d65acddf8a3c4cd4373d9a6d6bdf473376c-gamescript.cpp"
     },
     {
@@ -98062,6 +98062,69 @@
       "provenance": "content reconstruction of the BFG-removed original; carried from the #239 reconstruction; #240 retired the C-API Game module (gamescript.h and the surviving ScriptEngine no longer declare or create it), so only the Boost.Python _Game module remains (Building, Damage, Interaction, Coords)",
       "sha256": "464d1b37a4e5438611d8136a1c2ec7a10abeb0e85ff5f1c1f2858575248268c2",
       "source": "payloads/reconstructions/fa/faf42f873d667f44e1937e5db65d8c9f673557a1-gamescript.cpp"
+    },
+    {
+      "originalBlob": "41c95497826aac0b0bfb7b27db1c5c49a3c33840",
+      "path": "src/interaction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #245 reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); the fight selection comes from FightPanel::selected because #247 replaced FightView",
+      "sha256": "d4425190789aab2986bd0e8ab392aec18888e6862ca4a6a9abbc138cdd86375d",
+      "source": "payloads/reconstructions/41/41c95497826aac0b0bfb7b27db1c5c49a3c33840-interaction.cpp"
+    },
+    {
+      "originalBlob": "439ad0ac087ddb1929b5aec88f723919becc9f6b",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #246 reconstruction; the view creates CharPanel/FightPanel and delegates setup and showing to them, and defines the getScene/setScene accessors declared in #247 gameview.h",
+      "sha256": "cb48ee6149b6f2c724624c107c1bdf48d69309528ddbf7458f0b8d2c75c9e61a",
+      "source": "payloads/reconstructions/43/439ad0ac087ddb1929b5aec88f723919becc9f6b-gameview.cpp"
+    },
+    {
+      "originalBlob": "481821b66c23f601e091f7333c8869ff9fb48453",
+      "path": "src/map.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them",
+      "sha256": "d1b1c7b5751ebc8d7675e230d6429c1c604e0912706f5934c172f9b61d12a422",
+      "source": "payloads/reconstructions/48/481821b66c23f601e091f7333c8869ff9fb48453-map.h"
+    },
+    {
+      "originalBlob": "534c232187a648062fa7856e34404d4365222aa3",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the #245 reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); PathFinder::findPath gets a base body because #247 made it non-pure (reflection constructs the base type)",
+      "sha256": "0bc1b50924a2f61b376c8e55b23b5189d6165cd92efe068962fe02c47245abc6",
+      "source": "payloads/reconstructions/53/534c232187a648062fa7856e34404d4365222aa3-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "93f002747d3791f27152e9544cb1e49dd75b1ff8",
+      "path": "src/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; seeded from the surviving #246 gamescene.cpp (BFG-removed at #247) and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); the deleted fightview.h include becomes gamepanel.h",
+      "sha256": "516bb36bf7ebbef9a68d47d9d812117a021edd71d066f710eb7ae2976b685b8b",
+      "source": "payloads/reconstructions/93/93f002747d3791f27152e9544cb1e49dd75b1ff8-gamescene.cpp"
+    },
+    {
+      "originalBlob": "976163b6bc302df99a3c7cfed7dee615ef40bcfa",
+      "path": "src/gamepanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; new at #247: GamePanel/CharPanel/FightPanel replace the deleted CharView/FightView, so their bodies (fixed 400x300 black panels, z-order, hidden at start) come from the genuine #246 charview.cpp/fightview.cpp; the inventory/equipped/skill views and their positions move from the earlier GameView wiring into setUpPanel/showPanel, with lists refreshed when a panel is shown (inferred)",
+      "sha256": "88330fa049a3cf6f6ec5b19d70817653f979029f1489ea865c5aa3163eb02aed",
+      "source": "payloads/reconstructions/97/976163b6bc302df99a3c7cfed7dee615ef40bcfa-gamepanel.cpp"
+    },
+    {
+      "originalBlob": "b8a3a8f29c0406227b2955ac0aa10806edc8d922",
+      "path": "src/map.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them",
+      "sha256": "6a36a9465508f46fc6a5aae8dc649667189aed580af12e33c48323b2859c5a03",
+      "source": "payloads/reconstructions/b8/b8a3a8f29c0406227b2955ac0aa10806edc8d922-map.cpp"
+    },
+    {
+      "originalBlob": "e431caa556fe48da103be6bf09fa91b842bfca96",
+      "path": "src/stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them",
+      "sha256": "0086fa1089ba315ff1c90c0432b2a155d6ec1211f95f479c1fdb408e5235e2d1",
+      "source": "payloads/reconstructions/e4/e431caa556fe48da103be6bf09fa91b842bfca96-stats.h"
+    },
+    {
+      "originalBlob": "f63384a3a48495e2d7f882abdb6b1131e9f09cd7",
+      "path": "src/creature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them",
+      "sha256": "99e76ec8cc28c1893225995bd9902d4d9ca0032221b712c98d4e0a1ee5f1d668",
+      "source": "payloads/reconstructions/f6/f63384a3a48495e2d7f882abdb6b1131e9f09cd7-creature.cpp"
     }
   ],
   "schemaVersion": 1
