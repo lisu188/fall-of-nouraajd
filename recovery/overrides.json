@@ -94307,8 +94307,8 @@
     {
       "originalBlob": "03eac07a28c6c54b5b776f9ef7766bca4297713d",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "99a54027b21f2e539b89927cd3e1406aeb70bce2cb48ea2b42ab9f7d93c31bb5",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the creature declarations and add the player death signal where the surviving view connects to it.",
+      "sha256": "da09f164e714772dde988109be1e3ba221b3732a356da761cd56f49244873044",
       "source": "payloads/reconstructions/03/03eac07a28c6c54b5b776f9ef7766bca4297713d-CCreature.h"
     },
     {
@@ -99319,6 +99319,55 @@
       "provenance": "content reconstruction of the BFG-removed original; Carry the preceding working Python interaction definitions alongside the split player views. The default donor aborts during the authored package import.",
       "sha256": "cd92673b449ae5c7fcfbe12c6690bbd333557f3f2025f3ecdf4851f0ebb2ed1b",
       "source": "payloads/reconstructions/8f/8f918e9115dc949bea6ca4f4da7ddea39ce5a5a5-interaction.py"
+    },
+    {
+      "commit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "081407996cfca6dad844cd0e6952f80bf09233c7",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the map loader and use the surviving movement signature.",
+      "sha256": "927804d5992a7839116b2588080b37e5c01144b7d2d21597b7bca06233d3e42b",
+      "source": "payloads/reconstructions/08/081407996cfca6dad844cd0e6952f80bf09233c7-CMap.cpp"
+    },
+    {
+      "originalBlob": "185b32a81bb2003f0e74f2d0ead5b9eccd0ee27a",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the creature body and emit the authored death notification instead of closing the view directly.",
+      "sha256": "2011fc45e46954cdc1706c29c4fde3b0389c9178f5cb2d6cb4b3fb903982db84",
+      "source": "payloads/reconstructions/18/185b32a81bb2003f0e74f2d0ead5b9eccd0ee27a-CCreature.cpp"
+    },
+    {
+      "originalBlob": "24467ceb6d0669364a4d421e689c90d23fdfd1dd",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the creature body and emit the authored death notification instead of closing the view directly.",
+      "sha256": "2011fc45e46954cdc1706c29c4fde3b0389c9178f5cb2d6cb4b3fb903982db84",
+      "source": "payloads/reconstructions/24/24467ceb6d0669364a4d421e689c90d23fdfd1dd-CCreature.cpp"
+    },
+    {
+      "originalBlob": "769b24958100eee1226e34c50e6cf9fa0e6eca00",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Follow the surviving potion API and dispatch authored Python potion callbacks through the carried wrapper.",
+      "sha256": "4e032285b57dabf195662c3256111c9e9b6056d2ab906597254d6b06d5dcec3a",
+      "source": "payloads/reconstructions/76/769b24958100eee1226e34c50e6cf9fa0e6eca00-CItem.cpp"
+    },
+    {
+      "originalBlob": "d4d3fc4008d4784081cfc30140e81b5ea3e23aec",
+      "path": "CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry both player lists and implement the equipment-slot number getter moved out of line.",
+      "sha256": "806af36333b79183d5fec0a7131c5f2141dc90292a13d761ebba28860770712d",
+      "source": "payloads/reconstructions/d4/d4d3fc4008d4784081cfc30140e81b5ea3e23aec-CPlayerView.cpp"
     }
   ],
   "schemaVersion": 1

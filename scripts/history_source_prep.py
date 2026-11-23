@@ -39,6 +39,7 @@ try:
     from scripts import history_prepare_class_loaders as class_loaders_prep
     from scripts import history_prepare_map_packages as map_packages_prep
     from scripts import history_prepare_potion_movement as potion_movement_prep
+    from scripts import history_prepare_fight_system as fight_system_prep
     from scripts import history_prepare_script_loader as loader_prep
     from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -69,6 +70,7 @@ except ModuleNotFoundError:
     import history_prepare_class_loaders as class_loaders_prep
     import history_prepare_map_packages as map_packages_prep
     import history_prepare_potion_movement as potion_movement_prep
+    import history_prepare_fight_system as fight_system_prep
     import history_prepare_script_loader as loader_prep
     import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -361,6 +363,7 @@ def prepareSources(
     class_loaders = source_commit in class_loaders_prep.COMMITS
     map_packages = source_commit in map_packages_prep.COMMITS
     potion_movement = source_commit in potion_movement_prep.COMMITS
+    fight_system = source_commit in fight_system_prep.COMMITS
     script_loader = source_commit in loader_prep.COMMITS
     panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
@@ -423,6 +426,7 @@ def prepareSources(
         and not class_loaders
         and not map_packages
         and not potion_movement
+        and not fight_system
         and not script_loader
         and not panel_refresh_transition
     ):
@@ -800,6 +804,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if fight_system:
+        fight_system_prep.apply(source_root, source_commit)
+        identity = fight_system_prep.identity(source_commit)
+        result["identity"]["fightSystem"] = identity
+        log = output_root / "fight-system.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "fightSystem",
+            "command": ["history_source_prep.py", "prepare-fight-system"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if script_loader:
         loader_prep.apply(source_root, source_commit)
         identity = loader_prep.identity(source_commit)
@@ -975,6 +992,10 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in potion_movement_prep.PROFILES[source_commit]:
                     entry["purpose"] = potion_movement_prep.PURPOSE
+        if fight_system:
+            for entry in outputs:
+                if entry["path"] in fight_system_prep.PROFILES[source_commit]:
+                    entry["purpose"] = fight_system_prep.PURPOSE
         if script_loader:
             for entry in outputs:
                 if entry["path"] in loader_prep.PINS:
