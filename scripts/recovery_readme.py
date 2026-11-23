@@ -317,6 +317,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Missing Python shutdown preparation")
         if report.get("sourceCommit") == source_prep.panel_prep.COMMIT:
             raise VerificationError("Missing panel transition preparation")
+        if report.get("sourceCommit") == source_prep.text_shutdown_prep.COMMIT:
+            raise VerificationError("Missing text-panel shutdown preparation")
         if report.get("sourceCommit") == source_prep.position_prep.COMMIT:
             raise VerificationError("Missing map position preparation")
         if report.get("sourceCommit") == source_prep.trigger_prep.COMMIT:
@@ -351,6 +353,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_panel = "panelTransition" in names
     if has_panel != (report.get("sourceCommit") == source_prep.panel_prep.COMMIT):
         raise VerificationError("Panel transition preparation differs from the catalog commit")
+    has_text_shutdown = "textPanelShutdown" in names
+    if has_text_shutdown != (report.get("sourceCommit") == source_prep.text_shutdown_prep.COMMIT):
+        raise VerificationError("Text-panel shutdown preparation differs from the catalog commit")
     has_position = "mapPosition" in names
     if has_position != (report.get("sourceCommit") == source_prep.position_prep.COMMIT):
         raise VerificationError("Map position preparation differs from the catalog commit")
@@ -383,6 +388,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["triggerDecorator"] if has_trigger else [])
         + (["mapPosition"] if has_position else [])
         + (["panelTransition"] if has_panel else [])
+        + (["textPanelShutdown"] if has_text_shutdown else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -480,6 +486,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_panel_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_text_shutdown:
+        helper = source_prep.text_shutdown_prep
+        try:
+            helper.validate(preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_text_panel_shutdown.py"] = Path(helper.__file__).read_bytes()
     merged_outputs = {}
     if has_merged_headers:
         helper = source_prep.merged_prep
@@ -526,6 +539,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or name in include_files
                 or name in merged_outputs
                 or (has_panel and name in source_prep.panel_prep.PINS)
+                or (has_text_shutdown and name in source_prep.text_shutdown_prep.PINS)
                 or name in scene_outputs
                 or (has_shutdown and name == source_prep.shutdown_prep.TARGETS[report["sourceCommit"]])
                 or (has_position and name == source_prep.position_prep.TARGET)
@@ -990,6 +1004,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_trigger_decorator.py"] if "recovery/prepare_trigger_decorator.py" in preparation_files else []),
         *(["python3 recovery/prepare_map_position.py"] if "recovery/prepare_map_position.py" in preparation_files else []),
         *(["python3 recovery/prepare_panel_transition.py"] if "recovery/prepare_panel_transition.py" in preparation_files else []),
+        *(["python3 recovery/prepare_text_panel_shutdown.py"] if "recovery/prepare_text_panel_shutdown.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         *build_commands,

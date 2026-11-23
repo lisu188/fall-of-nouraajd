@@ -98538,6 +98538,41 @@
       "provenance": "content reconstruction of the BFG-removed original; carry preceding verified CMap body into the compatible interface before later GUI-handler implementation",
       "sha256": "c11ddc258127c43e98acaae58f20d21460711acfa354715af949b1f96f3665b4",
       "source": "payloads/reconstructions/f8/f8687ebfb3ac31cef9bdee8534e6e2a0f1893657-CMap.cpp"
+    },
+    {
+      "originalBlob": "4a72562de3d539d22a2efcf5b6f5c4999ecfab9c",
+      "path": "game/CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; use the surviving text panel and logically const factory while retaining QObject ownership",
+      "sha256": "a00f430bd0adbdd93f2479c629a57ec655e832f1bde3206ec8c33c179af983bd",
+      "source": "payloads/reconstructions/4a/4a72562de3d539d22a2efcf5b6f5c4999ecfab9c-CItem.cpp"
+    },
+    {
+      "originalBlob": "ba2b9fff876905442f32486cf6eb6e8d57b00d16",
+      "path": "game/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapt the reconstructed map and panel using same-version const handler getters and panel lookups",
+      "sha256": "91a72977048fea6791261f7c070df157b1e19f8b6f396f03bb7871d0f8b0252e",
+      "source": "payloads/reconstructions/ba/ba2b9fff876905442f32486cf6eb6e8d57b00d16-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "f25f5998db88efd57eadbf9a3b940b862f614816",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; initial adaptation from #273 to the surviving const handler and text panel APIs; pending verification",
+      "sha256": "3e119048480c94ad13956202a8e23efef37ab724f38656f590f6cb4bcc2d5f58",
+      "source": "payloads/reconstructions/f2/f25f5998db88efd57eadbf9a3b940b862f614816-GameScript.cpp"
+    },
+    {
+      "originalBlob": "f310344d4473ac43fd06052dba57f77c0a9b3299",
+      "path": "game/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; use the surviving text panel and logically const factory while retaining QObject ownership",
+      "sha256": "f597638fd45f7f45551c206c3c5f3ac52dc5905a9be882a4787812c3ce40c3c3",
+      "source": "payloads/reconstructions/f3/f310344d4473ac43fd06052dba57f77c0a9b3299-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "f9959291daade8eb7e8df8452ab55e110f6d5fbb",
+      "path": "game/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapt the reconstructed map and panel using same-version const handler getters and panel lookups",
+      "sha256": "d0f21f9217fe43dfe97e476c47371222f9831c5972cf95b1a0af65a051f1a523",
+      "source": "payloads/reconstructions/f9/f9959291daade8eb7e8df8452ab55e110f6d5fbb-CMap.cpp"
     }
   ],
   "schemaVersion": 1
