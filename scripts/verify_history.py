@@ -957,7 +957,7 @@ def verifySnapshot(
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         runtime_root = projects["application"].parent
         application_project = projects["application"].relative_to(source_root).as_posix()
-        runtime_layouts = {"core/core.pro": (".",), "game/game.pro": ("files", "resources")}
+        runtime_layouts = {"core/core.pro": (".",), "game/game.pro": ("files", "resources", "game")}
         for runtime_layout in runtime_layouts.get(application_project, ()):
             candidate = source_root / runtime_layout
             if all((candidate / name).is_dir() for name in ("maps", "scripts", "config")):

@@ -98720,6 +98720,97 @@
       "provenance": "content reconstruction of the BFG-removed original; Carry the preceding object factory against the unchanged native interface, using the authored configuration provider for each JSON file.",
       "sha256": "f597638fd45f7f45551c206c3c5f3ac52dc5905a9be882a4787812c3ce40c3c3",
       "source": "payloads/reconstructions/3f/3f1f8f2fe6552187b152a798b485be04bf1858fc-CObjectHandler.cpp"
+    },
+    {
+      "commit": "b18ba43aca75315aeee3f07bd2ca269a0060d1ce",
+      "path": "resources/images.qrc",
+      "provenance": "Carry the revision #282 resource manifest reconstruction across the unchanged image directory and BFG pointer.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "0454a345b8bb16966742435b6693eb78ddb808cc",
+      "path": "game/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the working object factory from #283 against the unchanged declared interface.",
+      "sha256": "f597638fd45f7f45551c206c3c5f3ac52dc5905a9be882a4787812c3ce40c3c3",
+      "source": "payloads/reconstructions/04/0454a345b8bb16966742435b6693eb78ddb808cc-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "c7c5e5d308551e665fc746973d678c8b4de503fd",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the Qt resource script loader and add inclusive native randint, as required by the authored startup and Cave scripts. Exact random engine and original binding body are unknown.",
+      "sha256": "df3f1fcbe5146109f7d9866661f122d95eba4c82034b25f717d34c0a1ff47db2",
+      "source": "payloads/reconstructions/c7/c7c5e5d308551e665fc746973d678c8b4de503fd-GameScript.cpp"
+    },
+    {
+      "originalBlob": "ecdaf5898510f3f82418e3494ab2044368ebd6d6",
+      "path": "game/scripts/game/interaction.py",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding working interactions and use game.randint, matching the authored import transition in object.py.",
+      "sha256": "cd92673b449ae5c7fcfbe12c6690bbd333557f3f2025f3ecdf4851f0ebb2ed1b",
+      "source": "payloads/reconstructions/ec/ecdaf5898510f3f82418e3494ab2044368ebd6d6-interaction.py"
+    },
+    {
+      "commit": "e5b5c9b397541ae896c999ee1810f0f293cf10fa",
+      "path": "game/images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "00d9708014417b8142294022d65ec201ccdfa29a",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "be7f9ca9af9d2f73ab4833a4ef884e71b798eb79",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "16335950403a0f7e5c9e8cfce53dd603dbfe90d8",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the verified Python bindings and resource-backed script loader into the merged project using the local resource handler header.",
+      "sha256": "6cdd3ca217f21fe66693c4bfef8103e44a78cf29394b0a40aa01b87dfdb44dbb",
+      "source": "payloads/reconstructions/16/16335950403a0f7e5c9e8cfce53dd603dbfe90d8-GameScript.cpp"
+    },
+    {
+      "originalBlob": "74fb1391813cb57152f0365e3383b90d57515384",
+      "path": "game/CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding verified player view against the unchanged panel declarations and arrow asset paths.",
+      "sha256": "61ca2cc12c1a3b9f0170a5a406ae51697266d942a8c0fe37f0deeb736558db35",
+      "source": "payloads/reconstructions/74/74fb1391813cb57152f0365e3383b90d57515384-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "aa7bfb98a9fe4960522c505d54a214652243925f",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the verified item body across the root project move. CScroll::onUse keeps the same signature despite the unnamed parameter in the header.",
+      "sha256": "c688202ddba3af38164c7c79ba88b6508dd09f0c0b0e11edc095a9c558c7f34d",
+      "source": "payloads/reconstructions/aa/aa7bfb98a9fe4960522c505d54a214652243925f-CItem.cpp"
+    },
+    {
+      "originalBlob": "adce523beb2e66a6e488e3e3d69dbb959e72d03c",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the verified Python bindings and resource-backed script loader into the merged project using the local resource handler header.",
+      "sha256": "6cdd3ca217f21fe66693c4bfef8103e44a78cf29394b0a40aa01b87dfdb44dbb",
+      "source": "payloads/reconstructions/ad/adce523beb2e66a6e488e3e3d69dbb959e72d03c-GameScript.cpp"
+    },
+    {
+      "originalBlob": "cba892021f06552dc3aa9e5455e3244c8986172e",
+      "path": "game/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding verified panel body across the resource merge against its unchanged header. Exact changes in the missing body are unknown.",
+      "sha256": "74e7440d0b2f0eb7349f77ecf1ce9e6163bd9eaaed7375b01ab9d9ea5d064b25",
+      "source": "payloads/reconstructions/cb/cba892021f06552dc3aa9e5455e3244c8986172e-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "f0f7c2189fc4e7c5db53aa5290d79537ceacaa3a",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the verified Python bindings and resource-backed script loader into the merged project using the local resource handler header.",
+      "sha256": "6cdd3ca217f21fe66693c4bfef8103e44a78cf29394b0a40aa01b87dfdb44dbb",
+      "source": "payloads/reconstructions/f0/f0f7c2189fc4e7c5db53aa5290d79537ceacaa3a-GameScript.cpp"
     }
   ],
   "schemaVersion": 1

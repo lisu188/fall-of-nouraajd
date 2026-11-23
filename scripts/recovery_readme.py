@@ -327,6 +327,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Missing effect transition preparation")
         if report.get("sourceCommit") in source_prep.resources_prep.COMMITS:
             raise VerificationError("Missing resources transition preparation")
+        if report.get("sourceCommit") in source_prep.import_hook_prep.COMMITS:
+            raise VerificationError("Missing import hook preparation")
         if report.get("sourceCommit") in source_prep.loader_prep.COMMITS:
             raise VerificationError("Missing script loader preparation")
         if report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES:
@@ -377,6 +379,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_resources_transition = "resourcesTransition" in names
     if has_resources_transition != (report.get("sourceCommit") in source_prep.resources_prep.COMMITS):
         raise VerificationError("Resources transition preparation differs from the catalog commit")
+    has_import_hook = "importHook" in names
+    if has_import_hook != (report.get("sourceCommit") in source_prep.import_hook_prep.COMMITS):
+        raise VerificationError("Import hook preparation differs from the catalog commit")
     has_script_loader = "scriptLoader" in names
     if has_script_loader != (report.get("sourceCommit") in source_prep.loader_prep.COMMITS):
         raise VerificationError("Script loader preparation differs from the catalog commit")
@@ -422,6 +427,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["sparseMapTransition"] if has_sparse else [])
         + (["namedEventTransition"] if has_named_event else [])
         + (["resourcesTransition"] if has_resources_transition else [])
+        + (["importHook"] if has_import_hook else [])
         + (["scriptLoader"] if has_script_loader else [])
         + (["effectTransition"] if has_effect else [])
         + (["panelRefreshTransition"] if has_panel_refresh else [])
@@ -550,6 +556,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_resources_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_import_hook:
+        helper = source_prep.import_hook_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_import_hook.py"] = Path(helper.__file__).read_bytes()
     if has_script_loader:
         helper = source_prep.loader_prep
         try:
@@ -622,6 +635,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_named_event and name in source_prep.named_event_prep.PINS)
                 or (has_effect and name in source_prep.effect_prep.PINS)
                 or (has_script_loader and name in source_prep.loader_prep.PINS)
+                or (has_import_hook and name in source_prep.import_hook_prep.PROFILES[report["sourceCommit"]])
                 or (has_resources_transition and name in source_prep.resources_prep.PINS)
                 or (has_panel_refresh and name in source_prep.panel_refresh_prep.PROFILES[report["sourceCommit"]])
                 or name in scene_outputs
@@ -840,8 +854,8 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     if split_runtime is not None:
         project = report.get("project")
         expected_runtime = {"core/core.pro": ".", "game/game.pro": "files"}.get(project)
-        if project == "game/game.pro" and split_runtime == "resources":
-            expected_runtime = "resources"
+        if project == "game/game.pro" and split_runtime in ("resources", "game"):
+            expected_runtime = split_runtime
         if split_runtime != expected_runtime:
             raise VerificationError("Unexpected split-project runtime directory")
         dependencies = report.get("dependencies", [])
@@ -864,9 +878,9 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             resource_qmake = shlex.join(["qmake", "resources.pro", *compiler_flags])
             build_commands.insert(1, '(cd resources && ' + resource_qmake + ' && make -j"$(nproc)")')
         executable = f"./{project_dir}/RecoveryGame"
-        if split_runtime in ("files", "resources"):
+        if split_runtime in ("files", "resources", "game"):
             build_commands.append(f"cd {split_runtime}")
-            executable = f"../{project_dir}/RecoveryGame"
+            executable = "./RecoveryGame" if split_runtime == project_dir else f"../{project_dir}/RecoveryGame"
     abi = str(report.get("recipe", {}).get("pythonAbi", "none"))
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
@@ -1101,6 +1115,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_named_event_transition.py"] if "recovery/prepare_named_event_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_effect_transition.py"] if "recovery/prepare_effect_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_script_loader.py"] if "recovery/prepare_script_loader.py" in preparation_files else []),
+        *(["python3 recovery/prepare_import_hook.py"] if "recovery/prepare_import_hook.py" in preparation_files else []),
         *(["python3 recovery/prepare_resources_transition.py"] if "recovery/prepare_resources_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_panel_refresh_transition.py"] if "recovery/prepare_panel_refresh_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),

@@ -33,6 +33,7 @@ try:
     from scripts import history_prepare_named_event_transition as named_event_prep
     from scripts import history_prepare_effect_transition as effect_prep
     from scripts import history_prepare_resources_transition as resources_prep
+    from scripts import history_prepare_import_hook as import_hook_prep
     from scripts import history_prepare_script_loader as loader_prep
     from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -57,6 +58,7 @@ except ModuleNotFoundError:
     import history_prepare_named_event_transition as named_event_prep
     import history_prepare_effect_transition as effect_prep
     import history_prepare_resources_transition as resources_prep
+    import history_prepare_import_hook as import_hook_prep
     import history_prepare_script_loader as loader_prep
     import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -343,6 +345,7 @@ def prepareSources(
     named_event_transition = source_commit == named_event_prep.COMMIT
     effect_transition = source_commit in effect_prep.COMMITS
     resources_transition = source_commit in resources_prep.COMMITS
+    import_hook = source_commit in import_hook_prep.COMMITS
     script_loader = source_commit in loader_prep.COMMITS
     panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
@@ -399,6 +402,7 @@ def prepareSources(
         and not named_event_transition
         and not effect_transition
         and not resources_transition
+        and not import_hook
         and not script_loader
         and not panel_refresh_transition
     ):
@@ -698,6 +702,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if import_hook:
+        import_hook_prep.apply(source_root, source_commit)
+        identity = import_hook_prep.identity(source_commit)
+        result["identity"]["importHook"] = identity
+        log = output_root / "import-hook.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "importHook",
+            "command": ["history_source_prep.py", "prepare-import-hook"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if script_loader:
         loader_prep.apply(source_root, source_commit)
         identity = loader_prep.identity(source_commit)
@@ -849,6 +866,10 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in resources_prep.PINS:
                     entry["purpose"] = resources_prep.PURPOSE
+        if import_hook:
+            for entry in outputs:
+                if entry["path"] in import_hook_prep.PROFILES[source_commit]:
+                    entry["purpose"] = import_hook_prep.PURPOSE
         if script_loader:
             for entry in outputs:
                 if entry["path"] in loader_prep.PINS:
