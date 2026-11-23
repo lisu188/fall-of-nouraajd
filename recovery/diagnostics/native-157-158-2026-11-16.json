@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "originalBlob": "26987e9ade4abb9dca784c78d7ef4626434146d0",
+      "path": "map/map.cpp",
+      "provenance": "Missing #157 map body carried from full native-verified #150\u2013156 implementation. Surviving Map.h is byte-identical; original scene body version is unchanged. Preserves original JSON map/state route and inferred blank-background terrain generation. New removed implementation changes and historical map/gameplay parity remain unproven.",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "recovery/payloads/reconstructions/26/26987e9ade4abb9dca784c78d7ef4626434146d0-map.cpp"
+    },
+    {
+      "originalBlob": "e8f90a736b9d1ab09523193860a2f6df5fcf3875",
+      "path": "Game.pro",
+      "provenance": "Missing #157 Game.pro inferred from accepted #156 project settings and actual same-tree C++/header/resource inventory. Removed deleted mapview/mapscene entries; includes all existing same-tree C++ sources. Original project bytes are unavailable; build configuration parity is not claimed. Includes vendored Tmx/tinyxml/base64 sources and zlib linkage required by genuine TmxUtil.",
+      "sha256": "0308172eca1d5336a7d54111bd40bddbd4680f3139c649fdc40fc87abde48578",
+      "source": "recovery/payloads/reconstructions/e8/e8f90a736b9d1ab09523193860a2f6df5fcf3875-Game.pro"
+    }
+  ],
+  "schemaVersion": 1
+}

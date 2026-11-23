@@ -1,0 +1,343 @@
+{
+  "entries": [
+    {
+      "commit": "d8f5b95be817631a31ed0fe13ec64730613a56a4",
+      "firstCatalogOrder": 122,
+      "originalBlob": "2c4a970391bc5c69cc51a4822d07fa727d621425",
+      "path": "config/items.json",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted genuine surviving #119 5e000dca02a17e179719d99ae93d31687c9d2244 config/items.json donor to missing originalBlob2c4 shared by122\u2013139. Genuine original122 Item::getItem migrated from legacy type strings to class + QMetaType::create, while the previous generic donor had only type and returned no real items. Adds only class Weapon/Armor/Potion corresponding to actual existing type, retaining every donor name/path/stat/power/type. This is source-derived missing-config reconstruction; unknown original added items/balance/slot declarations remain unavailable and are not invented. No surviving original file changes. Does not apply\u2264121 or\u2265140 different content groups.",
+      "sha256": "2081b633a9704c5abb2723a430f22769012312ce9e98dfd50b6fa4ad8f23dbf7",
+      "source": "recovery/payloads/reconstructions/2c/2c4a970391bc5c69cc51a4822d07fa727d621425-2081b633a970-items.json"
+    },
+    {
+      "commit": "23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+      "firstCatalogOrder": 130,
+      "originalBlob": "a773641d633236095a67164688d482c402ac87ca",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a70ddfe939a6fd91aec1a5a73050464f75b1688d (previous version of creatures/creature.cpp)",
+      "sha256": "ae5657065e859604520be6233e1b5d90f139f196c885e467fa971963fef47510",
+      "source": "recovery/payloads/reconstructions/a7/a773641d633236095a67164688d482c402ac87ca-ae5657065e85-creature.cpp"
+    },
+    {
+      "commit": "23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+      "firstCatalogOrder": 130,
+      "originalBlob": "422070eaff81ebcab20d94eb117a782dbc78d85a",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #129 missing Map implementation to genuine #130 newly introduced Teleporter class: recognizes Teleporter state, constructs the real surviving Teleporter, invokes its original 3-coordinate array loader, adds it through real map ownership, and classifies actual Teleporter objects for original saveToJson. Original genuine getObjects accessor and Teleporter entry/movement behavior remain unchanged. Carried generic Map generation/cache/formulas and unknown omitted implementation details remain inference; donor missing map configuration is not asserted identical to the lost authored map. This body does not add later enabled-flag semantics.",
+      "sha256": "2e8965a4ef220d9e10c0e49d7002a7fe5af390298fefd08e939f92cc30715464",
+      "source": "recovery/payloads/reconstructions/42/422070eaff81ebcab20d94eb117a782dbc78d85a-2e8965a4ef22-map.cpp"
+    },
+    {
+      "commit": "23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+      "firstCatalogOrder": 130,
+      "originalBlob": "c7ef8ce757365618b6a8e6c6adf33cf2cc0710a5",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0f1d12502ec20d26023cc1d8a777880d473f1dcb (previous version of view/gameview.cpp)",
+      "sha256": "935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7",
+      "source": "recovery/payloads/reconstructions/c7/c7ef8ce757365618b6a8e6c6adf33cf2cc0710a5-935518bc40dd-gameview.cpp"
+    },
+    {
+      "commit": "b24663bd7e3101a4043d4c79074f2897dcf2780c",
+      "firstCatalogOrder": 131,
+      "originalBlob": "565eef804bccb8194a8a78169a7408136f573d70",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of c7ef8ce757365618b6a8e6c6adf33cf2cc0710a5 (previous version of view/gameview.cpp)",
+      "sha256": "935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7",
+      "source": "recovery/payloads/reconstructions/56/565eef804bccb8194a8a78169a7408136f573d70-935518bc40dd-gameview.cpp"
+    },
+    {
+      "commit": "9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d",
+      "firstCatalogOrder": 132,
+      "originalBlob": "51cc3081ffb58fdf1b482488ebc31e6c8a14654b",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of a773641d633236095a67164688d482c402ac87ca (previous version of creatures/creature.cpp)",
+      "sha256": "ae5657065e859604520be6233e1b5d90f139f196c885e467fa971963fef47510",
+      "source": "recovery/payloads/reconstructions/51/51cc3081ffb58fdf1b482488ebc31e6c8a14654b-ae5657065e85-creature.cpp"
+    },
+    {
+      "commit": "9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d",
+      "firstCatalogOrder": 132,
+      "originalBlob": "9bd50bb1511ccb54138110c475b9c3e1613a8f0e",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 565eef804bccb8194a8a78169a7408136f573d70 (previous version of view/gameview.cpp)",
+      "sha256": "935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7",
+      "source": "recovery/payloads/reconstructions/9b/9bd50bb1511ccb54138110c475b9c3e1613a8f0e-935518bc40dd-gameview.cpp"
+    },
+    {
+      "commit": "75f3d90ee67e43eca7d4b40afc4ad3132f2bf53e",
+      "firstCatalogOrder": 133,
+      "originalBlob": "8a3884eea3f1479e3ebbd252e0982dfc082e7f56",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #133 GameView reconstruction to genuine133\u2013137 unchanged missing source blob spanning the original Creature equipped API migration from set<Item*> to map<int,Item*>. Small overloads select actual Item* values from either real return type, preserving one content-keyed body across all genuine headers. Displays only non-null items in the still-declared PlayerListView equipment panel, with actual collections/signals. Original137 PlayerEquippedView constructor is empty and GameView header still names PlayerListView. Exact missing layout/panel behavior remains inference; no surviving original changed.",
+      "sha256": "33fef946352e7520f2c1db8c983e1441d5e391692780eace2fe4741c98e52eeb",
+      "source": "recovery/payloads/reconstructions/8a/8a3884eea3f1479e3ebbd252e0982dfc082e7f56-33fef946352e-gameview.cpp"
+    },
+    {
+      "commit": "21ebd6611c521acf175ba29ab5247e6d221a5c87",
+      "firstCatalogOrder": 137,
+      "originalBlob": "448c39bd95dacc5026a5b9a7136904b8e9f88956",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #132 Creature reconstruction to genuine #137 std::map<int,Item*> equipped storage and actual hasEquipped/setItem(int)/getter declarations. Seeds keys from genuine137 slots.json; its actual RightHand=1 and Chest=4 retain weapon/armor APIs, unlike later0/3. Real item onEquip/onUnequip callbacks maintain stat bonuses; save subtracts each equipped bonus before serializing base stats. Inferred slot-value equipment JSON is inverse across save/load, and legacy inventory.weapon/armor template fields are applied only when present so they cannot erase restored equipment. Slot serialization format and exact missing policies remain inferred, not recovered original137 bodies; broader formulas and inventory/action collection-cast ABI limitation remain documented. Original surviving Player/Item/slot widgets unchanged.",
+      "sha256": "b6c03d593332d39a0439648f207ee68354fdb9d9d9887a95e9b13097cea9d142",
+      "source": "recovery/payloads/reconstructions/44/448c39bd95dacc5026a5b9a7136904b8e9f88956-b6c03d593332-creature.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 4,
+      "game": 12
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "420ec19118cfdece5f5ab0bf5c4eb05d43b161e10eaba13ca60ae98b9d5983af",
+        "sourceCommit": "d8f5b95be817631a31ed0fe13ec64730613a56a4",
+        "sourceTree": "2a4ef143c32d82865d342555a6fbca677b0c3a6c",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0ea4dead3ddbfb1485f7e3d15ed3d1619808bedc0210ceeb638fd6f0d40e632d",
+        "sourceCommit": "251c727c2a6957bcaca2335e2632bf2a60a772d3",
+        "sourceTree": "be145d0bc5df25b8abc3418577089d2591788b61",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "5d531d655d55994812512da5491140cc1baaa0c299dab427c3658e992066b4fc",
+        "sourceCommit": "12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+        "sourceTree": "5c1e61cf5ec289d3b3fe3f3b7e24d6a3ee77cef5",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "8fb6ee4d45b47537b9e919322ba4c7ff54400d45c21c0972782007e48268bb2d",
+        "sourceCommit": "1084dbc78cb2606f6740c61f03622b360206ce32",
+        "sourceTree": "0d8b368a0e19a66249eef922b6f044b6d7f21e34",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "fdc03f3f82709d0b4d398d95634f99b81c64f93f4fc390629c5459d4a8f8ab60",
+        "sourceCommit": "bc243030d30e75591a3aff3702525f4472f37331",
+        "sourceTree": "708e0a9cdb13df64e6bd4918027c8fd63485970c",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "fc5249847a8172994883cddf681944f4c4881a0203d5536d422b918d06820928",
+        "sourceCommit": "eef1a4ed9e2148f334fc0da05e924b556e2f355e",
+        "sourceTree": "c1db9a17f125fb71d00903dd82f0e3b0c819bade",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "568175ad736167e28876518730794bc2a80856a7fa515c7e12faa63846f5d6fe",
+        "sourceCommit": "856d7792e59d09f1e9cff08d9abb81052a47c7a3",
+        "sourceTree": "c74b0751b7d4a1d6f83af069b05e2888e1c1ff4a",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "a669e81348708a52ab21550a20ce64f97c99fadc5f88deadabb80f9f45bcbb59",
+        "sourceCommit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+        "sourceTree": "620875cb4254b3c73c14e7793d33671d1a6300b7",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "365a86953843277228ab26af555ae734d81c7a75e53522c6d18f90cd96be1ccb",
+        "sourceCommit": "23e6b207a2efa9d51efed68ed9f9e027bee2c881",
+        "sourceTree": "5697c4f4f5351a42e29ec2924ef1e0cdce6840bb",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "824a20f7b3f1474dd28c27a242d71be307d608e6d66a84cadf386c04c92a7e6b",
+        "sourceCommit": "b24663bd7e3101a4043d4c79074f2897dcf2780c",
+        "sourceTree": "c0b4a99062a2c3560284426447c546555e65443a",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "56c70e056d757984de82612aa990373d38d7a44abf6ed92349309911b0155108",
+        "sourceCommit": "9ab15ee4e1bc0f7f075a05c4cbfdac25a9967d9d",
+        "sourceTree": "f60f92ad5d6a13a1a8e35ed5425b99fd85fc2759",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "5f1859014c1f614e19d4054ccd2f5ceecb999bdce8086296b1213bce96b93b17",
+        "sourceCommit": "75f3d90ee67e43eca7d4b40afc4ad3132f2bf53e",
+        "sourceTree": "fbeaae97577297ddc01bcc179495b233898e4eeb",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "96d4c1f1ab391207df21a5fe0f8c10c332ab93ce3108ce2ee6f5a3bdd0374f2c",
+        "sourceCommit": "d27f773772f47adafa4a9077b9c9e2b1ab67f091",
+        "sourceTree": "35a3d321720be5f8bc07e4414d60e52d2c0db737",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "81144ed02ea4ca62ad44ae1bc9a563240bb458ec3c2a8f312c30ea85752a9c04",
+        "sourceCommit": "cdb285560097d679b94f693db0519c3cb83252fa",
+        "sourceTree": "81dfc3b5e7435b74cbb9763901b8b27b54279e0f",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0badfa8a44b96a79a15869a84bb4ab184b0d8f1cf40a1c4a7ea4c5de1e3a900d",
+        "sourceCommit": "026e63de89a691376462db46297f8564012c024c",
+        "sourceTree": "dd5aeb5dbca956517f1f91f718b6f6c9a29673e8",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "1f7e7df3c23f91082ea00efda4b627c8bed06dae182ad7c8b314fd13b62cc2a0",
+        "sourceCommit": "21ebd6611c521acf175ba29ab5247e6d221a5c87",
+        "sourceTree": "ab33e8cc26da48da461ff44786a1816ca1029411",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

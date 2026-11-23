@@ -1,0 +1,70 @@
+Loaded configuration: :/config/init.json 
+
+process 368: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: :/config/map.json 
+
+Loaded configuration: :/config/tiles.json 
+
+Loaded animation: :/images/tiles/mountain/ 
+
+Loaded animation: :/images/tiles/road/ 
+
+Loaded animation: :/images/buildings/cave/ 
+
+Loaded configuration: :/config/slots.json 
+
+Loaded configuration: :/images/monsters/pritzmage/time.json 
+
+Loaded animation: :/images/monsters/pritzmage/ 
+
+Loaded configuration: :/config/interactions.json 
+
+Loaded animation: :/images/interactions/attack/ 
+
+Loaded configuration: :/config/items.json 
+
+Loaded animation: :/images/interactions/chaosblast/ 
+
+Loaded animation: :/images/items/weapons/chaossword/ 
+
+Loaded animation: :/images/items/weapons/dagger/ 
+
+Loaded animation: :/images/items/potions/life/ 
+
+Loaded animation: :/images/items/potions/mana/ 
+
+Loaded animation: :/images/items/armors/leatherarmor/ 
+
+Loaded animation: :/images/items/armors/platearmor/ 
+
+Loaded animation: :/images/items/armors/robe/ 
+
+Loaded animation: :/images/items/weapons/staff/ 
+
+Loaded animation: :/images/items/weapons/sword/ 
+
+Loaded animation: :/images/buildings/dungeon/ 
+
+Loaded configuration: :/config/creatures.json 
+
+Loaded animation: :/images/buildings/teleporter/ 
+
+Loaded configuration: :/images/monsters/octobogz/time.json 
+
+Loaded animation: :/images/monsters/octobogz/ 
+
+Loaded configuration: :/images/monsters/pritz/time.json 
+
+Loaded animation: :/images/monsters/pritz/ 
+
+Loaded animation: :/images/tiles/grass/ 
+
+Loaded animation: :/images/tiles/ground/ 
+
+Loaded animation: :/images/tiles/water/ 
+
+Loaded animation: :/images/arrows/right/ 
+
+Loaded animation: :/images/arrows/left/ 
+
