@@ -36,6 +36,7 @@ try:
     from scripts import history_prepare_import_hook as import_hook_prep
     from scripts import history_prepare_map_events as map_events_prep
     from scripts import history_prepare_python_effects as python_effects_prep
+    from scripts import history_prepare_class_loaders as class_loaders_prep
     from scripts import history_prepare_script_loader as loader_prep
     from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -63,6 +64,7 @@ except ModuleNotFoundError:
     import history_prepare_import_hook as import_hook_prep
     import history_prepare_map_events as map_events_prep
     import history_prepare_python_effects as python_effects_prep
+    import history_prepare_class_loaders as class_loaders_prep
     import history_prepare_script_loader as loader_prep
     import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -352,6 +354,7 @@ def prepareSources(
     import_hook = source_commit in import_hook_prep.COMMITS
     map_events = source_commit in map_events_prep.COMMITS
     python_effects = source_commit in python_effects_prep.COMMITS
+    class_loaders = source_commit in class_loaders_prep.COMMITS
     script_loader = source_commit in loader_prep.COMMITS
     panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
@@ -411,6 +414,7 @@ def prepareSources(
         and not import_hook
         and not map_events
         and not python_effects
+        and not class_loaders
         and not script_loader
         and not panel_refresh_transition
     ):
@@ -749,6 +753,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if class_loaders:
+        class_loaders_prep.apply(source_root, source_commit)
+        identity = class_loaders_prep.identity(source_commit)
+        result["identity"]["classLoaders"] = identity
+        log = output_root / "class-loaders.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "classLoaders",
+            "command": ["history_source_prep.py", "prepare-class-loaders"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if script_loader:
         loader_prep.apply(source_root, source_commit)
         identity = loader_prep.identity(source_commit)
@@ -912,6 +929,10 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in python_effects_prep.PROFILES[source_commit]:
                     entry["purpose"] = python_effects_prep.PURPOSE
+        if class_loaders:
+            for entry in outputs:
+                if entry["path"] in class_loaders_prep.PROFILES[source_commit]:
+                    entry["purpose"] = class_loaders_prep.PURPOSE
         if script_loader:
             for entry in outputs:
                 if entry["path"] in loader_prep.PINS:

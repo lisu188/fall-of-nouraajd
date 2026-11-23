@@ -98986,6 +98986,41 @@
       "provenance": "content reconstruction of the BFG-removed original; Carry map loading and events and route removal through the surviving scene interface.",
       "sha256": "4b3d7da0f3c132b566770d4d7fbc7578d805964232cb2ee47f6e483ae2a1f117",
       "source": "payloads/reconstructions/e1/e1aaf5e1966f9a28392afa6c31392212a14dbe63-CMap.cpp"
+    },
+    {
+      "commit": "77581ebb8c9133ed56b11e6ecf6d5a10980f73e4",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "104edb40b2c18764b57630d15a6e1c12630752da",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "73abb1b5338cff7d75478143c52ae7b786f5def1",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Load the authored map script into the shared namespace for script-defined event classes.",
+      "sha256": "d59c346006cd768eec27361a667157742df489b5f8a6480a628464d9c115fb9a",
+      "source": "payloads/reconstructions/73/73abb1b5338cff7d75478143c52ae7b786f5def1-CMap.cpp"
+    },
+    {
+      "originalBlob": "a622e8ebc997c5186e67893e58f5d8ff48874628",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the authored native resource loader through the Python 3.4 import protocol.",
+      "sha256": "59ac1d08a50db9afdda45ef7f1d2064c129e021152041b79964434aece794f3c",
+      "source": "payloads/reconstructions/a6/a622e8ebc997c5186e67893e58f5d8ff48874628-GameScript.cpp"
+    },
+    {
+      "originalBlob": "e35b767748957fb8c032876a9dfb8e842ed1e785",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Load the authored map script into the shared namespace for script-defined event classes.",
+      "sha256": "d59c346006cd768eec27361a667157742df489b5f8a6480a628464d9c115fb9a",
+      "source": "payloads/reconstructions/e3/e35b767748957fb8c032876a9dfb8e842ed1e785-CMap.cpp"
     }
   ],
   "schemaVersion": 1

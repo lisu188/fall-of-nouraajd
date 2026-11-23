@@ -276,6 +276,7 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         or commit in vh.source_prep.import_hook_prep.COMMITS
         or commit in vh.source_prep.map_events_prep.COMMITS
         or commit in vh.source_prep.python_effects_prep.COMMITS
+        or commit in vh.source_prep.class_loaders_prep.COMMITS
         or commit in vh.source_prep.loader_prep.COMMITS
         or commit in vh.source_prep.panel_refresh_prep.PROFILES
         or commit in vh.source_prep.shutdown_prep.TARGETS
@@ -809,6 +810,7 @@ def progress() -> None:
                 or commit in vh.source_prep.import_hook_prep.COMMITS
                 or commit in vh.source_prep.map_events_prep.COMMITS
                 or commit in vh.source_prep.python_effects_prep.COMMITS
+                or commit in vh.source_prep.class_loaders_prep.COMMITS
                 or commit in vh.source_prep.loader_prep.COMMITS
                 or commit in vh.source_prep.panel_refresh_prep.PROFILES
                 or commit in vh.source_prep.shutdown_prep.TARGETS
@@ -881,6 +883,8 @@ def progress() -> None:
                 item["buildCompatibility"] = ["mapEvents"]
             if commit in vh.source_prep.python_effects_prep.COMMITS:
                 item["buildCompatibility"] = ["pythonEffects"]
+            if commit in vh.source_prep.class_loaders_prep.COMMITS:
+                item["buildCompatibility"] = ["classLoaders"]
             if commit in vh.source_prep.loader_prep.COMMITS:
                 item["buildCompatibility"] = ["scriptLoader"]
             if commit in vh.source_prep.effect_prep.COMMITS:
