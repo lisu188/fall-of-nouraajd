@@ -1,0 +1,35 @@
+{
+  "bundle": {
+    "bytes": 24043693,
+    "name": "nouraajd-bfg-2026-11-23-through-292.bundle",
+    "recoveryRefs": {
+      "refs/heads/recovery/bfg/2026-11-23-through-292/108bdcbeda04cefeba5e1895f91df023cea8487f": "c71ee387c03b31954c72ae1538ff075028aeca2d",
+      "refs/heads/recovery/bfg/2026-11-23-through-292/559ead9db96da50ae2e451d4c15fc0eb9985aa8f": "2b1f88fb86124171c75f768b35a15f7fb24bd2c2"
+    },
+    "sha256": "5287c312da1e2a8c2913c0a6d8fb8bb8a04dcca85d10ddad7fcfd87dfafb53fe"
+  },
+  "independentTransportVerification": {
+    "fsck": "git fsck --full --strict",
+    "noAlternates": true,
+    "reachableCommitCount": 293,
+    "reachableObjectCount": 5797,
+    "status": "passed"
+  },
+  "mainUpdated": false,
+  "mappedCommitCount": 293,
+  "mappingSha256": "a6b1910c2769651293500dc4738f9f9659b4f743bc7ac6cd3e66a34f2e0c79c8",
+  "matchingDocumentationAndStartupFramePresent": true,
+  "messagesPreservedWithRecoveryFooter": true,
+  "newlyMappedCommitCount": 3,
+  "parentOrderAndIdentitiesPreserved": true,
+  "preservedPreviousBundleCommitCount": 290,
+  "preservedPreviouslyPublishedCommitCount": 109,
+  "previouslyPublishedFramePreserved": {
+    "frameEvidenceCommit": "9acf3570ced5f0dcd8a9192184e169172d52ac28",
+    "latestRevalidationFrameSha256": "efce585e49b05be8a01440ee11fd795351fca25833f4ff197fa6c1ebc27ffed7",
+    "originalCommit": "108bdcbeda04cefeba5e1895f91df023cea8487f",
+    "publishedFrameSha256": "e83e97556322c6580c148a276ab8969de64397f8310b5764c90661544c410f6b"
+  },
+  "schemaVersion": 1,
+  "verifiedRestoredFilesAndModesPreserved": true
+}
