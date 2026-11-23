@@ -165,6 +165,14 @@ template <class T> static void registerObjectCallbacks(const char *name) {
 }
 
 // Under Python 2.7, Boost exports the init_game symbol called by CScriptEngine.
+template<class T> static void setNumericField(T &value, const std::string &name, int number) {
+    object wrapped(ptr(&value));
+    wrapped.attr(name.c_str()) = number;
+}
+template<class T> static int getNumericField(T &value, const std::string &name) {
+    object wrapped(ptr(&value));
+    return extract<int>(wrapped.attr(name.c_str()));
+}
 BOOST_PYTHON_MODULE(_game) {
     to_python_converter<QString, QStringToPython>();
     QStringFromPython();
@@ -187,8 +195,35 @@ BOOST_PYTHON_MODULE(_game) {
         .def("getCoords", &CMapObject::getCoords)
         .def("setCoords", &CMapObject::setCoords)
         .def("removeFromGame", &CMapObject::removeFromGame) PY_PROPERTY_ACCESSOR(CMapObject);
-    class_<Stats>("Stats") PY_PROPERTY_ACCESSOR(Stats);
-    class_<Damage>("Damage") PY_PROPERTY_ACCESSOR(Damage);
+    class_<Stats>("Stats")
+        .add_property("strength", &Stats::getStrength, &Stats::setStrength)
+        .add_property("stamina", &Stats::getStamina, &Stats::setStamina)
+        .add_property("agility", &Stats::getAgility, &Stats::setAgility)
+        .add_property("intelligence", &Stats::getIntelligence, &Stats::setIntelligence)
+        .add_property("armor", &Stats::getArmor, &Stats::setArmor)
+        .add_property("block", &Stats::getBlock, &Stats::setBlock)
+        .add_property("dmgMin", &Stats::getDmgMin, &Stats::setDmgMin)
+        .add_property("dmgMax", &Stats::getDmgMax, &Stats::setDmgMax)
+        .add_property("hit", &Stats::getHit, &Stats::setHit)
+        .add_property("crit", &Stats::getCrit, &Stats::setCrit)
+        .add_property("fireResist", &Stats::getFireResist, &Stats::setFireResist)
+        .add_property("thunderResist", &Stats::getThunderResist, &Stats::setThunderResist)
+        .add_property("frostResist", &Stats::getFrostResist, &Stats::setFrostResist)
+        .add_property("normalResist", &Stats::getNormalResist, &Stats::setNormalResist)
+        .add_property("damage", &Stats::getDamage, &Stats::setDamage)
+        .add_property("attack", &Stats::getAttack, &Stats::setAttack)
+        .add_property("shadowResist", &Stats::getShadowResist, &Stats::setShadowResist)
+        .def("setNumericProperty", &setNumericField<Stats>)
+        .def("getNumericProperty", &getNumericField<Stats>)
+        .def("getDamage", &Stats::getDamage);
+    class_<Damage>("Damage")
+        .add_property("fire", &Damage::getFire, &Damage::setFire)
+        .add_property("thunder", &Damage::getThunder, &Damage::setThunder)
+        .add_property("frost", &Damage::getFrost, &Damage::setFrost)
+        .add_property("normal", &Damage::getNormal, &Damage::setNormal)
+        .add_property("shadow", &Damage::getShadow, &Damage::setShadow)
+        .def("setNumericProperty", &setNumericField<Damage>)
+        .def("getNumericProperty", &getNumericField<Damage>);
     class_<CCreature, bases<CMapObject>, boost::noncopyable>("CCreature", no_init)
         .def("getDmg", &CCreature::getDmg)
         .def("hurt", static_cast<void (CCreature::*)(int)>(&CCreature::hurt))
@@ -222,6 +257,7 @@ BOOST_PYTHON_MODULE(_game) {
         "CInteraction")
         .def("performAction", &CInteraction::performAction, &CInteractionWrapper::defaultPerformAction)
         .def("configureEffect", &CInteraction::configureEffect, &CInteractionWrapper::defaultConfigureEffect);
+    scope().attr("Interaction") = scope().attr("CInteraction");
     class_<Effect, boost::noncopyable>("Effect", no_init)
         .def("getBonus", &Effect::getBonus, return_internal_reference<>())
         .def("setBonus", &Effect::setBonus)

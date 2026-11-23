@@ -1,0 +1,42 @@
+{
+  "entries": [
+    {
+      "originalBlob": "4db6a1b87f6ff850612d815ffa96ecde2bd6faac",
+      "path": "src/map.cpp",
+      "provenance": "Missing #197 Map implementation follows genuine new QObject/Map::moveCompleted and exact GameScene CompletionListener gating. Preserves native #196 map/factory/TMX/property/collision/turn implementation; worker movement is queued first, completion rebuilds overlapping entries and fires real onEnter/combat once after all worker results. Pixel interpolation retains original viewport centering while logical completion owns entry callbacks to avoid duplicates. No surviving source/header edits; asynchronous callback adaptation inferred from actual new API, not exact body or gameplay parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/recon/1635542d44e479a5f3e54a6210ca74cf8cde3e42\", \"sha256\": \"236bede65f5f4a0cac5d37e9ad84a35c17882399963a5996b7bd0e1b083afb7f\"}, {\"path\": \"src/map.h\", \"sha256\": \"c099f25d41447d89115b6e026121ea8f82eef72a2dba433d0ab267a1e7537274\"}]",
+      "sha256": "1e8a2385221c9219ce2d3dce41f8eed012ca51be060a1dddcd70d762d2c8aa76",
+      "source": "recovery/payloads/reconstructions/4d/4db6a1b87f6ff850612d815ffa96ecde2bd6faac-1e8a2385221c-map.cpp",
+      "validatedByOriginalCommit": "7555be4552788be476084397738baf36ca8cac95"
+    },
+    {
+      "originalBlob": "e3894cafc3fcf8170dd3ed83c40088e3c268d130",
+      "path": "src/pathfinder.cpp",
+      "provenance": "Missing #197 merged pathfinder preserves exact older original base/dumb/random/smart algorithms from native #195/196 cohort, adapting only worker signal names and genuine new CompletionListener API. Constructor counts queued workers before main turn ends; completed movement arrives before ended/deregister; final worker emits Map completion once. Singleton static initialization zeroes genuine workers/started fields. No fabricated completion result, no omitted AI; inferred worker body, not parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/recon/a66abb977d8290f3e46b61e4b2a9708a87ba6630\", \"sha256\": \"ccfeaa238eeb5a20f078ae42af8642001f597c8c62d96392f1feac8361dd8a38\"}, {\"path\": \"src/pathfinder.h\", \"sha256\": \"5176d4852a684c173bea481e2027b407d7fb3d224ad65806a1227a326c5d0c10\"}]",
+      "sha256": "738560391e3dcf0f63561bcde5d49fbf78c0098109d5fd291b7569e5abfad982",
+      "source": "recovery/payloads/reconstructions/e3/e3894cafc3fcf8170dd3ed83c40088e3c268d130-738560391e3d-pathfinder.cpp",
+      "validatedByOriginalCommit": "7555be4552788be476084397738baf36ca8cac95"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 197,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 197,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "7555be4552788be476084397738baf36ca8cac95",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-upper-middle/verify/evidence/26a9a19899ee47ed5fe6f11f9fbf9951be6d1eac5cd10016910343c32053d112",
+    "fingerprint": "26a9a19899ee47ed5fe6f11f9fbf9951be6d1eac5cd10016910343c32053d112",
+    "sourceCommit": "7555be4552788be476084397738baf36ca8cac95",
+    "sourceTree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

@@ -1,0 +1,59 @@
+process 436: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: "config/objects/items.json" 
+
+Loaded configuration: "config/objects/monsters.json" 
+
+Loaded configuration: "config/objects/interactions.json" 
+
+Loaded configuration: "config/objects/tiles.json" 
+
+Loaded configuration: "config/objects/effects.json" 
+
+Loaded configuration: "config/objects/armors.json" 
+
+Loaded configuration: "config/objects/buildings.json" 
+
+Loaded configuration: "config/objects/weapons.json" 
+
+Loaded configuration: "config/objects/potions.json" 
+
+Loaded configuration: "config/objects/misc.json" 
+
+Loaded animation: "images/arrows/right" 
+
+Loaded animation: "images/arrows/left" 
+
+Loaded configuration: "maps/map.json" 
+
+Loaded animation: "images/tiles/mountain" 
+
+Loaded animation: "images/tiles/road" 
+
+Loaded animation: "images/buildings/cave" 
+
+Loaded configuration: "config/slots.json" 
+
+Loaded configuration: "images/monsters/pritzmage/time.json" 
+
+Loaded animation: "images/monsters/pritzmage/" 
+
+Loaded animation: "images/interactions/attack" 
+
+Loaded animation: "images/players/assasin" 
+
+Loaded animation: "images/items/potions/life" 
+
+Loaded animation: "images/items/potions/mana" 
+
+Loaded animation: "images/items/weapons/dagger" 
+
+"Assasin" equipped "Dagger" 
+
+Loaded animation: "images/items/armors/leatherarmor" 
+
+"Assasin" equipped "LeatherArmor" 
+
+Loaded animation: "images/interactions/sneakattack" 
+
+I AM BUNDLE

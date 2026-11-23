@@ -63,8 +63,8 @@ class CCreature : public CMapObject {
     CWeapon *getWeapon();
     CArmor *getArmor();
     Stats *getStats();
-    void addBonus(Stats bonus);
-    void removeBonus(Stats bonus);
+    void addBonus(const Stats &bonus);
+    void removeBonus(const Stats &bonus);
     int getManaRatio();
     int getLevel();
     void addExpScaled(int scale);
@@ -115,10 +115,11 @@ class CCreature : public CMapObject {
     int hp;
     bool alive = true;
     Stats stats;
-    virtual CInteraction *selectAction();
+    CInteraction *selectAction();
     void takeDamage(int i);
     CInteraction *getLevelAction();
     Stats getLevelStats();
+    friend class CGameView;
     Q_SIGNAL void statsChanged();
     Q_SIGNAL void skillsChanged();
     Q_SIGNAL void inventoryChanged();
@@ -130,21 +131,32 @@ class CPlayer : public CCreature {
     friend class PlayerStatsView;
 
   public:
-    void updateViews();
     CPlayer();
-    CPlayer(const CPlayer &);
-    virtual ~CPlayer();
-    virtual CInteraction *selectAction() override;
-    virtual void fight(CCreature *creature) override;
-    CInteraction *getSelectedAction() const;
-    void setSelectedAction(CInteraction *value);
-    CCreature *getEnemy() const;
-    void setEnemy(CCreature *value);
+    CPlayer(const CPlayer &player);
+    ~CPlayer();
+    std::set<CItem *> *getLoot();
+    virtual void fight(CCreature *creature);
+    void onMove();
+    void onEnter();
+    void update();
+    void updateViews();
+    void addToFightList(CCreature *creature);
+    void removeFromFightList(CCreature *creature);
+    std::list<CCreature *> *getFightList();
+    void performAction(CInteraction *action, CCreature *creature);
+    void setSelectedAction(CInteraction *action) { selectedAction = action; }
+private:
+    CInteraction *selectedAction = nullptr;
+public:
+    void addEntered(CMapObject *object);
+    std::list<CMapObject *> *getEntered();
+    void init();
 
   private:
-    CInteraction *selectedAction = 0;
-    CCreature *enemy = 0;
-    int turn = 0;
+    std::list<CCreature *> fightList;
+    int turn;
+    qint64 date = QDateTime::currentMSecsSinceEpoch();
+    std::list<CMapObject *> entered;
 };
 
 class CMonster : public CCreature {

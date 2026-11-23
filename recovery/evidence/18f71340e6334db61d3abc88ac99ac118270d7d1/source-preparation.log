@@ -1,0 +1,20 @@
+
+=== mapEvents ===
+{
+  "files": {
+    "CGameView.cpp": [
+      "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
+      "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
+    ],
+    "CMapObject.cpp": [
+      "838224d0724159cc00909b40efafffb973df431faad7e828f552b60967eefacd",
+      "ae4640b87bbffdacb222c05b460d5d4f0b0faba069d87f5dd8b61a595441fec1"
+    ],
+    "CScriptEngine.cpp": [
+      "616b0b87aff45eeea0531d88f31f08bf218e5f0bd6312299cc3d8282f6279f1b",
+      "274b4aa0b9f8102926e9ec4835a130810e39e37bc3f4e5bacc15f05e6e6a8e88"
+    ]
+  },
+  "replaySha256": "a4d0155d104e42404db484cc0f360d1c24feaed256198913e22d02e789ff7e16",
+  "sourceCommit": "18f71340e6334db61d3abc88ac99ac118270d7d1"
+}
