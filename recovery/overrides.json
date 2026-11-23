@@ -96946,8 +96946,8 @@
     {
       "originalBlob": "14e4eb8ad61882fe7b5aa0005901bcfea811904e",
       "path": "src/items/item.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored item.cpp, armor.cpp, belt.cpp, helmet.cpp, boots.cpp, gloves.cpp, weapon.cpp and smallweapon.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred",
-      "sha256": "2076ddefc28da8372eb3df01bafa9862b1c6d0ddb2eb11126a7ee1b7ec1e9ee8",
+      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored item.cpp, armor.cpp, belt.cpp, helmet.cpp, boots.cpp, gloves.cpp, weapon.cpp and smallweapon.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred; missing virtual methods inferred from the #182 reconstruction",
+      "sha256": "7b817b3500f19f1509b3409f701dfbd10ec61c0ecfcde056a31b89aebd738023",
       "source": "payloads/reconstructions/14/14e4eb8ad61882fe7b5aa0005901bcfea811904e-item.cpp"
     },
     {
@@ -97037,8 +97037,8 @@
     {
       "originalBlob": "b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420",
       "path": "src/buildings/building.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored building.cpp, cave.cpp, dungeon.cpp and teleporter.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred",
-      "sha256": "0cd95483c0a389518643bc2e525f324499254eb2e77439cad9feb78d6e9d1457",
+      "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored building.cpp, cave.cpp, dungeon.cpp and teleporter.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred; missing virtual methods inferred from the #182 reconstruction; matching #182 teleporter coordinates and enabled-state object avoids mixing JSON arrays and objects on shutdown",
+      "sha256": "733f6426fe50edc07c198a3b41a428f57f58ac3bd575e2fde786ebabde189d27",
       "source": "payloads/reconstructions/b4/b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420-building.cpp"
     },
     {
@@ -98398,6 +98398,27 @@
       "provenance": "content reconstruction of the BFG-removed original; Adapt the #249 map bodies, factory and qmake inventory to the surviving #252 CTile and CTypeHandler headers and the rename in CAnimationProvider; retain the #251 generated stats API.",
       "sha256": "fb44cbbfbc58e1193b7b1c574e2c101cea3acdaf6f71e6cdbad442594dabb9aa",
       "source": "payloads/reconstructions/c5/c5ba327b4cb8f399ed6ee68f6c611b4fd4c63cfd-CMap.cpp"
+    },
+    {
+      "originalBlob": "678ad4bf0df4cfa0e9b0d9cf475d754ef08c5dbe",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake source and header lists follow the surviving relocated tree",
+      "sha256": "3d58e799ca17c23f8d5d8dcc6be4b8e40fe76fa9236371d4175ce804486f5da2",
+      "source": "payloads/reconstructions/67/678ad4bf0df4cfa0e9b0d9cf475d754ef08c5dbe-Game.pro"
+    },
+    {
+      "originalBlob": "9bb700ac866acc7a994ecd4a2bba0e9dcd566398",
+      "path": "Game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; qmake source and header lists follow the surviving relocated tree",
+      "sha256": "035e40d715ff6e52b122deb19421b7cf7587a13085581e8b26fc9e1b52461ced",
+      "source": "payloads/reconstructions/9b/9bb700ac866acc7a994ecd4a2bba0e9dcd566398-Game.pro"
+    },
+    {
+      "originalBlob": "d19dbcf7f0bc3ceaf42d15963e254f9450b9c4b9",
+      "path": "src/map/map.cpp",
+      "provenance": "The #180 map reconstruction with the surviving #180 Coords and PlayerAnimation bodies merged into the #181 translation unit as indicated by the surviving header.",
+      "sha256": "72323e1f7157d00a83d1d4d6c846bb42b0a9f2853fdec13a8f5a3d23e5be7a66",
+      "source": "payloads/reconstructions/d1/d19dbcf7f0bc3ceaf42d15963e254f9450b9c4b9-map.cpp"
     }
   ],
   "schemaVersion": 1

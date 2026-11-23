@@ -311,6 +311,8 @@ def legacyTimingAttachments(report: dict, preparation: dict) -> dict[str, bytes]
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
+        if report.get("sourceCommit") in source_prep.merged_prep.COMMITS:
+            raise VerificationError("Missing merged-header preparation")
         if report.get("sourceCommit") == source_prep.cache_prep.COMMIT:
             raise VerificationError("Missing pathfinder cache preparation for catalog #176")
         return {}
@@ -328,6 +330,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_teleporter = "teleporterSerialization" in names
     has_timing = "legacyTimingResources" in names
     has_conflicts = "trivialConflicts" in names
+    has_merged_headers = "mergedHeaders" in names
+    if has_merged_headers != (report.get("sourceCommit") in source_prep.merged_prep.COMMITS):
+        raise VerificationError("Merged-header preparation differs from the catalog commit")
     has_cache = "childPathfinderCache" in names
     if has_cache != (report.get("sourceCommit") == source_prep.cache_prep.COMMIT):
         raise VerificationError("Pathfinder cache preparation differs from the catalog commit")
@@ -341,6 +346,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["legacyTimingResources"] if has_timing else [])
         + (["trivialConflicts"] if has_conflicts else [])
         + (["childPathfinderCache"] if has_cache else [])
+        + (["mergedHeaders"] if has_merged_headers else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -393,6 +399,16 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Pathfinder cache differs from the reviewed #176 compatibility inputs")
         attachments["recovery/" + helper.ATTACHMENT] = data
         attachments["recovery/prepare_pathfinder_cache.py"] = Path(helper.__file__).read_bytes()
+    merged_outputs = {}
+    if has_merged_headers:
+        helper = source_prep.merged_prep
+        try:
+            companions = helper.donorFiles(Path(__file__).resolve().parents[1])
+            merged_outputs = helper.validate(report["sourceCommit"], preparation, companions)
+        except (ValueError, OSError, KeyError) as error:
+            raise VerificationError(str(error)) from error
+        attachments.update({f"recovery/{name}": data for name, data in companions.items()})
+        attachments["recovery/prepare_merged_headers.py"] = Path(helper.__file__).read_bytes()
     if has_includes:
         include_entries = identity.get("includeSeparators", [])
         if not include_entries:
@@ -427,6 +443,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 name == "gen/prop.h"
                 or (name.startswith("src/") and name.endswith(".h"))
                 or name in include_files
+                or name in merged_outputs
                 or (has_conflicts and name in source_prep.conflicts_prep.FILES)
                 or (has_cache and name == source_prep.cache_prep.TARGET)
                 or (has_resources and name == source_prep.SUPPLEMENTAL_QRC)
@@ -797,6 +814,14 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             ]
             if cache_preparation else []
         ),
+        *(
+            [
+                "The isolated build supplies the missing jsoncpp companions restored at #183.",
+                "Where needed, forwarding headers expose declarations from the merged headers.",
+                "",
+            ]
+            if "recovery/prepare_merged_headers.py" in preparation_files else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -838,6 +863,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_legacy_timing.py"] if timing_preparation else []),
         *(["python3 recovery/prepare_trivial_conflicts.py"] if conflicts_preparation else []),
         *(["python3 recovery/prepare_pathfinder_cache.py"] if cache_preparation else []),
+        *(["python3 recovery/prepare_merged_headers.py"] if "recovery/prepare_merged_headers.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

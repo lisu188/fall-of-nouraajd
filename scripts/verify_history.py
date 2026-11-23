@@ -813,6 +813,13 @@ def exportEvidence(result: dict, output_root: Path) -> None:
         helper.validatePreparation(result["sourcePreparation"])
         if result.get("buildCompatibility") != "trivialConflicts":
             raise VerificationError("Whitespace-only conflict preparation lacks its explicit build boundary")
+    if result["sourceCommit"] in source_prep.merged_prep.COMMITS:
+        helper = source_prep.merged_prep
+        root = Path(result["restoration"]["outputDir"])
+        companions = {name: (root / "lib/json" / name).read_bytes() for name in helper.COMPANIONS}
+        outputs = helper.validate(result["sourceCommit"], result["sourcePreparation"], companions)
+        if any((root / name).read_bytes() != content for name, content in outputs.items()):
+            raise VerificationError("Merged-header output differs from the reviewed bytes")
     if result["sourceCommit"] == source_prep.cache_prep.COMMIT:
         helper = source_prep.cache_prep
         helper.validate(result["sourcePreparation"])

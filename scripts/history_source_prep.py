@@ -21,6 +21,7 @@ try:
     from scripts import history_prepare_legacy_timing as timing_prep
     from scripts import history_prepare_conflicts as conflicts_prep
     from scripts import history_prepare_pathfinder_cache as cache_prep
+    from scripts import history_prepare_merged_headers as merged_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -31,6 +32,7 @@ except ModuleNotFoundError:
     import history_prepare_legacy_timing as timing_prep
     import history_prepare_conflicts as conflicts_prep
     import history_prepare_pathfinder_cache as cache_prep
+    import history_prepare_merged_headers as merged_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -308,6 +310,7 @@ def prepareSources(
     timing = timing_prep.legacyTimingPlan(source_root)
     conflicts = conflicts_prep.conflictPlan(source_root)
     child_cache = source_commit == cache_prep.COMMIT
+    merged_headers = source_commit in merged_prep.COMMITS
     if child_cache and (not conflicts or not teleporter):
         raise ValueError("Pathfinder cache preparation requires the reviewed #176 build inputs")
     if teleporter and teleporter_prep.containedPath(source_root, teleporter["path"]).exists():
@@ -345,6 +348,7 @@ def prepareSources(
         and not teleporter
         and not timing
         and not conflicts
+        and not merged_headers
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -484,6 +488,21 @@ def prepareSources(
             "name": "childPathfinderCache", "command": ["history_source_prep.py", "prepare-child-pathfinder-cache"],
             "returnCode": 0, "timedOut": False, "log": str(log),
         })
+    if merged_headers:
+        companions = merged_prep.donorFiles(repo_root or Path(__file__).resolve().parents[1])
+        generated = merged_prep.outputs(source_root, source_commit, companions)
+        merged_prep.apply(source_root, generated)
+        log = output_root / "merged-headers.log"
+        identity = merged_prep.identity(source_commit, generated)
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["identity"]["mergedHeaders"] = identity
+        result["steps"].append({
+            "name": "mergedHeaders",
+            "command": ["history_source_prep.py", "prepare-merged-headers"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -570,6 +589,10 @@ def prepareSources(
                 or (timing and name in timing["paths"])
             )
         ]
+        if merged_headers:
+            for entry in outputs:
+                if entry["path"] in generated:
+                    entry["purpose"] = merged_prep.PURPOSE
         if child_cache:
             next(entry for entry in outputs if entry["path"] == cache_prep.TARGET)["purpose"] = cache_prep.PURPOSE
         result.update({"status": "success", "outputs": outputs})

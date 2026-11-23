@@ -214,23 +214,46 @@ bool Teleporter::canSave()
 Json::Value Teleporter::saveToJson()
 {
     Json::Value config;
-    config[(unsigned int)0]=getPosX();
-    config[(unsigned int)1]=getPosY();
-    config[(unsigned int)2]=getPosZ();
-    config["enabled"]=enabled;
+    config["x"] = getPosX();
+    config["y"] = getPosY();
+    config["z"] = getPosZ();
+    config["enabled"] = enabled;
     return config;
 }
 
 void Teleporter::loadFromJson(Json::Value config)
 {
-    int x=config[(unsigned int)0].asInt();
-    int y=config[(unsigned int)1].asInt();
-    int z=config[(unsigned int)2].asInt();
-    enabled=config["enabled"].asBool();
-    this->moveTo(x,y,z,true);
+    if (config.isArray()) {
+        this->moveTo(config[(unsigned int)0].asInt(), config[(unsigned int)1].asInt(),
+                     config[(unsigned int)2].asInt(), true);
+        return;
+    }
+    int x = config["x"].asInt();
+    int y = config["y"].asInt();
+    int z = config["z"].asInt();
+    enabled = config["enabled"].asBool();
+    this->moveTo(x, y, z, true);
 }
 
 void Teleporter::loadFromProps(Tmx::PropertySet set)
 {
     enabled=(set.GetLiteralProperty("enabled").compare("true")==0);
+}
+
+void Cave::loadFromProps(Tmx::PropertySet set)
+{
+    if (set.HasProperty("enabled")) {
+        enabled = set.GetLiteralProperty("enabled").compare("true") == 0;
+    }
+    if (set.HasProperty("monster")) {
+        monster = set.GetLiteralProperty("monster");
+    }
+    if (set.HasProperty("chance")) {
+        chance = set.GetNumericProperty("chance");
+    }
+}
+
+Json::Value Cave::saveToJson()
+{
+    return Building::saveToJson();
 }

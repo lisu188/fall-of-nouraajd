@@ -230,3 +230,11 @@ SmallWeapon::SmallWeapon(const SmallWeapon &weapon)
     Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[className];
     loadFromJson(config);
 }
+
+void Item::onMove()
+{
+}
+
+void Item::loadFromProps(Tmx::PropertySet)
+{
+}

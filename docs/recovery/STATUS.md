@@ -2,8 +2,8 @@
 
 Work in progress on recovering the BFG-damaged history. Recovery tooling and the
 93-snapshot checkpoint were merged through PR #1660. PR #1659 connected the
-65 published recovered commits to main ancestry. The November 23 continuation on
-`recovery/bfg-247-continuation` includes the November 16 checkpoint from draft PR #1662.
+65 published recovered commits to main ancestry. The #180–#182 continuation builds on draft PR #1675, which incorporates the
+November 16 checkpoint from draft PR #1662.
 
 ## Objective and acceptance
 
@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **290 commits / 288 trees** against the
-restored inputs: **279 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **293 commits / 291 trees** against the
+restored inputs: **282 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -76,6 +76,12 @@ evidence and startup frames. The 21,116,789-byte bundle has SHA-256
 The mapping and verification are in `recovery/mappings/2026-11-23-prefix*.json`.
 The 71 additional IDs are local to the verified bundle.
 
+The follow-up local bundle extends the verified ancestry through #203 and includes
+#367. An independent bare clone passed strict fsck across 204 commits and 4,004
+reachable objects, preserving all 180 IDs from the #179 bundle. The mapping and
+verification are in `recovery/mappings/2026-11-23-through-203-prefix*.json`.
+Its SHA-256 is `41e24771115b9f7538d146654bde9acdd8e63f245a8005e68c7a4b6da48ed524`.
+
 The first 65 recovered commits are already ancestors of main through merge commit
 `c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
 `9acf3570ced5f0dcd8a9192184e169172d52ac28`. The additional 44 commits are published;
@@ -91,10 +97,16 @@ best-matching nearby reconstructed project (dropping `QT_NO_KEYWORDS` and Python
 libraries when the earlier tree does not need them), and carry reconstructions across
 file moves without ever replacing exact originals. The verifier treats a cached
 success whose artifacts have moved as a cache miss instead of a startup failure.
-Revisions #180-#182 are mid-refactor commits that cannot compile from their committed
-contents (deleted per-class headers still included, missing jsoncpp `.inl` companions);
-see `recovery/diagnostics/native-180-182-original-build-defects-2026-11-17.json`.
-Their reconstructions are kept for carrying; no compatibility step exists for them yet.
+Revisions #180–#182 now pass pinned native builds and game startup. The original
+build failures are recorded in
+`recovery/diagnostics/native-180-182-original-build-defects-2026-11-17.json`.
+The private build copy supplies forwarding headers for #180–#181 and the three
+jsoncpp companions restored at #183. The reconstructed qmake projects list the
+relocated compilation units. The #181 map reconstruction folds in the preceding
+Coords and PlayerAnimation bodies, and the #180–#181 building reconstruction
+uses the coordinate and enabled-state JSON object from the #182 reconstruction.
+That change fixes the reproduced shutdown assertion. #183 passed separately
+with its committed layouts and restored companions.
 The same continuation then accepted #186-#193 through the developer's serialization
 refactor (#186: name-keyed `loadFromJson`, static factories, no saving), property
 system (#187: per-kind configs merged into `config/object.json`, TMX properties applied
@@ -280,13 +292,11 @@ exported evidence before removing reproducible build scratch.
 
 ## Remaining work
 
-- #180–#182 are the first gap in the replay ancestry. Reproduce their documented
-  build defects and evaluate a narrowly pinned build-copy repair before extending
-  the bundle beyond #179.
-- #204 still needs a clean shutdown. #224–#225 need repairs for their documented
-  mid-refactor build defects.
+- #204 is the first gap in the replay ancestry. Reproduce its console-reader
+  shutdown defect. #224–#225 need repairs for their documented mid-refactor
+  build defects.
 - Continue the native walk at #269–#330, then #352–#359 and #366. The ledger
-  lists 77 catalog commits awaiting native acceptance.
+  lists 74 catalog commits awaiting native acceptance.
 - The published historical refs still cover 109 commits. Further publication is
   a separate operation. Keep the continuation PR open for review and track its
   GitHub build, suite and coverage results there.
