@@ -94272,8 +94272,8 @@
     {
       "originalBlob": "f31f0f27e62808f4afd70e284d765d5a1bc18e0c",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "81cfbb6c98257b33c002719d2ba988d8a850b8d62c6e081131ae5d0cdfbb577c",
+      "provenance": "content reconstruction of the BFG-removed original; Retain the creature interface and grant the view access to the signals used by the surviving typed connections.",
+      "sha256": "fcd7be4b6fde7ebed6ec753e6f1b13985a35d0e1db3214c692bea594db49399f",
       "source": "payloads/reconstructions/f3/f31f0f27e62808f4afd70e284d765d5a1bc18e0c-CCreature.h"
     },
     {
@@ -98811,6 +98811,76 @@
       "provenance": "content reconstruction of the BFG-removed original; Carry the verified Python bindings and resource-backed script loader into the merged project using the local resource handler header.",
       "sha256": "6cdd3ca217f21fe66693c4bfef8103e44a78cf29394b0a40aa01b87dfdb44dbb",
       "source": "payloads/reconstructions/f0/f0f7c2189fc4e7c5db53aa5290d79537ceacaa3a-GameScript.cpp"
+    },
+    {
+      "commit": "18f71340e6334db61d3abc88ac99ac118270d7d1",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "712b84e04439d96e4baeb4a9b739895370185682",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "10d732e8c9b545d47c0b00b4b0a56cb7e7b22d9b",
+      "path": "CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the player view against the revised slot path and QWidget refresh interface.",
+      "sha256": "8d221d6282f923e378d7e85335bdfd74fe68e4f6b80b1a0eb32430f8419b0ce0",
+      "source": "payloads/reconstructions/10/10d732e8c9b545d47c0b00b4b0a56cb7e7b22d9b-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "35c03dccffbdb390cf14dd9218570363e6a02aeb",
+      "path": "CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Implement visibility and refresh under protected graphics-item inheritance, forwarding refresh to the child views.",
+      "sha256": "9f18392f58a6ba805993628c4d7bad2df4cf245240692a36e97b280aa2ae2e00",
+      "source": "payloads/reconstructions/35/35c03dccffbdb390cf14dd9218570363e6a02aeb-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "4ea9275bb78d3824afdfe42331d10856093fd36c",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Load map directories and run each companion script in its own Python event dictionary. Use the surviving movement and object-removal interfaces.",
+      "sha256": "cc020e745c9e93bd6119ca63bd167dd5839a30cd2a44fc025c8e0d969e4e95a3",
+      "source": "payloads/reconstructions/4e/4ea9275bb78d3824afdfe42331d10856093fd36c-CMap.cpp"
+    },
+    {
+      "originalBlob": "7bf060a37e58b618095847e3e638f684fa6ba737",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the bindings and expose the new CEffect duration and callback methods.",
+      "sha256": "59aa71be199378aa472a73fc8fc33bdb2ba71fb04eb21538bfdb4b1593c275d4",
+      "source": "payloads/reconstructions/7b/7bf060a37e58b618095847e3e638f684fa6ba737-GameScript.cpp"
+    },
+    {
+      "originalBlob": "80ea265f057ba8d0ebb2f84f28584fdcd329b014",
+      "path": "CInteraction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry effect callbacks to the one-argument signature and expose authored duration and onEffect methods.",
+      "sha256": "3f48b5b647b5e1690403603742834df959b55cce4a0bcda5fa57eca8ca97f25c",
+      "source": "payloads/reconstructions/80/80ea265f057ba8d0ebb2f84f28584fdcd329b014-CInteraction.cpp"
+    },
+    {
+      "originalBlob": "bbfef72a616539691a1ac298fb2bd50bc36a6c0a",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Enumerate configuration via the authored resource handler, deduplicate disk and archive paths, and resolve the script factory against the surviving API.",
+      "sha256": "040e0467bbe59d3e86f2b10f1bca26c64bf6e38b7c29f762e93bebe8c8e64963",
+      "source": "payloads/reconstructions/bb/bbfef72a616539691a1ac298fb2bd50bc36a6c0a-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "d03396c8b4fc6f5bca4250c1429129d13d21da2a",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry creature behavior to the authored config paths and use the new panel hide API.",
+      "sha256": "bb900e87bc9d6a805bb9e5565b27c2f81c376ee90dc194207fd54ae1766422ac",
+      "source": "payloads/reconstructions/d0/d03396c8b4fc6f5bca4250c1429129d13d21da2a-CCreature.cpp"
+    },
+    {
+      "originalBlob": "ea8effd456fdd25733b4a1100a6f113493800bc6",
+      "path": "CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Use typed connections to the completion methods that are no longer Qt slots.",
+      "sha256": "fc8ca40a37be2ca7a4c4d8f9148e39203a0f18863668764de1ff26e8e228e559",
+      "source": "payloads/reconstructions/ea/ea8effd456fdd25733b4a1100a6f113493800bc6-CPathFinder.cpp"
     }
   ],
   "schemaVersion": 1
