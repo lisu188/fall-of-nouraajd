@@ -37,6 +37,11 @@ CCreature::CCreature()
     : gold(0), exp(0), level(0), sw(0), mana(0), manaMax(0), manaRegRate(0),
       hpMax(0), hp(0) {
   setZValue(2);
+  QJsonObject slot_config =
+      CConfigurationProvider::getConfig("config/slots.json").toObject();
+  for (auto it = slot_config.begin(); it != slot_config.end(); ++it) {
+    equipped[it.key().toInt()] = nullptr;
+  }
 }
 
 CCreature::CCreature(const CCreature &creature) : CCreature() {

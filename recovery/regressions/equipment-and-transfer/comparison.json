@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "case": "fixed",
+      "returnCode": 0,
+      "expected": 0,
+      "proof": "recovery/regressions/equipment-and-transfer/fixed/regression.json",
+      "status": "success",
+      "reason": null,
+      "nativeOutput": "{\"status\":\"success\",\"checks\":{\"mapInventoryTransfer\":true,\"equipmentAndStatsRoundtrip\":true,\"unequippedSlotsRoundtrip\":true,\"realTeleporterActorsRoundtrip\":true}}"
+    },
+    {
+      "case": "before-creature",
+      "returnCode": 1,
+      "expected": 1,
+      "proof": "recovery/regressions/equipment-and-transfer/before-creature/regression.json",
+      "status": "failed",
+      "reason": "native-state-roundtrip failed; see /tmp/nouraajd-bfg-recovery/native-middle/equipment-regression/before-creature-final/native-state-roundtrip.log",
+      "nativeOutput": "Loading the save changed equipped slot identities"
+    },
+    {
+      "case": "before-map",
+      "returnCode": 1,
+      "expected": 1,
+      "proof": "recovery/regressions/equipment-and-transfer/before-map/regression.json",
+      "status": "failed",
+      "reason": "native-state-roundtrip failed; see /tmp/nouraajd-bfg-recovery/native-middle/equipment-regression/before-map-final/native-state-roundtrip.log",
+      "nativeOutput": "Removing an item deleted it before genuine inventory transfer"
+    }
+  ],
+  "runner": "scripts/history_state_regression.py",
+  "fixture": "tests/fixtures/history-state/history_state_roundtrip.cpp",
+  "boundary": "Real historical Qt classes, item factory, inventory ownership and complete equipment/stat/teleporter state. This does not establish historical gameplay or UI parity."
+}

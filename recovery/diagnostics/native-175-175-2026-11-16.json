@@ -1,0 +1,280 @@
+{
+  "entries": [
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "f06f96f36581bf03a51550e23149d1fb1a47afa6",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed. Includes all15 genuine same-tree vendored zlib C translation units; exact-readable source/header files retained unchanged.",
+      "sha256": "c3b013dee3ac8dbc990e7bfef4011569030ebc1a8d31e4e45d8e89f8ea4e46df",
+      "source": "recovery/payloads/reconstructions/f0/f06f96f36581bf03a51550e23149d1fb1a47afa6-c3b013dee3ac-Game.pro"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "e18254b9bf0b4774ead0d6df3ad36139bd5562dd",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 08ec144f196a9a5195e281997b5695828ccbd2ab; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited. Corrected inferred equipment reload: legacy inventory.weapon/armor apply only if present; modern equipment slots survive save/load. Before/after native regression and revalidation required.",
+      "sha256": "4418a0fe3fa9b50681e6c5b6c44a00e283d48b98950274caef6e17f4437db589",
+      "source": "recovery/payloads/reconstructions/e1/e18254b9bf0b4774ead0d6df3ad36139bd5562dd-4418a0fe3fa9-creature.cpp"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "ca33fb5631a7c6e900c514d01ef7fe9155f35efb",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 0b0a9c19112914c23dcd4a6e2e032f335f7abf76; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #150 Interaction body inferred from native-verified #97 implementation and exact #150 surviving header: public/default/copy constructors, ListItem ordering and Effect state serialization added. Removed undeclared legacy setAnimation override, retaining inherited real resource loading. Historical ordering/effect persistence parity unverified.",
+      "sha256": "58c845dc10998af9d2593755795e2cbfce4f8fdd9e05369db918e2212cc511ec",
+      "source": "recovery/payloads/reconstructions/ca/ca33fb5631a7c6e900c514d01ef7fe9155f35efb-58c845dc1099-interaction.cpp"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "4e9febdaeecdae22e84141df72b76832da4a5d90",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #175 Map body inferred from native-verified #166; genuine header tokens identical apart from formatting. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "b8a62295421837dd1e98de6cb922f72641fa6b33296a8020a5f1749decf9b7ad",
+      "source": "recovery/payloads/reconstructions/4e/4e9febdaeecdae22e84141df72b76832da4a5d90-b8a622954218-map.cpp"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "ec45d6c6ea8a63a9aa3ad66a938c2d777bee71f0",
+      "path": "stats/stats.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #175 Stats body inferred from native-verified #150/#163 Stats body4ff9f45b2f23d26fc69280d6c0df542e02efa223; surviving #150/#175 header tokens are identical apart from formatting, including value-argument bonuses. Unknown removed-body changes and historical parity unverified.",
+      "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd",
+      "source": "recovery/payloads/reconstructions/ec/ec45d6c6ea8a63a9aa3ad66a938c2d777bee71f0-bff0757ad033-stats.cpp"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "4ac65b4fa8932bcd62d9ea368cb9db5557508def",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.",
+      "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+      "source": "recovery/payloads/reconstructions/4a/4ac65b4fa8932bcd62d9ea368cb9db5557508def-36f343a29f06-gamescene.cpp"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "9b0dfbaa8fa749b21bf55bb5b19242f32fdd1d2f",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 6eb88a3320dbc6f6e1b994b86d9001da97fbe33b; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing game view body inferred from earlier donor and exact #150 intact headers/UI sources: views are owned by GameView, constructed from surviving Creature collections, refreshed through declared signals; BackPackObject renders original PNG and emits declared clicked signal. Not exact original content; layout and gameplay parity unverified. Genuine175 Player.cpp has updateViews but no definition of declared update; inferred missing GameView refresh now calls actual updateViews and emits actual statsChanged directly, preserving earlier inferred refresh bridge without editing exact Player source.",
+      "sha256": "2955d23e701049fbb66cfec3688bdb3b7ae277d0fb94a00df0ed09b4b3148f03",
+      "source": "recovery/payloads/reconstructions/9b/9b0dfbaa8fa749b21bf55bb5b19242f32fdd1d2f-2955d23e7010-gameview.cpp"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "4116f85eb06c6aa2dff8d1446fcf34cbadd24f54",
+      "path": "zlib/adler32.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 adler32.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 65ad6a5adc44c00428b35eb15ff26d16f9ef209b, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "81600f9eaf1f57ab1529d898920250d671684da5d74aaa157c96cc0abf4acddd",
+      "source": "recovery/payloads/reconstructions/41/4116f85eb06c6aa2dff8d1446fcf34cbadd24f54-81600f9eaf1f-adler32.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "95181809996076cf7af987a303f8a9e2b96c3d45",
+      "path": "zlib/crc32.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 crc32.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 91be372d224da6833c03bd24d7158ff622ece35f, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "29e0ca6e01be744d1c6ac019cf2845bea5e1198c23d7082b1e1de0f76d7f2e12",
+      "source": "recovery/payloads/reconstructions/95/95181809996076cf7af987a303f8a9e2b96c3d45-29e0ca6e01be-crc32.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "c5abd900fff26dbe06467767173744f8dce89a77",
+      "path": "zlib/crc32.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 crc32.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 8053b6117c023f64554ea783b23fa06985acff7b, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "b8252ca25db989e06910c09b031a328a18ab9c32fb3ab6e6f5c98c0e2b0089cb",
+      "source": "recovery/payloads/reconstructions/c5/c5abd900fff26dbe06467767173744f8dce89a77-b8252ca25db9-crc32.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "2e8bb0148763ac006b3dcb005c7a351093873c3c",
+      "path": "zlib/deflate.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 deflate.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 5c4022f3d4774b98bb22104890b04a7d3f7f4aec, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "101f7b585462c8ee8fc8c71978de8393a1c9e57499fce6ee8f227328cd516315",
+      "source": "recovery/payloads/reconstructions/2e/2e8bb0148763ac006b3dcb005c7a351093873c3c-101f7b585462-deflate.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "f69bb1d95c102f288498717b97282870e87b4f14",
+      "path": "zlib/deflate.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 deflate.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob cbf0d1ea5d966e572c4d3ae24d334c1ff1789169, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "96399c109707e12ced9f25d088c1bf6edb0435453e32ae962de5808e1b948270",
+      "source": "recovery/payloads/reconstructions/f6/f69bb1d95c102f288498717b97282870e87b4f14-96399c109707-deflate.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "6de9ebae9f3a3952ff310a6310d78fc06eee05d5",
+      "path": "zlib/gzguts.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzguts.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 0f8fb79f87d4f65e7f5667129c763e3a361199f2, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "cd9eae44768d9d20807891235d1865eaef000bbaaa17db30ab93c40f394ff081",
+      "source": "recovery/payloads/reconstructions/6d/6de9ebae9f3a3952ff310a6310d78fc06eee05d5-cd9eae44768d-gzguts.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "f7426f062de89a07c138bcafff755c431358d5ce",
+      "path": "zlib/gzlib.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzlib.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "7a6d80cd56732262126a12632057729b4a5fc0c2e913caaa5dcc505c47cae6f8",
+      "source": "recovery/payloads/reconstructions/f7/f7426f062de89a07c138bcafff755c431358d5ce-7a6d80cd5673-gzlib.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "5c1404362cf971997102a11955ab86bf33c14c57",
+      "path": "zlib/gzread.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzread.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 548201ab0099b51556da32c4873d1dbb2d211b5a, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "d6fa9ae8977107662d809a1bb8f6c10390b07a7aec845c480d378b8b2b4ace46",
+      "source": "recovery/payloads/reconstructions/5c/5c1404362cf971997102a11955ab86bf33c14c57-d6fa9ae89771-gzread.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1",
+      "path": "zlib/gzwrite.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzwrite.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob e8defc6887a186055f17597968c4fc5791332811, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "36992244739127c917ec70a879609b3482468871f0cf741649fab84b48d4f751",
+      "source": "recovery/payloads/reconstructions/ef/ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1-369922447391-gzwrite.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "50acc91a1023e2f85b1e43af099fe448c21c6e8c",
+      "path": "zlib/infback.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 infback.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "52c1cbdf99250ca08bbf2011cf6ba996a0511cba0749f2bb2eb9c906460b0fd3",
+      "source": "recovery/payloads/reconstructions/50/50acc91a1023e2f85b1e43af099fe448c21c6e8c-52c1cbdf9925-infback.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "66d70d59796abb847009bf50d37c3a563a1a00b5",
+      "path": "zlib/inffast.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inffast.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 2f1d60b43b8a9deacf22bb5526a979dcc219a68f, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "f9439fbfad6112b155c1ede0b5c409a83c38096e741187f0ecb974f9babcac03",
+      "source": "recovery/payloads/reconstructions/66/66d70d59796abb847009bf50d37c3a563a1a00b5-f9439fbfad61-inffast.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "a5ca43e840160670ffdad89c8f9d1cbd792e2c66",
+      "path": "zlib/inffixed.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inffixed.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 75ed4b5978de4be3c44ad48a060b75500f17a0a2, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "88a340c8e628d56682a99c3a9a38e44fafeb8b4c609e0df85ea17c66011e0f42",
+      "source": "recovery/payloads/reconstructions/a5/a5ca43e840160670ffdad89c8f9d1cbd792e2c66-88a340c8e628-inffixed.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "bc6246d9bad95561f4f72507be04f02cbea5f4c5",
+      "path": "zlib/inflate.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inflate.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob a8431abeacffd97e5028a9e54135a5f173528960, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "0564169c9fefb4825493cb60b065b3b978c356ec2672a8150b7b73057f5d5215",
+      "source": "recovery/payloads/reconstructions/bc/bc6246d9bad95561f4f72507be04f02cbea5f4c5-0564169c9fef-inflate.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "1cc108ec73db7e06d8798c8563b9eaf978665552",
+      "path": "zlib/inflate.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inflate.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 95f4986d400223bad542e5b34a7e6284a039425e, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "36e5300408aa55a175a7d9be6b2f25dc0c5f80d79b2115fe43a2fe531e84775d",
+      "source": "recovery/payloads/reconstructions/1c/1cc108ec73db7e06d8798c8563b9eaf978665552-36e5300408aa-inflate.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "8f1e4e08d786739153e2692ff06427895feff871",
+      "path": "zlib/inftrees.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inftrees.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "5ab037f39e03f3c903a568d1f96614d49a5d1360dac9428adfcda674e56c8bf7",
+      "source": "recovery/payloads/reconstructions/8f/8f1e4e08d786739153e2692ff06427895feff871-5ab037f39e03-inftrees.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "a1aa1d8382f03a846400b832a1ae404cdbffa388",
+      "path": "zlib/trees.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 trees.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 56e9bb1c115e81082f58a89b003b766760e12a12, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "e225bcf76be1df0fe603f2f68eb6c3a64d8da3698e862d5bec76c9be21c404d6",
+      "source": "recovery/payloads/reconstructions/a1/a1aa1d8382f03a846400b832a1ae404cdbffa388-e225bcf76be1-trees.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "57e65278e453bd68826ff53160af36c6ba3400ed",
+      "path": "zlib/trees.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 trees.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob d35639d82a27807e49ea35c334f8bbcf64720f82, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "bb0a9d3ca88ee00c81adb7c636e73b97085f6ef1b52d6d58edbe2b6dc3adeb4d",
+      "source": "recovery/payloads/reconstructions/57/57e65278e453bd68826ff53160af36c6ba3400ed-bb0a9d3ca88e-trees.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "03f8b557ce8844bb38d604f3d0c08d881d2136d0",
+      "path": "zlib/zlib.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zlib.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "8d9049f1317cbb45e7da3a19752dd01e8c03561637b70afc0b2da9aabc5f12d5",
+      "source": "recovery/payloads/reconstructions/03/03f8b557ce8844bb38d604f3d0c08d881d2136d0-8d9049f1317c-zlib.h"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "4cc43311cb53094c515ed78d63f9aac6de653e9e",
+      "path": "zlib/zutil.c",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zutil.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "e50668dfc8ea207a2b6ef8b677b07b675de7f6634bec22274de4fb988c3f5448",
+      "source": "recovery/payloads/reconstructions/4c/4cc43311cb53094c515ed78d63f9aac6de653e9e-e50668dfc8ea-zutil.c"
+    },
+    {
+      "commit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+      "firstCatalogOrder": 175,
+      "originalBlob": "937dbb85cd5b5aedfd49dcae0ce30988041b31af",
+      "path": "zlib/zutil.h",
+      "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zutil.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 258fa88799ad1d97e44fe1ac9df77948e82ea5c0, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
+      "sha256": "65c868c99d5fcf336b9bf2110bbfc21d51ea972fbec613befc91e0b62d62e8f1",
+      "source": "recovery/payloads/reconstructions/93/937dbb85cd5b5aedfd49dcae0ce30988041b31af-65c868c99d5f-zutil.h"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "dd4c98cb9abe32399843a8c2f9b4cf765166b5c841550a56f07ad5e66bb431c4",
+        "sourceCommit": "fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f",
+        "sourceTree": "f6b583fcab8d7da3b4fa077d1401da8eafeacbde",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}
