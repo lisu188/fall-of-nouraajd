@@ -29,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **311 commits / 309 trees** against the
-restored inputs: **300 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **312 commits / 310 trees** against the
+restored inputs: **301 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -307,7 +307,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 282 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 283 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -332,10 +332,17 @@ sparse map input does not establish the original placement of the named
 `event1` trigger. The replay through #281 and #367 contains 282 commits and
 preserves all 280 IDs in the replay through #279.
 
+Revision #282 passed the pinned Qt build and startup verifier. The rebuilt
+image manifest uses the surviving arrow PNGs and omits the missing loading
+image. The original image inventory remains uncertain. The verifier builds
+the two static libraries with the matching GCC archive plugin and starts the
+game from the authored resources directory. The new replay through #282 and
+#367 contains 283 commits and preserves every ID from the #281 bundle.
+
 ## Remaining work
 
-- #282 is the first gap in the replay ancestry. Its Qt resource compiler stops on a missing loading image. The reconstructed image manifest also names two absent arrow frames. #282–#330 await native acceptance.
+- #283 is the first gap in the replay ancestry. Its missing Python script-loader implementation still needs reconstruction and native acceptance. #283–#330 await native acceptance.
 - #353–#359 still need native validation. At #353, moving imports below the
   decorators exposed the next failure, a missing ChaosSword definition.
-- The ledger lists 56 catalog commits awaiting native acceptance. Track GitHub
+- The ledger lists 55 catalog commits awaiting native acceptance. Track GitHub
   build, suite, and coverage on the continuation PR.

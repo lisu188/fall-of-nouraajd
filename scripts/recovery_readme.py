@@ -325,6 +325,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Missing named event transition preparation")
         if report.get("sourceCommit") in source_prep.effect_prep.COMMITS:
             raise VerificationError("Missing effect transition preparation")
+        if report.get("sourceCommit") in source_prep.resources_prep.COMMITS:
+            raise VerificationError("Missing resources transition preparation")
         if report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES:
             raise VerificationError("Missing panel refresh transition preparation")
         if report.get("sourceCommit") == source_prep.position_prep.COMMIT:
@@ -370,9 +372,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_named_event = "namedEventTransition" in names
     if has_named_event != (report.get("sourceCommit") == source_prep.named_event_prep.COMMIT):
         raise VerificationError("Named event transition preparation differs from the catalog commit")
-    has_panel_refresh = "panelRefreshTransition" in names
-    if has_panel_refresh != (report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES):
-        raise VerificationError("Panel refresh transition preparation differs from the catalog commit")
+    has_resources_transition = "resourcesTransition" in names
+    if has_resources_transition != (report.get("sourceCommit") in source_prep.resources_prep.COMMITS):
+        raise VerificationError("Resources transition preparation differs from the catalog commit")
     has_effect = "effectTransition" in names
     if has_effect != (report.get("sourceCommit") in source_prep.effect_prep.COMMITS):
         raise VerificationError("Effect transition preparation differs from the catalog commit")
@@ -414,6 +416,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["textPanelShutdown"] if has_text_shutdown else [])
         + (["sparseMapTransition"] if has_sparse else [])
         + (["namedEventTransition"] if has_named_event else [])
+        + (["resourcesTransition"] if has_resources_transition else [])
         + (["effectTransition"] if has_effect else [])
         + (["panelRefreshTransition"] if has_panel_refresh else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
@@ -534,13 +537,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_named_event_transition.py"] = Path(helper.__file__).read_bytes()
-    if has_panel_refresh:
-        helper = source_prep.panel_refresh_prep
+    if has_resources_transition:
+        helper = source_prep.resources_prep
         try:
             helper.validate(report["sourceCommit"], preparation)
         except ValueError as error:
             raise VerificationError(str(error)) from error
-        attachments["recovery/prepare_panel_refresh_transition.py"] = Path(helper.__file__).read_bytes()
+        attachments["recovery/prepare_resources_transition.py"] = Path(helper.__file__).read_bytes()
     if has_effect:
         helper = source_prep.effect_prep
         try:
@@ -605,6 +608,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_sparse and name in source_prep.sparse_prep.PINS)
                 or (has_named_event and name in source_prep.named_event_prep.PINS)
                 or (has_effect and name in source_prep.effect_prep.PINS)
+                or (has_resources_transition and name in source_prep.resources_prep.PINS)
                 or (has_panel_refresh and name in source_prep.panel_refresh_prep.PROFILES[report["sourceCommit"]])
                 or name in scene_outputs
                 or (has_shutdown and name == source_prep.shutdown_prep.TARGETS[report["sourceCommit"]])
@@ -822,11 +826,16 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     if split_runtime is not None:
         project = report.get("project")
         expected_runtime = {"core/core.pro": ".", "game/game.pro": "files"}.get(project)
+        if project == "game/game.pro" and split_runtime == "resources":
+            expected_runtime = "resources"
         if split_runtime != expected_runtime:
             raise VerificationError("Unexpected split-project runtime directory")
         dependencies = report.get("dependencies", [])
-        if [entry.get("project") for entry in dependencies] != ["python/python.pro"]:
-            raise VerificationError("Missing reviewed split-project Python dependency")
+        expected_dependencies = ["python/python.pro"]
+        if split_runtime == "resources":
+            expected_dependencies.append("resources/resources.pro")
+        if [entry.get("project") for entry in dependencies] != expected_dependencies:
+            raise VerificationError("Missing reviewed split-project dependencies")
         for entry in dependencies:
             successfulCommand(entry.get("configure"), "split-project dependency qmake")
             successfulCommand(entry.get("build"), "split-project dependency build")
@@ -837,9 +846,12 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             f'(cd {project_dir} && ' + qmake + ' && make -j"$(nproc)")',
             'export LD_LIBRARY_PATH="$PWD/python${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"',
         ]
+        if split_runtime == "resources":
+            resource_qmake = shlex.join(["qmake", "resources.pro", *compiler_flags])
+            build_commands.insert(1, '(cd resources && ' + resource_qmake + ' && make -j"$(nproc)")')
         executable = f"./{project_dir}/RecoveryGame"
-        if split_runtime == "files":
-            build_commands.append("cd files")
+        if split_runtime in ("files", "resources"):
+            build_commands.append(f"cd {split_runtime}")
             executable = f"../{project_dir}/RecoveryGame"
     abi = str(report.get("recipe", {}).get("pythonAbi", "none"))
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
@@ -1074,6 +1086,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_sparse_map_transition.py"] if "recovery/prepare_sparse_map_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_named_event_transition.py"] if "recovery/prepare_named_event_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_effect_transition.py"] if "recovery/prepare_effect_transition.py" in preparation_files else []),
+        *(["python3 recovery/prepare_resources_transition.py"] if "recovery/prepare_resources_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_panel_refresh_transition.py"] if "recovery/prepare_panel_refresh_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),

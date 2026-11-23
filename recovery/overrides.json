@@ -98692,6 +98692,13 @@
       "provenance": "content reconstruction of the BFG-removed original; follow the surviving startMove/endMove interface and carry the previously inline completion methods out of line",
       "sha256": "7a077ce39db238e40b0192ab08b515f6baca42e5ce1d1173a2964b4abfb69584",
       "source": "payloads/reconstructions/d6/d63614b85c8b26cd1146ff37adebd932a530a21f-CPathFinder.cpp"
+    },
+    {
+      "commit": "9843aa0b06bc706fdaeee61f20339c29a9d3a6de",
+      "path": "resources/images.qrc",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct the missing Qt manifest from the closest inventory proposal and surviving #282 resource paths. Keep backpack and item, use the arrow PNGs addressed by CPlayerView and CAnimationProvider, and omit the absent loading image. Exact original inventory and artwork remain unknown.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
     }
   ],
   "schemaVersion": 1

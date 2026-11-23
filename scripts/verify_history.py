@@ -957,12 +957,13 @@ def verifySnapshot(
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
         runtime_root = projects["application"].parent
         application_project = projects["application"].relative_to(source_root).as_posix()
-        runtime_layout = {"core/core.pro": ".", "game/game.pro": "files"}.get(application_project)
-        if runtime_layout is not None:
+        runtime_layouts = {"core/core.pro": (".",), "game/game.pro": ("files", "resources")}
+        for runtime_layout in runtime_layouts.get(application_project, ()):
             candidate = source_root / runtime_layout
             if all((candidate / name).is_dir() for name in ("maps", "scripts", "config")):
                 runtime_root = candidate
                 result["runtimeWorkingDirectory"] = runtime_layout
+                break
         adapter = prepareSmokeAdapter(
             source_root,
             work_root / "observer",

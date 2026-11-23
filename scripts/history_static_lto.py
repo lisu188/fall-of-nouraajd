@@ -26,6 +26,16 @@ REVIEWED_INPUT_SETS = (
         "python/python.pro": "f67d934305b60572f861a189b0e6b96e516a6fb7b173887ec9e3b2a037bd43f4",
         "game.pri": "415d2654f778c99df6fc8ba7cc57982f4e8dcd9f58f7f3f08dd8cac02f0b6d19",
     },
+    {
+        "python/python.pro": "f67d934305b60572f861a189b0e6b96e516a6fb7b173887ec9e3b2a037bd43f4",
+        "game.pri": "8bc5db97f33353117a964b240b3ab67b4ab2a722fedf883bd2b939f50ff4e5ad",
+        "resources/resources.pro": "99ba3b963bc5e4d1c3b84585b22821a2142145d0509d87a541f9c2fdda7e8f82",
+    },
+    {
+        "python/python.pro": "f67d934305b60572f861a189b0e6b96e516a6fb7b173887ec9e3b2a037bd43f4",
+        "game.pri": "8bc5db97f33353117a964b240b3ab67b4ab2a722fedf883bd2b939f50ff4e5ad",
+        "resources/resources.pro": "c171d7f40d3b6e2076bac5da84036c9f7adfe08b04855e8fbbfdf563ff53d7e3",
+    },
 )
 
 
