@@ -265,7 +265,9 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     environment = ["env", *(name + "=" + str(value) for name, value in recipe.get("environment", {}).items())]
     commands = ["set -e"]
     if (
-        commit in (vh.source_prep.console_prep.COMMIT, vh.source_prep.trigger_prep.COMMIT)
+        commit in (
+            vh.source_prep.console_prep.COMMIT, vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT
+        )
         or commit in vh.source_prep.merged_prep.COMMITS
         or vh.source_prep.preparationRequired(source)
     ):
@@ -783,7 +785,7 @@ def progress() -> None:
             requires_replay = (
                 commit in (vh.source_prep.cache_prep.COMMIT, vh.source_prep.console_prep.COMMIT)
                 or commit in vh.runtime_configs.INPUT_PINS
-                or commit == vh.source_prep.trigger_prep.COMMIT
+                or commit in (vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT)
             )
             if requires_replay or commit in vh.source_prep.merged_prep.COMMITS or report.get("startupCompatibility") in (
                 "parentReflectionRegistration",
@@ -832,6 +834,8 @@ def progress() -> None:
             if report.get("startupCompatibility") == "legacyTimingResources":
                 item["startupCompatibility"] = "legacyTimingResources"
                 item["validation"] = "build-and-startup-with-legacy-timing-resource-compatibility-passed"
+            if commit == vh.source_prep.position_prep.COMMIT:
+                item["buildCompatibility"] = ["mapPosition"]
             if commit == vh.source_prep.trigger_prep.COMMIT:
                 item["buildCompatibility"] = ["triggerDecorator"]
             if commit == vh.source_prep.console_prep.COMMIT:

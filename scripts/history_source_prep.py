@@ -24,6 +24,7 @@ try:
     from scripts import history_prepare_merged_headers as merged_prep
     from scripts import history_prepare_console_reader as console_prep
     from scripts import history_prepare_trigger_decorator as trigger_prep
+    from scripts import history_prepare_map_position as position_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -37,6 +38,7 @@ except ModuleNotFoundError:
     import history_prepare_merged_headers as merged_prep
     import history_prepare_console_reader as console_prep
     import history_prepare_trigger_decorator as trigger_prep
+    import history_prepare_map_position as position_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -314,6 +316,7 @@ def prepareSources(
     timing = timing_prep.legacyTimingPlan(source_root)
     conflicts = conflicts_prep.conflictPlan(source_root)
     child_cache = source_commit == cache_prep.COMMIT
+    map_position = source_commit == position_prep.COMMIT
     trigger_decorator = source_commit == trigger_prep.COMMIT
     console_reader = source_commit == console_prep.COMMIT
     merged_headers = source_commit in merged_prep.COMMITS
@@ -357,6 +360,7 @@ def prepareSources(
         and not merged_headers
         and not console_reader
         and not trigger_decorator
+        and not map_position
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -546,6 +550,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if map_position:
+        position_prep.apply(source_root)
+        identity = position_prep.identity()
+        result["identity"]["mapPosition"] = identity
+        log = output_root / "map-position.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "mapPosition",
+            "command": ["history_source_prep.py", "prepare-map-position"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -632,6 +649,8 @@ def prepareSources(
                 or (timing and name in timing["paths"])
             )
         ]
+        if map_position:
+            next(entry for entry in outputs if entry["path"] == position_prep.TARGET)["purpose"] = position_prep.PURPOSE
         if trigger_decorator:
             next(entry for entry in outputs if entry["path"] == trigger_prep.TARGET)["purpose"] = trigger_prep.PURPOSE
         if console_reader:
