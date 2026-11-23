@@ -1,0 +1,16 @@
+
+=== mapPackages ===
+{
+  "files": {
+    "CGameView.cpp": [
+      "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
+      "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
+    ],
+    "CScriptEngine.cpp": [
+      "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
+      "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+    ]
+  },
+  "replaySha256": "141d129887818584a5fde8dca0342b9c4b8561c16b05f29e079246831a1a5be5",
+  "sourceCommit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81"
+}

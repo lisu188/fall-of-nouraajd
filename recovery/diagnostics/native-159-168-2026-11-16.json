@@ -1,0 +1,226 @@
+{
+  "entries": [
+    {
+      "commit": "a1102ac053605a68abd7f98eb8b714b5a00ac6ec",
+      "firstCatalogOrder": 159,
+      "originalBlob": "f59850bc2948c48c34f05161ff83bf840234b80b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "c9d800bc2712caefb5264ff8f7a0ded3cf42624ba589c6c5be3951fe2297936d",
+      "source": "recovery/payloads/reconstructions/f5/f59850bc2948c48c34f05161ff83bf840234b80b-c9d800bc2712-map.cpp"
+    },
+    {
+      "commit": "71a3432e36b5649aabdd63c7807a78e9a8a3749a",
+      "firstCatalogOrder": 161,
+      "originalBlob": "e197feb3953c9c65e51587a60fc2fe66155a063e",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "c9d800bc2712caefb5264ff8f7a0ded3cf42624ba589c6c5be3951fe2297936d",
+      "source": "recovery/payloads/reconstructions/e1/e197feb3953c9c65e51587a60fc2fe66155a063e-c9d800bc2712-map.cpp"
+    },
+    {
+      "commit": "c90b86c5098927c1f123ad050632d9a220aa4604",
+      "firstCatalogOrder": 162,
+      "originalBlob": "fadffa17076c55f9bfc705548f355e69c7a56248",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "c9d800bc2712caefb5264ff8f7a0ded3cf42624ba589c6c5be3951fe2297936d",
+      "source": "recovery/payloads/reconstructions/fa/fadffa17076c55f9bfc705548f355e69c7a56248-c9d800bc2712-map.cpp"
+    },
+    {
+      "commit": "b4d315b857f8df32b17422f64b381a36f3d90d1d",
+      "firstCatalogOrder": 164,
+      "originalBlob": "78c0f564d9e8c27c80bc82812979cf1709c3a866",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "391eaf799e05f27ec65d713030712def0330c3eb6acd293c86d836e9977cb084",
+      "source": "recovery/payloads/reconstructions/78/78c0f564d9e8c27c80bc82812979cf1709c3a866-391eaf799e05-map.cpp"
+    },
+    {
+      "commit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
+      "firstCatalogOrder": 166,
+      "originalBlob": "6b6244e51180200914bebe6d31d0fc5f372d925b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "b8a62295421837dd1e98de6cb922f72641fa6b33296a8020a5f1749decf9b7ad",
+      "source": "recovery/payloads/reconstructions/6b/6b6244e51180200914bebe6d31d0fc5f372d925b-b8a622954218-map.cpp"
+    },
+    {
+      "commit": "cf4715fa2d6daa0658443374e35b9890a81ac801",
+      "firstCatalogOrder": 167,
+      "originalBlob": "38e482ddb223b7f3e4c6fe6392186bda488ccda4",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #166 reconstruction f50450a42a588a0a036ebff412b6ff245a8222cc; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.",
+      "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+      "source": "recovery/payloads/reconstructions/38/38e482ddb223b7f3e4c6fe6392186bda488ccda4-36f343a29f06-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 10
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "dadcd457e1607bf12bc321de0c4564e54fd3d641b65429108e612a922662fbb2",
+        "sourceCommit": "a1102ac053605a68abd7f98eb8b714b5a00ac6ec",
+        "sourceTree": "339446cd39ad54acdf4d6b0ffd4e290175e7dbca",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "b8968673586383091c4b21830fb9a975b5f57000f97decd3939a8f41985b4d82",
+        "sourceCommit": "cdc0be72f141da8414fa7c59baf24917a4897b75",
+        "sourceTree": "8fb6e4605af1c6cdc9c875586614ead5f95231a0",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "fa9e34b83e3cf4ef1a13f52036ee5fab505370aa4600242ab875067930ac58ae",
+        "sourceCommit": "71a3432e36b5649aabdd63c7807a78e9a8a3749a",
+        "sourceTree": "5b2f2d9781ca78cd6f69631b78a2d2f5fb55a743",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "79cf499f959d18e3cd070933476e89c20f48a5f6ed35f48dde48f7ea05257709",
+        "sourceCommit": "c90b86c5098927c1f123ad050632d9a220aa4604",
+        "sourceTree": "2098f8082af66db6a3be9a9cb112eef7a7a15402",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "669bf5ad0ef4b31a796e092a535600e1e2fb1cdd6464332b08f85a463afc8dd1",
+        "sourceCommit": "a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177",
+        "sourceTree": "15933f7c7d096db851eab42d42bf8dc3d177502f",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "d08a8c15f0891aec60fe41dacae42076e75ccd3d71a0327d9e40d54c0fefd60a",
+        "sourceCommit": "b4d315b857f8df32b17422f64b381a36f3d90d1d",
+        "sourceTree": "4cd0be400eaf2ef11abf985578f95b01be2e0e0f",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "a21be7a7adb55229bbdf44a347c05b51c7f63695ceae1d93a260455539950ecd",
+        "sourceCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a",
+        "sourceTree": "3bb524fa1791d87e8131c549c380e30d114a7d3e",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0a602291891fd5b8c5fc88e3fa6dfba9ad64e85fb03b03b22d25eefa21b22475",
+        "sourceCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
+        "sourceTree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "87108087727ece74bd203f74e26e1822b9fe626f90e78b0557cd54bb849ff24c",
+        "sourceCommit": "cf4715fa2d6daa0658443374e35b9890a81ac801",
+        "sourceTree": "abcf81c00ce2ce18e2f72dc6eb64c97690993723",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "d9b4a5edc6bd20ac57810ae5b44a04393f5387ce3bba9525d91175d3c34acba2",
+        "sourceCommit": "c1b8045a931f2712030e918f9af13bee52a69b18",
+        "sourceTree": "39dccf4fe874311456e84985830f374b31f7e4bc",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

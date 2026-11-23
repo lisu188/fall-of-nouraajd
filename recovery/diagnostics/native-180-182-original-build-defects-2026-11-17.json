@@ -1,0 +1,60 @@
+{
+ "boundary": "Static inspection of surviving original Git trees plus native reconstruction builds in isolated build copies; no tree in this record is accepted.",
+ "compatibilityStatus": "A reviewed build-copy step (forwarding headers to the merged same-directory header, .inl companions from #183) is not implemented; original bytes are unchanged.",
+ "reason": "Mid-refactor commits: surviving originals at #180/#181 include headers the same commit deleted when per-class headers were merged (and #180 main.cpp registers Interaction without any included declaration); #180-#182 omit the jsoncpp .inl companions that the unchanged json_value.cpp blob includes, which #183 restores. These trees cannot compile from their committed contents.",
+ "reconstructions": "Merged and relocated reconstructions for #180 and #182 were built natively with temporary forwarding headers and .inl copies in throwaway working trees only, then kept so later trees carry them; #181's own changed files were not reconstructed. #183-#185 are accepted with no compatibility step.",
+ "schemaVersion": 1,
+ "status": "original-build-defect-not-accepted",
+ "trees": [
+  {
+   "catalogOrder": 180,
+   "danglingSurvivingIncludes": [
+    "src/buildings/cave.h",
+    "src/buildings/dungeon.h",
+    "src/buildings/teleporter.h",
+    "src/items/armor.h",
+    "src/items/belt.h",
+    "src/items/boots.h",
+    "src/items/gloves.h",
+    "src/items/helmet.h",
+    "src/items/smallweapon.h",
+    "src/items/weapon.h",
+    "src/pathfinder/dumbpathfinder.h",
+    "src/pathfinder/randompathfinder.h",
+    "src/pathfinder/smartpathfinder.h"
+   ],
+   "jsonValueOriginalBlob": "2f0ef54467871c888bf16774f48f0f58912dcf2f",
+   "jsoncppInlineCompanions": [],
+   "sourceCommit": "6cc78c34d64fdee43adca1b829ccf687daa62ced"
+  },
+  {
+   "catalogOrder": 181,
+   "danglingSurvivingIncludes": [
+    "src/buildings/cave.h",
+    "src/buildings/dungeon.h",
+    "src/buildings/teleporter.h",
+    "src/items/armor.h",
+    "src/items/belt.h",
+    "src/items/boots.h",
+    "src/items/gloves.h",
+    "src/items/helmet.h",
+    "src/items/smallweapon.h",
+    "src/items/weapon.h",
+    "src/pathfinder/dumbpathfinder.h",
+    "src/pathfinder/randompathfinder.h",
+    "src/pathfinder/smartpathfinder.h",
+    "src/stats/damage.h"
+   ],
+   "jsonValueOriginalBlob": "2f0ef54467871c888bf16774f48f0f58912dcf2f",
+   "jsoncppInlineCompanions": [],
+   "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
+  },
+  {
+   "catalogOrder": 182,
+   "danglingSurvivingIncludes": [],
+   "jsonValueOriginalBlob": "2f0ef54467871c888bf16774f48f0f58912dcf2f",
+   "jsoncppInlineCompanions": [],
+   "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097"
+  }
+ ]
+}

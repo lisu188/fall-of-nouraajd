@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "commit": "998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0",
+      "firstCatalogOrder": 108,
+      "originalBlob": "500072ea74e6d100fff962bf4ccdaa7deb7974d1",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Reconstructed missing #108 GameScene from genuine surviving immediately preceding #107 c049ac73064442354af6224d06fe1c8b847bb8d9:view/gamescene.cpp (3,565 original bytes). Same-commit #108 GameScene/Player/Map/GameView headers are byte-identical to #107; use actual startGame/load/save/event handling and getView bodies instead of old #71-era donor. Exact removed implementation delta is unavailable. Formatting applied only to the missing reconstruction; the donor and all surviving historical originals remain unchanged.",
+      "sha256": "58c45409272b472fedb2723f318b28fa9a84a54539e829af9799e672950b6241",
+      "source": "recovery/payloads/reconstructions/50/500072ea74e6d100fff962bf4ccdaa7deb7974d1-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "34729dfba6f96de85cccc0ca041f06c6ff714f9ba53ae3ff007ed36228d441c3",
+        "sourceCommit": "998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0",
+        "sourceTree": "a8376f1433b73cf3ae6c3282b4c314b50c61fdc3",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

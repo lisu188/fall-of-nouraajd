@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "eventLoop": true,
+    "map": true,
+    "player": true,
+    "renderedFrame": true
+  },
+  "frame": {
+    "height": 718,
+    "path": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-m7cmscqe/smoke/startup.png",
+    "sha256": "eae63896ad434dc703d3d1b15045b69f0d9c195f0d1b7c7adcabd85be4e36584",
+    "width": 1278
+  },
+  "mode": "game",
+  "reason": "",
+  "schemaVersion": 1,
+  "status": "ready"
+}

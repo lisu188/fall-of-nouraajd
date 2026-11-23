@@ -4,11 +4,25 @@
 // provenance.
 #include "CBuilding.h"
 #include "CCreature.h"
+#ifdef GAME_RECOVERY_PREFIXED_SCENE_HEADER
+#include "CGameScene.h"
+#else
+#include "gamescene.h"
+#endif
 #include "CInteraction.h"
-#include "CItem.h"
 #include "CMap.h"
 #include "CMapObject.h"
+#include "CItem.h"
+#include "CItem.h"
+#ifdef GAME_RECOVERY_PREFIXED_TILE
 #include "CTile.h"
+using ScriptTile = CTile;
+static const char *scriptTileName = "CTile";
+#else
+#include "CTile.h"
+using ScriptTile = CTile;
+static const char *scriptTileName = "CTile";
+#endif
 #include "Stats.h"
 #include "Util.h"
 #include <Python.h>
@@ -126,6 +140,8 @@ class CPotionWrapper : public CPotion, public wrapper<CPotionWrapper> {
     Result defaultOnUse(CCreature *creature) { return CPotion::onUse(creature); }
 };
 
+static CPlayer *mapPlayer(CMap &value) { return value.getScene()->getPlayer(); }
+
 static void moveObject(CMapObject &value, int x, int y, int z) { value.moveTo(x, y, z); }
 
 template <class T> static auto nativeName(const T &value, int) -> decltype(QString::fromStdString(value.name)) {
@@ -149,6 +165,14 @@ template <class T> static void registerObjectCallbacks(const char *name) {
 }
 
 // Under Python 2.7, Boost exports the init_game symbol called by CScriptEngine.
+template<class T> static void setNumericField(T &value, const std::string &name, int number) {
+    object wrapped(ptr(&value));
+    wrapped.attr(name.c_str()) = number;
+}
+template<class T> static int getNumericField(T &value, const std::string &name) {
+    object wrapped(ptr(&value));
+    return extract<int>(wrapped.attr(name.c_str()));
+}
 BOOST_PYTHON_MODULE(_game) {
     to_python_converter<QString, QStringToPython>();
     QStringFromPython();
@@ -161,7 +185,7 @@ BOOST_PYTHON_MODULE(_game) {
         .def("removeObjectByName", &CMap::removeObjectByName)
         .def("removeObject", &CMap::removeObject)
         .def("replaceTile", &CMap::replaceTile)
-        .def("getPlayer", &CMap::getPlayer, return_internal_reference<>())
+        .def("getPlayer", &mapPlayer, return_internal_reference<>())
         .def("getObjectByName", &CMap::getObjectByName, return_internal_reference<>())
         .def("getLocationByName", &CMap::getLocationByName);
     class_<CMapObject, boost::noncopyable>("CMapObject", no_init)
@@ -171,8 +195,35 @@ BOOST_PYTHON_MODULE(_game) {
         .def("getCoords", &CMapObject::getCoords)
         .def("setCoords", &CMapObject::setCoords)
         .def("removeFromGame", &CMapObject::removeFromGame) PY_PROPERTY_ACCESSOR(CMapObject);
-    class_<Stats>("Stats") PY_PROPERTY_ACCESSOR(Stats);
-    class_<Damage>("Damage") PY_PROPERTY_ACCESSOR(Damage);
+    class_<Stats>("Stats")
+        .add_property("strength", &Stats::getStrength, &Stats::setStrength)
+        .add_property("stamina", &Stats::getStamina, &Stats::setStamina)
+        .add_property("agility", &Stats::getAgility, &Stats::setAgility)
+        .add_property("intelligence", &Stats::getIntelligence, &Stats::setIntelligence)
+        .add_property("armor", &Stats::getArmor, &Stats::setArmor)
+        .add_property("block", &Stats::getBlock, &Stats::setBlock)
+        .add_property("dmgMin", &Stats::getDmgMin, &Stats::setDmgMin)
+        .add_property("dmgMax", &Stats::getDmgMax, &Stats::setDmgMax)
+        .add_property("hit", &Stats::getHit, &Stats::setHit)
+        .add_property("crit", &Stats::getCrit, &Stats::setCrit)
+        .add_property("fireResist", &Stats::getFireResist, &Stats::setFireResist)
+        .add_property("thunderResist", &Stats::getThunderResist, &Stats::setThunderResist)
+        .add_property("frostResist", &Stats::getFrostResist, &Stats::setFrostResist)
+        .add_property("normalResist", &Stats::getNormalResist, &Stats::setNormalResist)
+        .add_property("damage", &Stats::getDamage, &Stats::setDamage)
+        .add_property("attack", &Stats::getAttack, &Stats::setAttack)
+        .add_property("shadowResist", &Stats::getShadowResist, &Stats::setShadowResist)
+        .def("setNumericProperty", &setNumericField<Stats>)
+        .def("getNumericProperty", &getNumericField<Stats>)
+        .def("getDamage", &Stats::getDamage);
+    class_<Damage>("Damage")
+        .add_property("fire", &Damage::getFire, &Damage::setFire)
+        .add_property("thunder", &Damage::getThunder, &Damage::setThunder)
+        .add_property("frost", &Damage::getFrost, &Damage::setFrost)
+        .add_property("normal", &Damage::getNormal, &Damage::setNormal)
+        .add_property("shadow", &Damage::getShadow, &Damage::setShadow)
+        .def("setNumericProperty", &setNumericField<Damage>)
+        .def("getNumericProperty", &getNumericField<Damage>);
     class_<CCreature, bases<CMapObject>, boost::noncopyable>("CCreature", no_init)
         .def("getDmg", &CCreature::getDmg)
         .def("hurt", static_cast<void (CCreature::*)(int)>(&CCreature::hurt))
@@ -194,8 +245,8 @@ BOOST_PYTHON_MODULE(_game) {
         .def("takeMana", &CCreature::takeMana)
         .def("isAlive", &CCreature::isAlive)
         .def("isPlayer", &CCreature::isPlayer);
-    class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer", no_init);
-    class_<CMonster, bases<CCreature>, boost::noncopyable>("CMonster", no_init);
+    class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer", init<>());
+    class_<CMonster, bases<CCreature>, boost::noncopyable>("CMonster", init<>());
     class_<CBuilding, bases<CMapObject>, boost::noncopyable>("CBuildingBase");
     class_<CEvent, bases<CMapObject>, boost::noncopyable>("CEventBase");
     registerObjectCallbacks<CBuilding>("CBuilding");
@@ -206,6 +257,7 @@ BOOST_PYTHON_MODULE(_game) {
         "CInteraction")
         .def("performAction", &CInteraction::performAction, &CInteractionWrapper::defaultPerformAction)
         .def("configureEffect", &CInteraction::configureEffect, &CInteractionWrapper::defaultConfigureEffect);
+    scope().attr("Interaction") = scope().attr("CInteraction");
     class_<Effect, boost::noncopyable>("Effect", no_init)
         .def("getBonus", &Effect::getBonus, return_internal_reference<>())
         .def("setBonus", &Effect::setBonus)
@@ -220,10 +272,22 @@ BOOST_PYTHON_MODULE(_game) {
     class_<CBoots, bases<CItem>, boost::noncopyable>("CBoots");
     class_<CGloves, bases<CItem>, boost::noncopyable>("CGloves");
     class_<CWeapon, bases<CItem>, boost::noncopyable>("CWeapon").def("getInteraction", &CWeapon::getInteraction,
-                                                                     return_internal_reference<>());
+                                                                  return_internal_reference<>());
     class_<CSmallWeapon, bases<CWeapon>, boost::noncopyable>("CSmallWeapon");
-    class_<CPotion, bases<CItem>, boost::noncopyable>("CPotionBase");
+    class_<CPotion, bases<CItem>, boost::noncopyable>("PotionBase");
     class_<CPotionWrapper, bases<CPotion>, boost::noncopyable, boost::shared_ptr<CPotionWrapper>>("CPotion").def(
         "onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
-    class_<CTile, bases<CMapObject>, boost::noncopyable>("CTile").def("onStep", &CTile::onStep);
+    class_<ScriptTile, bases<CMapObject>, boost::noncopyable>(scriptTileName).def("onStep", &ScriptTile::onStep);
+    scope().attr("Item") = scope().attr("CItem");
+    scope().attr("Potion") = scope().attr("CPotion");
+    scope().attr("Armor") = scope().attr("CArmor");
+    scope().attr("Helmet") = scope().attr("CHelmet");
+    scope().attr("Boots") = scope().attr("CBoots");
+    scope().attr("Belt") = scope().attr("CBelt");
+    scope().attr("Gloves") = scope().attr("CGloves");
+    scope().attr("Player") = scope().attr("CPlayer");
+    scope().attr("Monster") = scope().attr("CMonster");
+    scope().attr("Weapon") = scope().attr("CWeapon");
+    scope().attr("SmallWeapon") = scope().attr("CSmallWeapon");
+    scope().attr("Event") = scope().attr("CEvent");
 }

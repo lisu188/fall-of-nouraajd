@@ -1,0 +1,20 @@
+
+=== visitorCallbacks ===
+{
+  "files": {
+    "CGameScene.cpp": [
+      "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318",
+      "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
+    ],
+    "CGameView.cpp": [
+      "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd",
+      "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
+    ],
+    "CScriptEngine.cpp": [
+      "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a",
+      "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+    ]
+  },
+  "replaySha256": "cdf5851089696019266a88c2da75dedd6ed5ab2d87ab8c6b2cc774ae593a7636",
+  "sourceCommit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82"
+}

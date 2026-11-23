@@ -1,0 +1,20 @@
+
+=== panelRefreshTransition ===
+{
+  "files": {
+    "game/CGameView.cpp": [
+      "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+      "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+    ],
+    "game/CMapObject.cpp": [
+      "f0006dbd81a5b40f59f4b0f6b0d9d7f4bb4e42b550fefe925b39388af9ce9e84",
+      "f8fda33ba86ec6ff8beef27dbf0b1d58f1813eba8896afc47d7cda764f400de5"
+    ],
+    "game/CScriptEngine.cpp": [
+      "ee9e9c7481c1671e0deb196a2554548669fc9bcc3f14fd46a5c98e5f88ea00e8",
+      "c8f89bc8530c97902f0e90d86a6edc6fd26227d1a02a1ad2893ab79c71a5f94b"
+    ]
+  },
+  "replaySha256": "e3e5f6a2f937db3db68f35b242694d5e82739a95f581b04fffe8a897d2ed6ba5",
+  "sourceCommit": "fe01b5980ebbec1a29dc3b2210597e7003ff729f"
+}
