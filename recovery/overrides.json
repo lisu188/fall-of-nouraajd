@@ -94097,8 +94097,8 @@
     {
       "originalBlob": "70d87918c1d7c24681e98a3d8e860b33f0f42451",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "2f2b5a5ed9dff037a0742944192b666d8cd4519f36cb3ef7245bd9ff5cbd21aa",
+      "provenance": "content reconstruction of the BFG-removed original; Ported verified #248 project rules through the #249 source and header renames, removed the merged scrollobject unit and selected the prefixed scene header in the shared Python module.",
+      "sha256": "28832167c2b4b680b644406908cc4c6c1045b3620b9caaa54405f4ef5588baf3",
       "source": "payloads/reconstructions/70/70d87918c1d7c24681e98a3d8e860b33f0f42451-game.pro"
     },
     {
@@ -94412,8 +94412,8 @@
     {
       "originalBlob": "8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c",
       "path": "src/CMap.h",
-      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
-      "sha256": "3092413a62ad8da53774d01d9274af0a0fdbfb6b3756dd04d56e53c5f17a7dcc",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "7543e8fe915d9d68287743c0e9ac9eaa682cf27ec5aa93546b66320de1ef0928",
       "source": "payloads/reconstructions/85/8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c-CMap.h"
     },
     {
@@ -98174,6 +98174,76 @@
       "provenance": "content reconstruction of the BFG-removed original; Adapted verified #247 implementations to surviving #248 C-prefixed headers, regrouped player/monster code, abstract panel and pathfinder interfaces, and the named Python combat callbacks.",
       "sha256": "a27a5551a3d9937e16e2dca90327e6dcd1f2d91b36eb0f160f25dfd54d935f7b",
       "source": "payloads/reconstructions/da/dae218334a21f4d2df8bd12c1043e9b51f1ab107-gameview.cpp"
+    },
+    {
+      "originalBlob": "038a50c1ec93b9f1622a3dc7d3f2bbc016d21526",
+      "path": "src/stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reassembled #248 player-list and scroll implementations in their merged #249 unit. Stats retains typed accessors and copies declared members into a fresh QObject; the Damage macro in the surviving header supplies its accessors.",
+      "sha256": "c655cb6f02ab92afeac05e44d543479853b4655b8d46effaad70e9c53fc9b764",
+      "source": "payloads/reconstructions/03/038a50c1ec93b9f1622a3dc7d3f2bbc016d21526-stats.cpp"
+    },
+    {
+      "originalBlob": "2379fed70583ae71d38a793b8e52178a5e9bea34",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "2174b3962966a31f4853b5c9828ef10db52d1546d7f7b922f78009d6adec1164",
+      "source": "payloads/reconstructions/23/2379fed70583ae71d38a793b8e52178a5e9bea34-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "26f151c5892bbc6ab40bef29d6e98038cb3a5f8b",
+      "path": "src/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "7f43ffd6155bf997ea02d4204995782481cd0aa0e986c5fedf1d134edb7ec668",
+      "source": "payloads/reconstructions/26/26f151c5892bbc6ab40bef29d6e98038cb3a5f8b-CMap.cpp"
+    },
+    {
+      "originalBlob": "47ed7d4d521be2c8da51522d20d61ec3054592f3",
+      "path": "src/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "9a12ad4e2d5a57ccbedb354b707b76fbd2b35ba1a0c189d9ec4f220a140299b9",
+      "source": "payloads/reconstructions/47/47ed7d4d521be2c8da51522d20d61ec3054592f3-CCreature.cpp"
+    },
+    {
+      "originalBlob": "4b8ef52756b3ff39840321e72889bdbdd6a1b84c",
+      "path": "src/CGameView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "6bfdb6e3cd2b22916fdf59966785db2d06778158d8773dc51f3e331d607c7e96",
+      "source": "payloads/reconstructions/4b/4b8ef52756b3ff39840321e72889bdbdd6a1b84c-CGameView.cpp"
+    },
+    {
+      "originalBlob": "563affb785571c034699de3fc17378524cbbfbc2",
+      "path": "src/CGameScene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "25128ab825a7ac6b9de58ae8bde67ba3b23d480253712412b26d06c8cffa7f74",
+      "source": "payloads/reconstructions/56/563affb785571c034699de3fc17378524cbbfbc2-CGameScene.cpp"
+    },
+    {
+      "originalBlob": "83ebcca0146d7186eb2df4909221ca233590a17b",
+      "path": "src/playerlistview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reassembled #248 player-list and scroll implementations in their merged #249 unit. Stats retains typed accessors and copies declared members into a fresh QObject; the Damage macro in the surviving header supplies its accessors.",
+      "sha256": "50090a9f9578d9da79370f0ac842f7917e2b5173931c5bc399e2be77d0c80306",
+      "source": "payloads/reconstructions/83/83ebcca0146d7186eb2df4909221ca233590a17b-playerlistview.cpp"
+    },
+    {
+      "originalBlob": "b30458919497353ac7d0475c092d9a04c77c5f7c",
+      "path": "src/CInteraction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "ff80ad30421ef761616e1b5e72e857417749b22e40c4d7519dcc2c5b810d447a",
+      "source": "payloads/reconstructions/b3/b30458919497353ac7d0475c092d9a04c77c5f7c-CInteraction.cpp"
+    },
+    {
+      "originalBlob": "c6445a9bf10ebcd369aa42c3937bedf5c60ee72e",
+      "path": "src/CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "d209681a51c53706bfbc5be7b8113a78a4553b29b15fab3337dd5103129ccedb",
+      "source": "payloads/reconstructions/c6/c6445a9bf10ebcd369aa42c3937bedf5c60ee72e-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "c681391fe4b6b44f1e0781c8ca9bc051b88ee7c5",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+      "sha256": "02e1764e3b091afc7bbd0525e93aa7bfec3b42f592a47297a95bb487e2ce00b6",
+      "source": "payloads/reconstructions/c6/c681391fe4b6b44f1e0781c8ca9bc051b88ee7c5-CGamePanel.cpp"
     }
   ],
   "schemaVersion": 1
