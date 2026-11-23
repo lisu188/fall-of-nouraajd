@@ -117,6 +117,7 @@ class CCreature : public CMapObject {
     void takeDamage(int i);
     CInteraction *getLevelAction();
     Stats getLevelStats();
+    friend class CGameView;
     Q_SIGNAL void statsChanged();
     Q_SIGNAL void skillsChanged();
     Q_SIGNAL void inventoryChanged();

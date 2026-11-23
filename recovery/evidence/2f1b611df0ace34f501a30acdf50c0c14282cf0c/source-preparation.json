@@ -1,0 +1,112 @@
+{
+  "identity": {
+    "implementationSha256": "31f3e6f1a524a8cdfe1307845187f2cb058b5c7a0590f69468d86dbfc3b7cbfc",
+    "namedEventTransition": {
+      "files": {
+        "game/CGameView.cpp": [
+          "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89",
+          "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+        ],
+        "game/CMapObject.cpp": [
+          "f0006dbd81a5b40f59f4b0f6b0d9d7f4bb4e42b550fefe925b39388af9ce9e84",
+          "f8fda33ba86ec6ff8beef27dbf0b1d58f1813eba8896afc47d7cda764f400de5"
+        ],
+        "game/CScriptEngine.cpp": [
+          "ee9e9c7481c1671e0deb196a2554548669fc9bcc3f14fd46a5c98e5f88ea00e8",
+          "c8f89bc8530c97902f0e90d86a6edc6fd26227d1a02a1ad2893ab79c71a5f94b"
+        ]
+      },
+      "replaySha256": "f3274deb2b16b62f5d5065c0ec6c06f8826c0b7b8f655873a9ec58eb1556b89d",
+      "sourceCommit": "2f1b611df0ace34f501a30acdf50c0c14282cf0c"
+    },
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89"
+        },
+        "path": "game/CGameView.cpp",
+        "purpose": "Connect Qt signals, pass the named event by reference, and release the Python handles"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "f8fda33ba86ec6ff8beef27dbf0b1d58f1813eba8896afc47d7cda764f400de5"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "f0006dbd81a5b40f59f4b0f6b0d9d7f4bb4e42b550fefe925b39388af9ce9e84"
+        },
+        "path": "game/CMapObject.cpp",
+        "purpose": "Connect Qt signals, pass the named event by reference, and release the Python handles"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "c8f89bc8530c97902f0e90d86a6edc6fd26227d1a02a1ad2893ab79c71a5f94b"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "ee9e9c7481c1671e0deb196a2554548669fc9bcc3f14fd46a5c98e5f88ea00e8"
+        },
+        "path": "game/CScriptEngine.cpp",
+        "purpose": "Connect Qt signals, pass the named event by reference, and release the Python handles"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89"
+      },
+      "path": "game/CGameView.cpp",
+      "purpose": "Connect Qt signals, pass the named event by reference, and release the Python handles"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "f8fda33ba86ec6ff8beef27dbf0b1d58f1813eba8896afc47d7cda764f400de5"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "f0006dbd81a5b40f59f4b0f6b0d9d7f4bb4e42b550fefe925b39388af9ce9e84"
+      },
+      "path": "game/CMapObject.cpp",
+      "purpose": "Connect Qt signals, pass the named event by reference, and release the Python handles"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "c8f89bc8530c97902f0e90d86a6edc6fd26227d1a02a1ad2893ab79c71a5f94b"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "ee9e9c7481c1671e0deb196a2554548669fc9bcc3f14fd46a5c98e5f88ea00e8"
+      },
+      "path": "game/CScriptEngine.cpp",
+      "purpose": "Connect Qt signals, pass the named event by reference, and release the Python handles"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-named-event-transition"
+      ],
+      "log": "/tmp/nouraajd-276-pinned/verify/snapshot-0xfgsuvk/preparation/named-event-transition.log",
+      "name": "namedEventTransition",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "206e36bd0ed96a5220f34a953295bc81f923ad5061fbf24e4a406b50e530d3da"
+    },
+    "startup.log": {
+      "bytes": 1784,
+      "sha256": "5cfe07db55b3837e15e457c0961999ac2079ead36ecb75451991dc8b18efa47e"
+    },
+    "startup.png": {
+      "bytes": 154344,
+      "sha256": "0db93db326088067677ba6e588545dd80fcfb7c2c38c9dabbe92c5d434480d24"
+    }
+  },
+  "catalogIndex": 268,
+  "entries": [
+    {
+      "originalBlob": "465532d398f6368ad45f0959f9aeda6c0f0741d8",
+      "path": "maps/map.json",
+      "provenance": "Inferred missing268 input, preserving every surviving original byte. Actual Tiled JSON loader API is unchanged; retain audited266 deterministic conversion of supported265 TMX donor geometry, all40000 tile IDs and six supported actors. Original268 map changes and omitted future event/shop mechanics remain unavailable; no exact layout/gameplay parity claim.",
+      "sha256": "022c478b0054d7c802dbb45f6c45f4c658869426b510894f2626c7a0585c863f",
+      "source": "recovery/payloads/reconstructions/46/465532d398f6368ad45f0959f9aeda6c0f0741d8-022c478b0054-map.json",
+      "validatedByOriginalCommit": "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073"
+    },
+    {
+      "originalBlob": "daf956d0608afc41c00a26e2238c9aa7a715ff17",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Inferred missing268 input, preserving every surviving original byte. Actual header declarations and all surviving callers are unchanged from verified266/267; retain the genuine panel/inventory/action/text/backpack implementations. Unavailable original268 body changes cannot be inferred exactly.",
+      "sha256": "7eb0dffcb98eb7cc5cc366d896bfbf5a42789f5f71e27faf7f0d143e8716227b",
+      "source": "recovery/payloads/reconstructions/da/daf956d0608afc41c00a26e2238c9aa7a715ff17-7eb0dffcb98e-CGamePanel.cpp",
+      "validatedByOriginalCommit": "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073"
+    }
+  ],
+  "fingerprint": "41a3deb98b6e97911abd4d3c861c4490336c0eb290e8d5339313b2368f1e2239",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "7f1389cfb7d9611ed48c04c0979f4a318b2e5fd5f8b5263f8a0a078a22c803a7",
+  "originalCommit": "a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073"
+}

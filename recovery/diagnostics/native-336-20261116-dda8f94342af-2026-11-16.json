@@ -1,0 +1,72 @@
+{
+  "entries": [
+    {
+      "originalBlob": "c99c3fab51c9cd0e5c4e08eeb8976a1dcc23f9fe",
+      "path": "CMap.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "5dd0bb5fb794daebb86fde691e9553f7c946a475b62ce790ba05a68b031081cf",
+      "source": "recovery/payloads/reconstructions/c9/c99c3fab51c9cd0e5c4e08eeb8976a1dcc23f9fe-CMap.cpp",
+      "validatedByOriginalCommit": "a867af7effb9e502476ab70121f1035554b7b37c"
+    },
+    {
+      "originalBlob": "b0eea438d414ac8f5121276bc032baa3885ae222",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "24875144d2f2b61ad72691904fe6165c21ace244eddba0555536a81abc35b63f",
+      "source": "recovery/payloads/reconstructions/b0/b0eea438d414ac8f5121276bc032baa3885ae222-GameScript.cpp",
+      "validatedByOriginalCommit": "a867af7effb9e502476ab70121f1035554b7b37c"
+    },
+    {
+      "originalBlob": "21ed4813a35777a6e054c870bf06295fdf1e986b",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "recovery/payloads/reconstructions/21/21ed4813a35777a6e054c870bf06295fdf1e986b-CCreature.cpp",
+      "validatedByOriginalCommit": "a867af7effb9e502476ab70121f1035554b7b37c"
+    },
+    {
+      "originalBlob": "6a85f6aaaa21b613598c3111a8a59b53b0e7f35d",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+      "sha256": "1724c2d2fbf24687e48f6f17f28a17b4875b348cb7c570ae43f10866076c9637",
+      "source": "recovery/payloads/reconstructions/6a/6a85f6aaaa21b613598c3111a8a59b53b0e7f35d-CItem.cpp",
+      "validatedByOriginalCommit": "a867af7effb9e502476ab70121f1035554b7b37c"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 136,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 336,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "a867af7effb9e502476ab70121f1035554b7b37c"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "recovery/payloads/resources/0c437f82022d5640036583f068e4de2b273dd5bd-images.qrc",
+      "tree": "0c437f82022d5640036583f068e4de2b273dd5bd"
+    }
+  ],
+  "sourceCommit": "a867af7effb9e502476ab70121f1035554b7b37c",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/dda8f94342af026921053fe6903de1349ef3ec71951e59707719e9e17a0ea608",
+    "fingerprint": "dda8f94342af026921053fe6903de1349ef3ec71951e59707719e9e17a0ea608",
+    "sourceCommit": "a867af7effb9e502476ab70121f1035554b7b37c",
+    "sourceTree": "0c437f82022d5640036583f068e4de2b273dd5bd",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

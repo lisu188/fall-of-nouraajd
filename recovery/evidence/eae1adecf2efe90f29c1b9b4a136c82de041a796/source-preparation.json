@@ -1,0 +1,84 @@
+{
+  "identity": {
+    "implementationSha256": "7275cf63b84ba66338b210a8d8d2f767eb4dbd06ce3d15163684cd260a8341e8",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "132376c51990a0f49bf7f4b966161f9844be78dfd336a65b914c3feb74d58e7c"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "2d2e5f25f5470845e72312e4c0c6866523ff0ae455ef01611e36eb3196f73e46"
+        },
+        "path": "CGameView.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2"
+        },
+        "path": "CScriptEngine.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      }
+    ],
+    "potionMovement": {
+      "files": {
+        "CGameView.cpp": [
+          "2d2e5f25f5470845e72312e4c0c6866523ff0ae455ef01611e36eb3196f73e46",
+          "132376c51990a0f49bf7f4b966161f9844be78dfd336a65b914c3feb74d58e7c"
+        ],
+        "CScriptEngine.cpp": [
+          "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
+          "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+        ]
+      },
+      "replaySha256": "96aa1c83d4e389e224ef222a25d70c7cfb4da02f03afb3151842f1bb9646024f",
+      "sourceCommit": "eae1adecf2efe90f29c1b9b4a136c82de041a796"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "132376c51990a0f49bf7f4b966161f9844be78dfd336a65b914c3feb74d58e7c"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "2d2e5f25f5470845e72312e4c0c6866523ff0ae455ef01611e36eb3196f73e46"
+      },
+      "path": "CGameView.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2"
+      },
+      "path": "CScriptEngine.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-potion-movement"
+      ],
+      "log": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/preparation/potion-movement.log",
+      "name": "potionMovement",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

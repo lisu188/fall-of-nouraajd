@@ -99,3 +99,38 @@ FORMS += \
 # Header/class renames inside an unchanged missing module blob use surviving path facts.
 exists($$PWD/src/CTile.h):DEFINES += GAME_RECOVERY_PREFIXED_TILE
 exists($$PWD/src/CGameScene.h):DEFINES += GAME_RECOVERY_PREFIXED_SCENE_HEADER
+
+INCLUDEPATH += lib
+SOURCES += lib/base64/base64.cpp \
+    lib/tinyxml/tinystr.cpp \
+    lib/tinyxml/tinyxml.cpp \
+    lib/tinyxml/tinyxmlerror.cpp \
+    lib/tinyxml/tinyxmlparser.cpp \
+    lib/tmx/TmxEllipse.cpp \
+    lib/tmx/TmxImage.cpp \
+    lib/tmx/TmxImageLayer.cpp \
+    lib/tmx/TmxLayer.cpp \
+    lib/tmx/TmxMap.cpp \
+    lib/tmx/TmxObject.cpp \
+    lib/tmx/TmxObjectGroup.cpp \
+    lib/tmx/TmxPolygon.cpp \
+    lib/tmx/TmxPolyline.cpp \
+    lib/tmx/TmxPropertySet.cpp \
+    lib/tmx/TmxTile.cpp \
+    lib/tmx/TmxTileset.cpp \
+    lib/tmx/TmxUtil.cpp \
+    lib/zlib/adler32.c \
+    lib/zlib/compress.c \
+    lib/zlib/crc32.c \
+    lib/zlib/deflate.c \
+    lib/zlib/gzclose.c \
+    lib/zlib/gzlib.c \
+    lib/zlib/gzread.c \
+    lib/zlib/gzwrite.c \
+    lib/zlib/infback.c \
+    lib/zlib/inffast.c \
+    lib/zlib/inflate.c \
+    lib/zlib/inftrees.c \
+    lib/zlib/trees.c \
+    lib/zlib/uncompr.c \
+    lib/zlib/zutil.c

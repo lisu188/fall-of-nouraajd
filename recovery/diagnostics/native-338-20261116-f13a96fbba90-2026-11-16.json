@@ -1,0 +1,56 @@
+{
+  "entries": [
+    {
+      "originalBlob": "c93d43ffc6a48ffd8cc4cbe460eacef4387d8b6a",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #338 module carried from prior staged candidate plus binding to genuine same-commit CGuiHandler::showPanel(QString), called by original scripts/game/object.py Market class. Pending native verification; no surviving original bytes changed.",
+      "sha256": "0c0398251247a74491b28f9ad5f33eaaef647a86cdac89c17721662702b3f263",
+      "source": "recovery/payloads/reconstructions/c9/c93d43ffc6a48ffd8cc4cbe460eacef4387d8b6a-GameScript.cpp",
+      "validatedByOriginalCommit": "4954fe8532bfca5b22e98de2a528ab128b659ff5"
+    },
+    {
+      "originalBlob": "76588b5f1d2753a8dde9c8fc67cf596b10d07a67",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing #338 map uses the intact later donor JSON including its original market1/Market object and all layer/object coordinates. Unlike #331\u2013337, genuine same-commit scripts/game/object.py now declares Market(CBuilding), config/buildings.json selects game.object.Market, and market.png original pointer exists; therefore the earlier-era unsupported-object removal is not carried here. This remains a donor-backed reconstructed map, not recovered original map content. Pending native verification; no surviving original bytes changed.",
+      "sha256": "c30adeeb2c1192a4378512e0e7630547c29e52d2e693bc33ada9b8bb6b0e9ad4",
+      "source": "recovery/payloads/reconstructions/76/76588b5f1d2753a8dde9c8fc67cf596b10d07a67-map.json",
+      "validatedByOriginalCommit": "4954fe8532bfca5b22e98de2a528ab128b659ff5"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 138,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 338,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "4954fe8532bfca5b22e98de2a528ab128b659ff5"
+      ],
+      "imageCount": 86,
+      "path": "images.qrc",
+      "pointerBlob": "627da54907c91a152f4d938aad7f5574e191ca8b",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "71d622787c7169ac4ff8491e499771b2520cedafb7eee0112d6b29afd6837ae2",
+      "source": "recovery/payloads/resources/fc84a2ec513ed3d42f29b2fa122a47d67473197b-images.qrc",
+      "tree": "fc84a2ec513ed3d42f29b2fa122a47d67473197b"
+    }
+  ],
+  "sourceCommit": "4954fe8532bfca5b22e98de2a528ab128b659ff5",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/f13a96fbba9048705e4147e9a88862c037a259ca481d61a2e51f1e48bea7c587",
+    "fingerprint": "f13a96fbba9048705e4147e9a88862c037a259ca481d61a2e51f1e48bea7c587",
+    "sourceCommit": "4954fe8532bfca5b22e98de2a528ab128b659ff5",
+    "sourceTree": "fc84a2ec513ed3d42f29b2fa122a47d67473197b",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}
