@@ -1,8 +1,6 @@
 #include "gamescript.h"
 #include <QDebug>
 #include <QMetaProperty>
-namespace { Map *currentScriptMap = nullptr; }
-void setScriptMap(Map *map) { currentScriptMap = map; }
 #define METHOD(name) {#name,name,METH_VARARGS,NULL}
 
 PyObject *addObject(PyObject *, PyObject *args)
@@ -12,7 +10,7 @@ PyObject *addObject(PyObject *, PyObject *args)
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
     MapObject *object = MapObject::createMapObject(name);
     if (object) {
-        currentScriptMap->addObject(object);
+        GameScene::getMap()->addObject(object);
         object->moveTo(x, y, z);
     }
     qDebug() << "Added object"<<object->typeName.c_str()<<"with name"<<object->name.c_str()<<"on"<<x<<y<<z<<"\n";
@@ -24,8 +22,8 @@ PyObject *replaceTile(PyObject *, PyObject *args)
     const char *name;
     int x, y, z;
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
-    currentScriptMap->removeTile(x, y, z);
-    currentScriptMap->addTile(name, x, y, z);
+    GameScene::getMap()->removeTile(x, y, z);
+    GameScene::getMap()->addTile(name, x, y, z);
     Py_RETURN_NONE;
 }
 
@@ -37,7 +35,7 @@ PyObject *setProperty(PyObject *, PyObject *args)
     PyArg_ParseTuple(args, "sss",&objectName, &propertyName, &propertyValue);
     std::string propName=propertyName;
     std::string propValue=propertyValue;
-    MapObject *object=currentScriptMap->getObjectByName(objectName);
+    MapObject *object=GameScene::getMap()->getObjectByName(objectName);
     if(!object){
         Py_RETURN_NONE;
     }

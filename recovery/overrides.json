@@ -97247,8 +97247,8 @@
     {
       "originalBlob": "02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620",
       "path": "src/gamescript.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; bind the existing singleton ScriptManager functions to the map constructed by the instance scene",
-      "sha256": "1b642e3aa3ad988597435a4d180c2ca7e068c5f020ddfd7b1090ebdf6f5617e7",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp",
+      "sha256": "9b7b727648ac9c5ebb001889ce4ac463f6e397fda931ce53926e1777e990898c",
       "source": "payloads/reconstructions/02/02574dc3a6bfb19b1ca3e08fd0956bbc1b1d3620-gamescript.cpp"
     },
     {
@@ -97485,8 +97485,8 @@
     {
       "originalBlob": "b4f415c7fd4f63c338fbe41af875517520b91b9e",
       "path": "src/pathfinder.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; preserve the Coords worker interface and resolve the active map/player from the moving creature",
-      "sha256": "4f90ea115c15172ade155e01e77201134baf28a0c6bddad6a2632bbddaa2c7b5",
+      "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp",
+      "sha256": "738560391e3dcf0f63561bcde5d49fbf78c0098109d5fd291b7569e5abfad982",
       "source": "payloads/reconstructions/b4/b4f415c7fd4f63c338fbe41af875517520b91b9e-pathfinder.cpp"
     },
     {
@@ -98461,6 +98461,27 @@
       "provenance": "content reconstruction of the BFG-removed original; initial donor from adjacent verified #226 aligned to Creature headers; pending #224\u2013#225 API review",
       "sha256": "4f2ff5399e28a9a8c4e06f393f027d02850e8974a7f73917b6e0da8ffe4821f4",
       "source": "payloads/reconstructions/f5/f5483a900b421a723e7723e667dbdb67d719dcb6-creature.cpp"
+    },
+    {
+      "commit": "39356696f34ba87148a75f7ca6b8f808edf6303d",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; bind the existing singleton ScriptManager functions to the map constructed by the instance scene",
+      "sha256": "1b642e3aa3ad988597435a4d180c2ca7e068c5f020ddfd7b1090ebdf6f5617e7",
+      "source": "payloads/reconstructions/02/39356696-gamescript.cpp"
+    },
+    {
+      "commit": "38bba6a98d8a17324de69e30d7eee433da922962",
+      "path": "src/gamescript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; bind the existing singleton ScriptManager functions to the map constructed by the instance scene",
+      "sha256": "1b642e3aa3ad988597435a4d180c2ca7e068c5f020ddfd7b1090ebdf6f5617e7",
+      "source": "payloads/reconstructions/02/39356696-gamescript.cpp"
+    },
+    {
+      "commit": "39356696f34ba87148a75f7ca6b8f808edf6303d",
+      "path": "src/pathfinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; preserve the Coords worker interface and resolve the active map/player from the moving creature",
+      "sha256": "4f90ea115c15172ade155e01e77201134baf28a0c6bddad6a2632bbddaa2c7b5",
+      "source": "payloads/reconstructions/b4/39356696-pathfinder.cpp"
     }
   ],
   "schemaVersion": 1

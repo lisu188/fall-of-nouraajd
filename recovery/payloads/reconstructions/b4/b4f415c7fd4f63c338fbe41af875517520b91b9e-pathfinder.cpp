@@ -15,8 +15,6 @@ DumbPathFinder::DumbPathFinder() {
 DumbPathFinder::DumbPathFinder(const DumbPathFinder&) {
 }
 
-namespace { thread_local Map *workerMap = nullptr; }
-
 Coords DumbPathFinder::findPath(Coords start, Coords goal) {
 	int px = goal.x;
 	int py = goal.y;
@@ -112,7 +110,7 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal) {
 	int level = start.z;
 	nodes.insert(Cell(goal.x, goal.y, start));
 	values.insert(std::pair<Cell, int>(Cell(goal.x, goal.y, start), 0));
-	Map *map = workerMap;
+	Map *map = GameScene::getGame()->getMap();
 	while (!nodes.empty()) {
 		Cell currentCell = *nodes.begin();
 		nodes.erase(nodes.begin());
@@ -191,10 +189,7 @@ PathFinderWorker::PathFinderWorker(Creature *creature, PathFinder *finder) : cre
     Q_EMIT started();
 }
 void PathFinderWorker::run() {
-    workerMap = creature->getMap();
-    Player *player = workerMap->getScene()->getPlayer();
-    Coords delta = finder->findPath(creature->getCoords(), player->getCoords());
-    workerMap = nullptr;
+    Coords delta = finder->findPath(creature->getCoords(), GameScene::getPlayer()->getCoords());
     Q_EMIT completed(delta.x, delta.y);
     Q_EMIT ended();
     finder->deleteLater();
