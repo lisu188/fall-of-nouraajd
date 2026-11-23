@@ -1,0 +1,62 @@
+{
+  "identity": {
+    "implementationSha256": "3446c99a1abfb69a52ab271ee37b7933f5e7c0cb9b433a163fc5d6b357590d96",
+    "includeReplaySha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7",
+    "includeSeparators": [
+      {
+        "afterSha256": "e617d6aed297d0ba17246be9d60ab29f8c1ed545e24d810737a05f1b5c4a299d",
+        "beforeSha256": "58c45409272b472fedb2723f318b28fa9a84a54539e829af9799e672950b6241",
+        "includes": [
+          {
+            "line": 13,
+            "originalInclude": "view\\playerlistview.h",
+            "preparedInclude": "view/playerlistview.h",
+            "resolvedHeader": "view/playerlistview.h"
+          }
+        ],
+        "path": "view/gamescene.cpp"
+      }
+    ],
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "e617d6aed297d0ba17246be9d60ab29f8c1ed545e24d810737a05f1b5c4a299d"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "58c45409272b472fedb2723f318b28fa9a84a54539e829af9799e672950b6241"
+        },
+        "path": "view/gamescene.cpp",
+        "purpose": "Windows include separators on an isolated build-source copy"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "e617d6aed297d0ba17246be9d60ab29f8c1ed545e24d810737a05f1b5c4a299d"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "58c45409272b472fedb2723f318b28fa9a84a54539e829af9799e672950b6241"
+      },
+      "path": "view/gamescene.cpp",
+      "purpose": "Windows include separators on an isolated build-source copy"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "normalize-quoted-includes"
+      ],
+      "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-83rr3ylv/preparation/include-separators.log",
+      "name": "windowsIncludeSeparators",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

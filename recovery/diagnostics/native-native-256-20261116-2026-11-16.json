@@ -1,0 +1,178 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "legacy_tiles.json": {
+      "bytes": 853,
+      "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8"
+    },
+    "source-preparation.json": {
+      "bytes": 3758,
+      "sha256": "ef4eb51bc549723ff2067a258a5afff927056ad5b9269ff3b7c26f18a05a183d"
+    },
+    "source-preparation.log": {
+      "bytes": 1025,
+      "sha256": "a9937fbef74b8100250f401f68409f9220fac759be51f7c1699d86fb1018060d"
+    },
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "175178f264778593c4f0f7e840f1bf9bac40a6c12d245b242740a7c4cbb31d8c"
+    },
+    "startup.log": {
+      "bytes": 2439,
+      "sha256": "c4c0d55e1eff141db0411c8c572765a30d62269d1e73275c8f14aad2eb237450"
+    },
+    "startup.png": {
+      "bytes": 150299,
+      "sha256": "0166a48c3882afa512f28858d4561fa400fce529ceabe4e37e19682cf3196d5c"
+    }
+  },
+  "catalogIndex": 256,
+  "entries": [
+    {
+      "originalBlob": "03a52f4f2e1a2d40b26f8f4df9c13923d991877e",
+      "path": "src/Stats.cpp",
+      "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Actual original Stats.h predates copy assignment and still declares JSON load/save. Keep real generated numeric properties, add/remove bonuses and main-stat pointer, implementing those genuine JSON methods; copy constructor rebinds the main pointer to this object. Normalize the lower-case main names present in intact configuration. Preserve returned stat text lifetime within its const-char API rather than import the donor temporary-string lifetime error. Balance/gameplay parity remains unverified.",
+      "sha256": "5b27c8f512d6c5dd7b02a3de6b941500bef6aff19aa6bc26fe63635b5e339f7f",
+      "source": "recovery/payloads/reconstructions/03/03a52f4f2e1a2d40b26f8f4df9c13923d991877e-Stats.cpp",
+      "validatedByOriginalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    },
+    {
+      "originalBlob": "0cbb51172a1cf2b13313c9283210a4b4598d867d",
+      "path": "config/objects/weapons.json",
+      "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Use the explicit #257 reconstruction with the same surviving weapon class declarations and genuine item/interaction configuration schema; item balance values remain inferred donor data, not exact recovery.",
+      "sha256": "b818341b5fa7908d948c2dc06b7eff3a4510bd453f27ece71fe5c47a087de136",
+      "source": "recovery/payloads/reconstructions/0c/0cbb51172a1cf2b13313c9283210a4b4598d867d-weapons.json",
+      "validatedByOriginalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    },
+    {
+      "originalBlob": "3a08b2a33b8737e6e57b7c595eea6fdb5e10d9eb",
+      "path": "src/CCreature.cpp",
+      "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Use genuine #256 Stats::loadFromJson and copy construction rather than the future assignment operator. Preserve actual combined CCreature/CPlayer/CMonster API, slot-map invariant, item/action mechanics and authored configuration; no fake class or callback.",
+      "sha256": "92817cd75e0f2a3d17e86fb1c870dcde96d1e98a807a27e1ff85e80064c91d84",
+      "source": "recovery/payloads/reconstructions/3a/3a08b2a33b8737e6e57b7c595eea6fdb5e10d9eb-CCreature.cpp",
+      "validatedByOriginalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    },
+    {
+      "originalBlob": "69fd798f9c12545d2718d2787ad1ea609107a937",
+      "path": "game.pro",
+      "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Project selects actual same-commit application, engine sources, headers and all33 vendored TMX/non-jsoncpp C/C++ implementation units; no surviving project modified.",
+      "sha256": "46a4070c236a2d63aaa8498bea4ed7e2a167a936664ffa1b569604395881eb46",
+      "source": "recovery/payloads/reconstructions/69/69fd798f9c12545d2718d2787ad1ea609107a937-game.pro",
+      "validatedByOriginalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    },
+    {
+      "originalBlob": "7d48e90904e9a7409a0f220a668824bb36344f38",
+      "path": "src/Util.h",
+      "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Restore PROPERTY_ACCESSOR as a real Qt property macro from the immediately following intact macro.conf; #257 removes this macro from Util and expands exactly these real methods into original headers. Same Coords, task, comparer and PROP helpers from intact #257 Util. This is a donor adaptation, not exact original bytes.",
+      "sha256": "867f9ea68dda60c3f48489a38195eacbe00656d55d9bf6eb9783198f4141970b",
+      "source": "recovery/payloads/reconstructions/7d/7d48e90904e9a7409a0f220a668824bb36344f38-Util.h",
+      "validatedByOriginalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    },
+    {
+      "originalBlob": "8c63003f5470c2c430d3c9f7f6ff998a78f5a137",
+      "path": "src/CItem.cpp",
+      "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Same-commit CItem.h lacks future bonus getters/setters and still requires CWeapon::getStats()->Stats*. Restore only this genuine API and real static item/potion factory mechanics; all action/equipment configuration remains actual.",
+      "sha256": "daeadcbe9007b973e464cc378bb6d9eb99d7dc93b520be6d8dc2ef3f1aa1be5c",
+      "source": "recovery/payloads/reconstructions/8c/8c63003f5470c2c430d3c9f7f6ff998a78f5a137-CItem.cpp",
+      "validatedByOriginalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    }
+  ],
+  "fingerprint": "360c5e8634e90ab9a2211ef969aa4f04ed50bea9a5004a96612bffe7c522b9ce",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated.",
+    "Legacy tile configuration is explicit inferred compatibility from unchanged original tile metadata. Missing Stats implementation is tested against original header/generated properties, but game balance and combat parity remain unverified."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "85a6183d3b8653aaa8df18018c75d28a3270c067198db5e10f59032636a689a3",
+  "originalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+  "startupCompatibility": "legacyTileConfiguration",
+  "statsRegression": "stats-regression.json",
+  "supplementalArtifacts": {
+    "03a52f4f2e1a2d40b26f8f4df9c13923d991877e": {
+      "bytes": 3451,
+      "sha256": "5b27c8f512d6c5dd7b02a3de6b941500bef6aff19aa6bc26fe63635b5e339f7f"
+    },
+    "0cbb51172a1cf2b13313c9283210a4b4598d867d": {
+      "bytes": 6804,
+      "sha256": "b818341b5fa7908d948c2dc06b7eff3a4510bd453f27ece71fe5c47a087de136"
+    },
+    "3a08b2a33b8737e6e57b7c595eea6fdb5e10d9eb": {
+      "bytes": 17084,
+      "sha256": "92817cd75e0f2a3d17e86fb1c870dcde96d1e98a807a27e1ff85e80064c91d84"
+    },
+    "69fd798f9c12545d2718d2787ad1ea609107a937": {
+      "bytes": 3590,
+      "sha256": "46a4070c236a2d63aaa8498bea4ed7e2a167a936664ffa1b569604395881eb46"
+    },
+    "7d48e90904e9a7409a0f220a668824bb36344f38": {
+      "bytes": 5643,
+      "sha256": "867f9ea68dda60c3f48489a38195eacbe00656d55d9bf6eb9783198f4141970b"
+    },
+    "8c63003f5470c2c430d3c9f7f6ff998a78f5a137": {
+      "bytes": 5190,
+      "sha256": "daeadcbe9007b973e464cc378bb6d9eb99d7dc93b520be6d8dc2ef3f1aa1be5c"
+    },
+    "README.md": {
+      "bytes": 7626,
+      "sha256": "a00a31142329ca18ab05057a4e891d7d5e04abf8d96e264351367d62d44f88af"
+    },
+    "legacy_tiles.json": {
+      "bytes": 853,
+      "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8"
+    },
+    "native-proof.json": {
+      "bytes": 48495,
+      "sha256": "85a6183d3b8653aaa8df18018c75d28a3270c067198db5e10f59032636a689a3"
+    },
+    "portable-verification.json": {
+      "bytes": 49054,
+      "sha256": "9121c71c19d8f75f6f2616af556a56d06ebf2ac1fd521e4fe6f208dc1247425d"
+    },
+    "prepare_legacy_tile_configuration.py": {
+      "bytes": 6004,
+      "sha256": "6669a6e9f110fd2318a5800fc98b753f5418d7d2dca42fcd0bb2a2aac30418d5"
+    },
+    "source-preparation.json": {
+      "bytes": 3758,
+      "sha256": "ef4eb51bc549723ff2067a258a5afff927056ad5b9269ff3b7c26f18a05a183d"
+    },
+    "source-preparation.log": {
+      "bytes": 1025,
+      "sha256": "a9937fbef74b8100250f401f68409f9220fac759be51f7c1699d86fb1018060d"
+    },
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "175178f264778593c4f0f7e840f1bf9bac40a6c12d245b242740a7c4cbb31d8c"
+    },
+    "startup.log": {
+      "bytes": 2439,
+      "sha256": "c4c0d55e1eff141db0411c8c572765a30d62269d1e73275c8f14aad2eb237450"
+    },
+    "startup.png": {
+      "bytes": 150299,
+      "sha256": "0166a48c3882afa512f28858d4561fa400fce529ceabe4e37e19682cf3196d5c"
+    },
+    "stats-after-build.log": {
+      "bytes": 4345,
+      "sha256": "37bd84f0f189d853f90af8392f457f1c68b257cfd440404ef8989445d539bd2c"
+    },
+    "stats-after-run.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stats-before-build.log": {
+      "bytes": 7962,
+      "sha256": "1946eaf3a9eac9d68d724ab6858df9334bd08087e31e5692ea09effd5503cf83"
+    },
+    "stats-regression.cpp": {
+      "bytes": 1047,
+      "sha256": "8bddc3e697c493b847ab4512a3ed741af0104d8425dec331ed23b7fb50f31c12"
+    },
+    "stats-regression.json": {
+      "bytes": 1558,
+      "sha256": "e01c14a53e5704a5c874d9d8b63ddbd962452980433ced499d4036c5ecadd590"
+    }
+  },
+  "validationBoundary": "Game startup with legacy tile configuration derived from unchanged original object configuration; original loader and configuration bytes remain unchanged"
+}

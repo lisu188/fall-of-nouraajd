@@ -1,0 +1,50 @@
+{
+  "entries": [
+    {
+      "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
+      "path": "Game.pro",
+      "provenance": "Missing #196 body carried from native-verified #195 reconstruction e53cc0bde800c6d39a4e0b71b24fbb603481ebeb with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing #195 project reconstructed from all52 actual C++ and15 C translation units, all same-commit headers and6 surviving resource manifests under src/lib/res. Preserves every original game/library TU; declares supported CPython3.4 ABI for genuine Python3 C API, not claimed exact historical original flags. Replaces stale unverified pre-layout donor; pending native proof. JSON headers retain qualified lib/json or local includes; adding lib/json globally would shadow glibc features.h and is intentionally avoided. Defines QT_NO_KEYWORDS consistently with surviving Q_SLOT/Q_SIGNAL/Q_EMIT usage, preventing Qt slots macro from altering original Python3 PyType_Slot field.",
+      "sha256": "b57985841c6e3df57221a54f5920bb5ce19b7c2c1c258e83b606cffaf60412c5",
+      "source": "recovery/payloads/reconstructions/9a/9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa-b57985841c6e-Game.pro",
+      "validatedByOriginalCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
+    },
+    {
+      "originalBlob": "909fe69c1c44ab07cbaa303798240d5f5d481e56",
+      "path": "src/gameview.cpp",
+      "provenance": "Missing #196 body carried from native-verified #195 reconstruction fae8263548d0f71e1f752718d15c1803db5d47fd with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing body adapted from accepted earlier QWidget backpack/stats/list layout to exact #195 src paths, typeName and genuine PlayerEquippedView map constructor. Preserves real inventory, actions, character and combat views/signals; not exact original. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/0f/0f1d12502ec20d26023cc1d8a777880d473f1dcb-gameview.cpp\", \"sha256\": \"935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7\"}, {\"path\": \"src/gameview.h\", \"sha256\": \"02fdf02391f19861c882585ec81dec73dceeedab8c81c3e2d2a229d007a822bf\"}] Uses original protected/private Qt signals and slots through the supported metadata connection/invoke API and a local missing-TU QObject refresher, without changing genuine declarations.",
+      "sha256": "7a7884ab19487dcf9320bd8d4ae4b89a6e2ed4f551952f7f24802084913c5c9b",
+      "source": "recovery/payloads/reconstructions/90/909fe69c1c44ab07cbaa303798240d5f5d481e56-7a7884ab1948-gameview.cpp",
+      "validatedByOriginalCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
+    },
+    {
+      "originalBlob": "1635542d44e479a5f3e54a6210ca74cf8cde3e42",
+      "path": "src/map.cpp",
+      "provenance": "Missing #196 body carried from native-verified #195 reconstruction 42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1 with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing combined Map/MapObject/Coords body adapted from accepted #159 real TMX reconstruction and surviving #150 coordinate implementation to exact #195 src/consolidated config/factory/property APIs. Removed obsolete JSON save methods absent from genuine header; retains full authored TMX geometry, entries, objects/properties, real movement/collision/turns and procedural generation. Removed obsolete member animation fields using QObject-owned timeline/animation; generated dungeon uses genuine Teleporter API instead of removed Dungeon class. Unknown unavailable authored object classes are logged. These API adaptations are inferred, not original bytes or parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/recon/f59850bc2948c48c34f05161ff83bf840234b80b\", \"sha256\": \"4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/coords.cpp\", \"sha256\": \"64acf00cab276e850f453b2a7bc5b0cd5f8162d43f46e7288f8354f605fbefd3\"}, {\"path\": \"src/map.h\", \"sha256\": \"c099f25d41447d89115b6e026121ea8f82eef72a2dba433d0ab267a1e7537274\"}] Map::removeObject detaches without deleting, required by surviving #195 Item::onEnter which immediately passes the same pointer to Player::addItem; genuine AnimatedObject/Destroyer owns lifetime. Earlier donor delete-on-remove would make pickups use freed memory; not propagated. Preserve the exact original #150 PlayerAnimation::afterAnimationStep callback body in a local derived animation, restoring entry actions/fight UI and viewport centering at real timeline completion after the original standalone class was removed from #195 headers. Donor /tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/playeranimation.cpp SHA256 7075f62c953976c8704621896d078d044bf06a95ee9a3153d9342d3dd41ba945. Generic timeline alone had omitted these callbacks; causal before/after timer regression accompanies fresh proof.",
+      "sha256": "236bede65f5f4a0cac5d37e9ad84a35c17882399963a5996b7bd0e1b083afb7f",
+      "source": "recovery/payloads/reconstructions/16/1635542d44e479a5f3e54a6210ca74cf8cde3e42-236bede65f5f-map.cpp",
+      "validatedByOriginalCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 196,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 196,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-upper-middle/verify/evidence/cf22cbfcbc9a34bcf64ade4f6d41700c143c459f294411e682f30179aaa8f9d1",
+    "fingerprint": "cf22cbfcbc9a34bcf64ade4f6d41700c143c459f294411e682f30179aaa8f9d1",
+    "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+    "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

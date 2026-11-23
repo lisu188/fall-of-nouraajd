@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "originalBlob": "2b2f2fb5ddff600b35b7cd4f2876877359c9a19f",
+      "path": "CPathFinder.cpp",
+      "provenance": "Missing #349 reconstruction, not exact original. Genuine #348 CPathFinder.h removes old smart-finder member helpers/state. Backports intact surviving #350 CPathFinder.cpp free-helper search algorithm to actual older creature-pointer findPath ABI, with original callers requiring a relative next-step delta. Prior random/dumb algorithms retained. Exact missing #348/#349 algorithms are unknown; this is a documented donor-based implementation. Pending native verification; no gameplay/path parity claim.",
+      "sha256": "195c2bbe2bf9bdac842391604cf8da581486fdfbb8676e7290ec5311ccce4116",
+      "source": "recovery/payloads/reconstructions/2b/2b2f2fb5ddff600b35b7cd4f2876877359c9a19f-CPathFinder.cpp",
+      "validatedByOriginalCommit": "68fe4c08333803ebf226991b79b2e4421c989614"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 142,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 349,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "68fe4c08333803ebf226991b79b2e4421c989614",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/4a8873dd49d96b73df5eeb8dbdd9d8e547ddbecfec2016992c5457709fc23da1",
+    "fingerprint": "4a8873dd49d96b73df5eeb8dbdd9d8e547ddbecfec2016992c5457709fc23da1",
+    "sourceCommit": "68fe4c08333803ebf226991b79b2e4421c989614",
+    "sourceTree": "b58cf2ebd372f8b1b9d13cff3b91655b509ce91d",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

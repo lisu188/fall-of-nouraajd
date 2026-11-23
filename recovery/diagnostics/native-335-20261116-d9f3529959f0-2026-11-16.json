@@ -1,0 +1,48 @@
+{
+  "entries": [
+    {
+      "originalBlob": "114e92ee55dd1e74a4cd2fed2c4db50b00519a74",
+      "path": "CMap.cpp",
+      "provenance": "Missing #335 CMap implementation reconstructed from #333 candidate with only surviving same-commit CMap.h declared handler renames/const removal: getLootHandler/lootHandler/objectHandler, preserving native loading/event/map behavior and exact original headers. Shared missing creature CPP uses reviewed dependent-template dispatch to actual old/new loot API, never an empty fallback. Not exact original.",
+      "sha256": "49df84c88504124c37b63ba47f5a10a518ed7cf8b2bac99a82868e68c250f24a",
+      "source": "recovery/payloads/reconstructions/11/114e92ee55dd1e74a4cd2fed2c4db50b00519a74-CMap.cpp",
+      "validatedByOriginalCommit": "8259ac8f3f95ad87cab0c0970e5c71974480473e"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 136,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 335,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "8259ac8f3f95ad87cab0c0970e5c71974480473e"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "recovery/payloads/resources/da8d4ff1c5c10c6e21131dab10913215eff77024-images.qrc",
+      "tree": "da8d4ff1c5c10c6e21131dab10913215eff77024"
+    }
+  ],
+  "sourceCommit": "8259ac8f3f95ad87cab0c0970e5c71974480473e",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/d9f3529959f0721bd558bbd1b8745e7253cbeecc386f54040fdbad0024251b21",
+    "fingerprint": "d9f3529959f0721bd558bbd1b8745e7253cbeecc386f54040fdbad0024251b21",
+    "sourceCommit": "8259ac8f3f95ad87cab0c0970e5c71974480473e",
+    "sourceTree": "da8d4ff1c5c10c6e21131dab10913215eff77024",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}
