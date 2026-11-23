@@ -29,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **335 commits / 333 trees** against the
-restored inputs: **324 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **338 commits / 336 trees** against the
+restored inputs: **327 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -307,7 +307,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 306 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 309 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -409,10 +409,18 @@ The full fight selection flow and Android runtime remain unverified.
 The replay through #305 and #367 contains 306 commits and preserves the
 previous replay IDs.
 
+Revisions #306–#308 passed pinned Linux builds and startup. The recovered
+map uses the surviving named object index and visitor callback interface.
+A separate #308 Xvfb check moved a monster to a road tile and confirmed that
+its contact fired once, received that monster, and cleared the visitor.
+The carried sparse map is scoped to these early revisions so later Tiled
+map evidence retains its original reconstruction. The replay through #308
+and #367 contains 309 commits and preserves all previous replay IDs.
+
 ## Remaining work
 
-- #306 is the first gap in the replay ancestry. Its named object index and visitor-based event callbacks still need pinned verification. #306–#330 await native acceptance.
+- #309 is the first gap in the replay ancestry. Its reconstructed respawn path still needs pinned verification. #309–#330 await native acceptance.
 - #353–#359 still need native validation. At #353, moving imports below the
   decorators exposed the next failure, a missing ChaosSword definition.
-- The ledger lists 32 catalog commits awaiting native acceptance. Track GitHub
+- The ledger lists 29 catalog commits awaiting native acceptance. Track GitHub
   build, suite, and coverage on the continuation PR.

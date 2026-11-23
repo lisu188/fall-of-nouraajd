@@ -1,0 +1,112 @@
+{
+  "identity": {
+    "implementationSha256": "72372a54cb587e3f5b9ddf93fc2e063da68d3ffe282f7963a118cf8445567899",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318"
+        },
+        "path": "CGameScene.cpp",
+        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd"
+        },
+        "path": "CGameView.cpp",
+        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a"
+        },
+        "path": "CScriptEngine.cpp",
+        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      }
+    ],
+    "visitorCallbacks": {
+      "files": {
+        "CGameScene.cpp": [
+          "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318",
+          "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
+        ],
+        "CGameView.cpp": [
+          "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd",
+          "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
+        ],
+        "CScriptEngine.cpp": [
+          "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a",
+          "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+        ]
+      },
+      "replaySha256": "cdf5851089696019266a88c2da75dedd6ed5ab2d87ab8c6b2cc774ae593a7636",
+      "sourceCommit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318"
+      },
+      "path": "CGameScene.cpp",
+      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd"
+      },
+      "path": "CGameView.cpp",
+      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a"
+      },
+      "path": "CScriptEngine.cpp",
+      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-visitor-callbacks"
+      ],
+      "log": "/tmp/nouraajd-306-visitors-batch/verify/snapshot-nfc28vrz/preparation/visitor-callbacks.log",
+      "name": "visitorCallbacks",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}
