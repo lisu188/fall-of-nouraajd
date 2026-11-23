@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "commit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+      "firstCatalogOrder": 129,
+      "originalBlob": "a70ddfe939a6fd91aec1a5a73050464f75b1688d",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #126 Creature reconstruction to genuine #129 header removing the Creature hover-leave override; original ListItem now owns tooltip hide behavior. New concrete/default/copy policies follow126 provenance; unknown formulas and collection-cast ABI limitations remain. No original changed.",
+      "sha256": "ae5657065e859604520be6233e1b5d90f139f196c885e467fa971963fef47510",
+      "source": "recovery/payloads/reconstructions/a7/a70ddfe939a6fd91aec1a5a73050464f75b1688d-creature.cpp"
+    },
+    {
+      "commit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+      "firstCatalogOrder": 129,
+      "originalBlob": "b4a58e68d4c29bf64898559c5c0f2dd86f498412",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #127 Map reconstruction against genuine #129 unchanged body contract; addTile is newly public for the surviving original MapScene tile drop caller. Existing actual JSON state/map loader and rendering cache retained; generation/unknown missing behavior remains inferred as documented predecessor.",
+      "sha256": "ccbe86ed79c5a92693d711cce04aa3f757d61200838602a8420efd8539197dd0",
+      "source": "recovery/payloads/reconstructions/b4/b4a58e68d4c29bf64898559c5c0f2dd86f498412-map.cpp"
+    },
+    {
+      "commit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+      "firstCatalogOrder": 129,
+      "originalBlob": "7476f6bac498deb69ac2f9eb80963e8cab3c5705",
+      "path": "view/mapview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #124\u2013128 MapView reconstruction and genuine original123 donor to genuine #129 Tile-derived ListItem, actual loadTiles()/tiles palette and original MapScene tile drop path. Creates real configured Tile objects, marks actual drag support, cycles items/buildings/creatures/tiles, and replaces dropped palette prototypes using actual named Tile constructor. Config key enumeration and palette order/clone policy are inferred from actual headers/callers, not recovered original bodies. Monster filtering/default editor policy remains as documented124. No original source changed; startup does not establish palette-control parity.",
+      "sha256": "7f16e052a91981319b5f2f62c4b3dcf09e68bc2d982f7d9629c52f69b617789f",
+      "source": "recovery/payloads/reconstructions/74/7476f6bac498deb69ac2f9eb80963e8cab3c5705-mapview.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "8e10d60c577742ecbd811ad027a8570fdbc8e9b17101a3ce16b47aa684e894a7",
+        "sourceCommit": "bf32a4c93e396bd645769a9957eacd6a75106b62",
+        "sourceTree": "620875cb4254b3c73c14e7793d33671d1a6300b7",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

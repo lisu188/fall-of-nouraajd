@@ -1,0 +1,51 @@
+{
+  "entries": [
+    {
+      "originalBlob": "58f1cf45ae3026623441be92e48d25049a215288",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #339 reconstruction, not exact original. Carries prior inventory implementation with genuine CPlayerView.h CListView/CPlayerInventoryView renames; new CTradeItemsView iterates actual genuine parent CTradePanel::getItems() set, preserving item rendering rather than inventing player-market API. No surviving originals changed; pending native build/startup.",
+      "sha256": "e1f220b689d8127cbccb3b408cf832bb2f32b0937f263e039aacd7c5d88dea91",
+      "source": "recovery/payloads/reconstructions/58/58f1cf45ae3026623441be92e48d25049a215288-CPlayerView.cpp",
+      "validatedByOriginalCommit": "ae762f9c3572c5384c143690da32f8364fa39bcc"
+    },
+    {
+      "originalBlob": "977eb41ed0be6856591477680da1de8525fe18f4",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #339 reconstruction, not exact original. Carries prior item use/equip/drag behavior through genuine same-commit CMouseHandler::handleClick/getClickAction/onClickAction declarations. Mouse event acceptance remains before action dispatch; consumable inventory ownership/events and real drag payload behavior retained. No surviving originals changed; pending native build/startup.",
+      "sha256": "cf4d0b76fa1569ef2364dda336385e06b02b5aa143f115168d5fc8cd4ad06c6a",
+      "source": "recovery/payloads/reconstructions/97/977eb41ed0be6856591477680da1de8525fe18f4-CItem.cpp",
+      "validatedByOriginalCommit": "ae762f9c3572c5384c143690da32f8364fa39bcc"
+    },
+    {
+      "originalBlob": "097236850e1feffb0c0d53a3c12b41eda31dcd3c",
+      "path": "game.pro",
+      "provenance": "Missing #339 reconstruction, not exact original. Prior reconstructed project plus only two genuine newly added CMouseHandler source/header paths. No surviving originals changed; pending native build/startup.",
+      "sha256": "99143e478d7d12f3ca1a7428298cdf0af536b8afaf58307c5b38ae11fe63d858",
+      "source": "recovery/payloads/reconstructions/09/097236850e1feffb0c0d53a3c12b41eda31dcd3c-game.pro",
+      "validatedByOriginalCommit": "ae762f9c3572c5384c143690da32f8364fa39bcc"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 139,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 339,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "ae762f9c3572c5384c143690da32f8364fa39bcc",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/a77b91e6f69be10dba778ce31bfea75b0378fbb6c09362adaba8fff9956b9e6e",
+    "fingerprint": "a77b91e6f69be10dba778ce31bfea75b0378fbb6c09362adaba8fff9956b9e6e",
+    "sourceCommit": "ae762f9c3572c5384c143690da32f8364fa39bcc",
+    "sourceTree": "83d448c9b5cf93ff9fd6a27d8c07a4870ef363ee",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

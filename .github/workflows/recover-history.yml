@@ -12,8 +12,33 @@ on:
       - scripts/history_rootfs.py
       - scripts/history_workbench.py
       - scripts/history_source_prep.py
+      - scripts/history_prepare_console_reader.py
+      - scripts/history_prepare_scene_transition.py
+      - scripts/history_prepare_python_shutdown.py
+      - scripts/history_prepare_trigger_decorator.py
+      - scripts/history_prepare_map_position.py
+      - scripts/history_prepare_panel_transition.py
+      - scripts/history_prepare_text_panel_shutdown.py
+      - scripts/history_prepare_sparse_map_transition.py
+      - scripts/history_prepare_named_event_transition.py
+      - scripts/history_prepare_panel_refresh_transition.py
+      - scripts/history_prepare_effect_transition.py
+      - scripts/history_prepare_resources_transition.py
+      - scripts/history_prepare_script_loader.py
+      - scripts/history_prepare_merged_headers.py
+      - scripts/history_prepare_pathfinder_cache.py
+      - scripts/history_runtime_configs.py
       - scripts/history_prepare_includes.py
+      - scripts/history_prepare_resources.py
+      - scripts/history_prepare_reflection.py
+      - scripts/history_prepare_coordinates.py
+      - scripts/history_prepare_legacy_tiles.py
+      - scripts/history_prepare_maps_manifest.py
+      - scripts/history_prepare_teleporter.py
+      - scripts/history_prepare_legacy_timing.py
       - scripts/history_qmake_compatibility.py
+      - scripts/history_static_lto.py
+      - scripts/history_state_regression.py
       - scripts/verify_history.py
       - tests/test_history_recovery.py
       - tests/test_history_smoke.py
@@ -25,8 +50,37 @@ on:
       - tests/test_history_rootfs.py
       - tests/test_history_workbench.py
       - tests/test_history_source_prep.py
+      - tests/test_history_console_reader.py
+      - tests/test_history_scene_transition.py
+      - tests/test_history_python_shutdown.py
+      - tests/test_history_trigger_decorator.py
+      - tests/test_history_map_position.py
+      - tests/test_history_panel_transition.py
+      - tests/test_history_text_panel_shutdown.py
+      - tests/test_history_sparse_map_transition.py
+      - tests/test_history_named_event_transition.py
+      - tests/test_history_panel_refresh_transition.py
+      - tests/test_history_effect_transition.py
+      - tests/test_history_resources_transition.py
+      - tests/test_history_script_loader.py
+      - tests/test_history_merged_headers.py
+      - tests/test_history_runtime_transitions.py
+      - tests/test_history_resource_preparation.py
+      - tests/test_history_reflection_preparation.py
+      - tests/test_history_coordinate_preparation.py
+      - tests/test_history_legacy_tiles.py
+      - tests/test_history_maps_manifest.py
+      - tests/test_history_teleporter_preparation.py
+      - tests/test_history_legacy_timing.py
+      - tests/test_history_legacy_timing_integration.py
+      - tests/fixtures/history_teleporter/**
+      - tests/fixtures/history-timing-128/**
       - tests/test_history_prepare_includes.py
       - tests/test_history_qmake_compatibility.py
+      - tests/test_history_static_lto.py
+      - tests/test_history_movement_completion.py
+      - tests/fixtures/history-movement-195/**
+      - tests/fixtures/history-state/**
       - tests/test_recovery_workflow.py
 
 permissions:
@@ -53,7 +107,18 @@ jobs:
             tests.test_history_config tests.test_recovery_readme \
             tests.test_history_payloads tests.test_history_resources tests.test_history_rootfs \
             tests.test_history_workbench tests.test_history_source_prep tests.test_history_prepare_includes \
-            tests.test_history_qmake_compatibility
+            tests.test_history_qmake_compatibility tests.test_history_resource_preparation \
+            tests.test_history_reflection_preparation tests.test_history_maps_manifest tests.test_history_coordinate_preparation \
+            tests.test_history_legacy_tiles tests.test_history_teleporter_preparation \
+            tests.test_history_legacy_timing tests.test_history_legacy_timing_integration \
+            tests.test_history_static_lto tests.test_history_movement_completion \
+            tests.test_history_runtime_transitions tests.test_history_merged_headers tests.test_history_console_reader \
+            tests.test_history_scene_transition \
+            tests.test_history_python_shutdown \
+            tests.test_history_trigger_decorator tests.test_history_map_position tests.test_history_panel_transition \
+            tests.test_history_text_panel_shutdown tests.test_history_sparse_map_transition \
+            tests.test_history_named_event_transition tests.test_history_panel_refresh_transition tests.test_history_effect_transition \
+            tests.test_history_resources_transition tests.test_history_script_loader
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

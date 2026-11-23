@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "commit": "84017c9110a182dc9c25eca52576ff97f9a4b76c",
+      "firstCatalogOrder": 116,
+      "originalBlob": "6ae1a8de2c8e6d1d2c89e03f1ad6cb9bb8bf703b",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #115 set-based Player to genuine #116 Player::BackPackObject declaration, original images.qrc backpack.png and original GameView::showCharView public slot. The actual icon child belongs to the real Player, and left-click calls the existing character panel toggle, consuming that UI event. Ownership uses a QGraphicsItem child to preserve value-member lifetime. View anchoring at top center and exact original connection/layout policy are inferred because the body is missing; no neighboring surviving backpack implementation exists through149. getStep/containers/save/combat retain prior provenance; startup does not prove click behavior or gameplay equivalence.",
+      "sha256": "6e92174580f62cb1e54e407b5f5b320690f7ab7572c67123f2205c4472695fdf",
+      "source": "recovery/payloads/reconstructions/6a/6ae1a8de2c8e6d1d2c89e03f1ad6cb9bb8bf703b-player.cpp"
+    },
+    {
+      "commit": "84017c9110a182dc9c25eca52576ff97f9a4b76c",
+      "firstCatalogOrder": 116,
+      "originalBlob": "32c76f68b27dd5a1c61724e2cb1a41fafb83dbb6",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #115 Map reconstruction unchanged; same surviving Map API at #116. Prior explicitly inferred cache radius and unknown original implementation deltas retained.",
+      "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
+      "source": "recovery/payloads/reconstructions/32/32c76f68b27dd5a1c61724e2cb1a41fafb83dbb6-map.cpp"
+    },
+    {
+      "commit": "84017c9110a182dc9c25eca52576ff97f9a4b76c",
+      "firstCatalogOrder": 116,
+      "originalBlob": "5cbd4115d0db676b3a82e26a9f6937fb15ff7017",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Copied genuine surviving immediately preceding #115 6d8b6688d0808565029e6b96e9a52549e80c19aa:view/gameview.cpp; #116 original GameView header only moves the already existing showCharView method into Qt public slots, requiring no implementation change. Missing-source copy formatted to repository style only. Unknown original #116 implementation delta remains unverified; this avoids the generic future donor currently selected for the missing source.",
+      "sha256": "cd5b7358cecdb0fd1a6f1a70a60b7644b792acb67a4f37a1062693655309e90e",
+      "source": "recovery/payloads/reconstructions/5c/5cbd4115d0db676b3a82e26a9f6937fb15ff7017-gameview.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "99405f39281ae54ce51a75f31f69eabec91db1470d78553d82100b6ef27242dc",
+        "sourceCommit": "84017c9110a182dc9c25eca52576ff97f9a4b76c",
+        "sourceTree": "be0c1f9744ef0cb5c276e0ee32cfe8790ae3e504",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}
