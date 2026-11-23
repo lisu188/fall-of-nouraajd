@@ -29,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **302 commits / 300 trees** against the
-restored inputs: **291 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **303 commits / 301 trees** against the
+restored inputs: **292 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -91,6 +91,11 @@ from the #223 bundle. The independent clone passed strict fsck across 273 commit
 and 5,406 objects. Its SHA-256 is
 `42dfa7a45388e2886933b5924287fecb132326ed9e55946f0d5a7d72e1f6b2f6`. The review records are in
 `recovery/mappings/2026-11-23-through-272-prefix*.json`.
+
+The #273 bundle extends the verified ancestry by one revision while preserving
+the 273 previously bundled IDs. Its independent clone passed strict fsck across
+274 commits. Revision #273 uses the preceding compatible map body and a pinned
+build-copy repair for panel iteration and Python shutdown.
 
 The first 65 recovered commits are already ancestors of main through merge commit
 `c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
@@ -297,7 +302,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 273 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 274 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -317,9 +322,8 @@ exported evidence before removing reproducible build scratch.
 
 ## Remaining work
 
-- #273 is the first gap in the replay ancestry. Its current map donor uses
-  headers from a later directory layout. #274–#330 are also unverified.
+- #274 is the first gap in the replay ancestry. #274–#330 await native acceptance.
 - #353–#359 still need native validation. At #353, moving imports below the
   decorators exposed the next failure, a missing ChaosSword definition.
-- The ledger lists 65 catalog commits awaiting native acceptance. Track GitHub
+- The ledger lists 64 catalog commits awaiting native acceptance. Track GitHub
   build, suite, and coverage on the continuation PR.

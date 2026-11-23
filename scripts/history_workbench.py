@@ -267,6 +267,7 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     if (
         commit == vh.source_prep.console_prep.COMMIT
         or commit in vh.source_prep.scene_prep.PINS
+        or commit == vh.source_prep.panel_prep.COMMIT
         or commit in vh.source_prep.shutdown_prep.TARGETS
         or commit in (
             vh.source_prep.console_prep.COMMIT, vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT
@@ -789,6 +790,7 @@ def progress() -> None:
                 commit in (vh.source_prep.cache_prep.COMMIT, vh.source_prep.console_prep.COMMIT)
                 or commit in vh.runtime_configs.INPUT_PINS
                 or commit in vh.source_prep.scene_prep.PINS
+                or commit == vh.source_prep.panel_prep.COMMIT
                 or commit in vh.source_prep.shutdown_prep.TARGETS
                 or commit in (vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT)
             )
@@ -843,6 +845,8 @@ def progress() -> None:
                 item["buildCompatibility"] = ["sceneTransition"]
             if commit in vh.source_prep.shutdown_prep.TARGETS:
                 item["buildCompatibility"] = ["pythonShutdown"]
+            if commit == vh.source_prep.panel_prep.COMMIT:
+                item["buildCompatibility"] = ["panelTransition"]
             if commit == vh.source_prep.position_prep.COMMIT:
                 item["buildCompatibility"] = ["mapPosition"]
             if commit == vh.source_prep.trigger_prep.COMMIT:

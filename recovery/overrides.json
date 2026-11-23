@@ -98531,6 +98531,13 @@
       "provenance": "content reconstruction of the BFG-removed original; include the complete TMX map type required by this startup reconstruction",
       "sha256": "1d8245d11db6ddbb3ff6788de9fc5ef5baf20823df94aeef37f194669c7295fa",
       "source": "payloads/reconstructions/89/8965c542-gamescene.cpp"
+    },
+    {
+      "originalBlob": "f8687ebfb3ac31cef9bdee8534e6e2a0f1893657",
+      "path": "game/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carry preceding verified CMap body into the compatible interface before later GUI-handler implementation",
+      "sha256": "c11ddc258127c43e98acaae58f20d21460711acfa354715af949b1f96f3665b4",
+      "source": "payloads/reconstructions/f8/f8687ebfb3ac31cef9bdee8534e6e2a0f1893657-CMap.cpp"
     }
   ],
   "schemaVersion": 1

@@ -27,6 +27,7 @@ try:
     from scripts import history_prepare_python_shutdown as shutdown_prep
     from scripts import history_prepare_trigger_decorator as trigger_prep
     from scripts import history_prepare_map_position as position_prep
+    from scripts import history_prepare_panel_transition as panel_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -43,6 +44,7 @@ except ModuleNotFoundError:
     import history_prepare_python_shutdown as shutdown_prep
     import history_prepare_trigger_decorator as trigger_prep
     import history_prepare_map_position as position_prep
+    import history_prepare_panel_transition as panel_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -322,6 +324,7 @@ def prepareSources(
     child_cache = source_commit == cache_prep.COMMIT
     scene_transition = source_commit in scene_prep.PINS
     release_python_handles = source_commit in shutdown_prep.TARGETS
+    panel_transition = source_commit == panel_prep.COMMIT
     map_position = source_commit == position_prep.COMMIT
     trigger_decorator = source_commit == trigger_prep.COMMIT
     console_reader = source_commit == console_prep.COMMIT
@@ -369,6 +372,7 @@ def prepareSources(
         and not release_python_handles
         and not trigger_decorator
         and not map_position
+        and not panel_transition
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -601,6 +605,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if panel_transition:
+        panel_prep.apply(source_root)
+        identity = panel_prep.identity()
+        result["identity"]["panelTransition"] = identity
+        log = output_root / "panel-transition.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "panelTransition",
+            "command": ["history_source_prep.py", "prepare-panel-transition"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -693,6 +710,10 @@ def prepareSources(
                     entry["purpose"] = scene_prep.PURPOSE
         if release_python_handles:
             next(entry for entry in outputs if entry["path"] == shutdown_prep.TARGETS[source_commit])["purpose"] = shutdown_prep.PURPOSE
+        if panel_transition:
+            for entry in outputs:
+                if entry["path"] in panel_prep.PINS:
+                    entry["purpose"] = panel_prep.PURPOSE
         if map_position:
             next(entry for entry in outputs if entry["path"] == position_prep.TARGET)["purpose"] = position_prep.PURPOSE
         if trigger_decorator:
