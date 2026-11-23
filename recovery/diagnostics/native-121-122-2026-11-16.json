@@ -1,0 +1,70 @@
+{
+  "entries": [
+    {
+      "commit": "54fc8adfbe133d3eb4b92bc2a3770b5eafceaeee",
+      "firstCatalogOrder": 121,
+      "originalBlob": "cde7c6280a57ea92707012bf06f612fc9f513cff",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #120 Map reconstruction to genuine #121 MapObject default constructor declaration and original new empty Building::Building() caller. Delegates to actual existing four-argument construction, initializing map/coordinates/animation/timer/tooltip ownership at origin with default Qt layer0. Exact missing default coordinate/layer policy is inferred; no class-specific fabricated objects. Prior static configured size/save/movement provenance retained; originals unchanged.",
+      "sha256": "65d388f5969933d5e8cf30a75b14fc8cd18cfbfdb670cf2f7ff6d5abdbe7a461",
+      "source": "recovery/payloads/reconstructions/cd/cde7c6280a57ea92707012bf06f612fc9f513cff-map.cpp"
+    },
+    {
+      "commit": "d8f5b95be817631a31ed0fe13ec64730613a56a4",
+      "firstCatalogOrder": 122,
+      "originalBlob": "96690549347efb60c125951eb740b35f5b2bff6e",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cde7c6280a57ea92707012bf06f612fc9f513cff (previous version of map/map.cpp)",
+      "sha256": "65d388f5969933d5e8cf30a75b14fc8cd18cfbfdb670cf2f7ff6d5abdbe7a461",
+      "source": "recovery/payloads/reconstructions/96/96690549347efb60c125951eb740b35f5b2bff6e-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 1,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "7333ef99aa9728647dc8671988ae188694f3e6557986aa519741d27767803b1a",
+        "sourceCommit": "54fc8adfbe133d3eb4b92bc2a3770b5eafceaeee",
+        "sourceTree": "ec5491ce057df1acb04bb77c08bf0850a2b2e811",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0aa99d69287bd31fcbb2ad68ab03b7e33cad67cd3a5324cc1c9c402b08a9e1e8",
+        "sourceCommit": "d8f5b95be817631a31ed0fe13ec64730613a56a4",
+        "sourceTree": "2a4ef143c32d82865d342555a6fbca677b0c3a6c",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

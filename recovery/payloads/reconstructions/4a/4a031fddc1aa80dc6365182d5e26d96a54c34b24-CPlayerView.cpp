@@ -1,0 +1,234 @@
+#include "CMap.h"
+#include "CCreature.h"
+#include "CItemSlot.h"
+#include "CGameScene.h"
+#include "CPlayerView.h"
+
+#include <qpainter.h>
+#include <QWidget>
+#include <QDrag>
+#include <QMimeData>
+#include <src/CGameScene.h>
+
+CPlayerListView::CPlayerListView ( std::set<CMapObject *, Comparer<CMapObject>> *MapObjects )
+	: items ( MapObjects ) {
+	this->setZValue ( 3 );
+	curPosition = 0;
+	right = new CScrollObject ( this, true );
+	left = new CScrollObject ( this, false );
+	x = 4, y = 4;
+	pixmap.load ( ":/images/item.png" );
+	pixmap = pixmap.scaled ( CMap::getTileSize(), CMap::getTileSize(),
+	                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
+	left->setPos ( 0, y * CMap::getTileSize() );
+	right->setPos ( ( x - 1 ) * CMap::getTileSize(), y * CMap::getTileSize() );
+	update();
+}
+
+void CPlayerListView::update() {
+	if ( curPosition < 0 ) {
+		curPosition = 0;
+	}
+	if ( items->size() - x * y < curPosition ) {
+		curPosition = items->size() - x * y;
+	}
+	QList<QGraphicsItem *> list = childItems();
+	QList<QGraphicsItem *>::Iterator childIter;
+	for ( childIter = list.begin(); childIter != list.end(); childIter++ ) {
+		if ( *childIter == right || *childIter == left ) {
+			continue;
+		}
+		( *childIter )->setParentItem ( 0 );
+		( *childIter )->setVisible ( false );
+	}
+	std::set<CMapObject *, Comparer<CMapObject>>::iterator itemIter;
+	int i = 0;
+	for ( itemIter = items->begin(); itemIter != items->end(); i++, itemIter++ ) {
+		CMapObject *item = *itemIter;
+		if ( item->getMap() ) { //SigSegv for interaction
+			item->setMap ( item->getMap()->getScene()->getPlayer()->getMap() );
+		}
+		item->setVisible ( false );
+		item->setParentItem ( 0 );
+		int position = i - curPosition;
+		if ( position >= 0 && position < x * y ) {
+			item->setParentItem ( this );
+			item->setNumber ( position, x );
+		}
+	}
+	right->setVisible ( items->size() > x * y );
+	left->setVisible ( items->size() > x * y );
+}
+
+CMap *CPlayerListView::getMap() {
+	if ( items->size() ) {
+		return ( *items->begin() )->getMap();
+	}
+	return 0;
+}
+
+void CPlayerListView::setDraggable() {
+	this->setFlag ( QGraphicsItem::ItemIsMovable );
+}
+
+QRectF CPlayerListView::boundingRect() const {
+	return QRect ( 0, 0, pixmap.size().width() * x,
+	               pixmap.size().height() * ( items->size() > x * y ? y + 1 : y ) );
+}
+
+void CPlayerListView::paint ( QPainter *painter,
+                             const QStyleOptionGraphicsItem *option,
+                             QWidget *widget ) {
+	for ( int i = 0; i < x; i++ )
+		for ( int j = 0; j < y; j++ ) {
+			painter->drawPixmap ( i * CMap::getTileSize(), j * CMap::getTileSize(),
+			                      pixmap );
+		}
+}
+
+void CPlayerListView::updatePosition ( int i ) {
+	curPosition += i;
+	update();
+}
+
+void CPlayerListView::setXY ( int x, int y ) {
+	this->x = x;
+	this->y = y;
+}
+std::set<CMapObject *, Comparer<CMapObject>> *CPlayerListView::getItems() const {
+	return items;
+}
+
+void CPlayerListView::setItems ( std::set<CMapObject *, Comparer<CMapObject>> *value ) {
+	items = value;
+	curPosition = 0;
+	update();
+}
+
+void CPlayerListView::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
+	CItem *item = ( CItem * ) ( event->source() );
+	event->acceptProposedAction();
+	item->onUse ( this->getMap()->getScene()->getPlayer() );
+}
+
+#include "CGameScene.h"
+#include "CPlayerView.h"
+
+#include <src/CPlayerView.h>
+
+#include "CConfigurationProvider.h"
+
+CScrollObject::CScrollObject ( CPlayerListView *stats, bool isRight ) {
+	this->isRight = isRight;
+	this->setZValue ( 1 );
+	this->stats = stats;
+	int size = CMap::getTileSize();
+	if ( !isRight ) {
+		this->setAnimation ( "images/arrows/left/", size );
+	} else {
+		this->setAnimation ( "images/arrows/right/", size );
+	}
+	setParentItem ( stats );
+}
+
+void CScrollObject::setVisible ( bool visible ) {
+	if ( visible && this->scene() != stats->scene() ) {
+		stats->scene()->addItem ( this );
+	}
+	QGraphicsItem::setVisible ( visible );
+}
+
+void CScrollObject::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
+	if ( isRight ) {
+		stats->updatePosition ( 1 );
+	}
+	if ( !isRight ) {
+		stats->updatePosition ( -1 );
+	}
+}
+
+#include "CPlayerView.h"
+#include "CItem.h"
+#include "CMap.h"
+
+CPlayerEquippedView::CPlayerEquippedView ( std::map<int, CItem *> *equipped )
+	: equipped ( equipped ) {
+	for ( int i = 0; i < equipped->size(); i++ ) {
+		CItemSlot *slot = new CItemSlot ( i, equipped );
+		slot->setParentItem ( this );
+		slot->setPos ( i % 4 * CMap::getTileSize(), i / 4 * CMap::getTileSize() );
+		itemSlots.push_back ( slot );
+	}
+	update();
+}
+
+QRectF CPlayerEquippedView::boundingRect() const {
+	return QRectF ( 0, 0, 4 * CMap::getTileSize(), 2 * CMap::getTileSize() );
+}
+
+void CPlayerEquippedView::paint ( QPainter *painter,
+                                 const QStyleOptionGraphicsItem *option,
+                                 QWidget *widget ) {}
+
+void CPlayerEquippedView::update() {
+	for ( std::list<CItemSlot *>::iterator it = itemSlots.begin();
+	        it != itemSlots.end(); it++ ) {
+		( *it )->update();
+	}
+	QGraphicsObject::update();
+}
+
+#include "CPlayerView.h"
+
+#include "CGameScene.h"
+#include <qpainter.h>
+#include <sstream>
+#include "CBuilding.h"
+
+PlayerStatsView::PlayerStatsView() {
+	this->player = player;
+	setFixedSize ( 250, 75 );
+}
+
+void PlayerStatsView::paintEvent ( QPaintEvent * ) {
+	if ( !player ) {
+		return;
+	}
+	QPainter painter;
+	painter.begin ( this );
+	painter.setRenderHint ( QPainter::Antialiasing );
+	QTextOption opt ( Qt::AlignCenter );
+	float barx = 250;
+	float bary = 25;
+	painter.fillRect ( 0, 0, barx, bary * 3, QColor ( "GREEN" ) );
+	std::ostringstream hpStream;
+	hpStream << player->hp;
+	hpStream << "/";
+	hpStream << player->hpMax;
+	painter.fillRect ( 0, bary * 0, barx * player->getHpRatio() / 100.0, bary,
+	                   QColor ( "RED" ) );
+	painter.drawText ( QRectF ( 0, bary * 0, barx, bary ), hpStream.str().c_str(),
+	                   opt );
+	std::ostringstream manaStream;
+	manaStream << player->mana;
+	manaStream << "/";
+	manaStream << player->manaMax;
+	painter.fillRect ( 0, bary * 1, barx * player->getManaRatio() / 100.0, bary,
+	                   QColor ( "BLUE" ) );
+	painter.drawText ( QRectF ( 0, bary * 1, barx, bary ), manaStream.str().c_str(),
+	                   opt );
+	std::ostringstream expStream;
+	expStream << player->exp;
+	expStream << "/";
+	expStream << ( player->level ) * ( player->level + 1 ) * 500;
+	painter.fillRect ( 0, bary * 2, barx * player->getExpRatio() / 100.0, bary,
+	                   QColor ( "YELLOW" ) );
+	painter.drawText ( QRectF ( 0, bary * 2, barx, bary ), expStream.str().c_str(),
+	                   opt );
+	painter.end();
+}
+
+void PlayerStatsView::setPlayer ( CPlayer *value ) {
+	player = value;
+	connect ( player, SIGNAL ( statsChanged() ), this, SLOT ( update() ) );
+}

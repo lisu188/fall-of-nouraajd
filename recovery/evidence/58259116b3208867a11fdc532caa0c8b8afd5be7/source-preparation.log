@@ -1,0 +1,16 @@
+
+=== pythonEffects ===
+{
+  "files": {
+    "CGameView.cpp": [
+      "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
+      "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
+    ],
+    "CScriptEngine.cpp": [
+      "0b0052b4d226433d983f8746ca714c0eb42ccb5d92b3f64ee1e56fe951882267",
+      "557009619927f7fae3b0e850cad460411d63d58ec8b7976c9c8462ee85029719"
+    ]
+  },
+  "replaySha256": "187ec0830d5915d4278b79a8d5ada4bbec22f4e7f31df708a20c30d64f8006a9",
+  "sourceCommit": "58259116b3208867a11fdc532caa0c8b8afd5be7"
+}

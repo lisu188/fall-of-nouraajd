@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "eventLoop": true,
+    "map": true,
+    "player": true,
+    "renderedFrame": true
+  },
+  "frame": {
+    "height": 718,
+    "path": "/tmp/nouraajd-check250/verify/snapshot-pmprewxz/smoke/startup.png",
+    "sha256": "62de3cd67869ba7a9fd99e3e42192a6db68b0c0acc1d31b59c9f161a710c6998",
+    "width": 1278
+  },
+  "mode": "game",
+  "reason": "",
+  "schemaVersion": 1,
+  "status": "ready"
+}

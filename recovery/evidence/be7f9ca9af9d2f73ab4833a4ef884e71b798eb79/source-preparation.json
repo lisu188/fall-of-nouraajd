@@ -1,0 +1,84 @@
+{
+  "identity": {
+    "implementationSha256": "6127605a708465f4996c98b71d1244bd6112a08f94d2bbe2fbe525562037e825",
+    "importHook": {
+      "files": {
+        "CGameView.cpp": [
+          "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+          "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+        ],
+        "CScriptEngine.cpp": [
+          "e843b12bb0260eeefec7582f5f910036a53aabd68426c8d7b4b3a2ada7d489b5",
+          "1ea9ed0fb2ec7d3872fa42e7b1d8bda4a3ac0eb7261fc3a7f0ba33bdc381af96"
+        ]
+      },
+      "replaySha256": "0490940735b1f9da977ede7411fe17e7840c77861f1c21b9818e9eb7001a86e1",
+      "sourceCommit": "be7f9ca9af9d2f73ab4833a4ef884e71b798eb79"
+    },
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7"
+        },
+        "path": "CGameView.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "1ea9ed0fb2ec7d3872fa42e7b1d8bda4a3ac0eb7261fc3a7f0ba33bdc381af96"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "e843b12bb0260eeefec7582f5f910036a53aabd68426c8d7b4b3a2ada7d489b5"
+        },
+        "path": "CScriptEngine.cpp",
+        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7"
+      },
+      "path": "CGameView.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "1ea9ed0fb2ec7d3872fa42e7b1d8bda4a3ac0eb7261fc3a7f0ba33bdc381af96"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "e843b12bb0260eeefec7582f5f910036a53aabd68426c8d7b4b3a2ada7d489b5"
+      },
+      "path": "CScriptEngine.cpp",
+      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-import-hook"
+      ],
+      "log": "/tmp/nouraajd-287-import-final/verify/snapshot-0q2zj_uj/preparation/import-hook.log",
+      "name": "importHook",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

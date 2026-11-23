@@ -1,0 +1,114 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "c7ca8d4a0a55393a18473c17c08befb555c3199c0fb468255f53c61355d55d11"
+    },
+    "startup.log": {
+      "bytes": 2724,
+      "sha256": "5656f868c4578ba71a19b35b1873ea67f2629905308dad986255cbd384e0f381"
+    },
+    "startup.png": {
+      "bytes": 170193,
+      "sha256": "c059f8c9156fd5ac3b5fb817be155c31e911af377c0e29f4120ac00862bf9aaf"
+    }
+  },
+  "catalogIndex": 259,
+  "entries": [
+    {
+      "originalBlob": "1852ba9d4689f6cebcce47680c86b0b579748f89",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CPlayerView.h is byte-identical; actual PNG paths and initialized stats-view pointer retained. The actual #259 arrow assets are directory/0.png, unlike #260 flat PNGs; retain directory-slash paths after the native startup failure exposed this boundary.",
+      "sha256": "9cd69112a7a81ef2db049acbbfaa2b61d34ebb57b4c9f11c93bbc119d808d32e",
+      "source": "recovery/payloads/reconstructions/18/1852ba9d4689f6cebcce47680c86b0b579748f89-CPlayerView.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "25e5e0271690584dff5aeaa1f00de5e7535a28cf",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CPathFinder.h is byte-identical; cardinal/random/cost-field behavior and performance remain unverified.",
+      "sha256": "5b2ac46cc066dfa55c481777dff162ffd9c039052a887ce541f5ff2e5be3c7da",
+      "source": "recovery/payloads/reconstructions/25/25e5e0271690584dff5aeaa1f00de5e7535a28cf-CPathFinder.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "2b9ab73b866e9b6c8f6252dcea6bb2d86a618ba5",
+      "path": "src/Stats.h",
+      "provenance": "Infer missing #258\u2013259 Stats.h from nearest pre-deletion Stats header plus all22 exact fields emitted by genuine #257 generator/descriptors (retained generated-prop.h). Inline actual PROP rows using same-commit original Util.h macro; gen/ was genuinely deleted in #258, so no missing generated include remains. Preserve older int getMain/pointer-main Stats API, unlike #260 QString getMain/getMainValue. Not exact original source.",
+      "sha256": "ada9d5ff7f657ebd03350f6bc83d04e6409d2b16143682f6fd480bdec1b9acaa",
+      "source": "recovery/payloads/reconstructions/2b/2b9ab73b866e9b6c8f6252dcea6bb2d86a618ba5-Stats.h",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "8c99e7b9d7a511b8314e43202e7aa430460f1cbc",
+      "path": "src/GameScript.cpp",
+      "provenance": "Retain reconstructed missing #258\u2013259 Boost.Python module and exact init_game/Python2.7 ABI. Actual target script imports Interaction and calls Stats.getDamage; expose real CInteraction alias and genuine generated Stats getter, as native-proven #260 does. No stand-in or no-op binding.",
+      "sha256": "0c201fdcd291f6ab907524c9010dcf955a6487567edad02a44e53d813b94c7fc",
+      "source": "recovery/payloads/reconstructions/8c/8c99e7b9d7a511b8314e43202e7aa430460f1cbc-GameScript.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "8d5b72a24089899954852a9ace26217a7c95d8e4",
+      "path": "src/CMapObject.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original #259 CMapObject.h lacks the #260 explicit destructor declaration; omit that definition. Preserve genuine four-argument moveTo/no-argument callbacks/Tmx property APIs.",
+      "sha256": "4747ca05f88b4466c56f4007ead98ec589e20baa03021006469cc8bdf5f18008",
+      "source": "recovery/payloads/reconstructions/8d/8d5b72a24089899954852a9ace26217a7c95d8e4-CMapObject.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "961203efe5c083e5d4ca2a29f0dad37071fd5192",
+      "path": "src/CCreature.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Reconstructed combined header differs only by genuine CPlayer(CMap*,QString) constructor; implement delegation/map/load behavior. Use original int Stats::getMain rather than future getMainValue and apply actual main-stat selector explicitly. Keep declared null equipment slots.",
+      "sha256": "8a77b93ea5ff217ca44aef908f1ddfbc162b2dfde79b9e085bdc7f47d13d7643",
+      "source": "recovery/payloads/reconstructions/96/961203efe5c083e5d4ca2a29f0dad37071fd5192-CCreature.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "9631c0f070eec913f47a3b5b8f0404a0a42a321f",
+      "path": "src/CObjectHandler.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CObjectHandler/CTypeHandler APIs are byte-identical; support actual flat and nested object descriptors, no stand-in types. Native #259 clean-exit regression and diagnostic backtrace exposed QWidget destruction through an invalid non-widget QObject parent. Actual CAnimatedObject inherits QWidget, so give it the genuine owning CGameView QWidget; graphics ownership remains in original scene/item hierarchy.",
+      "sha256": "382c6fb7e97ebf142cb4bb64e067afad8d0403b424b99c5dcae7092df1678515",
+      "source": "recovery/payloads/reconstructions/96/9631c0f070eec913f47a3b5b8f0404a0a42a321f-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "a5bd0c343ccedc175855b76239bd468010a470c2",
+      "path": "src/CGameView.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CGameView API is unchanged apart from virtual destructor annotation. Original #258\u2013259 CGameScene has no explicit map-owning destructor (introduced in #260). Destroy its owned map before graphics-scene clearing so CMap mapObjects cannot contain already-deleted graphics items during QObject child cleanup.",
+      "sha256": "ef33bcda0346938dbb034aacd500513d5b8c2d34c6dd1ee1172b7194e00a7b0c",
+      "source": "recovery/payloads/reconstructions/a5/a5bd0c343ccedc175855b76239bd468010a470c2-CGameView.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "b2b8e3310ec27589e5a6878be9919bb815942b88",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CGamePanel.h is byte-identical; actual panel interfaces retained.",
+      "sha256": "17806b756b02289e1f732cd9aeedce54a77ac0dd5a8cab691fbe97fd0b42ce89",
+      "source": "recovery/payloads/reconstructions/b2/b2b8e3310ec27589e5a6878be9919bb815942b88-CGamePanel.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    },
+    {
+      "originalBlob": "b6ca211b1ba2c5a6a02491f90af4fa427c4e2971",
+      "path": "src/CMap.cpp",
+      "provenance": "Infer missing #258\u2013259 source from native-verified adjacent #260 reconstruction after checking same-commit original headers/callers; preserve every surviving input. Original CMap API is unchanged apart from virtual destructor annotation. Actual Tmx property guard and bounded layer/object semantics retained; procedural behavior remains inferred.",
+      "sha256": "91f1aa2add767fd56ee3506235e30ba5ab22e8712df1f043a34af26e2e40b588",
+      "source": "recovery/payloads/reconstructions/b6/b6ca211b1ba2c5a6a02491f90af4fa427c4e2971-CMap.cpp",
+      "validatedByOriginalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6"
+    }
+  ],
+  "fingerprint": "5e6ea97918b830ec821c757dc80a512127565099187b24cecbf6ff1efae07aa8",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "8211cbabafab56a5f2115dc160939c0ab6d054a45928d5829ee06c5952838ef5",
+  "originalCommit": "058f240a56b188ae5a3605395c77cff2c5a3b8a6",
+  "regressions": {
+    "after": "Both older-era ownership corrections together passed ordinary full build/map/player/renderedFrame/cleanExit. #260 factory remains byte-identical to its previously verified original-base-specific reconstruction.",
+    "before": "Missing gen/prop.h first prevented compilation; after source restoration, owner correction alone failed clean exit and map-before-scene correction alone failed clean exit.",
+    "isolatedMapOnlyFailureFingerprint": "229a3e0da5dc1aa286644ef5018e771739af0d8e0424cc00f38bedc7684c9e6c",
+    "untouchedOriginalBoundary": "Original #258\u2013259 CAnimatedObject inherits QWidget plus QGraphicsPixmapItem; #260 changes to QGraphicsObject. Original #257 factory supplies the non-widget QObject-parent donor; missing #258\u2013259 factories need valid QWidget ownership."
+  }
+}

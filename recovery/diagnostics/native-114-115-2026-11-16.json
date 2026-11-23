@@ -1,0 +1,109 @@
+{
+  "entries": [
+    {
+      "commit": "1b2eb449914cdff38292b1449b4608957b349145",
+      "firstCatalogOrder": 114,
+      "originalBlob": "dd8e45132dbf21ef72603e2a0bfddcffb84b4977",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing Game.pro reconstructed from the same-tree object_script.Game.Debug compiled object list and the nearest intact 84017c91 Game.pro settings. Native GCC first failed in unchanged view/gameview.h:26 because its CharView pointer has no declaration. Inferred project-only build compatibility force-includes the same-commit surviving view/charview.h (SHA-256 3a46107f0f2fa4248ee3ae3bd84044c797fde799859d617eccff8a0eb2628d18) with QMAKE_CXXFLAGS += -include $$PWD/view/charview.h. No surviving header, implementation, configuration or resource bytes are changed. Acceptance is compilation and genuine game startup with this reconstructed-project include repair; unchanged authored build/startup and historical gameplay equivalence remain unverified. First failure and original input hashes retained in native-early/failures/114-first-build/diagnostic.json. The same missing project blob also covers #115; includes genuine view/charview.cpp, which its original GameView now constructs even though the retained older object_script omits that source. At #114 the extra real empty constructor is unused; no original implementation is synthesized. This repaired project is build compatibility in both trees.",
+      "sha256": "9f999842fd25e02acf2f46ce4598811f304c447624f50005ed1a673fc9d78389",
+      "source": "recovery/payloads/reconstructions/dd/dd8e45132dbf21ef72603e2a0bfddcffb84b4977-Game.pro"
+    },
+    {
+      "commit": "6d8b6688d0808565029e6b96e9a52549e80c19aa",
+      "firstCatalogOrder": 115,
+      "originalBlob": "d69a34617bc5de3e9d83601c3a8e76fb2ef4b1fc",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted the validated #114 Creature reconstruction to genuine #115 set-based inventory/equipment/actions/effects and loot declarations, matching original Monster::getLoot, PlayerListView and item callers. Set insertion/erase replace list mutation; adding a loot container transfers its elements as the previous merge did. Implements actual declared getEquipped/getExp accessors. Earlier inferred combat/stat formulas and save schema retained; original internal delta unavailable.",
+      "sha256": "92e8cd504a41d309120e4b366b4346fcbe2fea132c396d1d0e79cf81f6078523",
+      "source": "recovery/payloads/reconstructions/d6/d69a34617bc5de3e9d83601c3a8e76fb2ef4b1fc-creature.cpp"
+    },
+    {
+      "commit": "6d8b6688d0808565029e6b96e9a52549e80c19aa",
+      "firstCatalogOrder": 115,
+      "originalBlob": "24e7b877bed88d78f4fda15df1bfaa7e78d487d4",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted the validated #114 Player reconstruction to genuine #115 std::set loot/inventory/actions/equipment and original PlayerListView(std::set<ListItem*>*). Uses per-player sets of actual base-class pointers for view collections, avoiding reinterpretation of incompatible standard container types. Populates view sets from real owned items/actions before original panels update. The exact original layout/refresh policy remains inferred; no fake items or player objects.",
+      "sha256": "0238001692c1109aac7cbf16ce7f96111cd1d998c74430ac12cdacd8d680b8cd",
+      "source": "recovery/payloads/reconstructions/24/24e7b877bed88d78f4fda15df1bfaa7e78d487d4-player.cpp"
+    },
+    {
+      "commit": "6d8b6688d0808565029e6b96e9a52549e80c19aa",
+      "firstCatalogOrder": 115,
+      "originalBlob": "8460dd5f7a70bce05e7add86fda814232bfb45a4",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #114 Map reconstruction to genuine #115 header removal of Map::show and cacheSize member. Removed obsolete show body; retains the immediately preceding original cache radius25 as a local ensureSize policy because the missing body gives no evidence for a new viewport/radius rule. Rendering, map state and object traversal remain real. Radius policy and prior unknown implementation deltas are explicitly inferred.",
+      "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
+      "source": "recovery/payloads/reconstructions/84/8460dd5f7a70bce05e7add86fda814232bfb45a4-map.cpp"
+    },
+    {
+      "commit": "6d8b6688d0808565029e6b96e9a52549e80c19aa",
+      "firstCatalogOrder": 115,
+      "originalBlob": "df89ff055df427f5fed56b631a812c62a42a40ab",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #114 Scene reconstruction to genuine #115 getStep/getMap declarations moved out of line. Returns the immediately preceding original inline step100 and actual owned map; real inherited mouse movement/save/startup behavior unchanged. Original internal delta unavailable.",
+      "sha256": "f4f4df8be4cd540a4a7062c32cf730d2e6d3ab901ee7d0fbf1b6dcc50effa2f1",
+      "source": "recovery/payloads/reconstructions/df/df89ff055df427f5fed56b631a812c62a42a40ab-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Compilation and genuine game startup using a reconstructed missing Game.pro that force-includes the genuine same-tree CharView header and includes its genuine implementation; no surviving original file is changed. This is project build compatibility, not an unchanged authored build. Historical gameplay parity remains unverified.",
+    "buildCompatibility": {
+      "additionalGenuineSource": "view/charview.cpp",
+      "boundary": "Compilation and genuine game startup using a reconstructed missing Game.pro that force-includes the genuine same-tree CharView header and includes its genuine implementation; no surviving original file is changed. This is project build compatibility, not an unchanged authored build. Historical gameplay parity remains unverified.",
+      "flags": [
+        "QMAKE_CXXFLAGS += -include $$PWD/view/charview.h"
+      ],
+      "originalBlob": "dd8e45132dbf21ef72603e2a0bfddcffb84b4977",
+      "projectSha256": "9f999842fd25e02acf2f46ce4598811f304c447624f50005ed1a673fc9d78389",
+      "type": "reconstructedMissingProject"
+    },
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 2
+    },
+    "proofs": [
+      {
+        "buildCompatibility": "reconstructedMissingProject",
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "0443fb43d8fab115a25034621176070364e0d061b91c3bb11f93784f543821b9",
+        "sourceCommit": "1b2eb449914cdff38292b1449b4608957b349145",
+        "sourceTree": "114681828078c326b72252551abc6b4e46775d26",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "buildCompatibility": "reconstructedMissingProject",
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "d7af713d354cb1b4e731a62d528947124075e44fe1827ea6bd54dfbe3b57732d",
+        "sourceCommit": "6d8b6688d0808565029e6b96e9a52549e80c19aa",
+        "sourceTree": "5d1456cfdabfad51681138ea1c663cea35dee0e0",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

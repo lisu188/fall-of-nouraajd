@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "commit": "5e000dca02a17e179719d99ae93d31687c9d2244",
+      "firstCatalogOrder": 119,
+      "originalBlob": "98850cf354ca7e6994d2f37b7783a258ce4e9437",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #118 Creature to genuine #119 getActions getter and inventoryChanged/skillsChanged/equippedChanged signals, which match original PlayerListView Qt slots and new GameView-owned lists. Returns actual owned actions and emits real moc-generated signals after actual collection changes; original Player.cpp remains untouched. Prior inferred formulas/save schema and unknown signal timing remain explicit.",
+      "sha256": "1301a6e9522580949962938c1ca546f3155573857b03ea5c8f3eea69f65715a5",
+      "source": "recovery/payloads/reconstructions/98/98850cf354ca7e6994d2f37b7783a258ce4e9437-creature.cpp"
+    },
+    {
+      "commit": "5e000dca02a17e179719d99ae93d31687c9d2244",
+      "firstCatalogOrder": 119,
+      "originalBlob": "ec097c57481272f5ed99b7e675a3ef6e8669ff5b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #116\u2013118 Map reconstruction unchanged; same surviving API at #119. Previous inferred cache radius and unknown internal deltas retained.",
+      "sha256": "552d5b3460d49131f2da0bc8e17a7e3a17c58374938d45f8c0f2fd19c0174612",
+      "source": "recovery/payloads/reconstructions/ec/ec097c57481272f5ed99b7e675a3ef6e8669ff5b-map.cpp"
+    },
+    {
+      "commit": "5e000dca02a17e179719d99ae93d31687c9d2244",
+      "firstCatalogOrder": 119,
+      "originalBlob": "824c9adea3bae16566a804dd9becd3ce2f102f5a",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #118 View (derived from genuine #117 source) to genuine #119 GameView-owned inventory/skill/equipment list pointers, Creature actual getters/new signals, and intact Player.cpp that no longer owns those views. Actual base-pointer view sets are refreshed from the real player on real collection-change signals, avoiding reinterpretation of incompatible containers. Original PlayerListView updates and CharView parenting are used; exact original layout/signal timing remains inferred. Original main/config/headers/Player.cpp/widgets/assets unchanged; startup does not prove ordinary GUI interaction or historical gameplay parity.",
+      "sha256": "26de7f724e5aac00319c918b730aac51b8b16d12ded915f05bfb482b7d1a98c4",
+      "source": "recovery/payloads/reconstructions/82/824c9adea3bae16566a804dd9becd3ce2f102f5a-gameview.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "e730ad4774489c1f4959f891c3b54211dc4376c0ef03b972e170b85403ce6b2f",
+        "sourceCommit": "5e000dca02a17e179719d99ae93d31687c9d2244",
+        "sourceTree": "31217a2066f3e568d8701155f95e3c79bac7a596",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

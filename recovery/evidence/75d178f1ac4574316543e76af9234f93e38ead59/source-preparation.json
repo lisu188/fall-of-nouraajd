@@ -1,0 +1,84 @@
+{
+  "identity": {
+    "implementationSha256": "3b4f2a26e966d6b1cb332e5f013784ca0ae06d172252607be4ee2469421c6dcd",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89"
+        },
+        "path": "game/CGameView.cpp",
+        "purpose": "Connect surviving Qt signals and release Python handles before finalization"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "af9b8465718b0584004328ae277f53dabbc6119c996b268e2dc82c4506722f3e"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "68bdf4ba92f9c2b4f11ad495710b9231e71a48781f63b1835ccb76616b37c028"
+        },
+        "path": "game/CScriptEngine.cpp",
+        "purpose": "Connect surviving Qt signals and release Python handles before finalization"
+      }
+    ],
+    "sparseMapTransition": {
+      "files": {
+        "game/CGameView.cpp": [
+          "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89",
+          "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+        ],
+        "game/CScriptEngine.cpp": [
+          "68bdf4ba92f9c2b4f11ad495710b9231e71a48781f63b1835ccb76616b37c028",
+          "af9b8465718b0584004328ae277f53dabbc6119c996b268e2dc82c4506722f3e"
+        ]
+      },
+      "replaySha256": "6af90aec620b026e1740305fa27cd65ef8efe04832585f09f16023d86dbe2e08",
+      "sourceCommit": "75d178f1ac4574316543e76af9234f93e38ead59"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89"
+      },
+      "path": "game/CGameView.cpp",
+      "purpose": "Connect surviving Qt signals and release Python handles before finalization"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "af9b8465718b0584004328ae277f53dabbc6119c996b268e2dc82c4506722f3e"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "68bdf4ba92f9c2b4f11ad495710b9231e71a48781f63b1835ccb76616b37c028"
+      },
+      "path": "game/CScriptEngine.cpp",
+      "purpose": "Connect surviving Qt signals and release Python handles before finalization"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-sparse-map-transition"
+      ],
+      "log": "/tmp/nouraajd-275-pinned/verify/snapshot-r5kg96sr/preparation/sparse-map-transition.log",
+      "name": "sparseMapTransition",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}
