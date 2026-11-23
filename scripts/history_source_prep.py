@@ -45,6 +45,7 @@ try:
     from scripts import history_prepare_respawn as respawn_prep
     from scripts import history_prepare_dispatch_events as dispatch_events_prep
     from scripts import history_prepare_typed_events as typed_events_prep
+    from scripts import history_prepare_object_factories as object_factories_prep
     from scripts import history_prepare_script_loader as loader_prep
     from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -81,6 +82,7 @@ except ModuleNotFoundError:
     import history_prepare_respawn as respawn_prep
     import history_prepare_dispatch_events as dispatch_events_prep
     import history_prepare_typed_events as typed_events_prep
+    import history_prepare_object_factories as object_factories_prep
     import history_prepare_script_loader as loader_prep
     import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -379,6 +381,7 @@ def prepareSources(
     respawn = source_commit in respawn_prep.COMMITS
     dispatch_events = source_commit in dispatch_events_prep.COMMITS
     typed_events = source_commit in typed_events_prep.COMMITS
+    object_factories = source_commit in object_factories_prep.COMMITS
     script_loader = source_commit in loader_prep.COMMITS
     panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
@@ -447,6 +450,7 @@ def prepareSources(
         and not respawn
         and not dispatch_events
         and not typed_events
+        and not object_factories
         and not script_loader
         and not panel_refresh_transition
     ):
@@ -902,6 +906,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if object_factories:
+        object_factories_prep.apply(source_root, source_commit)
+        identity = object_factories_prep.identity(source_commit)
+        result["identity"]["objectFactories"] = identity
+        log = output_root / "object-factories.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "objectFactories",
+            "command": ["history_source_prep.py", "prepare-object-factories"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if script_loader:
         loader_prep.apply(source_root, source_commit)
         identity = loader_prep.identity(source_commit)
@@ -1101,6 +1118,10 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in typed_events_prep.PROFILES[source_commit]:
                     entry["purpose"] = typed_events_prep.PURPOSE
+        if object_factories:
+            for entry in outputs:
+                if entry["path"] in object_factories_prep.PROFILES[source_commit]:
+                    entry["purpose"] = object_factories_prep.PURPOSE
         if script_loader:
             for entry in outputs:
                 if entry["path"] in loader_prep.PINS:

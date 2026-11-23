@@ -94391,8 +94391,8 @@
     {
       "originalBlob": "2b468657718b52d26660e4fd22254468842fd160",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "854a822fe0ef3788c0ce9b74ecadc3f031041c062713dfb3c2bf7844f2fa7904",
+      "provenance": "content reconstruction of the BFG-removed original; Follow the surviving onTurn event callback.",
+      "sha256": "58176ed98ddc8bed52f1cdb0bad6e307e5ad8280ae6858552f493be6e4c54622",
       "source": "payloads/reconstructions/2b/2b468657718b52d26660e4fd22254468842fd160-CCreature.h"
     },
     {
@@ -100019,6 +100019,181 @@
       "provenance": "content reconstruction of the BFG-removed original; Expose the typed event cause to scripts and explicitly convert Python removal predicate results.",
       "sha256": "78ee8ca1bf2a0927d3fc2ecbdc070c835507a7ae56146fa3d4f375a2a0220031",
       "source": "payloads/reconstructions/f3/f3dc3dd7762e28f7206f1bb81be5ac38b35fedaa-GameScript.cpp"
+    },
+    {
+      "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "f6b016214b3367ba302c2a6ed47face5d27f3c13",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "a64e71fc174103f81e7f3ef44ab8a79a312ea18b",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "ead6e0b8498679734b6a4d05b88884a810527fed",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "f6b016214b3367ba302c2a6ed47face5d27f3c13",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "a64e71fc174103f81e7f3ef44ab8a79a312ea18b",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "ead6e0b8498679734b6a4d05b88884a810527fed",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "f6b016214b3367ba302c2a6ed47face5d27f3c13",
+      "path": "GameScript.cpp",
+      "provenance": "Bind the common factory interface for the separately inherited tile and map classes.",
+      "sha256": "7a2dfa12e62c564590cbc484b236c0b5c5dc6f920e381b8278cc2eee4c90c462",
+      "source": "payloads/reconstructions/constructible-319/GameScript.cpp"
+    },
+    {
+      "originalBlob": "08567c5502977d86b1fd9e97db1693625f5b5977",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch turn events and attach tiles through their surviving scene and graphics interfaces.",
+      "sha256": "332c52b111aab295c50414cd827e722e9919e24b7f5ccf10eee9542b17149675",
+      "source": "payloads/reconstructions/08/08567c5502977d86b1fd9e97db1693625f5b5977-CMap.cpp"
+    },
+    {
+      "originalBlob": "0deba35859882a256e7820ff49fa5958dde590ca",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry map-object methods through the surviving turn and factory interfaces.",
+      "sha256": "a108612bd7a4808f2891f59cc73f3f7983684eea2c668ba356da5f2e4e3f1eaf",
+      "source": "payloads/reconstructions/0d/0deba35859882a256e7820ff49fa5958dde590ca-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "2b13a3f780da7896ca68af4c66f641a67d3c3f1a",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch turn events and attach tiles through their surviving scene and graphics interfaces.",
+      "sha256": "35d284c4dc55a68eeb7850b2f197801fc3efc7c7158854349ca0ef4e2d55f9a4",
+      "source": "payloads/reconstructions/2b/2b13a3f780da7896ca68af4c66f641a67d3c3f1a-CMap.cpp"
+    },
+    {
+      "originalBlob": "60da308ca570f72a80f9544fe3e2d4a43f7cb13a",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Configure QObject properties on objects from the surviving Constructible factory.",
+      "sha256": "af28bc782321ebb72729cff0b96b7ee2f49db5b51ade8567da233a02994bc28c",
+      "source": "payloads/reconstructions/60/60da308ca570f72a80f9544fe3e2d4a43f7cb13a-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "73059270e3a7cdb65f7b9e9a98876277a7cbe162",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct the common Constructible interface from the tile declarations and factory callers.",
+      "sha256": "187e97a048723972572073dcfcebc599b5f61e53cb601ea85f9ed7588d5f714a",
+      "source": "payloads/reconstructions/73/73059270e3a7cdb65f7b9e9a98876277a7cbe162-CMapObject.h"
+    },
+    {
+      "originalBlob": "7b4404fa9eed24fe786664284b9c270199ba1395",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry creature turn behavior through the surviving onTurn callback.",
+      "sha256": "5554a9d99bb6cd7845529f8efa3828f764ac9132752d537ceff8c1e2b23af5af",
+      "source": "payloads/reconstructions/7b/7b4404fa9eed24fe786664284b9c270199ba1395-CCreature.cpp"
+    },
+    {
+      "originalBlob": "8e677d7fe72f13874a8e54d977438dd2d05a330b",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry map-object methods through the surviving turn and factory interfaces.",
+      "sha256": "a108612bd7a4808f2891f59cc73f3f7983684eea2c668ba356da5f2e4e3f1eaf",
+      "source": "payloads/reconstructions/8e/8e677d7fe72f13874a8e54d977438dd2d05a330b-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "af3484f5ef03b9774dfc272b3248107cfa7e235b",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Configure QObject properties on objects from the surviving Constructible factory.",
+      "sha256": "af28bc782321ebb72729cff0b96b7ee2f49db5b51ade8567da233a02994bc28c",
+      "source": "payloads/reconstructions/af/af3484f5ef03b9774dfc272b3248107cfa7e235b-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "b9c78c7edc9d26dcd6f04e97a1438c87e14c6c5d",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry map-object methods through the surviving turn and factory interfaces.",
+      "sha256": "a108612bd7a4808f2891f59cc73f3f7983684eea2c668ba356da5f2e4e3f1eaf",
+      "source": "payloads/reconstructions/b9/b9c78c7edc9d26dcd6f04e97a1438c87e14c6c5d-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "d3fd55d560a20f3976faea757e1cb0647fefe582",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct the common Constructible interface from the tile declarations and factory callers.",
+      "sha256": "187e97a048723972572073dcfcebc599b5f61e53cb601ea85f9ed7588d5f714a",
+      "source": "payloads/reconstructions/d3/d3fd55d560a20f3976faea757e1cb0647fefe582-CMapObject.h"
+    },
+    {
+      "originalBlob": "d7a887dc3c0800f24521690ebe866fbc25ed91b7",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose turn callbacks and register the shared object and tile factory interface where present.",
+      "sha256": "7a2dfa12e62c564590cbc484b236c0b5c5dc6f920e381b8278cc2eee4c90c462",
+      "source": "payloads/reconstructions/d7/d7a887dc3c0800f24521690ebe866fbc25ed91b7-GameScript.cpp"
+    },
+    {
+      "originalBlob": "ec296ca0b74bc548ecf35b902eea622a11b308fa",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose turn callbacks and register the shared object and tile factory interface where present.",
+      "sha256": "7a2dfa12e62c564590cbc484b236c0b5c5dc6f920e381b8278cc2eee4c90c462",
+      "source": "payloads/reconstructions/ec/ec296ca0b74bc548ecf35b902eea622a11b308fa-GameScript.cpp"
+    },
+    {
+      "originalBlob": "ecc081f93c9585803a6463f61c6dfed6000a6c14",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry map-object methods through the surviving turn and factory interfaces.",
+      "sha256": "a108612bd7a4808f2891f59cc73f3f7983684eea2c668ba356da5f2e4e3f1eaf",
+      "source": "payloads/reconstructions/ec/ecc081f93c9585803a6463f61c6dfed6000a6c14-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "f377a56b6511ff42ef78f7a359868ca27875b977",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct the common Constructible interface from the tile declarations and factory callers.",
+      "sha256": "52e1950fd51d0eda36d69c7f2832cea3fd3f57faf9bed56e66e84ae55d6bcdda",
+      "source": "payloads/reconstructions/f3/f377a56b6511ff42ef78f7a359868ca27875b977-CMapObject.h"
+    },
+    {
+      "originalBlob": "f6906d606c479c52ef1c841ddd2e2e0ea6c73de6",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose turn callbacks and register the shared object and tile factory interface where present.",
+      "sha256": "491222bbf4313295c8b117bb21722059302728f63aa4855a1e745162eafeb3cf",
+      "source": "payloads/reconstructions/f6/f6906d606c479c52ef1c841ddd2e2e0ea6c73de6-GameScript.cpp"
+    },
+    {
+      "originalBlob": "fc908c4a5542dd46e7b8232ea99a17fc29f4933e",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Configure QObject properties on objects from the surviving Constructible factory.",
+      "sha256": "af28bc782321ebb72729cff0b96b7ee2f49db5b51ade8567da233a02994bc28c",
+      "source": "payloads/reconstructions/fc/fc908c4a5542dd46e7b8232ea99a17fc29f4933e-CObjectHandler.cpp"
     }
   ],
   "schemaVersion": 1
