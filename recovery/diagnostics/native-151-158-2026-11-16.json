@@ -1,0 +1,160 @@
+{
+  "entries": [
+    {
+      "commit": "709535a6085c63fe1d26aebc3414ea2281529b3b",
+      "firstCatalogOrder": 156,
+      "originalBlob": "36a2abe00f55a8a2c096d7659890b4b4ae359ce1",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed.",
+      "sha256": "e0d2439967a34d004a1d19d8762989af66c11d2849c210acdee0c4fec65449e2",
+      "source": "recovery/payloads/reconstructions/36/36a2abe00f55a8a2c096d7659890b4b4ae359ce1-e0d2439967a3-Game.pro"
+    },
+    {
+      "commit": "152007b28631784d3c5e17f2686eb6ef9ff30e46",
+      "firstCatalogOrder": 157,
+      "originalBlob": "26987e9ade4abb9dca784c78d7ef4626434146d0",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #157 map body carried from full native-verified #150\u2013156 implementation. Surviving Map.h is byte-identical; original scene body version is unchanged. Preserves original JSON map/state route and inferred blank-background terrain generation. New removed implementation changes and historical map/gameplay parity remain unproven. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "301dc9a904e92d6d27b37eba0a42f1b8aef568530cc6da9b3a82c62515e55e87",
+      "source": "recovery/payloads/reconstructions/26/26987e9ade4abb9dca784c78d7ef4626434146d0-301dc9a904e9-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 2,
+      "game": 6
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "b71a96c8ccd4c5f043e34b8da1ec21916d2332a277f2c5b1390e8aae80e9ac5c",
+        "sourceCommit": "169b592c32924654d830fbf0571e86c5de9dc692",
+        "sourceTree": "c0489a7f3585630b791c5619ae399cffdb83c169",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "b95beccf2cd659ab2122448b155e20e4fd44abb14d40e75229c08ef31deeca1a",
+        "sourceCommit": "fd507cdac42337d763550ffe41334a39a1d0d954",
+        "sourceTree": "bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "b282e380fc3f39f137117163d1598a2a06cf4df98774c40b8bf0af2fb56dc9c0",
+        "sourceCommit": "80920f276d6aff53a2aa0dd237f4a26cb47cb60d",
+        "sourceTree": "f258b5917713c6e1eeebb2d39e5595d166d2d819",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "f2a58bc85443303cd9b1feeb68a48939679a3a702c1a604afe96b46a30f7c646",
+        "sourceCommit": "cb42b1415a317340d83d240b92e65bae631b7dea",
+        "sourceTree": "f6eb10b750fb51aca5dca992a2401c3b658b6374",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "26f6bfca65fc8c6f0e7e1765b28e5033694bd79db347ffd731e6ca5ba0a5dc7a",
+        "sourceCommit": "5258bb040f2780638a76c26b0a61bb9437cdaab5",
+        "sourceTree": "9c2893d3f24f2b2325e180f335f9d84d1bee3033",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "77ef9880202733a7183fd874167686e07458c30bbe8e7b09eea7708a4dc277b5",
+        "sourceCommit": "709535a6085c63fe1d26aebc3414ea2281529b3b",
+        "sourceTree": "9a0503af4fb00321d9ba3f9f77777c13943e2d15",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "13305b923f4111a20d6a0aae086250e7fc6e5e99afdf447020bed372415d5c1c",
+        "sourceCommit": "152007b28631784d3c5e17f2686eb6ef9ff30e46",
+        "sourceTree": "f9b16149815272e9ec71b4a69061479d1979e398",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "ad9147dd30d2d18ad40186110afeb6e3a9dbcff1117bd8ab4a96dcfd5a5579e9",
+        "sourceCommit": "8bb9add08cfde759541b3b35a5a2f9ad499654ed",
+        "sourceTree": "9bec71b4e72baf89e479a37a6890a8fdd7b2aea6",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

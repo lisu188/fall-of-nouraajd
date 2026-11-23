@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "commit": "251c727c2a6957bcaca2335e2632bf2a60a772d3",
+      "firstCatalogOrder": 123,
+      "originalBlob": "6d3dc7979db57f360f46edde7bc13ba319208e62",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #122 Map to genuine #123 Cave/Dungeon default constructors, original loadFromJson implementations and save schemas. Cave loading delegates the real three-coordinate array; Dungeon loading delegates the original six-coordinate entry/exit array. Generated paired dungeon entrances use that same genuine loader/schema, preserving actual teleport destinations. Building now inherits original ListItem; no obsolete constructors or fake objects used. Prior inferred geometry/cache/default policies and unknown original delta remain explicit; original building code untouched.",
+      "sha256": "ccbe86ed79c5a92693d711cce04aa3f757d61200838602a8420efd8539197dd0",
+      "source": "recovery/payloads/reconstructions/6d/6d3dc7979db57f360f46edde7bc13ba319208e62-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "c8e2c5c63578a68f220c57dd34e098dfeff57bc4d26c16b802a1ab9743f3c194",
+        "sourceCommit": "251c727c2a6957bcaca2335e2632bf2a60a772d3",
+        "sourceTree": "be145d0bc5df25b8abc3418577089d2591788b61",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

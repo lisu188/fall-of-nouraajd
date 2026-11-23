@@ -1,220 +1,218 @@
-#include "CPlayerView.h"
 #include "CCreature.h"
 #include "CGameScene.h"
 #include "CGameView.h"
-#include "CMap.h"
 #include "CItem.h"
 #include "CItemSlot.h"
-#include <QPainter>
+#include "CMap.h"
+#include "CPlayerView.h"
 #include <QGraphicsSceneDragDropEvent>
 #include <QGraphicsSceneMouseEvent>
+#include <QPainter>
 #include <sstream>
 
-
-CPlayerListView::CPlayerListView ( std::set<CMapObject *, Comparer<CMapObject>> *MapObjects )
-	: items ( MapObjects ) {
-	this->setZValue ( 3 );
-	curPosition = 0;
-	right = new CScrollObject ( this, true );
-	left = new CScrollObject ( this, false );
-	x = 4, y = 4;
-	pixmap.load ( ":/images/item.png" );
-	pixmap = pixmap.scaled ( 50, 50,
-	                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
-	left->setPos ( 0, y * 50 );
-	right->setPos ( ( x - 1 ) * 50, y * 50 );
-	update();
+CPlayerListView::CPlayerListView(
+    std::set<CMapObject *, Comparer<CMapObject>> *MapObjects)
+    : items(MapObjects) {
+  this->setZValue(3);
+  curPosition = 0;
+  right = new CScrollObject(this, true);
+  left = new CScrollObject(this, false);
+  x = 4, y = 4;
+  pixmap.load("images/item.png");
+  pixmap =
+      pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+  left->setPos(0, y * 50);
+  right->setPos((x - 1) * 50, y * 50);
+  update();
 }
 
 void CPlayerListView::update() {
-	if ( curPosition < 0 ) {
-		curPosition = 0;
-	}
-	if ( items->size() - x * y < curPosition ) {
-		curPosition = items->size() - x * y;
-	}
-	QList<QGraphicsItem *> list = childItems();
-	QList<QGraphicsItem *>::Iterator childIter;
-	for ( childIter = list.begin(); childIter != list.end(); childIter++ ) {
-		if ( *childIter == right || *childIter == left ) {
-			continue;
-		}
-		( *childIter )->setParentItem ( 0 );
-		( *childIter )->setVisible ( false );
-	}
-	std::set<CMapObject *, Comparer<CMapObject>>::iterator itemIter;
-	int i = 0;
-	for ( itemIter = items->begin(); itemIter != items->end(); i++, itemIter++ ) {
-		CMapObject *item = *itemIter;
-		if ( item->getMap() ) { //SigSegv for interaction
-			item->setMap ( item->getMap()->getScene()->getPlayer()->getMap() );
-		}
-		item->setVisible ( false );
-		item->setParentItem ( 0 );
-		int position = i - curPosition;
-		if ( position >= 0 && position < x * y ) {
-			item->setParentItem ( this );
-			item->setNumber ( position, x );
-		}
-	}
-	right->setVisible ( items->size() > x * y );
-	left->setVisible ( items->size() > x * y );
+  if (curPosition < 0) {
+    curPosition = 0;
+  }
+  if (items->size() - x * y < curPosition) {
+    curPosition = items->size() - x * y;
+  }
+  QList<QGraphicsItem *> list = childItems();
+  QList<QGraphicsItem *>::Iterator childIter;
+  for (childIter = list.begin(); childIter != list.end(); childIter++) {
+    if (*childIter == right || *childIter == left) {
+      continue;
+    }
+    (*childIter)->setParentItem(0);
+    (*childIter)->setVisible(false);
+  }
+  std::set<CMapObject *, Comparer<CMapObject>>::iterator itemIter;
+  int i = 0;
+  for (itemIter = items->begin(); itemIter != items->end(); i++, itemIter++) {
+    CMapObject *item = *itemIter;
+    if (item->getMap()) { // SigSegv for interaction
+      item->setMap(item->getMap()->getScene()->getPlayer()->getMap());
+    }
+    item->setVisible(false);
+    item->setParentItem(0);
+    int position = i - curPosition;
+    if (position >= 0 && position < x * y) {
+      item->setParentItem(this);
+      item->setNumber(position, x);
+    }
+  }
+  right->setVisible(items->size() > x * y);
+  left->setVisible(items->size() > x * y);
 }
 
 CMap *CPlayerListView::getMap() {
-	if ( items->size() ) {
-		return ( *items->begin() )->getMap();
-	}
-	return 0;
+  if (items->size()) {
+    return (*items->begin())->getMap();
+  }
+  return 0;
 }
 
 void CPlayerListView::setDraggable() {
-	this->setFlag ( QGraphicsItem::ItemIsMovable );
+  this->setFlag(QGraphicsItem::ItemIsMovable);
 }
 
 QRectF CPlayerListView::boundingRect() const {
-	return QRect ( 0, 0, pixmap.size().width() * x,
-	               pixmap.size().height() * ( items->size() > x * y ? y + 1 : y ) );
+  return QRect(0, 0, pixmap.size().width() * x,
+               pixmap.size().height() * (items->size() > x * y ? y + 1 : y));
 }
 
-void CPlayerListView::paint ( QPainter *painter,
-                             const QStyleOptionGraphicsItem *option,
-                             QWidget *widget ) {
-	for ( int i = 0; i < x; i++ )
-		for ( int j = 0; j < y; j++ ) {
-			painter->drawPixmap ( i * 50, j * 50,
-			                      pixmap );
-		}
+void CPlayerListView::paint(QPainter *painter,
+                            const QStyleOptionGraphicsItem *option,
+                            QWidget *widget) {
+  for (int i = 0; i < x; i++)
+    for (int j = 0; j < y; j++) {
+      painter->drawPixmap(i * 50, j * 50, pixmap);
+    }
 }
 
-void CPlayerListView::updatePosition ( int i ) {
-	curPosition += i;
-	update();
+void CPlayerListView::updatePosition(int i) {
+  curPosition += i;
+  update();
 }
 
-void CPlayerListView::setXY ( int x, int y ) {
-	this->x = x;
-	this->y = y;
+void CPlayerListView::setXY(int x, int y) {
+  this->x = x;
+  this->y = y;
 }
-std::set<CMapObject *, Comparer<CMapObject>> *CPlayerListView::getItems() const {
-	return items;
-}
-
-void CPlayerListView::setItems ( std::set<CMapObject *, Comparer<CMapObject>> *value ) {
-	items = value;
-	curPosition = 0;
-	update();
+std::set<CMapObject *, Comparer<CMapObject>> *
+CPlayerListView::getItems() const {
+  return items;
 }
 
-void CPlayerListView::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
-	CItem *item = ( CItem * ) ( event->source() );
-	event->acceptProposedAction();
-	item->onUse ( this->getMap()->getScene()->getPlayer() );
+void CPlayerListView::setItems(
+    std::set<CMapObject *, Comparer<CMapObject>> *value) {
+  items = value;
+  curPosition = 0;
+  update();
 }
 
+void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
+  CItem *item = (CItem *)(event->source());
+  event->acceptProposedAction();
+  item->onUse(this->getMap()->getScene()->getPlayer());
+}
 
-CPlayerEquippedView::CPlayerEquippedView ( std::map<int, CItem *> *equipped )
-	: equipped ( equipped ) {
-	for ( int i = 0; i < equipped->size(); i++ ) {
-		CItemSlot *slot = new CItemSlot ( i, equipped );
-		slot->setParentItem ( this );
-		slot->setPos ( i % 4 * 50, i / 4 * 50 );
-		itemSlots.push_back ( slot );
-	}
-	update();
+CPlayerEquippedView::CPlayerEquippedView(std::map<int, CItem *> *equipped)
+    : equipped(equipped) {
+  for (int i = 0; i < equipped->size(); i++) {
+    CItemSlot *slot = new CItemSlot(i, equipped);
+    slot->setParentItem(this);
+    slot->setPos(i % 4 * 50, i / 4 * 50);
+    itemSlots.push_back(slot);
+  }
+  update();
 }
 
 QRectF CPlayerEquippedView::boundingRect() const {
-	return QRectF ( 0, 0, 4 * 50, 2 * 50 );
+  return QRectF(0, 0, 4 * 50, 2 * 50);
 }
 
-void CPlayerEquippedView::paint ( QPainter *painter,
-                                 const QStyleOptionGraphicsItem *option,
-                                 QWidget *widget ) {}
+void CPlayerEquippedView::paint(QPainter *painter,
+                                const QStyleOptionGraphicsItem *option,
+                                QWidget *widget) {}
 
 void CPlayerEquippedView::update() {
-	for ( std::list<CItemSlot *>::iterator it = itemSlots.begin();
-	        it != itemSlots.end(); it++ ) {
-		( *it )->update();
-	}
-	QGraphicsObject::update();
+  for (std::list<CItemSlot *>::iterator it = itemSlots.begin();
+       it != itemSlots.end(); it++) {
+    (*it)->update();
+  }
+  QGraphicsObject::update();
 }
-
 
 PlayerStatsView::PlayerStatsView() {
-	this->player = player;
-	setFixedSize ( 250, 75 );
+  this->player = nullptr;
+  setFixedSize(250, 75);
 }
 
-void PlayerStatsView::paintEvent ( QPaintEvent * ) {
-	if ( !player ) {
-		return;
-	}
-	QPainter painter;
-	painter.begin ( this );
-	painter.setRenderHint ( QPainter::Antialiasing );
-	QTextOption opt ( Qt::AlignCenter );
-	float barx = 250;
-	float bary = 25;
-	painter.fillRect ( 0, 0, barx, bary * 3, QColor ( "GREEN" ) );
-	std::ostringstream hpStream;
-	hpStream << player->hp;
-	hpStream << "/";
-	hpStream << player->hpMax;
-	painter.fillRect ( 0, bary * 0, barx * player->getHpRatio() / 100.0, bary,
-	                   QColor ( "RED" ) );
-	painter.drawText ( QRectF ( 0, bary * 0, barx, bary ), hpStream.str().c_str(),
-	                   opt );
-	std::ostringstream manaStream;
-	manaStream << player->mana;
-	manaStream << "/";
-	manaStream << player->manaMax;
-	painter.fillRect ( 0, bary * 1, barx * player->getManaRatio() / 100.0, bary,
-	                   QColor ( "BLUE" ) );
-	painter.drawText ( QRectF ( 0, bary * 1, barx, bary ), manaStream.str().c_str(),
-	                   opt );
-	std::ostringstream expStream;
-	expStream << player->exp;
-	expStream << "/";
-	expStream << ( player->level ) * ( player->level + 1 ) * 500;
-	painter.fillRect ( 0, bary * 2, barx * player->getExpRatio() / 100.0, bary,
-	                   QColor ( "YELLOW" ) );
-	painter.drawText ( QRectF ( 0, bary * 2, barx, bary ), expStream.str().c_str(),
-	                   opt );
-	painter.end();
+void PlayerStatsView::paintEvent(QPaintEvent *) {
+  if (!player) {
+    return;
+  }
+  QPainter painter;
+  painter.begin(this);
+  painter.setRenderHint(QPainter::Antialiasing);
+  QTextOption opt(Qt::AlignCenter);
+  float barx = 250;
+  float bary = 25;
+  painter.fillRect(0, 0, barx, bary * 3, QColor("GREEN"));
+  std::ostringstream hpStream;
+  hpStream << player->hp;
+  hpStream << "/";
+  hpStream << player->hpMax;
+  painter.fillRect(0, bary * 0, barx * player->getHpRatio() / 100.0, bary,
+                   QColor("RED"));
+  painter.drawText(QRectF(0, bary * 0, barx, bary), hpStream.str().c_str(),
+                   opt);
+  std::ostringstream manaStream;
+  manaStream << player->mana;
+  manaStream << "/";
+  manaStream << player->manaMax;
+  painter.fillRect(0, bary * 1, barx * player->getManaRatio() / 100.0, bary,
+                   QColor("BLUE"));
+  painter.drawText(QRectF(0, bary * 1, barx, bary), manaStream.str().c_str(),
+                   opt);
+  std::ostringstream expStream;
+  expStream << player->exp;
+  expStream << "/";
+  expStream << (player->level) * (player->level + 1) * 500;
+  painter.fillRect(0, bary * 2, barx * player->getExpRatio() / 100.0, bary,
+                   QColor("YELLOW"));
+  painter.drawText(QRectF(0, bary * 2, barx, bary), expStream.str().c_str(),
+                   opt);
+  painter.end();
 }
 
-void PlayerStatsView::setPlayer ( CPlayer *value ) {
-	player = value;
-	connect ( player, SIGNAL ( statsChanged() ), this, SLOT ( update() ) );
+void PlayerStatsView::setPlayer(CPlayer *value) {
+  player = value;
+  connect(player, SIGNAL(statsChanged()), this, SLOT(update()));
 }
 
-
-CScrollObject::CScrollObject ( CPlayerListView *stats, bool isRight ) {
-	this->isRight = isRight;
-	this->setZValue ( 1 );
-	this->stats = stats;
-	int size = 50;
-	if ( !isRight ) {
-		this->setAnimation ( "images/arrows/left/", size );
-	} else {
-		this->setAnimation ( "images/arrows/right/", size );
-	}
-	setParentItem ( stats );
+CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
+  this->isRight = isRight;
+  this->setZValue(1);
+  this->stats = stats;
+  int size = 50;
+  if (!isRight) {
+    this->setAnimation("images/arrows/left", size);
+  } else {
+    this->setAnimation("images/arrows/right", size);
+  }
+  setParentItem(stats);
 }
 
-void CScrollObject::setVisible ( bool visible ) {
-	if ( visible && this->scene() != stats->scene() ) {
-		stats->scene()->addItem ( this );
-	}
-	QGraphicsItem::setVisible ( visible );
+void CScrollObject::setVisible(bool visible) {
+  if (visible && this->scene() != stats->scene()) {
+    stats->scene()->addItem(this);
+  }
+  QGraphicsItem::setVisible(visible);
 }
 
-void CScrollObject::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
-	if ( isRight ) {
-		stats->updatePosition ( 1 );
-	}
-	if ( !isRight ) {
-		stats->updatePosition ( -1 );
-	}
+void CScrollObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+  if (isRight) {
+    stats->updatePosition(1);
+  }
+  if (!isRight) {
+    stats->updatePosition(-1);
+  }
 }
