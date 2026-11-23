@@ -23,6 +23,7 @@ try:
     from scripts import history_prepare_pathfinder_cache as cache_prep
     from scripts import history_prepare_merged_headers as merged_prep
     from scripts import history_prepare_console_reader as console_prep
+    from scripts import history_prepare_python_shutdown as shutdown_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -35,6 +36,7 @@ except ModuleNotFoundError:
     import history_prepare_pathfinder_cache as cache_prep
     import history_prepare_merged_headers as merged_prep
     import history_prepare_console_reader as console_prep
+    import history_prepare_python_shutdown as shutdown_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -312,6 +314,7 @@ def prepareSources(
     timing = timing_prep.legacyTimingPlan(source_root)
     conflicts = conflicts_prep.conflictPlan(source_root)
     child_cache = source_commit == cache_prep.COMMIT
+    release_python_handles = source_commit in shutdown_prep.TARGETS
     console_reader = source_commit == console_prep.COMMIT
     merged_headers = source_commit in merged_prep.COMMITS
     if child_cache and (not conflicts or not teleporter):
@@ -353,6 +356,7 @@ def prepareSources(
         and not conflicts
         and not merged_headers
         and not console_reader
+        and not release_python_handles
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -529,6 +533,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if release_python_handles:
+        shutdown_prep.apply(source_root, source_commit)
+        identity = shutdown_prep.identity(source_commit)
+        result["identity"]["pythonShutdown"] = identity
+        log = output_root / "python-shutdown.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "pythonShutdown",
+            "command": ["history_source_prep.py", "prepare-python-shutdown"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -615,6 +632,8 @@ def prepareSources(
                 or (timing and name in timing["paths"])
             )
         ]
+        if release_python_handles:
+            next(entry for entry in outputs if entry["path"] == shutdown_prep.TARGETS[source_commit])["purpose"] = shutdown_prep.PURPOSE
         if console_reader:
             next(entry for entry in outputs if entry["path"] == console_prep.TARGET)["purpose"] = console_prep.PURPOSE
         if merged_headers:

@@ -952,13 +952,24 @@ def verifySnapshot(
             result["startupCompatibility"] = "transitionalRuntimeConfiguration"
             startup["boundary"] = runtime_configs.BOUNDARY
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
+        runtime_root = projects["application"].parent
+        application_project = projects["application"].relative_to(source_root).as_posix()
+        runtime_layout = {"core/core.pro": ".", "game/game.pro": "files"}.get(application_project)
+        if runtime_layout is not None:
+            candidate = source_root / runtime_layout
+            if all((candidate / name).is_dir() for name in ("maps", "scripts", "config")):
+                runtime_root = candidate
+                result["runtimeWorkingDirectory"] = runtime_layout
         adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
         identity = {
             "sourceTree": tree["tree"],
             "startupSelection": startup,
             "sourcePreparation": preparation["identity"],
-            "runtimePreparation": {"directories": runtime_directories},
+            "runtimePreparation": {
+                "directories": runtime_directories,
+                "workingDirectory": runtime_root.relative_to(source_root).as_posix(),
+            },
             "recipe": recipe,
             "toolchain": toolchain,
             "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
@@ -1092,13 +1103,13 @@ def verifySnapshot(
             ).rstrip(":")
         if runtime_directories:
             result["runtimePreparation"] = source_prep.prepareRuntimeDirectories(
-                projects["application"].parent, runtime_directories
+                runtime_root, runtime_directories
             )
         if config_plan:
             runtime_configs.writeOutputs(source_root, config_plan[1])
         result["smoke"] = runSmoke(
             ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
-            projects["application"].parent,
+            runtime_root,
             artifact_dir,
             environment=smoke_environment,
             timeout=timeout,
