@@ -16,7 +16,6 @@ using Tile = CTile;
 #include <src/CConfigurationProvider.h>
 #include <src/CCreature.h>
 #include <src/CInteraction.h>
-#include <src/item.h>
 #include <src/CGameScene.h>
 #include <src/CGameView.h>
 #include <src/CScriptEngine.h>
@@ -69,7 +68,7 @@ void CMapObject::moveTo(int x, int y, int z, bool silent) {
     posx = x; posy = y; posz = z;
     QPointF to(x * CMap::getTileSize(), y * CMap::getTileSize());
     if (!silent && map && map->getScene()->getView() && from != to) {
-        QGraphicsItemAnimation *animation = inherits("Player")
+        QGraphicsItemAnimation *animation = (map->getScene()->getPlayer() == this)
             ? static_cast<QGraphicsItemAnimation *>(new ReconstructedPlayerAnimation(this))
             : new QGraphicsItemAnimation(this);
         QTimeLine *timeline = new QTimeLine(animation_step_ms, animation);
@@ -81,7 +80,7 @@ void CMapObject::moveTo(int x, int y, int z, bool silent) {
     } else { setPos(to); }
     if (map) QGraphicsItem::setVisible(posz == map->getCurrentMap());
     if (!silent) {
-        Player *player = map ? map->getScene()->getPlayer() : NULL;
+        auto *player = map ? map->getScene()->getPlayer() : NULL;
         if (player && player != this && player->getPosX() == posx && player->getPosY() == posy && player->getPosZ() == posz)
             player->addEntered(this);
     }

@@ -98234,8 +98234,8 @@
     {
       "originalBlob": "c6445a9bf10ebcd369aa42c3937bedf5c60ee72e",
       "path": "src/CMapObject.cpp",
-      "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
-      "sha256": "d209681a51c53706bfbc5be7b8113a78a4553b29b15fab3337dd5103129ccedb",
+      "provenance": "content reconstruction of the BFG-removed original; Split the #247 map and event sources at the #248 class rename. The unchanged #249\u2013253 blob follows the scene player through getPlayer(), and selects the renamed tile header using project path evidence.",
+      "sha256": "7a448dedd11f93894ad5ff7f127d4c0ded4f25eb78e583b7fe7d67df287e10f2",
       "source": "payloads/reconstructions/c6/c6445a9bf10ebcd369aa42c3937bedf5c60ee72e-CMapObject.cpp"
     },
     {

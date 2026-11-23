@@ -2544,7 +2544,7 @@
       "originalCommit": "f873badeef24b84b8940982d21a2a9b87545fb30",
       "originalTree": "f5e5d612f795ff2794cd4bc10a08bf27ba3e1240",
       "published": false,
-      "restoredFilesFingerprint": "d225637b7f7c12998d107ff2f7f960ef0c07c32cb4c13083a848e600f7a1f913",
+      "restoredFilesFingerprint": "4201f49eb23a9108bc55b9e1c553d21de233c1b77d6762bf1684280c9a9a1e80",
       "startupMode": "game",
       "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
       "validation": "build-and-startup-passed"
