@@ -19,6 +19,10 @@ on:
       - scripts/history_prepare_map_position.py
       - scripts/history_prepare_panel_transition.py
       - scripts/history_prepare_text_panel_shutdown.py
+      - scripts/history_prepare_sparse_map_transition.py
+      - scripts/history_prepare_named_event_transition.py
+      - scripts/history_prepare_panel_refresh_transition.py
+      - scripts/history_prepare_effect_transition.py
       - scripts/history_prepare_merged_headers.py
       - scripts/history_prepare_pathfinder_cache.py
       - scripts/history_runtime_configs.py
@@ -51,6 +55,10 @@ on:
       - tests/test_history_map_position.py
       - tests/test_history_panel_transition.py
       - tests/test_history_text_panel_shutdown.py
+      - tests/test_history_sparse_map_transition.py
+      - tests/test_history_named_event_transition.py
+      - tests/test_history_panel_refresh_transition.py
+      - tests/test_history_effect_transition.py
       - tests/test_history_merged_headers.py
       - tests/test_history_runtime_transitions.py
       - tests/test_history_resource_preparation.py
@@ -104,7 +112,8 @@ jobs:
             tests.test_history_scene_transition \
             tests.test_history_python_shutdown \
             tests.test_history_trigger_decorator tests.test_history_map_position tests.test_history_panel_transition \
-            tests.test_history_text_panel_shutdown
+            tests.test_history_text_panel_shutdown tests.test_history_sparse_map_transition \
+            tests.test_history_named_event_transition tests.test_history_panel_refresh_transition tests.test_history_effect_transition
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

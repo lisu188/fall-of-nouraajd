@@ -29,6 +29,10 @@ try:
     from scripts import history_prepare_map_position as position_prep
     from scripts import history_prepare_panel_transition as panel_prep
     from scripts import history_prepare_text_panel_shutdown as text_shutdown_prep
+    from scripts import history_prepare_sparse_map_transition as sparse_prep
+    from scripts import history_prepare_named_event_transition as named_event_prep
+    from scripts import history_prepare_effect_transition as effect_prep
+    from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -47,6 +51,10 @@ except ModuleNotFoundError:
     import history_prepare_map_position as position_prep
     import history_prepare_panel_transition as panel_prep
     import history_prepare_text_panel_shutdown as text_shutdown_prep
+    import history_prepare_sparse_map_transition as sparse_prep
+    import history_prepare_named_event_transition as named_event_prep
+    import history_prepare_effect_transition as effect_prep
+    import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -327,6 +335,10 @@ def prepareSources(
     scene_transition = source_commit in scene_prep.PINS
     release_python_handles = source_commit in shutdown_prep.TARGETS
     text_panel_shutdown = source_commit == text_shutdown_prep.COMMIT
+    sparse_map_transition = source_commit == sparse_prep.COMMIT
+    named_event_transition = source_commit == named_event_prep.COMMIT
+    effect_transition = source_commit in effect_prep.COMMITS
+    panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
     map_position = source_commit == position_prep.COMMIT
     trigger_decorator = source_commit == trigger_prep.COMMIT
@@ -377,6 +389,10 @@ def prepareSources(
         and not map_position
         and not panel_transition
         and not text_panel_shutdown
+        and not sparse_map_transition
+        and not named_event_transition
+        and not effect_transition
+        and not panel_refresh_transition
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -635,6 +651,71 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if sparse_map_transition:
+        sparse_prep.apply(source_root)
+        identity = sparse_prep.identity()
+        result["identity"]["sparseMapTransition"] = identity
+        log = output_root / "sparse-map-transition.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "sparseMapTransition",
+            "command": ["history_source_prep.py", "prepare-sparse-map-transition"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
+    if named_event_transition:
+        named_event_prep.apply(source_root)
+        identity = named_event_prep.identity()
+        result["identity"]["namedEventTransition"] = identity
+        log = output_root / "named-event-transition.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "namedEventTransition",
+            "command": ["history_source_prep.py", "prepare-named-event-transition"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
+    if panel_refresh_transition:
+        panel_refresh_prep.apply(source_root, source_commit)
+        identity = panel_refresh_prep.identity(source_commit)
+        result["identity"]["panelRefreshTransition"] = identity
+        log = output_root / "panel-refresh-transition.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "panelRefreshTransition",
+            "command": ["history_source_prep.py", "prepare-panel-refresh-transition"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
+    if effect_transition:
+        effect_prep.apply(source_root, source_commit)
+        identity = effect_prep.identity(source_commit)
+        result["identity"]["effectTransition"] = identity
+        log = output_root / "effect-transition.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "effectTransition",
+            "command": ["history_source_prep.py", "prepare-effect-transition"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
+    if panel_refresh_transition:
+        panel_refresh_prep.apply(source_root, source_commit)
+        identity = panel_refresh_prep.identity(source_commit)
+        result["identity"]["panelRefreshTransition"] = identity
+        log = output_root / "panel-refresh-transition.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "panelRefreshTransition",
+            "command": ["history_source_prep.py", "prepare-panel-refresh-transition"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -735,6 +816,26 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in text_shutdown_prep.PINS:
                     entry["purpose"] = text_shutdown_prep.PURPOSE
+        if sparse_map_transition:
+            for entry in outputs:
+                if entry["path"] in sparse_prep.PINS:
+                    entry["purpose"] = sparse_prep.PURPOSE
+        if named_event_transition:
+            for entry in outputs:
+                if entry["path"] in named_event_prep.PINS:
+                    entry["purpose"] = named_event_prep.PURPOSE
+        if panel_refresh_transition:
+            for entry in outputs:
+                if entry["path"] in panel_refresh_prep.PROFILES[source_commit]:
+                    entry["purpose"] = panel_refresh_prep.PURPOSE
+        if effect_transition:
+            for entry in outputs:
+                if entry["path"] in effect_prep.PINS:
+                    entry["purpose"] = effect_prep.PURPOSE
+        if panel_refresh_transition:
+            for entry in outputs:
+                if entry["path"] in panel_refresh_prep.PROFILES[source_commit]:
+                    entry["purpose"] = panel_refresh_prep.PURPOSE
         if map_position:
             next(entry for entry in outputs if entry["path"] == position_prep.TARGET)["purpose"] = position_prep.PURPOSE
         if trigger_decorator:

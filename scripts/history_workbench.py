@@ -269,6 +269,10 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         or commit in vh.source_prep.scene_prep.PINS
         or commit == vh.source_prep.panel_prep.COMMIT
         or commit == vh.source_prep.text_shutdown_prep.COMMIT
+        or commit == vh.source_prep.sparse_prep.COMMIT
+        or commit == vh.source_prep.named_event_prep.COMMIT
+        or commit in vh.source_prep.effect_prep.COMMITS
+        or commit in vh.source_prep.panel_refresh_prep.PROFILES
         or commit in vh.source_prep.shutdown_prep.TARGETS
         or commit in (
             vh.source_prep.console_prep.COMMIT, vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT
@@ -793,6 +797,10 @@ def progress() -> None:
                 or commit in vh.source_prep.scene_prep.PINS
                 or commit == vh.source_prep.panel_prep.COMMIT
                 or commit == vh.source_prep.text_shutdown_prep.COMMIT
+                or commit == vh.source_prep.sparse_prep.COMMIT
+                or commit == vh.source_prep.named_event_prep.COMMIT
+                or commit in vh.source_prep.effect_prep.COMMITS
+                or commit in vh.source_prep.panel_refresh_prep.PROFILES
                 or commit in vh.source_prep.shutdown_prep.TARGETS
                 or commit in (vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT)
             )
@@ -851,6 +859,16 @@ def progress() -> None:
                 item["buildCompatibility"] = ["panelTransition"]
             if commit == vh.source_prep.text_shutdown_prep.COMMIT:
                 item["buildCompatibility"] = ["textPanelShutdown"]
+            if commit == vh.source_prep.sparse_prep.COMMIT:
+                item["buildCompatibility"] = ["sparseMapTransition"]
+            if commit == vh.source_prep.named_event_prep.COMMIT:
+                item["buildCompatibility"] = ["namedEventTransition"]
+            if commit in vh.source_prep.panel_refresh_prep.PROFILES:
+                item["buildCompatibility"] = ["panelRefreshTransition"]
+            if commit in vh.source_prep.effect_prep.COMMITS:
+                item["buildCompatibility"] = ["effectTransition"]
+            if commit in vh.source_prep.panel_refresh_prep.PROFILES:
+                item["buildCompatibility"] = ["panelRefreshTransition"]
             if commit == vh.source_prep.position_prep.COMMIT:
                 item["buildCompatibility"] = ["mapPosition"]
             if commit == vh.source_prep.trigger_prep.COMMIT:

@@ -98573,6 +98573,125 @@
       "provenance": "content reconstruction of the BFG-removed original; adapt the reconstructed map and panel using same-version const handler getters and panel lookups",
       "sha256": "d0f21f9217fe43dfe97e476c47371222f9831c5972cf95b1a0af65a051f1a523",
       "source": "payloads/reconstructions/f9/f9959291daade8eb7e8df8452ab55e110f6d5fbb-CMap.cpp"
+    },
+    {
+      "originalBlob": "0c56c1aee2f326c222ca611b13c73a809c889d23",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; initial adjacent source adaptation to the surviving #275 headers; pending native validation",
+      "sha256": "3e119048480c94ad13956202a8e23efef37ab724f38656f590f6cb4bcc2d5f58",
+      "source": "payloads/reconstructions/0c/0c56c1aee2f326c222ca611b13c73a809c889d23-GameScript.cpp"
+    },
+    {
+      "originalBlob": "1ea46ac0f86abb5b01919bb57ff69bd643100c1c",
+      "path": "game/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; initial adjacent source adaptation to the surviving #275 headers; pending native validation",
+      "sha256": "f597638fd45f7f45551c206c3c5f3ac52dc5905a9be882a4787812c3ce40c3c3",
+      "source": "payloads/reconstructions/1e/1ea46ac0f86abb5b01919bb57ff69bd643100c1c-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "697d6f44fdc0c5cb4db070830a685a4fb4d01535",
+      "path": "game/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow same-revision view constructors and live inventory, equipment, and skill ownership",
+      "sha256": "74e7440d0b2f0eb7349f77ecf1ce9e6163bd9eaaed7375b01ab9d9ea5d064b25",
+      "source": "payloads/reconstructions/69/697d6f44fdc0c5cb4db070830a685a4fb4d01535-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "8168a23750d187a6f7b85df4e8120f163162a520",
+      "path": "game/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow the surviving GuiHandler and typed player-view APIs; pending native verification",
+      "sha256": "3ded0d37f49e6a9ee22be6b17d8ee94b53362c2eead8f4d39ff06add8ca57d13",
+      "source": "payloads/reconstructions/81/8168a23750d187a6f7b85df4e8120f163162a520-CCreature.cpp"
+    },
+    {
+      "originalBlob": "91dc071deb03294dfca74ec9faf8c015e8d944ff",
+      "path": "game/CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow same-revision view constructors and live inventory, equipment, and skill ownership",
+      "sha256": "61ca2cc12c1a3b9f0170a5a406ae51697266d942a8c0fe37f0deeb736558db35",
+      "source": "payloads/reconstructions/91/91dc071deb03294dfca74ec9faf8c015e8d944ff-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "a2d16813a496312c88dfa7ba3547dc89012e8457",
+      "path": "game/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; parse authored sparse terrain and state records, retaining their explicit coordinates, creature base stats, hit points and mana",
+      "sha256": "8e7bfbc7a206e03e3a7c865cb47cc248f3a91ab64ec447708c0eb456342908e0",
+      "source": "payloads/reconstructions/a2/a2d16813a496312c88dfa7ba3547dc89012e8457-CMap.cpp"
+    },
+    {
+      "originalBlob": "f7e9d841e093319ba7832d01173d46f4160b44d3",
+      "path": "game/CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow the surviving GuiHandler and typed player-view APIs; pending native verification",
+      "sha256": "c688202ddba3af38164c7c79ba88b6508dd09f0c0b0e11edc095a9c558c7f34d",
+      "source": "payloads/reconstructions/f7/f7e9d841e093319ba7832d01173d46f4160b44d3-CItem.cpp"
+    },
+    {
+      "originalBlob": "5d39acb37cb7159f3c492a310bc0954481f82b14",
+      "path": "game/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carry the sparse loader and expose the authored map event namespace and GUI binding",
+      "sha256": "b11b420fc1e90ddce088cab6a0e1f2c26389622647d63736bed6c77b80c5b896",
+      "source": "payloads/reconstructions/5d/5d39acb37cb7159f3c492a310bc0954481f82b14-CMap.cpp"
+    },
+    {
+      "originalBlob": "bfc3573dc37b393013c81495e68e313969b7c8df",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carry the sparse loader and expose the authored map event namespace and GUI binding",
+      "sha256": "2b217f8b39f1ce2495b56803ae32e155b0b060afb5af4e520ebef484754a873d",
+      "source": "payloads/reconstructions/bf/bfc3573dc37b393013c81495e68e313969b7c8df-GameScript.cpp"
+    },
+    {
+      "originalBlob": "93c609602f19f37282744260c66c35c0f06d4c95",
+      "path": "game/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carry the previous compatible panel reconstruction against unchanged declarations",
+      "sha256": "74e7440d0b2f0eb7349f77ecf1ce9e6163bd9eaaed7375b01ab9d9ea5d064b25",
+      "source": "payloads/reconstructions/93/93c609602f19f37282744260c66c35c0f06d4c95-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "d22ce388d24e479e3a476acc7e994340a63f6ce3",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow the unchanged native map interface and expose removeObject used by the surviving Cave script",
+      "sha256": "2b217f8b39f1ce2495b56803ae32e155b0b060afb5af4e520ebef484754a873d",
+      "source": "payloads/reconstructions/d2/d22ce388d24e479e3a476acc7e994340a63f6ce3-GameScript.cpp"
+    },
+    {
+      "originalBlob": "6eea0dbace4b3df300897edc870adcfbd811250c",
+      "path": "game/maps/map.json",
+      "provenance": "content reconstruction of the BFG-removed original; retain the same sparse map reconstruction for the unchanged missing blob across #276\u2013#279, carrying preceding terrain and state; event placement remains unknown",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/6e/6eea0dbace4b3df300897edc870adcfbd811250c-map.json"
+    },
+    {
+      "originalBlob": "513c9cbf66977ac8ea62064daf1c48047262abcb",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; initial CEffect adaptation following the surviving inheritance and declarations, pending native validation",
+      "sha256": "4b8d9c765c57953982053bc275ee5d1f6cdff4c7bf17f6640073560e331580f4",
+      "source": "payloads/reconstructions/51/513c9cbf66977ac8ea62064daf1c48047262abcb-GameScript.cpp"
+    },
+    {
+      "originalBlob": "a1b895fba4340c76fdca9050053dd75066189e01",
+      "path": "game/CInteraction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; initial CEffect adaptation following the surviving inheritance and declarations, pending native validation",
+      "sha256": "460b42c2f0c4e89379282d52610b2811a7a7669ad802716cf40b8a4a15b7738e",
+      "source": "payloads/reconstructions/a1/a1b895fba4340c76fdca9050053dd75066189e01-CInteraction.cpp"
+    },
+    {
+      "originalBlob": "b6d6528548d4b41e23de96ec96614fc40101aa28",
+      "path": "game/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; initial CEffect adaptation following the surviving inheritance and declarations, pending native validation",
+      "sha256": "587d9acdc84c80e4b4f7bc52c728b321b8755af60473142184110dbd16ef6373",
+      "source": "payloads/reconstructions/b6/b6d6528548d4b41e23de96ec96614fc40101aa28-CCreature.cpp"
+    },
+    {
+      "originalBlob": "bc77ba9d8a21083e06a343914d7ee5b9be6d1ca9",
+      "path": "game/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow the surviving startMove/endMove interface and carry the previously inline completion methods out of line",
+      "sha256": "c7a3ed82f9ba85e2020495a407d17c6b1892bf472ded224470f307c0f06e6b7b",
+      "source": "payloads/reconstructions/bc/bc77ba9d8a21083e06a343914d7ee5b9be6d1ca9-CMap.cpp"
+    },
+    {
+      "originalBlob": "d63614b85c8b26cd1146ff37adebd932a530a21f",
+      "path": "game/CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; follow the surviving startMove/endMove interface and carry the previously inline completion methods out of line",
+      "sha256": "7a077ce39db238e40b0192ab08b515f6baca42e5ce1d1173a2964b4abfb69584",
+      "source": "payloads/reconstructions/d6/d63614b85c8b26cd1146ff37adebd932a530a21f-CPathFinder.cpp"
     }
   ],
   "schemaVersion": 1

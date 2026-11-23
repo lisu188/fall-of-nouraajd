@@ -319,6 +319,14 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Missing panel transition preparation")
         if report.get("sourceCommit") == source_prep.text_shutdown_prep.COMMIT:
             raise VerificationError("Missing text-panel shutdown preparation")
+        if report.get("sourceCommit") == source_prep.sparse_prep.COMMIT:
+            raise VerificationError("Missing sparse map transition preparation")
+        if report.get("sourceCommit") == source_prep.named_event_prep.COMMIT:
+            raise VerificationError("Missing named event transition preparation")
+        if report.get("sourceCommit") in source_prep.effect_prep.COMMITS:
+            raise VerificationError("Missing effect transition preparation")
+        if report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES:
+            raise VerificationError("Missing panel refresh transition preparation")
         if report.get("sourceCommit") == source_prep.position_prep.COMMIT:
             raise VerificationError("Missing map position preparation")
         if report.get("sourceCommit") == source_prep.trigger_prep.COMMIT:
@@ -356,6 +364,21 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_text_shutdown = "textPanelShutdown" in names
     if has_text_shutdown != (report.get("sourceCommit") == source_prep.text_shutdown_prep.COMMIT):
         raise VerificationError("Text-panel shutdown preparation differs from the catalog commit")
+    has_sparse = "sparseMapTransition" in names
+    if has_sparse != (report.get("sourceCommit") == source_prep.sparse_prep.COMMIT):
+        raise VerificationError("Sparse map transition preparation differs from the catalog commit")
+    has_named_event = "namedEventTransition" in names
+    if has_named_event != (report.get("sourceCommit") == source_prep.named_event_prep.COMMIT):
+        raise VerificationError("Named event transition preparation differs from the catalog commit")
+    has_panel_refresh = "panelRefreshTransition" in names
+    if has_panel_refresh != (report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES):
+        raise VerificationError("Panel refresh transition preparation differs from the catalog commit")
+    has_effect = "effectTransition" in names
+    if has_effect != (report.get("sourceCommit") in source_prep.effect_prep.COMMITS):
+        raise VerificationError("Effect transition preparation differs from the catalog commit")
+    has_panel_refresh = "panelRefreshTransition" in names
+    if has_panel_refresh != (report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES):
+        raise VerificationError("Panel refresh transition preparation differs from the catalog commit")
     has_position = "mapPosition" in names
     if has_position != (report.get("sourceCommit") == source_prep.position_prep.COMMIT):
         raise VerificationError("Map position preparation differs from the catalog commit")
@@ -389,6 +412,10 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["mapPosition"] if has_position else [])
         + (["panelTransition"] if has_panel else [])
         + (["textPanelShutdown"] if has_text_shutdown else [])
+        + (["sparseMapTransition"] if has_sparse else [])
+        + (["namedEventTransition"] if has_named_event else [])
+        + (["effectTransition"] if has_effect else [])
+        + (["panelRefreshTransition"] if has_panel_refresh else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -493,6 +520,41 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_text_panel_shutdown.py"] = Path(helper.__file__).read_bytes()
+    if has_sparse:
+        helper = source_prep.sparse_prep
+        try:
+            helper.validate(preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_sparse_map_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_named_event:
+        helper = source_prep.named_event_prep
+        try:
+            helper.validate(preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_named_event_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_panel_refresh:
+        helper = source_prep.panel_refresh_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_panel_refresh_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_effect:
+        helper = source_prep.effect_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_effect_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_panel_refresh:
+        helper = source_prep.panel_refresh_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_panel_refresh_transition.py"] = Path(helper.__file__).read_bytes()
     merged_outputs = {}
     if has_merged_headers:
         helper = source_prep.merged_prep
@@ -540,6 +602,10 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or name in merged_outputs
                 or (has_panel and name in source_prep.panel_prep.PINS)
                 or (has_text_shutdown and name in source_prep.text_shutdown_prep.PINS)
+                or (has_sparse and name in source_prep.sparse_prep.PINS)
+                or (has_named_event and name in source_prep.named_event_prep.PINS)
+                or (has_effect and name in source_prep.effect_prep.PINS)
+                or (has_panel_refresh and name in source_prep.panel_refresh_prep.PROFILES[report["sourceCommit"]])
                 or name in scene_outputs
                 or (has_shutdown and name == source_prep.shutdown_prep.TARGETS[report["sourceCommit"]])
                 or (has_position and name == source_prep.position_prep.TARGET)
@@ -1005,6 +1071,10 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_map_position.py"] if "recovery/prepare_map_position.py" in preparation_files else []),
         *(["python3 recovery/prepare_panel_transition.py"] if "recovery/prepare_panel_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_text_panel_shutdown.py"] if "recovery/prepare_text_panel_shutdown.py" in preparation_files else []),
+        *(["python3 recovery/prepare_sparse_map_transition.py"] if "recovery/prepare_sparse_map_transition.py" in preparation_files else []),
+        *(["python3 recovery/prepare_named_event_transition.py"] if "recovery/prepare_named_event_transition.py" in preparation_files else []),
+        *(["python3 recovery/prepare_effect_transition.py"] if "recovery/prepare_effect_transition.py" in preparation_files else []),
+        *(["python3 recovery/prepare_panel_refresh_transition.py"] if "recovery/prepare_panel_refresh_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         *build_commands,
