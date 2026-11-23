@@ -1,0 +1,20 @@
+
+=== gameObjects ===
+{
+  "files": {
+    "CGameScene.cpp": [
+      "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
+      "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+    ],
+    "CGameView.cpp": [
+      "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
+      "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+    ],
+    "CScriptEngine.cpp": [
+      "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
+      "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+    ]
+  },
+  "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
+  "sourceCommit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139"
+}

@@ -17,7 +17,7 @@ class CMap;
 class CGameEvent;
 class PlayerStatsView;
 
-class CCreature : public CMapObject {
+class CCreature : public CMapObject, public Visitable {
     Q_OBJECT
     Q_PROPERTY(int exp READ getExp WRITE setExp USER true)
     Q_PROPERTY(int gold READ getGold WRITE setGold USER true)
@@ -63,8 +63,8 @@ class CCreature : public CMapObject {
     CWeapon *getWeapon();
     CArmor *getArmor();
     Stats *getStats();
-    void addBonus(Stats bonus);
-    void removeBonus(Stats bonus);
+    void addBonus(const Stats &bonus);
+    void removeBonus(const Stats &bonus);
     int getManaRatio();
     int getLevel();
     void addExpScaled(int scale);
@@ -77,6 +77,8 @@ class CCreature : public CMapObject {
     std::map<int, CItem *> *getEquipped();
     bool applyEffects();
     std::set<CInteraction *> *getActions();
+    virtual void onEnter(CGameEvent *);
+    void onLeave(CGameEvent *) override {}
     virtual void onMove(CGameEvent *);
     bool hasEquipped(CItem *item);
     void setItem(int i, CItem *newItem);
@@ -114,10 +116,11 @@ class CCreature : public CMapObject {
     int hp;
     bool alive = true;
     Stats stats;
-    virtual CInteraction *selectAction();
+    CInteraction *selectAction();
     void takeDamage(int i);
     CInteraction *getLevelAction();
     Stats getLevelStats();
+    friend class CGameView;
     Q_SIGNAL void statsChanged();
     Q_SIGNAL void skillsChanged();
     Q_SIGNAL void inventoryChanged();
@@ -129,23 +132,32 @@ class CPlayer : public CCreature {
     friend class PlayerStatsView;
 
   public:
-    virtual void onMove(CGameEvent *) override;
-    virtual void onDestroy(CGameEvent *) override;
-    void updateViews();
     CPlayer();
-    CPlayer(const CPlayer &);
-    virtual ~CPlayer();
-    virtual CInteraction *selectAction() override;
-    virtual void fight(CCreature *creature) override;
-    CInteraction *getSelectedAction() const;
-    void setSelectedAction(CInteraction *value);
-    CCreature *getEnemy() const;
-    void setEnemy(CCreature *value);
+    CPlayer(const CPlayer &player);
+    ~CPlayer();
+    std::set<CItem *> *getLoot();
+    virtual void fight(CCreature *creature);
+    void onMove(CGameEvent *);
+    void onEnter(CGameEvent *);
+    void update();
+    void updateViews();
+    void addToFightList(CCreature *creature);
+    void removeFromFightList(CCreature *creature);
+    std::list<CCreature *> *getFightList();
+    void performAction(CInteraction *action, CCreature *creature);
+    void setSelectedAction(CInteraction *action) { selectedAction = action; }
+private:
+    CInteraction *selectedAction = nullptr;
+public:
+    void addEntered(CMapObject *object);
+    std::list<CMapObject *> *getEntered();
+    void init();
 
   private:
-    CInteraction *selectedAction = 0;
-    CCreature *enemy = 0;
-    int turn = 0;
+    std::list<CCreature *> fightList;
+    int turn;
+    qint64 date = QDateTime::currentMSecsSinceEpoch();
+    std::list<CMapObject *> entered;
 };
 
 class CMonster : public CCreature {
@@ -154,6 +166,7 @@ class CMonster : public CCreature {
     CMonster();
     CMonster(const CMonster &monster);
     virtual void onMove(CGameEvent *);
+    virtual void onEnter(CGameEvent *);
     virtual void levelUp();
     virtual std::set<CItem *> *getLoot();
 };

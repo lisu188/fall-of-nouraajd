@@ -1,0 +1,43 @@
+{
+  "entries": [
+    {
+      "originalBlob": "f1d5cfeb0588d217c7bc6590e0224e72a0c1870f",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #347 reconstruction, not exact original. Adds intact55e6516 CQuestWrapper::isCompleted fallback + CQuest base/wrapper registration and real CPlayer.addQuest binding now required by genuine map1/script.py. Future donor onComplete omitted because actual #347 CQuest.h has no such member. Pending native verification; surviving originals unchanged.",
+      "sha256": "feba30219cf6f009a81a99ad029f4a04aff1b9f5bddc8a3e800f706d930a17cb",
+      "source": "recovery/payloads/reconstructions/f1/f1d5cfeb0588d217c7bc6590e0224e72a0c1870f-GameScript.cpp",
+      "validatedByOriginalCommit": "7482347bc37b07f65ced0f48a7e39aabf09c4dd5"
+    },
+    {
+      "originalBlob": "449b34403c89a5ce4d968cb2e0babe1d65d997cc",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #347 reconstruction, not exact original. Prior real creature implementation retained against unchanged same-era header; native/script quest mechanics are genuine original CPlayer/CQuest translation units, not implemented as substitutes. Pending native verification; surviving originals unchanged.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "recovery/payloads/reconstructions/44/449b34403c89a5ce4d968cb2e0babe1d65d997cc-CCreature.cpp",
+      "validatedByOriginalCommit": "7482347bc37b07f65ced0f48a7e39aabf09c4dd5"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 142,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 347,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "7482347bc37b07f65ced0f48a7e39aabf09c4dd5",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/7db1a07cc849d2bc296abb95eab899e0124ff6715650951ddea601efa46b331e",
+    "fingerprint": "7db1a07cc849d2bc296abb95eab899e0124ff6715650951ddea601efa46b331e",
+    "sourceCommit": "7482347bc37b07f65ced0f48a7e39aabf09c4dd5",
+    "sourceTree": "33ede8c5b0fc09a350df7891c7c0dfc38b690514",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

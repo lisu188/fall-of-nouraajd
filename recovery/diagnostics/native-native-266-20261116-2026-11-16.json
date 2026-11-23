@@ -1,0 +1,111 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "1f99ee715c4264858b0a57b5de2cb51b87752e47ca35252456505165ee88326f"
+    },
+    "startup.log": {
+      "bytes": 1784,
+      "sha256": "5cfe07db55b3837e15e457c0961999ac2079ead36ecb75451991dc8b18efa47e"
+    },
+    "startup.png": {
+      "bytes": 154344,
+      "sha256": "0db93db326088067677ba6e588545dd80fcfb7c2c38c9dabbe92c5d434480d24"
+    }
+  },
+  "catalogIndex": 266,
+  "entries": [
+    {
+      "originalBlob": "20d027ec5361f99512b7fa93a59c6c80042c6d8d",
+      "path": "src/CCreature.cpp",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Original inferred combined266 header deliberately omits obsolete loadFromJson; remove that member rather than invent a declaration. Public getStats/addItem/addAction/setItem APIs let missing factory initialize actual configured state; original QObject property path stores configured sw read by getScale, with direct static factory still populating genuine protected sw/stats. Keep real combat, bonuses, level/effects, slot invariants and signals.",
+      "sha256": "a0ca7a2ae4d7da0b8efecd32bd9e4a160fc2e374af6252ee48b5ab1e2df98c1b",
+      "source": "recovery/payloads/reconstructions/20/20d027ec5361f99512b7fa93a59c6c80042c6d8d-a0ca7a2ae4d7-CCreature.cpp",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    },
+    {
+      "originalBlob": "274fa0fe255146442ea3d76613badd3cb5f5fdde",
+      "path": "src/CMap.cpp",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Restore real original loadMap(QJsonObject)/handleTileLayer/handleObjectLayer API using Tiled JSON tileproperties/layer-data/object-property semantics from intact55e6516:CMapLoader.cpp, with firstgid normalization from the validated TMX donor and explicit rectangular dimensions, retaining validated tile/object ownership, movement, levels and entry APIs. Honor rectangular dimensions and declared three-argument moves. Source map data is explicitly inferred separately; unsupported schemas/classes fail, no fake objects.",
+      "sha256": "c11ddc258127c43e98acaae58f20d21460711acfa354715af949b1f96f3665b4",
+      "source": "recovery/payloads/reconstructions/27/274fa0fe255146442ea3d76613badd3cb5f5fdde-c11ddc258127-CMap.cpp",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    },
+    {
+      "originalBlob": "2a5c5e27065400988449f4f270eca6315f66cc67",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Retain real inventory/equipment/action/backpack/scroll rendering and early-resize safety. Implement newly declared scroll mouse handler as dismissal of its actual text panel, consistent with its message-use role. Text-panel paint/show semantics come from intact later CTextPanel; no invented gameplay actor or disabled action.",
+      "sha256": "7eb0dffcb98eb7cc5cc366d896bfbf5a42789f5f71e27faf7f0d143e8716227b",
+      "source": "recovery/payloads/reconstructions/2a/2a5c5e27065400988449f4f270eca6315f66cc67-7eb0dffcb98e-CGamePanel.cpp",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    },
+    {
+      "originalBlob": "3c0cbee62e2b1facd08089c04c09b602fb2630ab",
+      "path": "maps/map.json",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Missing JSON map donor was incompatible pre-Tiled {map,state} save data. Infer this input by deterministic lossless Tiled JSON conversion of the accepted265 donor adaptation: preserve every layer tile id, tile definition, size, entry/property and six supported actors. Eight later unsupported StartEvent and one Market donor objects remain omitted as documented in263 audit. Not exact original266 map/layout, event/shop mechanics or gameplay parity.",
+      "sha256": "022c478b0054d7c802dbb45f6c45f4c658869426b510894f2626c7a0585c863f",
+      "source": "recovery/payloads/reconstructions/3c/3c0cbee62e2b1facd08089c04c09b602fb2630ab-022c478b0054-map.json",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    },
+    {
+      "originalBlob": "542bcef2371cf9a93b2210a6b6afe720dfa2ddb1",
+      "path": "src/CObjectHandler.cpp",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Use original QObject/Qt properties and actual public creature Stats/actions/items/equipment API to initialize the real model after original removal of loadFromJson; do not add unsupported API to the conservative reconstructed header. Preserve real type factories, Python function-versus-class detection across shared inferred interactions, configuration failure diagnostics and accessors.",
+      "sha256": "4d6eda5f966e80258a6091d051b6420aedf0545043158716a26de6255d5c3c24",
+      "source": "recovery/payloads/reconstructions/54/542bcef2371cf9a93b2210a6b6afe720dfa2ddb1-4d6eda5f966e-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    },
+    {
+      "originalBlob": "58f55a8d2743412470fb36fc64e6403c642cf496",
+      "path": "src/CInteraction.cpp",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Retain all genuine function-based Python interaction dispatch and native authored effects, adapting only removal of the no-longer-declared Effect::saveToJson. Effect bodies remain grounded in surviving scripts/game/effect.py and earlier genuine APIs, not placeholders.",
+      "sha256": "c6e948506f1b941e296d896272583c391fdc5b6200e1f195eefd17bdbb18c8cc",
+      "source": "recovery/payloads/reconstructions/58/58f55a8d2743412470fb36fc64e6403c642cf496-c6e948506f1b-CInteraction.cpp",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    },
+    {
+      "originalBlob": "75a69392eaac23a251a08b797362bc6751514494",
+      "path": "src/CItem.cpp",
+      "provenance": "Inferred #266 missing implementation grounded in native-verified263\u2013265 bodies and actual original266 JSON/property/three-argument moveTo/bool item-use migration. Preserve all surviving original bytes. Match real bool onUse migration: equip returns non-consumption; actual Life/Mana effects and displayed scroll text return consumption, and single-use mouse path removes only after successful use. Remove obsolete loader member; preserve declared armor named constructor with actual config and proper base copy state. Keep actual interactions/equipment/bonus/potion behavior, not no-op callbacks.",
+      "sha256": "727054e8627b4e7e9f5695ca88007a1d125d351666d9f52b7a3356a8b3eb9f17",
+      "source": "recovery/payloads/reconstructions/75/75a69392eaac23a251a08b797362bc6751514494-727054e8627b-CItem.cpp",
+      "validatedByOriginalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+    }
+  ],
+  "fingerprint": "835f1fc392d4b68ce2cea8a135541864e1b880eeb4c5f3184ca80f48ff3fa102",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated.",
+    "The rejected first native frame and actual fail-before/pass-after Qt boundary regression are retained separately; current accepted frame has grass and roads, not the incorrect all-mountain fill."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "ae756696166cfea46890d90ecab7c009c7a53c8b2e6f342d741faf28a5714dff",
+  "nativeRegressions": {
+    "boundary-after-build.log": {
+      "bytes": 327,
+      "sha256": "e94da91e9bb3fcfb0385321d7f620b43eee8b09de3684f74c13285103f07650a"
+    },
+    "boundary-after.cpp": {
+      "bytes": 709,
+      "sha256": "9a1fb088868c513519d29d8f0c7ef9497b1782637e89ce94800bd37acbe502df"
+    },
+    "boundary-before-build.log": {
+      "bytes": 327,
+      "sha256": "e94da91e9bb3fcfb0385321d7f620b43eee8b09de3684f74c13285103f07650a"
+    },
+    "boundary-before.cpp": {
+      "bytes": 644,
+      "sha256": "48d4261eb001ed8b4bc3065cf4e48f31f6a2caff2c2d48b9681be5b0160e30c8"
+    },
+    "map-boundary-regression.json": {
+      "bytes": 1018,
+      "sha256": "3bfa9d266578a4e3f07313fef639bfd3643037a895c17d0a3dfe9e9b463eadb7"
+    },
+    "map-era-266.json": {
+      "bytes": 1291,
+      "sha256": "ce6a0600e68e91fbeba463ec3a50d73e93d34b941b39929e06dca1ca89c43681"
+    }
+  },
+  "originalCommit": "6367c6918ce9c141e0863d4e193fbd4a9e647ebb"
+}

@@ -1,0 +1,140 @@
+{
+  "identity": {
+    "implementationSha256": "1ac92e93e18b8230eee08b340fb1c11ac03ecc36477ac3b503113df5c48f6732",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "522bff353e14c398cf09039342c5fe13262e74eb5f39ebc2e7d580e19c02886e"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "9b9da24e06f101502a7f9edc394859765604d59b7ae85117c5887fae346e366d"
+        },
+        "path": "CAnimatedObject.h",
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
+        },
+        "path": "CGameScene.cpp",
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
+        },
+        "path": "CGameView.cpp",
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
+        },
+        "path": "CScriptEngine.cpp",
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+      }
+    ],
+    "typedEvents": {
+      "files": {
+        "CAnimatedObject.h": [
+          "9b9da24e06f101502a7f9edc394859765604d59b7ae85117c5887fae346e366d",
+          "522bff353e14c398cf09039342c5fe13262e74eb5f39ebc2e7d580e19c02886e"
+        ],
+        "CGameScene.cpp": [
+          "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
+          "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+        ],
+        "CGameView.cpp": [
+          "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
+          "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+        ],
+        "CScriptEngine.cpp": [
+          "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
+          "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+        ]
+      },
+      "replaySha256": "5d4e272ccfc113445242d654e64604ba4f5299e59873bbca09e03c69ed064e49",
+      "sourceCommit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "522bff353e14c398cf09039342c5fe13262e74eb5f39ebc2e7d580e19c02886e"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "9b9da24e06f101502a7f9edc394859765604d59b7ae85117c5887fae346e366d"
+      },
+      "path": "CAnimatedObject.h",
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
+      },
+      "path": "CGameScene.cpp",
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
+      },
+      "path": "CGameView.cpp",
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
+      },
+      "path": "CScriptEngine.cpp",
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-typed-events"
+      ],
+      "log": "/tmp/nouraajd-316-typed-final/verify/snapshot-lsl2mwp7/preparation/typed-events.log",
+      "name": "typedEvents",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

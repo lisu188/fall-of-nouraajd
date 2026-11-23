@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "catalogOrder": 164,
+  "sourceCommit": "b4d315b857f8df32b17422f64b381a36f3d90d1d",
+  "buildReturnCode": 0,
+  "status": "original-runtime-defect-not-accepted",
+  "reason": "Genuine Teleporter::saveToJson first creates an array then writes the enabled object field; genuine Json::Value aborts during shutdown. No original edits or successful-tree claim.",
+  "originalSourceGitBlob": "9d8a200390610e30304d471d0e48cac3522a9f20",
+  "sourceSha256": "317099f84b236b4f32e84d7169d4374d94393a084ac73c4c55f80b2a5f72c7ef",
+  "startupLogSha256": "bc006c4945a8dca46b87e88a524304527a99a892ff979c6decdbd06c128b3fb6",
+  "retainedSnapshot": "/tmp/nouraajd-bfg-recovery/native-middle/verify/snapshot-13ukzwyb",
+  "compatibilityStatus": "separate exact-pinned adapter and before/after regression in development"
+}

@@ -1,0 +1,94 @@
+{
+  "entries": [
+    {
+      "donorPayloadSha256": "24875144d2f2b61ad72691904fe6165c21ace244eddba0555536a81abc35b63f",
+      "originalBlob": "dee6f6894a095a75e175dbeb66b5a9bdb511e450",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "24875144d2f2b61ad72691904fe6165c21ace244eddba0555536a81abc35b63f",
+      "source": "recovery/payloads/reconstructions/de/dee6f6894a095a75e175dbeb66b5a9bdb511e450-GameScript.cpp",
+      "validatedByOriginalCommit": "466d7f400881743b23af062bf725f80363058437"
+    },
+    {
+      "donorPayloadSha256": "538dbba4e847ce39d49b63c5d85e2727ced4f52840d323f4dfa03b5f4bbd3209",
+      "originalBlob": "92db1c50940de267343f2438a1f9acd64a15241a",
+      "path": "game.pro",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "cf1828c317db6a869bc89b01b97764f54f4b5b876dfbbeb6d04133a59aaefa98",
+      "source": "recovery/payloads/reconstructions/92/92db1c50940de267343f2438a1f9acd64a15241a-game.pro",
+      "validatedByOriginalCommit": "466d7f400881743b23af062bf725f80363058437"
+    },
+    {
+      "donorPayloadSha256": "b1c6981b4af44abb68d3ff52186bb71166ea716d5ffa270d2144954fb4a0b03c",
+      "originalBlob": "e002f325958d029c4230c7f2cdf61efd9cf9029a",
+      "path": "config/interactions.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "b1c6981b4af44abb68d3ff52186bb71166ea716d5ffa270d2144954fb4a0b03c",
+      "source": "recovery/payloads/reconstructions/e0/e002f325958d029c4230c7f2cdf61efd9cf9029a-interactions.json",
+      "validatedByOriginalCommit": "466d7f400881743b23af062bf725f80363058437"
+    },
+    {
+      "donorPayloadSha256": "f92b712627946194dab152fc38fb9ed9b473b6c5ce28af934c2f8ac6cf3aa801",
+      "originalBlob": "60fcbe36a016804c1addc17f0695be9d0ddac77e",
+      "path": "config/weapons.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "f92b712627946194dab152fc38fb9ed9b473b6c5ce28af934c2f8ac6cf3aa801",
+      "source": "recovery/payloads/reconstructions/60/60fcbe36a016804c1addc17f0695be9d0ddac77e-weapons.json",
+      "validatedByOriginalCommit": "466d7f400881743b23af062bf725f80363058437"
+    },
+    {
+      "donorPayloadSha256": "dcba654730c76fa2ae07087ac47ec9416849cbdc1b2c8c974d8cd65304f1cd64",
+      "originalBlob": "37dc13de6694265ff593d0e474a6946704f45e25",
+      "path": "config/monsters.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "dcba654730c76fa2ae07087ac47ec9416849cbdc1b2c8c974d8cd65304f1cd64",
+      "source": "recovery/payloads/reconstructions/37/37dc13de6694265ff593d0e474a6946704f45e25-monsters.json",
+      "validatedByOriginalCommit": "466d7f400881743b23af062bf725f80363058437"
+    },
+    {
+      "donorPayloadSha256": "a2bdedfc0bad2e694b5853d54ada3fe67a0205052088aad58067c47ff0efcb17",
+      "originalBlob": "61b8ec54270990c88fe4331a7b335d4e53545788",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+      "sha256": "a2bdedfc0bad2e694b5853d54ada3fe67a0205052088aad58067c47ff0efcb17",
+      "source": "recovery/payloads/reconstructions/61/61b8ec54270990c88fe4331a7b335d4e53545788-map.json",
+      "validatedByOriginalCommit": "466d7f400881743b23af062bf725f80363058437"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 138,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 337,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "466d7f400881743b23af062bf725f80363058437"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "recovery/payloads/resources/1a6c07270143702ee9e19cb1613e0edb4e54875c-images.qrc",
+      "tree": "1a6c07270143702ee9e19cb1613e0edb4e54875c"
+    }
+  ],
+  "sourceCommit": "466d7f400881743b23af062bf725f80363058437",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/f5d5730374ed231d9066f68e72087b9655269945b78e5a4bfb31a37129ac9fc5",
+    "fingerprint": "f5d5730374ed231d9066f68e72087b9655269945b78e5a4bfb31a37129ac9fc5",
+    "sourceCommit": "466d7f400881743b23af062bf725f80363058437",
+    "sourceTree": "1a6c07270143702ee9e19cb1613e0edb4e54875c",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

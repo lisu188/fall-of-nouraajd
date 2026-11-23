@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "originalBlob": "54ed05c16423e789a9e400f8c2cdd74323fa54b8",
+      "path": "CMap.cpp",
+      "provenance": "Missing #333 content reconstructed from verified #332 candidate, updated to original CMap.h/CScriptHandler.h naming. Original CScriptHandler.cpp now installs the map loader and imports the map script, so duplicate earlier map-owned loader setup is removed. Bodies/API otherwise retained; not an exact original.",
+      "sha256": "fb77b71d3a44ab0ecf9000c5867c836afd36098583daa078dc3f1e6452f46ec8",
+      "source": "recovery/payloads/reconstructions/54/54ed05c16423e789a9e400f8c2cdd74323fa54b8-CMap.cpp",
+      "validatedByOriginalCommit": "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9"
+    },
+    {
+      "originalBlob": "7f2bb362cabf0290d84ce866c4f20100c974ce4d",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #333 content reconstructed from verified #332 candidate, updated to original CMap.h/CScriptHandler.h naming. Original CScriptHandler.cpp now installs the map loader and imports the map script, so duplicate earlier map-owned loader setup is removed. Bodies/API otherwise retained; not an exact original.",
+      "sha256": "9f22f1d77e65bf96642bb3b4edd0e3e1d1b28a6a53e1c27283651ca0dd4419eb",
+      "source": "recovery/payloads/reconstructions/7f/7f2bb362cabf0290d84ce866c4f20100c974ce4d-GameScript.cpp",
+      "validatedByOriginalCommit": "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9"
+    },
+    {
+      "originalBlob": "44761c8ef6b349cb78b8459f78c9a1931827829f",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #333 content reconstructed from verified #332 candidate, updated to original CMap.h/CScriptHandler.h naming. Original CScriptHandler.cpp now installs the map loader and imports the map script, so duplicate earlier map-owned loader setup is removed. Bodies/API otherwise retained; not an exact original. The same removed originalBlob spans the surviving CMap API rename at #335, so a dependent-template compile-time dispatch calls actual declared getLootHandler() or getLootProvider(), with no empty fallback. Reviewed to preserve both genuine interfaces and one consistent payload.",
+      "sha256": "cdc32aabc88b3be26aa8bbfbc6dab9e91bc3b8be98281ca7bbf79480dca3d5d7",
+      "source": "recovery/payloads/reconstructions/44/44761c8ef6b349cb78b8459f78c9a1931827829f-CCreature.cpp",
+      "validatedByOriginalCommit": "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 133,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 333,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "recovery/payloads/resources/e4fa30d9c332bc5c3314260337db543717d4419c-images.qrc",
+      "tree": "e4fa30d9c332bc5c3314260337db543717d4419c"
+    }
+  ],
+  "sourceCommit": "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/cce234c09778e9a828c1a93083d961ea2d3388008ddc9212b28f2e294fb7e409",
+    "fingerprint": "cce234c09778e9a828c1a93083d961ea2d3388008ddc9212b28f2e294fb7e409",
+    "sourceCommit": "1b0584e68ef288c00101a4e33f3b7eaac7a3e6c9",
+    "sourceTree": "e4fa30d9c332bc5c3314260337db543717d4419c",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}
