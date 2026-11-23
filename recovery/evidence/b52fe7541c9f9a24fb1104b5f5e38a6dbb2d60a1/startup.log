@@ -1,0 +1,53 @@
+Loaded configuration: :/config/init.json 
+
+process 187: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+QIODevice::read (QFile, ":/save/game.sav"): device not open
+Loaded configuration: :/save/game.sav 
+
+Loaded configuration: :/config/map.json 
+
+Loaded animation: :/images/buildings/cave/ 
+
+Loaded animation: :/images/buildings/dungeon/ 
+
+Loaded configuration: :/config/items.json 
+
+Loaded animation: :/images/items/potions/life/ 
+
+Loaded configuration: :/config/creatures.json 
+
+Loaded animation: :/images/players/sorcerer/ 
+
+Loaded configuration: :/config/interactions.json 
+
+Loaded animation: :/images/interactions/attack/ 
+
+Loaded animation: :/images/items/potions/mana/ 
+
+Loaded animation: :/images/items/weapons/staff/ 
+
+Sorcerer equipped Staff 
+
+Loaded animation: :/images/items/armors/robe/ 
+
+Sorcerer equipped Robe 
+
+Loaded animation: :/images/interactions/magicmissile/ 
+
+Loaded animation: :/images/arrows/right/ 
+
+Loaded animation: :/images/arrows/left/ 
+
+Loaded configuration: :/config/tiles.json 
+
+Loaded animation: :/images/tiles/grass/ 
+
+Loaded animation: :/images/tiles/mountain/ 
+
+Loaded animation: :/images/tiles/ground/ 
+
+Loaded animation: :/images/tiles/water/ 
+
+Loaded animation: :/images/tiles/road/ 
+

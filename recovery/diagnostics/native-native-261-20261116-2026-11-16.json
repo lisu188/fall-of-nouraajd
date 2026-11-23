@@ -1,0 +1,91 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "e5f62c62a97e32118ee84dcca7ca14d3b35a1e23b0e9f9b6692009cb03aa312d"
+    },
+    "startup.log": {
+      "bytes": 1744,
+      "sha256": "91b780421d3c89f2bd9a79a4fd93ada5f6b570ccd2d1e89122150c6075174a60"
+    },
+    "startup.png": {
+      "bytes": 174091,
+      "sha256": "196b4136f17f6365a8ee1218f71773499e16cdae0eadeb9ff47058cf71b327f1"
+    }
+  },
+  "catalogIndex": 261,
+  "entries": [
+    {
+      "originalBlob": "0044767fb8e0532f198436b1661be4bba7fbbdb3",
+      "path": "src/CMap.cpp",
+      "provenance": "Inferred missing #261 body from native-verified #260 reconstruction and exact same-commit original header/callers, preserving all surviving bytes. Original CMap now privately owns its pointer-tile dictionary, declares canStep/moveTile and removes addRiver/addRoad. Keep actual TMX geometry, factories, objects and startup; implement tile index transfer used by intact CTile::moveTo, rejecting duplicate ownership explicitly. The friend unique_lock declaration adds no lock/unlock methods and no surviving caller uses that unfinished API; no thread-safety claim.",
+      "sha256": "c18c53382ac354cf13d43404e7342bb7b596fe0fbe95330549ec8e29f309d8d8",
+      "source": "recovery/payloads/reconstructions/00/0044767fb8e0532f198436b1661be4bba7fbbdb3-CMap.cpp",
+      "validatedByOriginalCommit": "b4954bbcaad2b59cd68f24beb69fe05cbbe46081"
+    },
+    {
+      "originalBlob": "a3512edf4fd784a2491fa09c8e416de666d62f92",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "Inferred missing #261 body from native-verified #260 reconstruction and exact same-commit original header/callers, preserving all surviving bytes. Retain real cardinal/random/cost-field path implementations and add only the declared CSmartPathFinder::canStep wrapper to the genuine CMap::canStep API. No pathfinding behavior/performance parity claim.",
+      "sha256": "7a9d57150ee9d59f4c1f278f900e30bbfd689c384f244a7adf16a8232c8afae2",
+      "source": "recovery/payloads/reconstructions/a3/a3512edf4fd784a2491fa09c8e416de666d62f92-CPathFinder.cpp",
+      "validatedByOriginalCommit": "b4954bbcaad2b59cd68f24beb69fe05cbbe46081"
+    },
+    {
+      "originalBlob": "ad1a073d750b17e403bf4b6156e98cbb1359677c",
+      "path": "src/CItem.cpp",
+      "provenance": "Inferred missing #261 body from native-verified #260 reconstruction and exact same-commit original header/callers, preserving all surviving bytes. Original #261 CItem/CPotion headers remove static createItem and the potion load override. Preserve real inherited item load API, public bonus property, factory-created items and genuine life/mana effects; resolve the original recognized potion effect inside the declared onUse rather than define a future method.",
+      "sha256": "8052b17dc10d05e76c1a84c6f285bdce7968a117ac0cc0fb011610e5734178f9",
+      "source": "recovery/payloads/reconstructions/ad/ad1a073d750b17e403bf4b6156e98cbb1359677c-CItem.cpp",
+      "validatedByOriginalCommit": "b4954bbcaad2b59cd68f24beb69fe05cbbe46081"
+    }
+  ],
+  "fingerprint": "ee5960735077b2ff9a228b2486fc4edb8db12868727cc11409e1530b57e6ac85",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated.",
+    "Tile index transfer rejects conflicting existing tile ownership; tile-editor collision behavior and concurrent map access have not been validated."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "fd9a94ba96a4dc6b479b5ca098cd67dc23b9c57af29bbf0e5223376b6478367b",
+  "originalCommit": "b4954bbcaad2b59cd68f24beb69fe05cbbe46081",
+  "supplementalArtifacts": {
+    "0044767fb8e0532f198436b1661be4bba7fbbdb3": {
+      "bytes": 10178,
+      "sha256": "c18c53382ac354cf13d43404e7342bb7b596fe0fbe95330549ec8e29f309d8d8"
+    },
+    "README.md": {
+      "bytes": 6335,
+      "sha256": "887e277d6058a8210c8f88e39fbc2e092b6ee21e1e1599ceaa98e18987068097"
+    },
+    "a3512edf4fd784a2491fa09c8e416de666d62f92": {
+      "bytes": 4631,
+      "sha256": "7a9d57150ee9d59f4c1f278f900e30bbfd689c384f244a7adf16a8232c8afae2"
+    },
+    "ad1a073d750b17e403bf4b6156e98cbb1359677c": {
+      "bytes": 4691,
+      "sha256": "8052b17dc10d05e76c1a84c6f285bdce7968a117ac0cc0fb011610e5734178f9"
+    },
+    "native-proof.json": {
+      "bytes": 44848,
+      "sha256": "fd9a94ba96a4dc6b479b5ca098cd67dc23b9c57af29bbf0e5223376b6478367b"
+    },
+    "portable-verification.json": {
+      "bytes": 44702,
+      "sha256": "5f5efa4bf96c30a0cdd09ae56ebe979105532a71cd314c3b7741fe1f4d7b5e31"
+    },
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "e5f62c62a97e32118ee84dcca7ca14d3b35a1e23b0e9f9b6692009cb03aa312d"
+    },
+    "startup.log": {
+      "bytes": 1744,
+      "sha256": "91b780421d3c89f2bd9a79a4fd93ada5f6b570ccd2d1e89122150c6075174a60"
+    },
+    "startup.png": {
+      "bytes": 174091,
+      "sha256": "196b4136f17f6365a8ee1218f71773499e16cdae0eadeb9ff47058cf71b327f1"
+    }
+  }
+}

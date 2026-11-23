@@ -1,0 +1,32 @@
+{
+ "affectedRange": "LoadGameTask is present in the surviving gamescene.cpp through #246 and at #248; #247 and #249-#252 lack a surviving gamescene.cpp",
+ "catalogOrder": 226,
+ "compatibilityStatus": "No adapter; original bytes unchanged. #226 reconstructions are kept (instance-based GameScene, per-scene Map/ScriptEngine, creature-based pathfinders, deferred view showing).",
+ "genuineFiles": {
+  "src/gamescene.cpp": "7335a50ae01a076c85ff51f177b55cfbe6a6e8ec",
+  "src/tile.cpp": "c2a495010d1146344288cb3894018f44d50be660"
+ },
+ "hasherSurvivingAt": {
+  "180": "d1ec5a991eb0d44bf5efb9c37ce77aa363ee7ef9",
+  "366": "same expression in the surviving #366 source"
+ },
+ "measurements": {
+  "verificationAttempts": [
+   "60 s watchdog: ready report written but exit deadlocked on the loading task (before the observer waited for the pool)",
+   "420 s and 720 s watchdogs with the observer waiting for an idle thread pool: no readiness before the observer deadline"
+  ],
+  "verifierEnvironmentWithoutObserver": "LoadGameTask start to end 278.9 s for 200x200 map plus 10-tile border; pool idle afterwards",
+  "withoutObserver": "48000 of 48400 ensureTile calls after 351 s (instrumented throwaway build); thread pool not observed idle afterwards"
+ },
+ "outcome": "Loading was confirmed to finish: in the verifier environment without the observer, LoadGameTask completes about 279 s after it starts and the global thread pool then goes idle. The earlier failures came from the startup observer, which applied its 20 s readiness deadline while the game kept its view hidden during loading and then exited underneath the loading task; it now applies the loading deadline as soon as background work is seen. #226 then verified with HISTORY_VERIFY_TIMEOUT=900 (smoke 699.7 s); #227-#236 verified with 1200 s.",
+ "reason": "The surviving #226 GameScene::startGame runs LoadGameTask, which calls Map::ensureTile through BlockingQueuedConnection for every cell of the map plus a 10-tile border and shows the view only afterwards. The genuine CoordsHasher (surviving #180 coords.cpp, still identical at #366) returns (a^b)^(b^c)^(a^c), which is always 0, so every Coords-keyed unordered_map degenerates to one bucket and loading is quadratic. With the restored 200x200 maps/map.tmx (an unverified donor conversion of a later authored map) the load did not settle within the verification window.",
+ "schemaVersion": 1,
+ "sourceCommit": "e43a91c0533f3ded4b560e92b0d735fc3613e8bf",
+ "status": "accepted-with-documented-long-startup-window",
+ "verificationWindow": {
+  "environment": "HISTORY_VERIFY_TIMEOUT",
+  "observerLoadDeadline": "watchdog minus 10 s",
+  "range": "#226-#248 (LoadGameTask present)",
+  "seconds": 1200
+ }
+}

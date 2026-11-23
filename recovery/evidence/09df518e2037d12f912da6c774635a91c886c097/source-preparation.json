@@ -1,0 +1,89 @@
+{
+  "identity": {
+    "implementationSha256": "f8630b91ea7e53f73b081ba54d266da2c53ef532e5eb6c4dcb90213996a23b78",
+    "mergedHeaders": {
+      "donorCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
+      "inputs": {
+        "lib/json/json_value.cpp": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2"
+      },
+      "outputs": {
+        "lib/json/json_internalarray.inl": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
+        "lib/json/json_internalmap.inl": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
+        "lib/json/json_valueiterator.inl": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc"
+      },
+      "replaySha256": "2c508b5aef0177ff121cf8eb66cf14a37127bd791fb261b8b1e186a36cd18157",
+      "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097"
+    },
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1"
+        },
+        "before": null,
+        "path": "lib/json/json_internalarray.inl",
+        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c"
+        },
+        "before": null,
+        "path": "lib/json/json_internalmap.inl",
+        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc"
+        },
+        "before": null,
+        "path": "lib/json/json_valueiterator.inl",
+        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1"
+      },
+      "before": null,
+      "path": "lib/json/json_internalarray.inl",
+      "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c"
+      },
+      "before": null,
+      "path": "lib/json/json_internalmap.inl",
+      "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc"
+      },
+      "before": null,
+      "path": "lib/json/json_valueiterator.inl",
+      "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-merged-headers"
+      ],
+      "log": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/preparation/merged-headers.log",
+      "name": "mergedHeaders",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

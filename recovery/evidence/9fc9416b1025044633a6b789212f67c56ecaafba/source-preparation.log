@@ -1,0 +1,23 @@
+
+=== legacyTileConfiguration ===
+{
+  "inputs": {
+    "config/objects/tiles.json": "b95264f9ddef82b4196f80b823c161978fa6d11b3d3329964ab23254f0874b71",
+    "src/CTile.cpp": "885fe0cd8557ef7ef8e0c8e8a7e8910a31e10321ae7eda82ef1c952f72650124"
+  },
+  "path": "config/tiles.json",
+  "provenance": {
+    "inferredCompatibility": true,
+    "operation": "Flatten each original properties object; rename animation to path and preserve canStep",
+    "reason": "Original CTile::loadFromJson still reads config/tiles.json after configuration moved to config/objects",
+    "sourceCommit": "9fc9416b1025044633a6b789212f67c56ecaafba"
+  },
+  "replaySha256": "6669a6e9f110fd2318a5800fc98b753f5418d7d2dca42fcd0bb2a2aac30418d5",
+  "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8",
+  "validationBoundary": "Game startup with legacy tile configuration derived from unchanged original object configuration; original loader and configuration bytes remain unchanged"
+}
+
+=== interpreter ===
+Python 2.7.18
+
+=== generator ===

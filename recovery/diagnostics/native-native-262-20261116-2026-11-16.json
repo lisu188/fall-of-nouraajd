@@ -1,0 +1,60 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "1f4ee67f2ddde9fc7ad4e12531908f817cb9ef57478a4c433cf247b41991f625"
+    },
+    "startup.log": {
+      "bytes": 1744,
+      "sha256": "1e8f1427c815d1b29b940d8d0c27f2d2be1f27d9c27268e8f7672ce48673b006"
+    },
+    "startup.png": {
+      "bytes": 174091,
+      "sha256": "196b4136f17f6365a8ee1218f71773499e16cdae0eadeb9ff47058cf71b327f1"
+    }
+  },
+  "catalogIndex": 262,
+  "entries": [
+    {
+      "originalBlob": "2acae78ce75952feff76d3fb469ca6cc160104c4",
+      "path": "src/CItem.cpp",
+      "provenance": "Inferred missing #262 body from native-verified #260/#261 reconstructions and the actual #262 original header change. Preserve every surviving source byte. Original item API is unchanged from261; use actual CItemSlot declaration moved to CPlayerView.h, retaining all real item/potion/equipment mechanics.",
+      "sha256": "b0fc1e6125a1a826b02e6159b28513a2077f3fd6b7dc306aa8418a7c333c3d08",
+      "source": "recovery/payloads/reconstructions/2a/2acae78ce75952feff76d3fb469ca6cc160104c4-CItem.cpp",
+      "validatedByOriginalCommit": "e8b7c3d0e6da989122a0587943a98504342da3cd"
+    },
+    {
+      "originalBlob": "36902d47a7eeb261960915c2d64f8dbe6d0c0ff5",
+      "path": "src/CCreature.cpp",
+      "provenance": "Inferred missing #262 body from native-verified #260/#261 reconstructions and the actual #262 original header change. Preserve every surviving source byte. Original CPlayerView.h now owns the unchanged CItemSlot declaration, so retain the same genuine creature/player/monster mechanics and include the surviving containing header; omit only the genuinely deleted separate header.",
+      "sha256": "a975dada31dc9ddecfff4194338ee8eca179a51c34372612c2d87561c4969541",
+      "source": "recovery/payloads/reconstructions/36/36902d47a7eeb261960915c2d64f8dbe6d0c0ff5-CCreature.cpp",
+      "validatedByOriginalCommit": "e8b7c3d0e6da989122a0587943a98504342da3cd"
+    },
+    {
+      "originalBlob": "7caf45e39f7a992d2d3d43870b97520462a3ea4d",
+      "path": "game.pro",
+      "provenance": "Inferred missing #262 body from native-verified #260/#261 reconstructions and the actual #262 original header change. Preserve every surviving source byte. Same actual application/engine/TMX source inventory as261, excluding only the genuinely deleted separate CItemSlot translation unit/header; all original slot code is compiled in the reconstructed combined CPlayerView.cpp.",
+      "sha256": "aeb486849fa1d180d21e95801f3140a4e15b19d671fa1b1d8c7d1343fc5e11db",
+      "source": "recovery/payloads/reconstructions/7c/7caf45e39f7a992d2d3d43870b97520462a3ea4d-game.pro",
+      "validatedByOriginalCommit": "e8b7c3d0e6da989122a0587943a98504342da3cd"
+    },
+    {
+      "originalBlob": "c65272270d06a8f9f6bb8b46253b20259fb99297",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Inferred missing #262 body from native-verified #260/#261 reconstructions and the actual #262 original header change. Preserve every surviving source byte. The separate CItemSlot.cpp/.h are genuinely deleted while original CPlayerView.h adds the exact same full slot class declaration. Carry every original261 slot method into this missing combined player-view implementation, changing only its deleted include to the actual containing header. Preserve drag/drop/checkType/update/equipped mechanics; no static initializer or needed method is omitted.",
+      "sha256": "b4356de0e90f9359a73bf578273a11488884a3e22c7d5b92ac41d04f79edbab3",
+      "source": "recovery/payloads/reconstructions/c6/c65272270d06a8f9f6bb8b46253b20259fb99297-CPlayerView.cpp",
+      "validatedByOriginalCommit": "e8b7c3d0e6da989122a0587943a98504342da3cd"
+    }
+  ],
+  "fingerprint": "3ef5699e61c251ce098c578146fa8281a993014129da81e48f7a446dc89d21b8",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "b46772d1ce32eb076bf5f388b8be279e8f0eedd9019390242caead514c23201f",
+  "originalCommit": "e8b7c3d0e6da989122a0587943a98504342da3cd"
+}

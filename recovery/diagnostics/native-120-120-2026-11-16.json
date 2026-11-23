@@ -1,0 +1,82 @@
+{
+  "entries": [
+    {
+      "commit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "firstCatalogOrder": 120,
+      "originalBlob": "0f75e9ef9043aabb7b24d83fba949c94aedf4cc2",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #119 Creature to genuine #120 private Comparer sets while its public getter types remain std::set<T*>*. Matches the explicit same-commit surviving Player::getLoot cast pattern to return the actual owned containers through their legacy types, preserving pointer identity and mutation semantics rather than inventing snapshots. This is a documented original-style container ABI/aliasing compatibility inference under pinned GCC5, not a portable C++ guarantee or gameplay parity claim. Real contents/signals/formulas/save behavior retain prior provenance.",
+      "sha256": "ecc6416d0a9d46fab2330428f1d072550a6e70ea7c3a45dbc96ef8c8d7e9ab59",
+      "source": "recovery/payloads/reconstructions/0f/0f75e9ef9043aabb7b24d83fba949c94aedf4cc2-creature.cpp"
+    },
+    {
+      "commit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "firstCatalogOrder": 120,
+      "originalBlob": "0fa59fba8ca22ca6821f5c0df8f8f4daea80dde2",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated #119 Interaction and removed only its obsolete setAnimation definition because genuine #120 header now inherits MapObject::setAnimation. Real configured animations and combat/effects remain enabled; previous behavior/inference provenance retained.",
+      "sha256": "4c0d5059e8b1ae235cea442136b39495f0c10fcc72fd53c943d87efd4b51ae36",
+      "source": "recovery/payloads/reconstructions/0f/0fa59fba8ca22ca6821f5c0df8f8f4daea80dde2-interaction.cpp"
+    },
+    {
+      "commit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "firstCatalogOrder": 120,
+      "originalBlob": "302c0add3bfa57a055abf4e3765fd4da7f2791e5",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #119 Map/MapObject to genuine #120 static Map::getTileSize and removal of per-map tileSize/setTileSize, MapObject path cache/getSize. Static size selects the surviving init.json editor/mapSize/gameSize keys, matching the original MapScene removal of its per-map size assignment; exact missing default-size implementation remains inferred. Real animation setup now uses static size directly, no cached path fabricated. Geometry/save/object behavior retains prior provenance.",
+      "sha256": "255beb190023fb1c5f077de85501cb3d8d987526f70027528c52cf667fb34912",
+      "source": "recovery/payloads/reconstructions/30/302c0add3bfa57a055abf4e3765fd4da7f2791e5-map.cpp"
+    },
+    {
+      "commit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "firstCatalogOrder": 120,
+      "originalBlob": "a46487e910e445d28ba0f82365095257061634c2",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #119 Scene to genuine #120 static Map tile-size API by removing the two obsolete per-map setter calls. Real original configuration now determines static size; real map/player/save/movement remains unchanged. Exact missing original implementation delta remains unverified.",
+      "sha256": "ac2b4e0d0949bcb4453124c7c184bb2ae7aeea700e6fd8b636b62cab306f7221",
+      "source": "recovery/payloads/reconstructions/a4/a46487e910e445d28ba0f82365095257061634c2-gamescene.cpp"
+    },
+    {
+      "commit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+      "firstCatalogOrder": 120,
+      "originalBlob": "0f1d12502ec20d26023cc1d8a777880d473f1dcb",
+      "path": "view/gameview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #119 GameView-owned real collections to genuine #120 PlayerListView constructor std::set<ListItem*,Comparer>* using the actual surviving Comparer. Actual player inventory/actions/equipment remain the source, with real signals/views/widgets. Prior explicit layout/timing inference and original-style Creature container ABI limitation remain; original headers/main/config/player/assets unchanged.",
+      "sha256": "935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7",
+      "source": "recovery/payloads/reconstructions/0f/0f1d12502ec20d26023cc1d8a777880d473f1dcb-gameview.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "13fbaa1118aa9200a9905bb12e1e43dad7753a638dec627635bfc59fa079fac9",
+        "sourceCommit": "627b788d90ebebaab4e4da3a6300b802b10ce4bf",
+        "sourceTree": "ca5a2edc1229cea216959feed80feb195c6feaa6",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

@@ -1,0 +1,20 @@
+
+=== importHook ===
+{
+  "files": {
+    "game/CGameView.cpp": [
+      "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+      "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+    ],
+    "game/CMapObject.cpp": [
+      "c6caca2440285f2076c3f6e04a7f7822ea8d7bb180e9a524546bab78d50a1961",
+      "c304cdc03afaa0febbd316874ab74e34073ba23bf4b905800247a2f3b3784be5"
+    ],
+    "game/CScriptEngine.cpp": [
+      "5411d923d8acddc06f8ad1a62a680f8bc997accbdb8e778b3705b168595c893b",
+      "e7acfd9636ac0617c656e2581009e4f676efff07b33cd36de70d7f7f12741ba8"
+    ]
+  },
+  "replaySha256": "0490940735b1f9da977ede7411fe17e7840c77861f1c21b9818e9eb7001a86e1",
+  "sourceCommit": "b18ba43aca75315aeee3f07bd2ca269a0060d1ce"
+}
