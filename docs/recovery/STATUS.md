@@ -29,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **312 commits / 310 trees** against the
-restored inputs: **301 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **313 commits / 311 trees** against the
+restored inputs: **302 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -307,7 +307,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 283 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 284 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -339,10 +339,17 @@ the two static libraries with the matching GCC archive plugin and starts the
 game from the authored resources directory. The new replay through #282 and
 #367 contains 283 commits and preserves every ID from the #281 bundle.
 
+Revision #283 passed the same pinned verifier and a second isolated run with
+no loose script files. The reconstructed `_core.ScriptLoader` resolved the
+authored Python package from Qt resources and delegated standard-library imports
+to the registered Python finders. Its original implementation remains unknown.
+The replay through #283 and #367 contains 284 commits and preserves all IDs
+from the #282 bundle.
+
 ## Remaining work
 
-- #283 is the first gap in the replay ancestry. Its missing Python script-loader implementation still needs reconstruction and native acceptance. #283–#330 await native acceptance.
+- #284 is the first gap in the replay ancestry. #284–#330 await native acceptance.
 - #353–#359 still need native validation. At #353, moving imports below the
   decorators exposed the next failure, a missing ChaosSword definition.
-- The ledger lists 55 catalog commits awaiting native acceptance. Track GitHub
+- The ledger lists 54 catalog commits awaiting native acceptance. Track GitHub
   build, suite, and coverage on the continuation PR.

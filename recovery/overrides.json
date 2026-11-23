@@ -98699,6 +98699,27 @@
       "provenance": "content reconstruction of the BFG-removed original; Reconstruct the missing Qt manifest from the closest inventory proposal and surviving #282 resource paths. Keep backpack and item, use the arrow PNGs addressed by CPlayerView and CAnimationProvider, and omit the absent loading image. Exact original inventory and artwork remain unknown.",
       "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
       "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "161a04cd7a7b4e57e4170b925f32dfd5d14ee66c",
+      "path": "resources/images.qrc",
+      "provenance": "Carry the revision #282 resource manifest reconstruction across the unchanged image directory and BFG pointer.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "18435278d50cf48bcc1f12a8888c443f96d42d3e",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding _game bindings and implement the _core.ScriptLoader API named by authored start.py. Use the resource handler for package and module source and retain the original Python finders for builtins and standard-library imports after start.py clears sys.meta_path. The missing historical loader body is inferred.",
+      "sha256": "dbebf55b6d24695deed59a1b984a5acc7c309020b6ce08d3e2445d36b3ac6fa1",
+      "source": "payloads/reconstructions/18/18435278d50cf48bcc1f12a8888c443f96d42d3e-GameScript.cpp"
+    },
+    {
+      "originalBlob": "3f1f8f2fe6552187b152a798b485be04bf1858fc",
+      "path": "game/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding object factory against the unchanged native interface, using the authored configuration provider for each JSON file.",
+      "sha256": "f597638fd45f7f45551c206c3c5f3ac52dc5905a9be882a4787812c3ce40c3c3",
+      "source": "payloads/reconstructions/3f/3f1f8f2fe6552187b152a798b485be04bf1858fc-CObjectHandler.cpp"
     }
   ],
   "schemaVersion": 1
