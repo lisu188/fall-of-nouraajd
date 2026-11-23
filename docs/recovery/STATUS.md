@@ -2,8 +2,7 @@
 
 Work in progress on recovering the BFG-damaged history. Recovery tooling and the
 93-snapshot checkpoint were merged through PR #1660. PR #1659 connected the
-65 published recovered commits to main ancestry. The #180–#182 continuation builds on draft PR #1675, which incorporates the
-November 16 checkpoint from draft PR #1662.
+65 published recovered commits to main ancestry. The current continuation builds on the #204 checkpoint in draft PR #1677.
 
 ## Objective and acceptance
 
@@ -30,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **294 commits / 292 trees** against the
-restored inputs: **283 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **302 commits / 300 trees** against the
+restored inputs: **291 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -87,6 +86,12 @@ passed strict fsck across 224 commits and 4,273 reachable objects and preserved
 all 204 IDs in the #203 bundle. The mapping and verification are in
 `recovery/mappings/2026-11-23-through-223-prefix*.json`.
 
+The current local bundle covers #1–#272 and #367, preserving all 224 commit IDs
+from the #223 bundle. The independent clone passed strict fsck across 273 commits
+and 5,406 objects. Its SHA-256 is
+`42dfa7a45388e2886933b5924287fecb132326ed9e55946f0d5a7d72e1f6b2f6`. The review records are in
+`recovery/mappings/2026-11-23-through-272-prefix*.json`.
+
 The first 65 recovered commits are already ancestors of main through merge commit
 `c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
 `9acf3570ced5f0dcd8a9192184e169172d52ac28`. The additional 44 commits are published;
@@ -126,10 +131,12 @@ and clean shutdown passed with both EOF and an open idle stdin pipe. A separate
 probe confirmed command execution. The original entrypoint remains in the tree.
 The reconstructed `main.cpp` from #205 to #246 omits the console reader, which
 is absent again from the next surviving `main.cpp` at #247.
-Revisions #224 and #225 are mid-refactor commits whose surviving files cannot compile
-(static `GameScene` calls after the instance refactor; a commented-out `RoadTile`).
-Diagnostics: `recovery/diagnostics/native-204-original-shutdown-defect-2026-11-17.json`
-and `recovery/diagnostics/native-224-225-original-build-defects-2026-11-18.json`.
+Revisions #224 and #225 now pass with a pinned Linux build-copy repair.
+The #224 scene and tile call sites use the active scene instance, and #225
+borrows the no-op RoadTile definition from #226. The surviving project headers
+and adjacent implementations inform the missing map, view, and binding sources.
+Both real game views are embedded in the main window. Synchronous map
+initialization took approximately nine minutes in the pinned runs.
 Carry-forward now seeds a missing file from the nearest earlier version even when that
 version is a surviving original, and inferred projects leave out Qt resource manifests
 whose listed files are absent.
@@ -190,6 +197,17 @@ build-copy addition. Its project lists `pathfinder/pathfindercache.cpp`, introdu
 the sole change in its immediate child #177. The verifier pins the donor, the project
 and header inputs, exports the exact donor source with the evidence, and leaves the
 restored #176 tree intact. #177 also passed a separate control build and startup.
+
+Revisions #269–#272 now pass with reconstructed Python 3.3 bindings. The
+verifier builds the declared Python dependency and uses the authored resource
+directory for each layout. A pinned build-copy repair releases the owned
+Boost.Python handles before interpreter finalization.
+
+Revision #352 uses a reconstructed qmake project with the Python 3.4 link ABI.
+Returning the class from the trigger decorator lets the existing map factory
+resolve the named constructor. Revision #366 preserves the authored map source
+and disambiguates the graphics position call in the private build copy. Its
+GameScene reconstruction is scoped to that commit.
 
 All 365 trees restore without unresolved inputs or BFG markers, preserving every
 surviving original file and mode. **Source readiness is not native acceptance.**
@@ -279,7 +297,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 269 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 273 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -299,10 +317,9 @@ exported evidence before removing reproducible build scratch.
 
 ## Remaining work
 
-- #224–#225 are the first ancestry gap. Their pinned builds reproduce the
-  documented scene-access and tile-registration defects.
-- Continue the native walk at #269–#330, then #352–#359 and #366. The ledger
-  lists 73 catalog commits awaiting native acceptance.
-- The published historical refs still cover 109 commits. Further publication is
-  a separate operation. Keep the continuation PR open for review and track its
-  GitHub build, suite and coverage results there.
+- #273 is the first gap in the replay ancestry. Its current map donor uses
+  headers from a later directory layout. #274–#330 are also unverified.
+- #353–#359 still need native validation. At #353, moving imports below the
+  decorators exposed the next failure, a missing ChaosSword definition.
+- The ledger lists 65 catalog commits awaiting native acceptance. Track GitHub
+  build, suite, and coverage on the continuation PR.
