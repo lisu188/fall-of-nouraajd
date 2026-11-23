@@ -781,8 +781,11 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             if conflicts_preparation else []
         ),
         *(
-            ["The runtime copy combines the split object tables, copies the flat tile table to its legacy path,",
-             "and supplies empty arrays for missing timing files so the original animation loader selects 250 ms.", ""]
+            [
+                "The runtime copy combines the split object tables, copies the flat tile table to its legacy path,",
+                "and supplies empty arrays for missing timing files so the original animation loader selects 250 ms.",
+                "",
+            ]
             if runtime_config else []
         ),
         *(

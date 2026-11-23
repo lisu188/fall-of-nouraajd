@@ -31,6 +31,20 @@ class HistoryRuntimeTransitionTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             cache.validate(altered)
 
+    def testChildCachePreparationIsRequiredOnlyAtTheParent(self):
+        directory = EVIDENCE / cache.COMMIT
+        report = json.loads((directory / "verification.json").read_bytes())
+        report["verifiedFromCommit"] = cache.COMMIT
+        attachments = snapshotDocumentation(report, directory)
+        self.assertEqual(attachments["recovery/" + cache.ATTACHMENT], (directory / cache.ATTACHMENT).read_bytes())
+        report.pop("sourcePreparation")
+        with self.assertRaisesRegex(VerificationError, "Missing pathfinder cache preparation"):
+            snapshotDocumentation(report, directory)
+        directory = EVIDENCE / cache.CHILD
+        child = json.loads((directory / "verification.json").read_bytes())
+        child["verifiedFromCommit"] = cache.CHILD
+        self.assertNotIn("recovery/" + cache.ATTACHMENT, snapshotDocumentation(child, directory))
+
     def testRuntimePreparationMustMatchRecordedTransition(self):
         for commit in configs.INPUT_PINS:
             with self.subTest(commit=commit):
