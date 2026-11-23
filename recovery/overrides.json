@@ -94314,22 +94314,22 @@
     {
       "originalBlob": "25e2c224f89417c642ba1c0ee27722add4d97018",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "provenance": "content reconstruction of the BFG-removed original; Carry creature declarations with the action-selection method used by the authored interaction and the creature-aware event signature where present.",
+      "sha256": "819ed4b388ab7814bb25d3e23f0351230b61191705908d8d383acf12d3eefd16",
       "source": "payloads/reconstructions/25/25e2c224f89417c642ba1c0ee27722add4d97018-CCreature.h"
     },
     {
       "originalBlob": "7df65b454ee43e8b906490450927ad04d78d319b",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "de8e13ca36a6779f3ba1f1c0a73c49881833faceecf546c49db34fe6e1232b54",
+      "provenance": "content reconstruction of the BFG-removed original; Carry creature declarations with the action-selection method used by the authored interaction and the creature-aware event signature where present.",
+      "sha256": "afd75aca99ed05211e1156896ecf1932159f19250cd1893a03561061c5b38cc6",
       "source": "payloads/reconstructions/7d/7df65b454ee43e8b906490450927ad04d78d319b-CCreature.h"
     },
     {
       "originalBlob": "df4495b6ce640f09469c04b4286a27aa7a84c3d4",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "de8e13ca36a6779f3ba1f1c0a73c49881833faceecf546c49db34fe6e1232b54",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.",
+      "sha256": "afd75aca99ed05211e1156896ecf1932159f19250cd1893a03561061c5b38cc6",
       "source": "payloads/reconstructions/df/df4495b6ce640f09469c04b4286a27aa7a84c3d4-CCreature.h"
     },
     {
@@ -99368,6 +99368,132 @@
       "provenance": "content reconstruction of the BFG-removed original; Carry both player lists and implement the equipment-slot number getter moved out of line.",
       "sha256": "806af36333b79183d5fec0a7131c5f2141dc90292a13d761ebba28860770712d",
       "source": "payloads/reconstructions/d4/d4d3fc4008d4784081cfc30140e81b5ea3e23aec-CPlayerView.cpp"
+    },
+    {
+      "commit": "30f2226a11e58b114692d6990323f26af5646e58",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "0149b5c6c2677036a2ebdd99d12bce366b0d2307",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Follow the surviving combat interfaces and charge mana in the authored interaction. Pass the entering creature through the revised event callbacks.",
+      "sha256": "4fe8a15232d27d2ac8e9c881a9b4a0a3ecad8f38fcc840b53ffc5022b5c9db41",
+      "source": "payloads/reconstructions/01/0149b5c6c2677036a2ebdd99d12bce366b0d2307-CCreature.cpp"
+    },
+    {
+      "originalBlob": "16247e4f16db42508077fea4173d8923c6c0aaf3",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Import the map-local script before the authored loot factory enumerates object classes. Pass the entering creature to map objects where required by the header.",
+      "sha256": "eecf352b3bae7fa7f1ac1400fc56dd37b41909aaefb0f8c6802341a852c54cf4",
+      "source": "payloads/reconstructions/16/16247e4f16db42508077fea4173d8923c6c0aaf3-CMap.cpp"
+    },
+    {
+      "originalBlob": "19ba5a787f1a68d279abc5e23b2bd100dfd3cd02",
+      "path": "CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Read the active opponent from the player fight list after removal of the static panel selection.",
+      "sha256": "f00f8e482fb552f5d357f091e8ea798be2d147f2a5554ca4d101267b282f70aa",
+      "source": "payloads/reconstructions/19/19ba5a787f1a68d279abc5e23b2bd100dfd3cd02-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "1e3121f757c986d58f420c88d4538d124c3e734d",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry class bindings and heap-backed effects, exposing the revised event argument in the native Python wrapper.",
+      "sha256": "32aae66d55c30b1c99ea4f725288751a999d997c96cd417b1af7e2e5fbf8831c",
+      "source": "payloads/reconstructions/1e/1e3121f757c986d58f420c88d4538d124c3e734d-GameScript.cpp"
+    },
+    {
+      "originalBlob": "33c361932772ca59caacd593ee239b22a434b1f6",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry class bindings and heap-backed effects, exposing the revised event argument in the native Python wrapper.",
+      "sha256": "068d8aa21cb2b9266c1f2b4740284e81c330a02ff94525f773458b43900c43d8",
+      "source": "payloads/reconstructions/33/33c361932772ca59caacd593ee239b22a434b1f6-GameScript.cpp"
+    },
+    {
+      "originalBlob": "7430ab4488d5b77be48b39942f3ca647cf29a0c1",
+      "path": "CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the player views against the unchanged slot accessor and view interface.",
+      "sha256": "806af36333b79183d5fec0a7131c5f2141dc90292a13d761ebba28860770712d",
+      "source": "payloads/reconstructions/74/7430ab4488d5b77be48b39942f3ca647cf29a0c1-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "a0818917e0b79de5f876f5a1b347c89e5f8580f4",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Import the map-local script before the authored loot factory enumerates object classes. Pass the entering creature to map objects where required by the header.",
+      "sha256": "a4b566365ae3f072a9c61445d46bbc9135f78409b75ba73069cc5f68b055f774",
+      "source": "payloads/reconstructions/a0/a0818917e0b79de5f876f5a1b347c89e5f8580f4-CMap.cpp"
+    },
+    {
+      "originalBlob": "ad73d4351759cdc12709c551774cd6ccc101b405",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Move the interaction accessor to the base item as required by the surviving header.",
+      "sha256": "0950ecf5f03f361fe4ddcd4bf99aed2cd09045b38e23b95f9ede2779ee02d4ab",
+      "source": "payloads/reconstructions/ad/ad73d4351759cdc12709c551774cd6ccc101b405-CItem.cpp"
+    },
+    {
+      "originalBlob": "f1a649a1826e4bd2f12f9b252e819b505cf36bdb",
+      "path": "CGamePanel.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the nearest surviving panel declarations across the unchanged callers.",
+      "sha256": "4f45a9a72b2168da5ab307a34e6e026d36e760e1ad616b3d6c8af7417209a502",
+      "source": "payloads/reconstructions/f1/f1a649a1826e4bd2f12f9b252e819b505cf36bdb-CGamePanel.h"
+    },
+    {
+      "originalBlob": "fa7be0a595b29e3c945a809fe50500a27846b7a0",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Follow the surviving combat interfaces and charge mana in the authored interaction. Pass the entering creature through the revised event callbacks.",
+      "sha256": "ecdb790889e7ae318a08f8fbdaeaf140eaf8a0c7015c6a7be55ab812fd6e1b8d",
+      "source": "payloads/reconstructions/fa/fa7be0a595b29e3c945a809fe50500a27846b7a0-CCreature.cpp"
+    },
+    {
+      "commit": "471be57fbbd86d75c56133e610a1f28bb68446bb",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "29b659134a7d78e623fa7fab1c4882e3f99e6d4c",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.",
+      "sha256": "eecf352b3bae7fa7f1ac1400fc56dd37b41909aaefb0f8c6802341a852c54cf4",
+      "source": "payloads/reconstructions/29/29b659134a7d78e623fa7fab1c4882e3f99e6d4c-CMap.cpp"
+    },
+    {
+      "originalBlob": "6d9ab65439133dd25bc2c71d922908653f2ad4c8",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.",
+      "sha256": "4fe8a15232d27d2ac8e9c881a9b4a0a3ecad8f38fcc840b53ffc5022b5c9db41",
+      "source": "payloads/reconstructions/6d/6d9ab65439133dd25bc2c71d922908653f2ad4c8-CCreature.cpp"
+    },
+    {
+      "originalBlob": "95ad5a3afceb50ae4b5a6b1636d5b51fea3de7b4",
+      "path": "CGamePanel.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.",
+      "sha256": "4f45a9a72b2168da5ab307a34e6e026d36e760e1ad616b3d6c8af7417209a502",
+      "source": "payloads/reconstructions/95/95ad5a3afceb50ae4b5a6b1636d5b51fea3de7b4-CGamePanel.h"
+    },
+    {
+      "originalBlob": "bba954075161ee042a9c4479c5d632dc58ac0cbf",
+      "path": "CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.",
+      "sha256": "f00f8e482fb552f5d357f091e8ea798be2d147f2a5554ca4d101267b282f70aa",
+      "source": "payloads/reconstructions/bb/bba954075161ee042a9c4479c5d632dc58ac0cbf-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "d46670e9c4ccce28d69369362e32d0867a716ed7",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.",
+      "sha256": "068d8aa21cb2b9266c1f2b4740284e81c330a02ff94525f773458b43900c43d8",
+      "source": "payloads/reconstructions/d4/d46670e9c4ccce28d69369362e32d0867a716ed7-GameScript.cpp"
     }
   ],
   "schemaVersion": 1

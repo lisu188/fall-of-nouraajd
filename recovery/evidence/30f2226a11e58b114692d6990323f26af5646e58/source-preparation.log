@@ -1,0 +1,16 @@
+
+=== creatureEvents ===
+{
+  "files": {
+    "CGameView.cpp": [
+      "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3",
+      "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
+    ],
+    "CScriptEngine.cpp": [
+      "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
+      "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+    ]
+  },
+  "replaySha256": "56b9c659a91fa2936c1e7a7bb0c3d9dd83c4fbcef5af0bb90cad9448c7a9355a",
+  "sourceCommit": "30f2226a11e58b114692d6990323f26af5646e58"
+}

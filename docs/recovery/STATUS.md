@@ -29,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **332 commits / 330 trees** against the
-restored inputs: **321 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **335 commits / 333 trees** against the
+restored inputs: **324 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -307,7 +307,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 303 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 306 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -401,10 +401,18 @@ Original fight logic changes and combat behavior remain unverified. The
 replay through #302 and #367 contains 303 commits and preserves all IDs
 from the #300 bundle.
 
+Revisions #303–#305 passed pinned Linux builds and startup. The reconstructed
+bindings connect the class-based interactions and the creature-aware event
+arguments to the surviving interfaces. A separate #303 runtime check invoked
+MagicMissile directly and observed 4 HP of damage and one 5-mana charge.
+The full fight selection flow and Android runtime remain unverified.
+The replay through #305 and #367 contains 306 commits and preserves the
+previous replay IDs.
+
 ## Remaining work
 
-- #303 is the first gap in the replay ancestry. Its class-based interactions and loot factory still need pinned verification. #303–#330 await native acceptance.
+- #306 is the first gap in the replay ancestry. Its named object index and visitor-based event callbacks still need pinned verification. #306–#330 await native acceptance.
 - #353–#359 still need native validation. At #353, moving imports below the
   decorators exposed the next failure, a missing ChaosSword definition.
-- The ledger lists 35 catalog commits awaiting native acceptance. Track GitHub
+- The ledger lists 32 catalog commits awaiting native acceptance. Track GitHub
   build, suite, and coverage on the continuation PR.

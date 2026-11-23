@@ -341,6 +341,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Missing Potion movement preparation")
         if report.get("sourceCommit") in source_prep.fight_system_prep.COMMITS:
             raise VerificationError("Missing Fight system preparation")
+        if report.get("sourceCommit") in source_prep.creature_events_prep.COMMITS:
+            raise VerificationError("Missing Creature events preparation")
         if report.get("sourceCommit") in source_prep.loader_prep.COMMITS:
             raise VerificationError("Missing script loader preparation")
         if report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES:
@@ -412,6 +414,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_fight_system = "fightSystem" in names
     if has_fight_system != (report.get("sourceCommit") in source_prep.fight_system_prep.COMMITS):
         raise VerificationError("Fight system preparation differs from the catalog commit")
+    has_creature_events = "creatureEvents" in names
+    if has_creature_events != (report.get("sourceCommit") in source_prep.creature_events_prep.COMMITS):
+        raise VerificationError("Creature events preparation differs from the catalog commit")
     has_script_loader = "scriptLoader" in names
     if has_script_loader != (report.get("sourceCommit") in source_prep.loader_prep.COMMITS):
         raise VerificationError("Script loader preparation differs from the catalog commit")
@@ -464,6 +469,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["mapPackages"] if has_map_packages else [])
         + (["potionMovement"] if has_potion_movement else [])
         + (["fightSystem"] if has_fight_system else [])
+        + (["creatureEvents"] if has_creature_events else [])
         + (["scriptLoader"] if has_script_loader else [])
         + (["effectTransition"] if has_effect else [])
         + (["panelRefreshTransition"] if has_panel_refresh else [])
@@ -641,6 +647,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_fight_system.py"] = Path(helper.__file__).read_bytes()
+    if has_creature_events:
+        helper = source_prep.creature_events_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_creature_events.py"] = Path(helper.__file__).read_bytes()
     if has_script_loader:
         helper = source_prep.loader_prep
         try:
@@ -720,6 +733,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_map_packages and name in source_prep.map_packages_prep.PROFILES[report["sourceCommit"]])
                 or (has_potion_movement and name in source_prep.potion_movement_prep.PROFILES[report["sourceCommit"]])
                 or (has_fight_system and name in source_prep.fight_system_prep.PROFILES[report["sourceCommit"]])
+                or (has_creature_events and name in source_prep.creature_events_prep.PROFILES[report["sourceCommit"]])
                 or (has_resources_transition and name in source_prep.resources_prep.PINS)
                 or (has_panel_refresh and name in source_prep.panel_refresh_prep.PROFILES[report["sourceCommit"]])
                 or name in scene_outputs
@@ -1206,6 +1220,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_map_packages.py"] if "recovery/prepare_map_packages.py" in preparation_files else []),
         *(["python3 recovery/prepare_potion_movement.py"] if "recovery/prepare_potion_movement.py" in preparation_files else []),
         *(["python3 recovery/prepare_fight_system.py"] if "recovery/prepare_fight_system.py" in preparation_files else []),
+        *(["python3 recovery/prepare_creature_events.py"] if "recovery/prepare_creature_events.py" in preparation_files else []),
         *(["python3 recovery/prepare_resources_transition.py"] if "recovery/prepare_resources_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_panel_refresh_transition.py"] if "recovery/prepare_panel_refresh_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
