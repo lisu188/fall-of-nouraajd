@@ -98482,6 +98482,41 @@
       "provenance": "content reconstruction of the BFG-removed original; preserve the Coords worker interface and resolve the active map/player from the moving creature",
       "sha256": "4f90ea115c15172ade155e01e77201134baf28a0c6bddad6a2632bbddaa2c7b5",
       "source": "payloads/reconstructions/b4/39356696-pathfinder.cpp"
+    },
+    {
+      "originalBlob": "6731717107c5f63460388b54e45e54808c6480c9",
+      "path": "core/src/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; relocated module based on #268 and adapted the QString converter to the authored Python 3.3 ABI",
+      "sha256": "3e119048480c94ad13956202a8e23efef37ab724f38656f590f6cb4bcc2d5f58",
+      "source": "payloads/reconstructions/67/6731717107c5f63460388b54e45e54808c6480c9-GameScript.cpp"
+    },
+    {
+      "originalBlob": "37b8290c31dc24cc058e1ec9a110950d85872afd",
+      "path": "core/src/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carry the verified factory for the unchanged interface and include the script engine directly after its transitive include was removed",
+      "sha256": "7dc340400040f71d1371a13ed523c80c4e4cc802140491e45c124a8f5706babb",
+      "source": "payloads/reconstructions/37/37b8290c31dc24cc058e1ec9a110950d85872afd-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "af325a46526fd80841042b09059ac2754ffd82ab",
+      "path": "core/src/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; reuse the accepted neighboring Python 3.3 bindings against the surviving Windows-build refactor interfaces",
+      "sha256": "3e119048480c94ad13956202a8e23efef37ab724f38656f590f6cb4bcc2d5f58",
+      "source": "payloads/reconstructions/af/af325a46526fd80841042b09059ac2754ffd82ab-GameScript.cpp"
+    },
+    {
+      "originalBlob": "49ea713e14ba616d37a3000b6c1645cce7522b52",
+      "path": "game/GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; adapt the preceding Python 3.3 bindings to the surviving Android-era game project layout",
+      "sha256": "3e119048480c94ad13956202a8e23efef37ab724f38656f590f6cb4bcc2d5f58",
+      "source": "payloads/reconstructions/49/49ea713e14ba616d37a3000b6c1645cce7522b52-GameScript.cpp"
+    },
+    {
+      "originalBlob": "abfda3b3bd5e1011cbe0f65b26ae0b0f1422423a",
+      "path": "game/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; carry the preceding accepted object factory to the new game directory for the matching header",
+      "sha256": "7dc340400040f71d1371a13ed523c80c4e4cc802140491e45c124a8f5706babb",
+      "source": "payloads/reconstructions/ab/abfda3b3bd5e1011cbe0f65b26ae0b0f1422423a-CObjectHandler.cpp"
     }
   ],
   "schemaVersion": 1

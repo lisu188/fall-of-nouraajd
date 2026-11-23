@@ -313,6 +313,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     if not preparation or preparation.get("status") == "not-required":
         if report.get("sourceCommit") in source_prep.scene_prep.PINS:
             raise VerificationError("Missing scene transition preparation")
+        if report.get("sourceCommit") in source_prep.shutdown_prep.TARGETS:
+            raise VerificationError("Missing Python shutdown preparation")
         if report.get("sourceCommit") == source_prep.console_prep.COMMIT:
             raise VerificationError("Missing console reader preparation")
         if report.get("sourceCommit") in source_prep.merged_prep.COMMITS:
@@ -337,6 +339,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_scene = "sceneTransition" in names
     if has_scene != (report.get("sourceCommit") in source_prep.scene_prep.PINS):
         raise VerificationError("Scene transition preparation differs from the catalog commit")
+    has_shutdown = "pythonShutdown" in names
+    if has_shutdown != (report.get("sourceCommit") in source_prep.shutdown_prep.TARGETS):
+        raise VerificationError("Python shutdown preparation differs from the catalog commit")
     has_console = "consoleReader" in names
     if has_console != (report.get("sourceCommit") == source_prep.console_prep.COMMIT):
         raise VerificationError("Console reader preparation differs from the catalog commit")
@@ -359,6 +364,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["mergedHeaders"] if has_merged_headers else [])
         + (["consoleReader"] if has_console else [])
         + (["sceneTransition"] if has_scene else [])
+        + (["pythonShutdown"] if has_shutdown else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -428,6 +434,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError(str(error)) from error
         scene_outputs = helper.PINS[commit]
         attachments["recovery/prepare_scene_transition.py"] = Path(helper.__file__).read_bytes()
+    if has_shutdown:
+        helper = source_prep.shutdown_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_python_shutdown.py"] = Path(helper.__file__).read_bytes()
     merged_outputs = {}
     if has_merged_headers:
         helper = source_prep.merged_prep
@@ -474,6 +487,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or name in include_files
                 or name in merged_outputs
                 or name in scene_outputs
+                or (has_shutdown and name == source_prep.shutdown_prep.TARGETS[report["sourceCommit"]])
                 or (has_console and name == source_prep.console_prep.TARGET)
                 or (has_conflicts and name in source_prep.conflicts_prep.FILES)
                 or (has_cache and name == source_prep.cache_prep.TARGET)
@@ -680,6 +694,31 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     ):
         raise VerificationError("Historical compiler flags need an explicitly reviewed portable command")
     qmake = shlex.join(["qmake", projects[0], *compiler_flags, "-after", "TARGET=RecoveryGame", "DESTDIR=."])
+    build_commands = [qmake, 'make -j"$(nproc)"']
+    executable = "./RecoveryGame"
+    split_runtime = report.get("runtimeWorkingDirectory")
+    if split_runtime is not None:
+        project = report.get("project")
+        expected_runtime = {"core/core.pro": ".", "game/game.pro": "files"}.get(project)
+        if split_runtime != expected_runtime:
+            raise VerificationError("Unexpected split-project runtime directory")
+        dependencies = report.get("dependencies", [])
+        if [entry.get("project") for entry in dependencies] != ["python/python.pro"]:
+            raise VerificationError("Missing reviewed split-project Python dependency")
+        for entry in dependencies:
+            successfulCommand(entry.get("configure"), "split-project dependency qmake")
+            successfulCommand(entry.get("build"), "split-project dependency build")
+        project_dir = Path(project).parent.as_posix()
+        dependency_qmake = shlex.join(["qmake", "python.pro", *compiler_flags])
+        build_commands = [
+            '(cd python && ' + dependency_qmake + ' && make -j"$(nproc)")',
+            f'(cd {project_dir} && ' + qmake + ' && make -j"$(nproc)")',
+            'export LD_LIBRARY_PATH="$PWD/python${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"',
+        ]
+        executable = f"./{project_dir}/RecoveryGame"
+        if split_runtime == "files":
+            build_commands.append("cd files")
+            executable = f"../{project_dir}/RecoveryGame"
     abi = str(report.get("recipe", {}).get("pythonAbi", "none"))
     prerequisites = "Qt 5 Core, Gui and Widgets development files and a C++ compiler"
     if abi != "none":
@@ -905,19 +944,19 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_merged_headers.py"] if "recovery/prepare_merged_headers.py" in preparation_files else []),
         *(["python3 recovery/prepare_console_reader.py"] if "recovery/prepare_console_reader.py" in preparation_files else []),
         *(["python3 recovery/prepare_scene_transition.py"] if "recovery/prepare_scene_transition.py" in preparation_files else []),
+        *(["python3 recovery/prepare_python_shutdown.py"] if "recovery/prepare_python_shutdown.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
-        qmake,
-        'make -j"$(nproc)"',
+        *build_commands,
         *(["python3 recovery/prepare_runtime_configs.py"] if runtime_config else []),
         *(["mkdir -p save"] if save_directory else []),
-        "./RecoveryGame",
+        executable,
         "```",
         "",
         "For an isolated launch, use:",
         "",
         "```sh",
-        'LIBGL_ALWAYS_SOFTWARE=1 QT_OPENGL=software xvfb-run -a --server-args="-screen 0 1920x1080x24" ./RecoveryGame',
+        'LIBGL_ALWAYS_SOFTWARE=1 QT_OPENGL=software xvfb-run -a --server-args="-screen 0 1920x1080x24" ' + executable,
         "```",
         "",
         "The automated readiness observer used for verification is recorded in the attached evidence; ordinary",
