@@ -29,8 +29,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **319 commits / 317 trees** against the
-restored inputs: **308 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **322 commits / 320 trees** against the
+restored inputs: **311 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -307,7 +307,7 @@ python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-
 docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
     --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
 export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 290 330 --verify  # next long gap; stops at first failure
+python3 scripts/history_workbench.py auto 293 330 --verify  # next long gap; stops at first failure
 python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
 python3 scripts/history_workbench.py verify N
 python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
@@ -362,10 +362,17 @@ readiness and equipment loading. Event placement and effect behavior during
 combat remain unverified. The replay through #289 and #367 contains 290
 commits and preserves every ID from the #287 bundle.
 
+Revisions #290–#292 passed the pinned build and startup verifier with the
+authored Python effect subclasses. The reconstruction exposes the effect
+callback, uses the surviving object and map accessors, and implements the
+stat bonus methods called by the authored code. Effect behavior during combat
+remains unverified. The replay through #292 and #367 contains 293 commits
+and preserves the previous replay IDs.
+
 ## Remaining work
 
-- #290 is the first gap in the replay ancestry. Its authored Python effect subclasses and object encapsulation changes need native acceptance. #290–#330 await native acceptance.
+- #293 is the first gap in the replay ancestry. Its script-defined map event classes still need pinned verification. #293–#330 await native acceptance.
 - #353–#359 still need native validation. At #353, moving imports below the
   decorators exposed the next failure, a missing ChaosSword definition.
-- The ledger lists 48 catalog commits awaiting native acceptance. Track GitHub
+- The ledger lists 45 catalog commits awaiting native acceptance. Track GitHub
   build, suite, and coverage on the continuation PR.
