@@ -1,0 +1,8 @@
+
+=== triggerDecorator ===
+{
+  "inputSha256": "d33fbe171fadebafc6c54b8c74e3ba2e9b8f949beb1669149598a9bd62f89b06",
+  "outputSha256": "17b426746455720c21e236e156e8fd7e28323a387451c277d36abd8a09510fcf",
+  "replaySha256": "96dc6463bd3c2fd68658917442ebe75b89cd72373c5199cd8f4adb581c3d8136",
+  "sourceCommit": "4c0be0149008787ff79b4479307f1945b28c9507"
+}

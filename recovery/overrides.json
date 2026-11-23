@@ -98419,6 +98419,13 @@
       "provenance": "The #180 map reconstruction with the surviving #180 Coords and PlayerAnimation bodies merged into the #181 translation unit as indicated by the surviving header.",
       "sha256": "72323e1f7157d00a83d1d4d6c846bb42b0a9f2853fdec13a8f5a3d23e5be7a66",
       "source": "payloads/reconstructions/d1/d19dbcf7f0bc3ceaf42d15963e254f9450b9c4b9-map.cpp"
+    },
+    {
+      "originalBlob": "b9e84eac1020681df13379f76c3654ff72acab4f",
+      "path": "game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; reconstruct from the surviving translation units and retain the Python 3.4/Boost link ABI from the nearest historical project",
+      "sha256": "7a326993e88826a4c488c2fa27adb3e0e206ee84eff67b8e9b2c50fbb4321898",
+      "source": "payloads/reconstructions/b9/b9e84eac1020681df13379f76c3654ff72acab4f-game.pro"
     }
   ],
   "schemaVersion": 1

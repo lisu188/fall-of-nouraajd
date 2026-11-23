@@ -311,6 +311,8 @@ def legacyTimingAttachments(report: dict, preparation: dict) -> dict[str, bytes]
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
+        if report.get("sourceCommit") == source_prep.trigger_prep.COMMIT:
+            raise VerificationError("Missing trigger decorator preparation")
         if report.get("sourceCommit") == source_prep.console_prep.COMMIT:
             raise VerificationError("Missing console reader preparation")
         if report.get("sourceCommit") in source_prep.merged_prep.COMMITS:
@@ -332,6 +334,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_teleporter = "teleporterSerialization" in names
     has_timing = "legacyTimingResources" in names
     has_conflicts = "trivialConflicts" in names
+    has_trigger = "triggerDecorator" in names
+    if has_trigger != (report.get("sourceCommit") == source_prep.trigger_prep.COMMIT):
+        raise VerificationError("Trigger decorator preparation differs from the catalog commit")
     has_console = "consoleReader" in names
     if has_console != (report.get("sourceCommit") == source_prep.console_prep.COMMIT):
         raise VerificationError("Console reader preparation differs from the catalog commit")
@@ -353,6 +358,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["childPathfinderCache"] if has_cache else [])
         + (["mergedHeaders"] if has_merged_headers else [])
         + (["consoleReader"] if has_console else [])
+        + (["triggerDecorator"] if has_trigger else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -412,6 +418,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_console_reader.py"] = Path(helper.__file__).read_bytes()
+    if has_trigger:
+        helper = source_prep.trigger_prep
+        try:
+            helper.validate(preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_trigger_decorator.py"] = Path(helper.__file__).read_bytes()
     merged_outputs = {}
     if has_merged_headers:
         helper = source_prep.merged_prep
@@ -457,6 +470,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (name.startswith("src/") and name.endswith(".h"))
                 or name in include_files
                 or name in merged_outputs
+                or (has_trigger and name == source_prep.trigger_prep.TARGET)
                 or (has_console and name == source_prep.console_prep.TARGET)
                 or (has_conflicts and name in source_prep.conflicts_prep.FILES)
                 or (has_cache and name == source_prep.cache_prep.TARGET)
@@ -883,6 +897,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_pathfinder_cache.py"] if cache_preparation else []),
         *(["python3 recovery/prepare_merged_headers.py"] if "recovery/prepare_merged_headers.py" in preparation_files else []),
         *(["python3 recovery/prepare_console_reader.py"] if "recovery/prepare_console_reader.py" in preparation_files else []),
+        *(["python3 recovery/prepare_trigger_decorator.py"] if "recovery/prepare_trigger_decorator.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,
