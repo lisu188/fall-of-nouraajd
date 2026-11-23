@@ -3,6 +3,7 @@
 """Regression checks for historical startup evidence and watchdog handling."""
 
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -131,13 +132,14 @@ class HistoricalSmokeTest(unittest.TestCase):
         self.assertEqual("failed", result["status"])
         self.assertIn("cannot claim player", result["reason"])
 
-    def editorFixture(self, root, *, editor=True, extra_statement=""):
+    def editorFixture(self, root, *, editor=True, extra_statement="", registration=""):
         repo = root / "original"
         (repo / "config").mkdir(parents=True)
         (repo / "main.cpp").write_text(
             '#include "view/mapview.h"\n'
             "int main(int argc, char *argv[]) { QApplication a(argc,argv); QGraphicsView *view;"
-            'bool editor=(*ConfigurationProvider::getConfig("config/init.json")).get("editor",false).asBool();'
+            + registration
+            + 'bool editor=(*ConfigurationProvider::getConfig("config/init.json")).get("editor",false).asBool();'
             "if(editor) { view=new MapView(); } else { view=new GameView(); }"
             + extra_statement
             + "int ret=a.exec(); delete view; return ret; }\n"
@@ -207,6 +209,43 @@ class HistoricalSmokeTest(unittest.TestCase):
             repo, source, commit = self.editorFixture(Path(temporary), extra_statement="view->hide();")
             with self.assertRaisesRegex(verify.VerificationError, "explicitly reviewed startup route"):
                 verify.selectStartupMode(repo, commit, source)
+
+    def testReviewedRegistrationRouteRequiresItsExactMainBytes(self):
+        registrations = (
+            "qRegisterMetaType<Weapon>();qRegisterMetaType<Armor>();qRegisterMetaType<Potion>();",
+            "registerMetaTypes();",
+        )
+        for registration in registrations:
+            with self.subTest(registration=registration), tempfile.TemporaryDirectory() as temporary:
+                repo, source, commit = self.editorFixture(Path(temporary), registration=registration)
+                main_hash = hashlib.sha256((source / "main.cpp").read_bytes()).hexdigest()
+                with self.assertRaisesRegex(verify.VerificationError, "explicitly reviewed startup route"):
+                    verify.selectStartupMode(repo, commit, source)
+                with mock.patch.object(verify, "REVIEWED_EDITOR_MAIN_SHA256", frozenset({main_hash}), create=True):
+                    selection = verify.selectStartupMode(repo, commit, source)
+                    self.assertEqual("editor", selection["mode"])
+                    self.assertEqual(main_hash, selection["originalInputs"][0]["sha256"])
+                    with (source / "main.cpp").open("a") as stream:
+                        stream.write("// changed original entrypoint\n")
+                    with self.assertRaisesRegex(verify.VerificationError, "differs from surviving original main.cpp"):
+                        verify.selectStartupMode(repo, commit, source)
+
+    def testReviewedRegistrationRoutePinsBothConfigurationModes(self):
+        for editor in (False, True):
+            with self.subTest(editor=editor), tempfile.TemporaryDirectory() as temporary:
+                repo, source, commit = self.editorFixture(
+                    Path(temporary), editor=editor, registration="registerMetaTypes();"
+                )
+                main_hash = hashlib.sha256((source / "main.cpp").read_bytes()).hexdigest()
+                with mock.patch.object(verify, "REVIEWED_EDITOR_MAIN_SHA256", frozenset({main_hash}), create=True):
+                    self.assertEqual(
+                        "editor" if editor else "game", verify.selectStartupMode(repo, commit, source)["mode"]
+                    )
+                    (source / "config/init.json").write_text(json.dumps({"editor": not editor}))
+                    with self.assertRaisesRegex(
+                        verify.VerificationError, "differs from surviving original config/init.json"
+                    ):
+                        verify.selectStartupMode(repo, commit, source)
 
     def testEditorAdapterUsesTheRealEditorWithoutAnyPlayerDefinition(self):
         with tempfile.TemporaryDirectory() as temporary:

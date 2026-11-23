@@ -28,6 +28,7 @@ outputs stay under ``HISTORY_WORK_DIR``. Docker remains the default runner.
 from __future__ import annotations
 
 import argparse
+import functools
 import gzip
 import hashlib
 import json
@@ -47,6 +48,8 @@ import verify_history as vh  # noqa: E402
 
 WORK = Path(os.environ.get("HISTORY_WORK_DIR", REPO / ".cache/history-recovery/workbench")).resolve()
 RECON = WORK / "recon"
+# Startup watchdog for verify; trees with genuine minutes-long background loading need more.
+VERIFY_TIMEOUT = float(os.environ.get("HISTORY_VERIFY_TIMEOUT", "60"))
 NOTES = RECON / "notes.json"
 IMAGE = os.environ.get("HISTORY_TOOLCHAIN_IMAGE", "nouraajd-recovery:qt5")
 ROOTFS = Path(os.environ["HISTORY_TOOLCHAIN_ROOTFS"]).resolve() if os.environ.get("HISTORY_TOOLCHAIN_ROOTFS") else None
@@ -158,6 +161,10 @@ def prep(ref: str, quiet: bool = False) -> Path:
     destination = WORK / "src" / commit[:8]
     shutil.rmtree(destination, ignore_errors=True)
     report = rh.restoreSnapshot(REPO, CATALOG, commit, destination, rh.loadOverrides(workbenchOverrides()))
+    methods = {item["path"]: item["method"] for item in report["restored"]}
+    record = WORK / "restoration" / f"{commit}.json"
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(json.dumps(methods, indent=1, sort_keys=True))
     if not quiet:
         working = {path.name for path in workingReconstructions()}
         for item in report["restored"]:
@@ -166,6 +173,33 @@ def prep(ref: str, quiet: bool = False) -> Path:
                 print(f"{item['originalBlob'][:10]} {marker}{item['path']}  [{item['provenance'][:70]}]")
         print(destination)
     return destination
+
+
+def survivesInGit(commit: str, path: str) -> bool:
+    return subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{commit}:{path}"], capture_output=True).returncode == 0
+
+
+def earlierReconstruction(path: str, index: int, available, survives=survivesInGit) -> tuple[str, str] | None:
+    """The nearest earlier version of ``path``: a reconstruction or a surviving original.
+
+    Walking back from ``index``, the first earlier tree that either has a reconstruction
+    for ``path`` or still contains the genuine file wins; a genuine file is returned as
+    ``original:<commit>``. Only when no earlier tree has the same path is the nearest
+    reconstruction with the same basename (case-insensitively) used, which follows the
+    developer's directory moves such as ``creatures/creature.cpp`` ->
+    ``src/creatures/creature.cpp`` -> ``src/creature.cpp``. Returns ``(donor, earlierPath)``.
+    """
+    for previous in reversed(ORDER[:index]):
+        for earlier in missing(previous):
+            if earlier["path"] == path and available(earlier["originalBlob"]):
+                return earlier["originalBlob"], path
+        if not any(earlier["path"] == path for earlier in missing(previous)) and survives(previous, path):
+            return f"original:{previous}", path
+    for previous in reversed(ORDER[:index]):
+        for earlier in missing(previous):
+            if Path(earlier["path"]).name.lower() == Path(path).name.lower() and available(earlier["originalBlob"]):
+                return earlier["originalBlob"], earlier["path"]
+    return None
 
 
 def carry(ref: str) -> list[tuple[str, str, str]]:
@@ -180,28 +214,39 @@ def carry(ref: str) -> list[tuple[str, str, str]]:
     }
 
     def content(blob: str) -> bytes | None:
+        if blob.startswith("original:"):
+            return None
         if blob in working:
             return (RECON / blob).read_bytes()
         return committed[blob].read_bytes() if blob in committed else None
 
+    record = WORK / "restoration" / f"{commit}.json"
+    if not record.is_file():
+        raise SystemExit("run prep first: carry needs this tree's restoration methods")
+    methods = json.loads(record.read_text())
     carried = []
     index = ORDER.index(commit)
     for entry in missing(commit):
         if not entry["path"].endswith(CODE) or content(entry["originalBlob"]) is not None:
             continue
-        donor = next(
-            (
-                earlier["originalBlob"]
-                for previous in reversed(ORDER[:index])
-                for earlier in missing(previous)
-                if earlier["path"] == entry["path"] and content(earlier["originalBlob"]) is not None
-            ),
-            None,
-        )
-        if donor:
-            (source / entry["path"]).write_bytes(content(donor))
-            print("carried", entry["path"], "from", donor[:10])
-            carried.append((entry["path"], entry["originalBlob"], donor))
+        if methods.get(entry["path"]) != "reconstruction":
+            continue  # exact originals and compatibility repairs are never replaced by older versions
+        found = earlierReconstruction(entry["path"], index, lambda blob: content(blob) is not None)
+        if found:
+            donor, earlier_path = found
+            if donor.startswith("original:"):
+                previous = donor.split(":", 1)[1]
+                data = subprocess.run(
+                    ["git", "-C", str(REPO), "show", f"{previous}:{earlier_path}"], capture_output=True, check=True
+                ).stdout
+                label = f"surviving original {earlier_path} at {previous[:8]}"
+            else:
+                data = content(donor)
+                moved = "" if earlier_path == entry["path"] else f" (moved from {earlier_path})"
+                label = f"reconstruction {donor[:10]}{moved}"
+            (source / entry["path"]).write_bytes(data)
+            print("carried", entry["path"], "from", label)
+            carried.append((entry["path"], entry["originalBlob"], label))
         elif not entry["path"].startswith("json/"):
             print("no earlier reconstruction for", entry["path"])
     return carried
@@ -219,7 +264,26 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     aliases = vh.prepareLibraryAliases(source, output)
     environment = ["env", *(name + "=" + str(value) for name, value in recipe.get("environment", {}).items())]
     commands = ["set -e"]
-    if vh.source_prep.preparationRequired(source):
+    if (
+        commit == vh.source_prep.console_prep.COMMIT
+        or commit in vh.source_prep.scene_prep.PINS
+        or commit == vh.source_prep.panel_prep.COMMIT
+        or commit == vh.source_prep.text_shutdown_prep.COMMIT
+        or commit == vh.source_prep.sparse_prep.COMMIT
+        or commit == vh.source_prep.named_event_prep.COMMIT
+        or commit in vh.source_prep.effect_prep.COMMITS
+        or commit in vh.source_prep.resources_prep.COMMITS
+        or commit in vh.source_prep.import_hook_prep.COMMITS
+        or commit in vh.source_prep.map_events_prep.COMMITS
+        or commit in vh.source_prep.loader_prep.COMMITS
+        or commit in vh.source_prep.panel_refresh_prep.PROFILES
+        or commit in vh.source_prep.shutdown_prep.TARGETS
+        or commit in (
+            vh.source_prep.console_prep.COMMIT, vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT
+        )
+        or commit in vh.source_prep.merged_prep.COMMITS
+        or vh.source_prep.preparationRequired(source)
+    ):
         commands.append(
             shlex.join(
                 [
@@ -233,6 +297,8 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
                     str(REPO / "recovery/toolchains/qt5.json"),
                     "--recipe",
                     recipe["id"],
+                    "--source-commit",
+                    commit,
                 ]
             )
         )
@@ -278,6 +344,200 @@ def intactProject(commit: str, name: str) -> tuple[str, str] | None:
     return None
 
 
+@functools.lru_cache(maxsize=1)
+def committedPayloads() -> dict[str, str]:
+    entries = json.loads((REPO / "recovery/overrides.json").read_text())["entries"]
+    return {entry["originalBlob"]: entry["source"] for entry in entries if entry.get("originalBlob") and entry.get("source")}
+
+
+def reconstructionText(blob: str) -> str | None:
+    """A working or committed content-keyed reconstruction of ``blob``, if any."""
+    if (RECON / blob).exists():
+        return (RECON / blob).read_text(errors="replace")
+    source = committedPayloads().get(blob)
+    if source is None:
+        return None
+    path = (REPO / "recovery" / rh.safePath(source)).resolve()
+    return path.read_text(errors="replace") if path.is_relative_to(REPO / "recovery") else None
+
+
+def projectTemplates(commit: str, name: str, radius: int = 40) -> list[tuple[str, str, int, str]]:
+    """Candidate project settings: the nearest intact project plus nearby reconstructed ones.
+
+    Each candidate is ``(commit, text, distance, kind)``. Reconstructed neighbours matter
+    after layout moves (for example sources moving under ``src/`` and ``lib/``), where the
+    nearest intact project predates the move and matches none of this tree's files.
+    """
+    index = ORDER.index(commit) if commit in ORDER else 0
+    candidates = []
+    intact = intactProject(commit, name)
+    if intact is not None:
+        candidates.append((intact[0], intact[1], abs(ORDER.index(intact[0]) - index), "intact"))
+    for distance in range(1, radius + 1):
+        for position in (index - distance, index + distance):
+            if not 0 <= position < len(ORDER):
+                continue
+            for entry in missing(ORDER[position]):
+                if entry["path"] == name:
+                    text = reconstructionText(entry["originalBlob"])
+                    if text is not None:
+                        candidates.append((ORDER[position], text, distance, "reconstructed"))
+    return candidates
+
+
+def templateUnits(template: str, files: list[str]) -> list[str]:
+    """The project template's SOURCES that exist in this tree, matched case-insensitively."""
+    listed = []
+    for block in re.findall(r"^[ \t]*SOURCES[ \t]*\+?=((?:.*\\\n)*.*)$", template, flags=re.M):
+        for token in block.split():
+            token = re.sub(r"^(\$\$PWD/|\./)", "", token.replace("\\", "/"))
+            if token.endswith((".cpp", ".c", ".cc")):
+                listed.append(token)
+    present = sorted(path for path in files if path.endswith((".cpp", ".c", ".cc")) and not path.startswith("tmp/"))
+    by_lower = {path.lower(): path for path in present}
+    kept: list[str] = []
+    for token in listed:
+        match = token if token in by_lower.values() else by_lower.get(token.lower())
+        if match and match not in kept:
+            kept.append(match)
+    return kept
+
+
+def donorSources(template: str, files: list[str], read=None) -> list[str]:
+    """Infer a tree's translation units when no object_script listing survives.
+
+    Keeps the donor project's SOURCES that still exist in this tree (matching
+    Windows-era paths case-insensitively), then adds this tree's other C/C++ files from
+    directories the donor already compiled from. With ``read``, sources of new directories
+    reached through ``#include`` closure are added too (see ``includedSources``). The result is an inference, not the
+    original list; native build and startup verification decide whether it is accepted.
+    """
+    present = sorted(path for path in files if path.endswith((".cpp", ".c", ".cc")) and not path.startswith("tmp/"))
+    kept = templateUnits(template, files)
+    directories = {Path(path).parent.as_posix() for path in kept}
+    extra = [
+        path
+        for path in present
+        if path not in kept
+        and Path(path).parent.as_posix() in directories
+        and not Path(path).name.startswith(("moc_", "qrc_"))
+    ]
+    units = kept + extra
+    if read is not None and units:
+        units += includedSources(units, files, present, directories, read)
+    return units
+
+
+INCLUDE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
+ENTRY_POINT = re.compile(r"\bint\s+main\s*\(")
+COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
+
+
+def definesEntryPoint(text: str | None) -> bool:
+    """True when ``main`` is declared outside comments (zlib's inflate.c mentions it in one)."""
+    return bool(text) and ENTRY_POINT.search(COMMENT.sub(" ", text)) is not None
+
+
+def includedSources(units: list[str], files: list[str], present: list[str], directories: set[str], read) -> list[str]:
+    """Add translation units from directories the inferred units reach through ``#include``.
+
+    Directories introduced after the donor project (for example vendored TMX, TinyXML or
+    zlib sources) are otherwise missing at link time. The first reached header in a
+    directory the donor did not compile from adds all of that directory's C/C++ sources,
+    except generated ``moc_``/``qrc_`` files and files defining ``main``; their includes
+    are followed in turn. Includes resolve against the including file's directory, then
+    the tree root, case-insensitively as on the original Windows hosts.
+    """
+    by_lower = {path.lower(): path for path in files}
+    by_directory: dict[str, list[str]] = {}
+    for path in present:
+        if not Path(path).name.startswith(("moc_", "qrc_")):
+            by_directory.setdefault(Path(path).parent.as_posix(), []).append(path)
+    added: list[str] = []
+    entered = set(directories)
+    queue, seen = list(units), set(units)
+    while queue:
+        current = queue.pop()
+        text = read(current)
+        if not text:
+            continue
+        for name in INCLUDE.findall(text):
+            name = name.replace("\\", "/")
+            header = None
+            for base in (Path(current).parent.as_posix(), "."):
+                candidate = os.path.normpath(f"{base}/{name}").replace(os.sep, "/")
+                header = by_lower.get(candidate.lower())
+                if header:
+                    break
+            if header is None or header in seen:
+                continue
+            seen.add(header)
+            queue.append(header)
+            directory = Path(header).parent.as_posix()
+            if directory in entered:
+                continue
+            entered.add(directory)
+            for path in by_directory.get(directory, []):
+                if path not in seen and not definesEntryPoint(read(path)):
+                    seen.add(path)
+                    queue.append(path)
+                    added.append(path)
+    return added
+
+
+QT_KEYWORDS = re.compile(r"^[ \t]*(?:(?:public|protected|private)[ \t]+)?(?:slots|signals)[ \t]*:", re.M)
+BOOST_PYTHON_USE = re.compile(r'#[ \t]*include[ \t]*[<"]boost/python')
+PYTHON2_API = re.compile(r"\bPy_InitModule\w*\s*\(")
+PYTHON_USE = re.compile(r'#[ \t]*include[ \t]*[<"](?:Python\.h|boost/python)')
+
+
+def adaptSettings(head: str, files: list[str], read) -> tuple[str, list[str]]:
+    """Fit settings borrowed from a reconstructed neighbour project to this tree.
+
+    A later neighbour may define ``QT_NO_KEYWORDS`` and link Python because it embeds an
+    interpreter; an earlier tree whose headers still use bare ``slots``/``signals`` and
+    never includes Python cannot be built with those settings.
+    """
+    adjustments = []
+    code = [path for path in files if path.endswith((".h", ".hpp", ".cpp", ".c")) and not path.startswith("tmp/")]
+    if "QT_NO_KEYWORDS" in head and any(QT_KEYWORDS.search(read(path) or "") for path in code if path.endswith((".h", ".hpp"))):
+        head = re.sub(r"^([ \t]*DEFINES[ \t]*\+?=.*?)[ \t]*\bQT_NO_KEYWORDS\b", r"\1", head, flags=re.M)
+        head = re.sub(r"^[ \t]*DEFINES[ \t]*\+?=[ \t]*$\n?", "", head, flags=re.M)
+        adjustments.append("QT_NO_KEYWORDS dropped because this tree uses bare Qt keywords")
+    if re.search(r"python3", head, re.I) and any(PYTHON2_API.search(read(path) or "") for path in code):
+        head = re.sub(r"-lpython3\.\d+m?", "-lpython2.7", head)
+        head = re.sub(r"-lpython3\d+", "-lpython27", head)
+        adjustments.append("Python 3 libraries replaced by Python 2.7 because this tree uses the Python 2 module API")
+    if "boost_python" not in head and any(BOOST_PYTHON_USE.search(read(path) or "") for path in code):
+        library = "-lboost_python3" if re.search(r"-lpython3", head) else "-lboost_python"
+        head = head.rstrip() + "\nunix:LIBS += " + library
+        adjustments.append(f"{library} added because this tree includes Boost.Python")
+    if re.search(r"python", head, re.I) and not any(PYTHON_USE.search(read(path) or "") for path in code):
+        head = re.sub(r"^.*LIBS.*python.*$\n?", "", head, flags=re.M | re.I)
+        adjustments.append("Python libraries dropped because this tree does not include Python")
+    return head.rstrip(), adjustments
+
+
+QRC_FILE = re.compile(r"<file(?:\s[^>]*)?>([^<]+)</file>")
+
+
+def unresolvedResources(manifest: str, files: list[str], text: str) -> list[str]:
+    """Entries of a Qt resource manifest that do not exist in the tree (case-insensitively).
+
+    A manifest with missing entries cannot have been compiled by the original project,
+    so an inferred project leaves it out (for example the stale ``res/scripts.qrc`` once
+    scripts moved to a top-level ``scripts/`` directory loaded from disk).
+    """
+    present = {path.lower() for path in files}
+    base = Path(manifest).parent
+    missing_entries = []
+    for entry in QRC_FILE.findall(text):
+        name = os.path.normpath((base / entry.strip().replace("\\", "/")).as_posix()).replace(os.sep, "/")
+        if name.lower() not in present and not any(path.startswith(name.lower() + "/") for path in present):
+            missing_entries.append(entry.strip())
+    return missing_entries
+
+
 def project(ref: str) -> str:
     """Write a qmake project from the tree's surviving object_script listing and the nearest intact project."""
     commit = resolve(ref)
@@ -287,27 +547,55 @@ def project(ref: str) -> str:
         raise SystemExit("this tree's qmake project survived")
     name = lost[0]
     scripts = sorted(source.glob("object_script.*.Debug")) or sorted(source.glob("object_script.*.Release"))
-    if not scripts:
-        raise SystemExit("no object_script listing survives in this tree")
-    objects = [
-        Path(line.strip().replace("\\", "/")).stem
-        for line in scripts[0].read_text(errors="replace").splitlines()
-        if line.strip().endswith(".o")
-    ]
     files = [path.relative_to(source).as_posix() for path in source.rglob("*") if path.is_file()]
-    by_stem: dict[str, list[str]] = {}
-    for path in files:
-        if path.endswith((".cpp", ".c", ".cc")):
-            by_stem.setdefault(Path(path).stem, []).append(path)
+    candidates = projectTemplates(commit, name)
+    if not candidates:
+        raise SystemExit("no intact or reconstructed qmake project survives to supply settings")
+    if scripts:
+        candidates = [candidate for candidate in candidates if candidate[3] == "intact"] or candidates
+    donor, template, _, kind = max(candidates, key=lambda c: (len(templateUnits(c[1], files)), -c[2], c[3] == "intact"))
     sources, unknown = [], []
-    for stem in objects:
-        if stem.startswith(("moc_", "qrc_")):
-            continue
-        matches = by_stem.get(stem, [])
-        (sources.append(matches[0]) if len(matches) == 1 else unknown.append(stem))
+    if scripts:
+        objects = [
+            Path(line.strip().replace("\\", "/")).stem
+            for line in scripts[0].read_text(errors="replace").splitlines()
+            if line.strip().endswith(".o")
+        ]
+        by_stem: dict[str, list[str]] = {}
+        for path in files:
+            if path.endswith((".cpp", ".c", ".cc")):
+                by_stem.setdefault(Path(path).stem, []).append(path)
+        for stem in objects:
+            if stem.startswith(("moc_", "qrc_")):
+                continue
+            matches = by_stem.get(stem, [])
+            (sources.append(matches[0]) if len(matches) == 1 else unknown.append(stem))
+        origin = f"{len(sources)} sources from {scripts[0].name}"
+    else:
+        def readTreeFile(path: str) -> str | None:
+            try:
+                return (source / path).read_text(errors="replace")
+            except OSError:
+                return None
+
+        sources = donorSources(template, files, readTreeFile)
+        origin = (
+            f"{len(sources)} sources inferred without a surviving object_script listing: {kind} "
+            f"{donor[:8]}:{name} SOURCES reconciled with this tree's files"
+        )
     headers = sorted(path for path in files if path.endswith(".h") and not path.startswith("tmp/"))
-    donor, template = intactProject(commit, name)
     head = template.split("SOURCES", 1)[0].rstrip()
+    if not scripts and kind == "reconstructed":
+
+        def readTree(path: str) -> str | None:
+            try:
+                return (source / path).read_text(errors="replace")
+            except OSError:
+                return None
+
+        head, adjustments = adaptSettings(head, files, readTree)
+        if adjustments:
+            origin += "; " + "; ".join(adjustments)
     lines = [
         head,
         "",
@@ -316,11 +604,19 @@ def project(ref: str) -> str:
         "HEADERS  += \\\n    " + " \\\n    ".join(headers),
         "",
     ]
-    resources = sorted(path for path in files if path.endswith(".qrc"))
+    resources = sorted(
+        path for path in files if path.endswith(".qrc") and not unresolvedResources(path, files, (source / path).read_text(errors="replace"))
+    )
+    stale = sorted(path for path in files if path.endswith(".qrc") and path not in resources)
+    if stale:
+        print("left out resource manifests listing files absent from this tree:", stale)
     if resources:
         lines += ["RESOURCES += \\\n    " + " \\\n    ".join(resources), ""]
+    forms = sorted(path for path in files if path.endswith(".ui") and not path.startswith("tmp/"))
+    if forms:
+        lines += ["FORMS += \\\n    " + " \\\n    ".join(forms), ""]
     (source / name).write_text("\n".join(lines))
-    summary = f"{len(sources)} sources from {scripts[0].name}; settings from intact {donor[:8]}:{name}"
+    summary = f"{origin}; settings from {kind} {donor[:8]}:{name}"
     print("wrote", name, "-", summary, "; unmatched objects:", unknown)
     return summary
 
@@ -344,7 +640,7 @@ def verify(ref: str, recipe: str | None = None) -> str:
     extra = f"--recipe {recipe}" if recipe else ""
     result = docker(
         f"/opt/recovery/controller/bin/python3.12 {REPO}/scripts/verify_history.py --commit {commit} "
-        f"--overrides {overrides} --output-dir {output} --timeout 60 --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
+        f"--overrides {overrides} --output-dir {output} --timeout {VERIFY_TIMEOUT} --jobs {os.cpu_count() or 1} {extra} > /dev/null; "
         f"/opt/recovery/controller/bin/python3.12 -c 'import json,sys; "
         f'r=json.load(open(sys.argv[1]))["results"][-1]; print(r["status"], r.get("reason",""))\' '
         f"{output}/summary-0.json",
@@ -370,7 +666,7 @@ def auto(start: int, end: int, check: bool = False) -> None:
             return
         for path, blob, donor in carried:
             (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
-            note(blob, f"carried forward unchanged from the reconstruction of {donor} (previous version of {path})")
+            note(blob, f"carried forward unchanged from the {donor} (previous version of {path})")
         for path, blob, summary in generated:
             (RECON / blob).write_bytes((WORK / "src" / commit[:8] / path).read_bytes())
             note(blob, "qmake project regenerated with " + summary)
@@ -444,6 +740,13 @@ def export() -> None:
                 "startup.log",
                 "source-preparation.json",
                 "source-preparation.log",
+                "supplemental_images.qrc",
+                "reflection_registration.h",
+                "coordinates_hash.h",
+                "legacy_tiles.json",
+                "maps_manifest.qrc",
+                "teleporter_serialization.cpp",
+                "pathfindercache.cpp",
             ):
                 if (report_path.parent / name).exists():
                     shutil.copyfile(report_path.parent / name, target / name)
@@ -492,6 +795,37 @@ def progress() -> None:
                     continue
             except vh.VerificationError:
                 continue
+            requires_replay = (
+                commit in (vh.source_prep.cache_prep.COMMIT, vh.source_prep.console_prep.COMMIT)
+                or commit in vh.runtime_configs.INPUT_PINS
+                or commit in vh.source_prep.scene_prep.PINS
+                or commit == vh.source_prep.panel_prep.COMMIT
+                or commit == vh.source_prep.text_shutdown_prep.COMMIT
+                or commit == vh.source_prep.sparse_prep.COMMIT
+                or commit == vh.source_prep.named_event_prep.COMMIT
+                or commit in vh.source_prep.effect_prep.COMMITS
+                or commit in vh.source_prep.resources_prep.COMMITS
+                or commit in vh.source_prep.import_hook_prep.COMMITS
+                or commit in vh.source_prep.map_events_prep.COMMITS
+                or commit in vh.source_prep.loader_prep.COMMITS
+                or commit in vh.source_prep.panel_refresh_prep.PROFILES
+                or commit in vh.source_prep.shutdown_prep.TARGETS
+                or commit in (vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT)
+            )
+            if requires_replay or commit in vh.source_prep.merged_prep.COMMITS or report.get("startupCompatibility") in (
+                "parentReflectionRegistration",
+                "originalCoordinateHash",
+                "legacyTileConfiguration",
+                "authoredMapsManifest",
+                "teleporterSerialization",
+                "legacyTimingResources",
+            ):
+                from recovery_readme import VerificationError as DocumentationError, snapshotDocumentation
+
+                try:
+                    snapshotDocumentation(report, report_path.parent)
+                except DocumentationError:
+                    continue
             item = {
                 "originalCommit": commit,
                 "originalTree": report["sourceTree"],
@@ -504,6 +838,64 @@ def progress() -> None:
                 ),
                 "published": False,
             }
+            if report.get("startupCompatibility") == "supplementalQtResources":
+                item["startupCompatibility"] = "supplementalQtResources"
+                item["validation"] = "build-and-startup-with-resource-compatibility-passed"
+            if report.get("startupCompatibility") == "parentReflectionRegistration":
+                item["startupCompatibility"] = "parentReflectionRegistration"
+                item["validation"] = "build-and-startup-with-reflection-compatibility-passed"
+            if report.get("startupCompatibility") == "originalCoordinateHash":
+                item["startupCompatibility"] = "originalCoordinateHash"
+                item["validation"] = "build-and-startup-with-coordinate-hash-compatibility-passed"
+            if report.get("startupCompatibility") == "legacyTileConfiguration":
+                item["startupCompatibility"] = "legacyTileConfiguration"
+                item["validation"] = "build-and-startup-with-legacy-tile-compatibility-passed"
+            if report.get("startupCompatibility") == "authoredMapsManifest":
+                item["startupCompatibility"] = "authoredMapsManifest"
+                item["validation"] = "build-and-startup-with-maps-manifest-compatibility-passed"
+            if report.get("startupCompatibility") == "teleporterSerialization":
+                item["startupCompatibility"] = "teleporterSerialization"
+                item["validation"] = "build-and-startup-with-teleporter-serialization-compatibility-passed"
+            if report.get("startupCompatibility") == "legacyTimingResources":
+                item["startupCompatibility"] = "legacyTimingResources"
+                item["validation"] = "build-and-startup-with-legacy-timing-resource-compatibility-passed"
+            if commit in vh.source_prep.scene_prep.PINS:
+                item["buildCompatibility"] = ["sceneTransition"]
+            if commit in vh.source_prep.shutdown_prep.TARGETS:
+                item["buildCompatibility"] = ["pythonShutdown"]
+            if commit == vh.source_prep.panel_prep.COMMIT:
+                item["buildCompatibility"] = ["panelTransition"]
+            if commit == vh.source_prep.text_shutdown_prep.COMMIT:
+                item["buildCompatibility"] = ["textPanelShutdown"]
+            if commit == vh.source_prep.sparse_prep.COMMIT:
+                item["buildCompatibility"] = ["sparseMapTransition"]
+            if commit == vh.source_prep.named_event_prep.COMMIT:
+                item["buildCompatibility"] = ["namedEventTransition"]
+            if commit in vh.source_prep.resources_prep.COMMITS:
+                item["buildCompatibility"] = ["resourcesTransition"]
+            if commit in vh.source_prep.import_hook_prep.COMMITS:
+                item["buildCompatibility"] = ["importHook"]
+            if commit in vh.source_prep.map_events_prep.COMMITS:
+                item["buildCompatibility"] = ["mapEvents"]
+            if commit in vh.source_prep.loader_prep.COMMITS:
+                item["buildCompatibility"] = ["scriptLoader"]
+            if commit in vh.source_prep.effect_prep.COMMITS:
+                item["buildCompatibility"] = ["effectTransition"]
+            if commit in vh.source_prep.panel_refresh_prep.PROFILES:
+                item["buildCompatibility"] = ["panelRefreshTransition"]
+            if commit == vh.source_prep.position_prep.COMMIT:
+                item["buildCompatibility"] = ["mapPosition"]
+            if commit == vh.source_prep.trigger_prep.COMMIT:
+                item["buildCompatibility"] = ["triggerDecorator"]
+            if commit == vh.source_prep.console_prep.COMMIT:
+                item["buildCompatibility"] = ["consoleReader"]
+            if commit in vh.source_prep.merged_prep.COMMITS:
+                item["buildCompatibility"] = ["mergedHeaders"]
+            if commit == vh.source_prep.cache_prep.COMMIT:
+                item["buildCompatibility"] = ["trivialConflicts", "childPathfinderCache"]
+            if commit in vh.runtime_configs.INPUT_PINS:
+                item["startupCompatibility"] = "transitionalRuntimeConfiguration"
+                item["validation"] = "build-and-startup-with-runtime-configuration-compatibility-passed"
             old = published.get(commit)
             if old and old.get("restoredFilesFingerprint") == current and old.get("toolchainImage") == image_id:
                 item.update(published=True, url=old["url"])

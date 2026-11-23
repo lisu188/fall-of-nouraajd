@@ -1,0 +1,64 @@
+{
+  "identity": {
+    "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
+    "inputs": {
+      "classes.json": {
+        "kind": "file",
+        "sha256": "174a45a1ed4bc03b5359c17205da277413ab292fe52d87a9b58afbec5353d252"
+      },
+      "preprocessor.py": {
+        "kind": "file",
+        "sha256": "6350c785401d28bc857357ee18a593a61aab1351ca17b26115f2b3d84f7073d6"
+      }
+    },
+    "interpreter": "Python 2.7.18",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "fe29227d18381c48a3f897516e2fb5dffcde9dff337c56ee92d8034cc4cd83c8"
+        },
+        "before": null,
+        "path": "gen/prop.h",
+        "purpose": "historical property generation"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "fe29227d18381c48a3f897516e2fb5dffcde9dff337c56ee92d8034cc4cd83c8"
+      },
+      "before": null,
+      "path": "gen/prop.h",
+      "purpose": "historical property generation"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "/opt/recovery/python/2.7.18/bin/python2.7",
+        "--version"
+      ],
+      "log": "/tmp/nouraajd-check250/verify/snapshot-pmprewxz/preparation/interpreter.log",
+      "name": "interpreter",
+      "returnCode": 0,
+      "seconds": 0.001,
+      "timedOut": false
+    },
+    {
+      "command": [
+        "/opt/recovery/python/2.7.18/bin/python2.7",
+        "-B",
+        "/tmp/nouraajd-check250/verify/snapshot-pmprewxz/source/preprocessor.py"
+      ],
+      "log": "/tmp/nouraajd-check250/verify/snapshot-pmprewxz/preparation/generator.log",
+      "name": "generator",
+      "returnCode": 0,
+      "seconds": 0.007,
+      "timedOut": false
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+process 414: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: :/config/creatures.json 
+
+Loaded configuration: :/config/slots.json 
+
+Loaded animation: :/images/players/sorcerer/ 
+
+Loaded configuration: :/config/interactions.json 
+
+Loaded animation: :/images/interactions/attack/ 
+
+Loaded configuration: :/config/tiles.json 
+
+Loaded animation: :/images/tiles/grass/ 
+
+Loaded animation: :/images/arrows/right/ 
+
+Loaded animation: :/images/arrows/left/ 
+

@@ -1,0 +1,140 @@
+{
+  "identity": {
+    "implementationSha256": "3cc1c71cddb06d9f8b7aa587f17a868c1e909ed55a41ad612f71adfa1fcbeba7",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7"
+        },
+        "path": "game/CGameView.cpp",
+        "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "4a8462bec5abd35eb0530366897dceb934536c890a22f1a6b8593ca52d3b9e03"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "b30647c71eb7c4f0cd3ccd988cedc4db84df449137aeec0ea994756348c8a8ce"
+        },
+        "path": "game/CMapObject.cpp",
+        "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b"
+        },
+        "path": "game/CScriptEngine.cpp",
+        "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958"
+        },
+        "path": "game/game.pro",
+        "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+      }
+    ],
+    "scriptLoader": {
+      "files": {
+        "game/CGameView.cpp": [
+          "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+          "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+        ],
+        "game/CMapObject.cpp": [
+          "b30647c71eb7c4f0cd3ccd988cedc4db84df449137aeec0ea994756348c8a8ce",
+          "4a8462bec5abd35eb0530366897dceb934536c890a22f1a6b8593ca52d3b9e03"
+        ],
+        "game/CScriptEngine.cpp": [
+          "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b",
+          "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921"
+        ],
+        "game/game.pro": [
+          "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958",
+          "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713"
+        ]
+      },
+      "replaySha256": "37238cf98021ddd0e9f0143c186cef5b28332eb75f0c6b2da9b533ec5a8e9d44",
+      "sourceCommit": "161a04cd7a7b4e57e4170b925f32dfd5d14ee66c"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7"
+      },
+      "path": "game/CGameView.cpp",
+      "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "4a8462bec5abd35eb0530366897dceb934536c890a22f1a6b8593ca52d3b9e03"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "b30647c71eb7c4f0cd3ccd988cedc4db84df449137aeec0ea994756348c8a8ce"
+      },
+      "path": "game/CMapObject.cpp",
+      "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b"
+      },
+      "path": "game/CScriptEngine.cpp",
+      "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958"
+      },
+      "path": "game/game.pro",
+      "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-script-loader"
+      ],
+      "log": "/tmp/nouraajd-283-final/verify/snapshot-s9t7d9jv/preparation/script-loader.log",
+      "name": "scriptLoader",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+
+=== teleporterSerialization ===
+{
+  "inputs": {
+    "buildings/teleporter.cpp": "317099f84b236b4f32e84d7169d4374d94393a084ac73c4c55f80b2a5f72c7ef",
+    "buildings/teleporter.h": "79a3726ec0eaf317770b5d4e2c65d19743658f6b90ca9ba8f6bd06f829491ca8",
+    "json/json_value.cpp": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4"
+  },
+  "path": "buildings/recovery_teleporter.cpp",
+  "provenance": {
+    "legacyArrays": "Retain current enabled for legacy coordinate arrays; every reviewed original header initializes it to true",
+    "operation": "Replace only Teleporter save/load bodies with inverse JSON object coordinate-and-enabled storage",
+    "sourceCommit": "b4d315b857f8df32b17422f64b381a36f3d90d1d"
+  },
+  "qmakeArguments": [
+    "-after",
+    "SOURCES-=buildings/teleporter.cpp",
+    "SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp"
+  ],
+  "replaySha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c",
+  "sha256": "3da78d7450b99710c79aed3d0587f6d00e74a319941ad2ea2f2d0a388c3a3e3e",
+  "validationBoundary": "Game startup and shutdown with coordinate-and-enabled teleporter serialization compatibility; original sources unchanged"
+}
+
+=== windowsIncludeSeparators ===
+[
+  {
+    "afterSha256": "10e5d6bae2b827282e81c61b797b66665aa8c927c0762ad99ef275fc3742adf4",
+    "beforeSha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+    "includes": [
+      {
+        "line": 13,
+        "originalInclude": "view\\playerlistview.h",
+        "preparedInclude": "view/playerlistview.h",
+        "resolvedHeader": "view/playerlistview.h"
+      }
+    ],
+    "path": "view/gamescene.cpp"
+  }
+]
