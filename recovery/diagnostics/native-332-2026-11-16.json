@@ -1,0 +1,96 @@
+{
+  "entries": [
+    {
+      "originalBlob": "214cf1545dc5fa41b72519f8f58e739df8094549",
+      "path": "CMap.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "12703f50348e2d6a6fffffb9d908a4c5747e87c485f0e69df3762b87b9a368de",
+      "source": "recovery/payloads/reconstructions/21/214cf1545dc5fa41b72519f8f58e739df8094549-CMap.cpp",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    },
+    {
+      "originalBlob": "55619f91e1effd284e5e8ae500dab4d40476810b",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "2ac0fb899fcf11bd99127f23a2975aaf0b72a7f0337572ef2a1be8d45a5461e6",
+      "source": "recovery/payloads/reconstructions/55/55619f91e1effd284e5e8ae500dab4d40476810b-CPlayerView.cpp",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    },
+    {
+      "originalBlob": "89db0c16cbbc4a799e23c8512e58a70706cdb8c3",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "9f22f1d77e65bf96642bb3b4edd0e3e1d1b28a6a53e1c27283651ca0dd4419eb",
+      "source": "recovery/payloads/reconstructions/89/89db0c16cbbc4a799e23c8512e58a70706cdb8c3-GameScript.cpp",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    },
+    {
+      "originalBlob": "d28ea8454c9af1b3fa778242a7b6d04ac9fbe60a",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "f96f940562b62725deeb8582dced4615a880bd66ad3c36ebb85bd5d876f53eed",
+      "source": "recovery/payloads/reconstructions/d2/d28ea8454c9af1b3fa778242a7b6d04ac9fbe60a-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    },
+    {
+      "originalBlob": "5b08dfa2f0bc500b0a0b422217ba0c2f5b228ffe",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "a758d10541f3ba3688a5af1c22f99b95b520a5c02791933d31dc22cf5767f2ed",
+      "source": "recovery/payloads/reconstructions/5b/5b08dfa2f0bc500b0a0b422217ba0c2f5b228ffe-CCreature.cpp",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    },
+    {
+      "originalBlob": "d0f1d2f0038e37a409c5e2c8fa62711da7322e69",
+      "path": "object/CCreature.h",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "03f38b4a0a2b37287b4824afa7f928093ae7fc4c7316d3b21343700ef71d7e28",
+      "source": "recovery/payloads/reconstructions/d0/d0f1d2f0038e37a409c5e2c8fa62711da7322e69-CCreature.h",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    },
+    {
+      "originalBlob": "d769a9de7a72631bc886b3bda363737873be0ccf",
+      "path": "object/CItem.cpp",
+      "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+      "sha256": "a50eeae7e652fbb1a3d5e670f1f0876dedcc750160bd5ba107531b2efe3a3b9d",
+      "source": "recovery/payloads/reconstructions/d7/d769a9de7a72631bc886b3bda363737873be0ccf-CItem.cpp",
+      "validatedByOriginalCommit": "718e735056ffe5daceed5cccccf6da257a4fe314"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 132,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 332,
+  "schemaVersion": 1,
+  "scopedEntries": [
+    {
+      "commits": [
+        "718e735056ffe5daceed5cccccf6da257a4fe314"
+      ],
+      "imageCount": 85,
+      "path": "images.qrc",
+      "pointerBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
+      "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+      "sha256": "78bd73afe97c231f96aa3d49c1e787c60caba544575b2fe992dab1aa34ff1cc4",
+      "source": "recovery/payloads/resources/ffee761da016546507d64cda072b997f0992a5d9-images.qrc",
+      "tree": "ffee761da016546507d64cda072b997f0992a5d9"
+    }
+  ],
+  "sourceCommit": "718e735056ffe5daceed5cccccf6da257a4fe314",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/e67f3507f63a7a4322c45e533f830b0a2868fd1e667b655e18f69ea3fb4fa7db",
+    "fingerprint": "e67f3507f63a7a4322c45e533f830b0a2868fd1e667b655e18f69ea3fb4fa7db",
+    "sourceCommit": "718e735056ffe5daceed5cccccf6da257a4fe314",
+    "sourceTree": "ffee761da016546507d64cda072b997f0992a5d9",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "entries": [
+    {
+      "originalBlob": "75a0d46aa2ada95db722db0e3882e522aae1ccc2",
+      "path": "CMap.cpp",
+      "provenance": "Missing #351 reconstruction, not exact original. Actual #351 CMap.h moves player ownership from scene to map; getPlayer/setPlayer bodies are unchanged intact55e6516 donor methods matching the genuine CGameScene::startGame call. Other verified loader/map bodies preserved. Pending native verification; surviving original bytes retained.",
+      "sha256": "e017f6194aafa6934c780de2b1fd08708f7b97bc756812257e66c80a6daa7dd5",
+      "source": "recovery/payloads/reconstructions/75/75a0d46aa2ada95db722db0e3882e522aae1ccc2-CMap.cpp",
+      "validatedByOriginalCommit": "74ffdde33436cd7bf70565b683f8eda1e2439352"
+    },
+    {
+      "originalBlob": "a8ab7c56aa4ba14aec16f31ef6abd6dc4ae79820",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #351 reconstruction, not exact original. Prior actual creature combat/inventory bodies already obtain player through map, consistent with genuine removal of CGameScene::getPlayer; missing exact implementation unknown. Pending native verification; surviving original bytes retained.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "recovery/payloads/reconstructions/a8/a8ab7c56aa4ba14aec16f31ef6abd6dc4ae79820-CCreature.cpp",
+      "validatedByOriginalCommit": "74ffdde33436cd7bf70565b683f8eda1e2439352"
+    },
+    {
+      "originalBlob": "a6e76a3cc1ce3f3a54220aeb3d455c989311c902",
+      "path": "game.pro",
+      "provenance": "Missing #351 reconstruction, not exact original. Preserves prior game translation-unit/header list while actual same-commit game.pri carries original platform settings. Genuine test subproject is deleted; no surviving game source is excluded. Pending native verification; surviving original bytes retained.",
+      "sha256": "d994bbe2b3b9ff5772354dbfce76a8b33f9dee90b9816c2c9e52cf326ceea32f",
+      "source": "recovery/payloads/reconstructions/a6/a6e76a3cc1ce3f3a54220aeb3d455c989311c902-game.pro",
+      "validatedByOriginalCommit": "74ffdde33436cd7bf70565b683f8eda1e2439352"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 142,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 351,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "74ffdde33436cd7bf70565b683f8eda1e2439352",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/74f44dd4a78c75bc9fcc525cdb610146588a4e98c618a4b760ec4ba5bbde768e",
+    "fingerprint": "74f44dd4a78c75bc9fcc525cdb610146588a4e98c618a4b760ec4ba5bbde768e",
+    "sourceCommit": "74ffdde33436cd7bf70565b683f8eda1e2439352",
+    "sourceTree": "71e1979c7dcf1dc126737403dcc2823e60130733",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

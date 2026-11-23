@@ -1,0 +1,108 @@
+{
+  "acceptance": "Full ordinary compile/link and actual headless map/player/rendered-frame/clean-exit startup for this commit only; no gameplay parity or exact-source claim.",
+  "artifacts": {
+    "startup.json": {
+      "bytes": 420,
+      "sha256": "3a72571131730ba96a6985c021d2cdd3a45b58fb9c89a08b6a45413a1d00e592"
+    },
+    "startup.log": {
+      "bytes": 1744,
+      "sha256": "2f698467a6da8ad68089cbf468f48c7034277a8f499590c1d6071da60f4445ca"
+    },
+    "startup.png": {
+      "bytes": 174091,
+      "sha256": "196b4136f17f6365a8ee1218f71773499e16cdae0eadeb9ff47058cf71b327f1"
+    }
+  },
+  "catalogIndex": 263,
+  "entries": [
+    {
+      "originalBlob": "04cf19a0c0dd265addd4bf7cbfecd4896a4df97e",
+      "path": "src/CMap.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Keep the proven TMX geometry/object/property loading, tile ownership, path/move/entry contracts. Adapt only the real original CGameView panel API replacing showFightView. Map layout remains separately labelled inferred, not exact original.",
+      "sha256": "456af29e814091c214120267ef9d06b6f117039aa6d22591bae0b03d1bd13113",
+      "source": "recovery/payloads/reconstructions/04/04cf19a0c0dd265addd4bf7cbfecd4896a4df97e-456af29e8140-CMap.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "16cde9cc4beec1a566c1f0fcb0707dabc8146661",
+      "path": "src/CItem.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Preserve real prior item/potion/equipment behavior and implement new original interaction-name Q_PROPERTY through the actual map object handler, returning configured interaction typeName and rejecting missing/wrong interaction classes; no stand-in callbacks.",
+      "sha256": "6aa3bae642e35e59487b71a98b39de800b456c77863a990b61db490f3383906a",
+      "source": "recovery/payloads/reconstructions/16/16cde9cc4beec1a566c1f0fcb0707dabc8146661-6aa3bae642e3-CItem.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "1aa860a79c7d33523f18b2a3ff6b45426b7d40c2",
+      "path": "src/CMapObject.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Original base CMapObject no longer declares loadFromJson; omit that removed method, and keep the separately still-declared CEvent loader setting its genuine typeName directly. QObject plus QGraphicsPixmapItem ownership/position/property/event behavior matches original CAnimatedObject.",
+      "sha256": "32b3393bcfd2bd085b7f822685781623d6d274aeeb10270151064cc319a95df7",
+      "source": "recovery/payloads/reconstructions/1a/1aa860a79c7d33523f18b2a3ff6b45426b7d40c2-32b3393bcfd2-CMapObject.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "234bebb0bc17612dfbcd2ac0e7e7ac6d2f51f0fb",
+      "path": "maps/map.tmx",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Inferred donor adaptation, not an exact original map: preserve every tile/layer/geometry/map-entry property and all six supported Cave/Teleporter/ChaosSword actors byte-for-byte; omit only eight StartEvent and one Market objects introduced by a later unavailable-API donor. Actual same-commit scripts/headers define no such classes or configurations; do not invent stand-ins. Authored removed event/shop mechanics and original263 map layout remain unavailable.",
+      "sha256": "09d122d84eac8cc3c31ec4355ddc3e1bdfa4dab54714e9923416074e65e529ef",
+      "source": "recovery/payloads/reconstructions/23/234bebb0bc17612dfbcd2ac0e7e7ac6d2f51f0fb-09d122d84eac-map.tmx",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "2fa0eb6bff67a4cad9be57e768bcd3625e2e790c",
+      "path": "src/CCreature.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Retain actual combat/stat/inventory/level/effect mechanics; original CGameView replaces getFightView with getPanel(\"CFightPanel\"), so use that declared interface for visibility/update.",
+      "sha256": "64bf4c5281d921321c8b9d1a4bffa67ba15be9829ba58d9578105ffbf3ab5d91",
+      "source": "recovery/payloads/reconstructions/2f/2fa0eb6bff67a4cad9be57e768bcd3625e2e790c-64bf4c5281d9-CCreature.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "3cd0386c9ce16defa9e1844a20235d7d56a2a7d3",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Carry every actual261 slot method through the262 combined declaration. Original CAnimatedObject is now QObject+QGraphicsPixmapItem and places CObjectData(this) in MIME data, so read the genuine MIME source with checked dynamic casts instead of stale QWidget event->source(). Match original CItemSlot::checkType(CItem*) and one-argument setAnimation. Inventory/equipment and drag/drop actions remain real.",
+      "sha256": "507d20b513e55fb48ff12c152c161c8f672357dffe22ed603559bbb2dd1b61c5",
+      "source": "recovery/payloads/reconstructions/3c/3cd0386c9ce16defa9e1844a20235d7d56a2a7d3-507d20b513e5-CPlayerView.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "b92740722fa1dbedf9002b65ee7ac47739eb5392",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Use original AGamePanel/CCharPanel/CFightPanel signatures and real inventory/equipment/actions setup from accepted260. Original CGameView now discovers panels and calls each setUpPanel; move the genuine backpack widget drawing/click behavior from prior missing view reconstruction into the newly declared BackPackObject(CGameView*), calling original showPanel(\"CCharPanel\"). No later panel APIs or dummy behavior.",
+      "sha256": "2c9d549cfa85cbe7b605178777abec6d67c4d802cd173952c768a6554b804c01",
+      "source": "recovery/payloads/reconstructions/b9/b92740722fa1dbedf9002b65ee7ac47739eb5392-2c9d549cfa85-CGamePanel.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "b9a42415bb5972af5c6715acad8954e06d09126a",
+      "path": "src/CObjectHandler.cpp",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Keep actual CTypeHandler/PyTypeHandler factory and QMetaProperty assignment, including real Stats conversion; add original declared config accessors. Removed base loadFromJson cannot be called; retained declared CCreature::loadFromJson initializes its actual Stats/inventory/actions state. Other objects use their genuine declared Qt properties. Shared inferred interaction config spans both earlier free-function and later subclass APIs; inspect the actual Python definition, and only a genuine PyFunction selects CInteraction with its real callback dispatcher. Actual classes retain PyTypeHandler; missing definitions still raise rather than becoming placeholders. Unknown classes/configurations still fail explicitly.",
+      "sha256": "5fea5f143afb55046dd3f15d3fc06674aaffa0f5e168ec123762aef13a026144",
+      "source": "recovery/payloads/reconstructions/b9/b9a42415bb5972af5c6715acad8954e06d09126a-5fea5f143afb-CObjectHandler.cpp",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "d60416a14135380c6bbef683f95fe533e5d06b06",
+      "path": "config/objects/weapons.json",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Replace demonstrably wrong future donor containing duplicate tile definitions with the nearest native-verified262 weapon configuration, retaining actual weapon ids, bonuses, interactions and original263 declared Qt property schema. Inferred data, not recovered original balancing/layout.",
+      "sha256": "b818341b5fa7908d948c2dc06b7eff3a4510bd453f27ece71fe5c47a087de136",
+      "source": "recovery/payloads/reconstructions/d6/d60416a14135380c6bbef683f95fe533e5d06b06-b818341b5fa7-weapons.json",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    },
+    {
+      "originalBlob": "e44a0288b373871a71c3dbe0d82ec6c483c2a014",
+      "path": "game.pro",
+      "provenance": "Inferred missing #263 implementation from native-verified #260\u2013262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Retain complete actual application/engine/TMX source inventory from262, including intact now-empty CAnimation.cpp and actual original CGameView.cpp. All needed combined CItemSlot implementation compiles with CPlayerView.cpp. No original project is edited.",
+      "sha256": "aeb486849fa1d180d21e95801f3140a4e15b19d671fa1b1d8c7d1343fc5e11db",
+      "source": "recovery/payloads/reconstructions/e4/e44a0288b373871a71c3dbe0d82ec6c483c2a014-aeb486849fa1-game.pro",
+      "validatedByOriginalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+    }
+  ],
+  "fingerprint": "2e194955100b9a12378af971e4bc97e06dc05f7b5db0e27840a2c5cfb32cdd57",
+  "limitations": [
+    "Map/object data and missing bodies remain explicitly inferred from surviving adjacent APIs, not original source bytes.",
+    "Procedural map generation, pathfinding, combat, loot and target balance have not been gameplay-parity validated."
+  ],
+  "nativeProof": "native-proof.json",
+  "nativeProofSha256": "2c46d9000a869b2b443d0fd7612cd441647545c42a01e53631830a4362bf601d",
+  "originalCommit": "be8b99dfdfe8c13c33f4d60610f24dc7199031a7"
+}

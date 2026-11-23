@@ -63,8 +63,8 @@ class CCreature : public CMapObject {
     CWeapon *getWeapon();
     CArmor *getArmor();
     Stats *getStats();
-    void addBonus(Stats bonus);
-    void removeBonus(Stats bonus);
+    void addBonus(const Stats &bonus);
+    void removeBonus(const Stats &bonus);
     int getManaRatio();
     int getLevel();
     void addExpScaled(int scale);
@@ -119,6 +119,7 @@ class CCreature : public CMapObject {
     void takeDamage(int i);
     CInteraction *getLevelAction();
     Stats getLevelStats();
+    friend class CGameView;
     Q_SIGNAL void statsChanged();
     Q_SIGNAL void skillsChanged();
     Q_SIGNAL void inventoryChanged();
@@ -130,6 +131,7 @@ class CPlayer : public CCreature {
     friend class PlayerStatsView;
 
   public:
+    Q_SIGNAL void dead();
     CPlayer();
     CPlayer(const CPlayer &player);
     ~CPlayer();
@@ -146,7 +148,6 @@ class CPlayer : public CCreature {
     void addEntered(CMapObject *object);
     std::list<CMapObject *> *getEntered();
     void init();
-    void setMap(CMap *map);
 
   private:
     std::list<CCreature *> fightList;

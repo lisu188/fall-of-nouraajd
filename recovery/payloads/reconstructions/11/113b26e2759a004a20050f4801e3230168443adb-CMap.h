@@ -1,6 +1,7 @@
 #pragma once
 #include "scriptmanager.h"
 #include <list>
+#include <type_traits>
 #include <QTimer>
 #include <QObject>
 #include <qgraphicsitemanimation.h>
@@ -67,7 +68,7 @@ class CMap : public QObject, public std::unordered_map<Coords, std::string, Coor
     int getEntryZ();
     CMapObject *getObjectByName(std::string name);
     Q_SLOT void moveCompleted();
-    Q_INVOKABLE inline void ensureTile(int i, int j);
+    Q_INVOKABLE void ensureTile(int i, int j);
     std::unordered_map<Coords, Tile *, CoordsHasher> tiles;
     std::map<int, std::pair<int, int>> getBounds();
     int getCurrentXBound();
@@ -88,18 +89,17 @@ class CMap : public QObject, public std::unordered_map<Coords, std::string, Coor
         if (config.isNull()) {
             return "";
         }
-        return config.get("class", "").asString();
+        return config.get("class", std::is_same<T, CInteraction *>::value ? "CInteraction" : "").asString();
     }
     template <typename T> T createMapObject(QString name) {
         CMapObject *object = NULL;
         std::string className = getClassName<T>(name);
-        object = this->engine->createObject<CMapObject *>(className);
+        if (className == "Event") className = "CEvent";
+        int typeId = QMetaType::type(className.c_str());
+        if (typeId) object = static_cast<CMapObject *>(QMetaType::create(typeId));
         if (object == NULL) {
-            int typeId = QMetaType::type(className.c_str());
-            if (typeId == 0) {
-                return NULL;
-            }
-            object = (CMapObject *)QMetaType::create(typeId);
+            object = engine->createObject<CMapObject *>(className);
+            if (!object) return NULL;
         }
         std::stringstream stream;
         stream << std::hex << (unsigned long)object;

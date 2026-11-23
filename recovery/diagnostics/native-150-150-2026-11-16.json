@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "commit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+      "firstCatalogOrder": 150,
+      "originalBlob": "2081d2dea252a6a38259edabea59e26fb74c6726",
+      "path": "config/items.json",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted genuine119 config/items.json donor blob41d081fe6c796beab79afb418358b8af12cfa877 to missing original2081: adds only class Weapon/Armor/Potion from each actual legacy type, as required by surviving150 Item::getItem/QMetaType factory. Preserves every donor item name/path/stat/power/type. All lost original later item IDs, exact balance and slot metadata remain unavailable and are not invented. This is inferred missing-config compatibility, not original2081 bytes or gameplay parity. Root owns integration and affected-proof revalidation.",
+      "sha256": "2081b633a9704c5abb2723a430f22769012312ce9e98dfd50b6fa4ad8f23dbf7",
+      "source": "recovery/payloads/reconstructions/20/2081d2dea252a6a38259edabea59e26fb74c6726-2081b633a970-items.json"
+    },
+    {
+      "commit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+      "firstCatalogOrder": 150,
+      "originalBlob": "08ec144f196a9a5195e281997b5695828ccbd2ab",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited. Corrected inferred equipment reload: legacy inventory.weapon/armor apply only if present; modern equipment slots survive save/load. Before/after native regression and revalidation required.",
+      "sha256": "4418a0fe3fa9b50681e6c5b6c44a00e283d48b98950274caef6e17f4437db589",
+      "source": "recovery/payloads/reconstructions/08/08ec144f196a9a5195e281997b5695828ccbd2ab-4418a0fe3fa9-creature.cpp"
+    },
+    {
+      "commit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+      "firstCatalogOrder": 150,
+      "originalBlob": "a8de3873c648161f0ab8c80b2f9c67fabde5193b",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing map body inferred from earlier recovered donor; adapted to exact #150 intact Map/MapObject declarations: no later TMX/entry-coordinate API, original JSON map/state and declared ownership preserved. Not exact original content; gameplay parity unverified. Missing ensureSize background generation is inferred as GrassTile (declared in original tiles.json) when the original default string is empty; preserves every explicitly authored road/mountain and player coordinate. Before this missing-body repair native observer reported real healthy player but no terrain at authored spawn (0,0,0). Historical terrain parity is unverified. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "301dc9a904e92d6d27b37eba0a42f1b8aef568530cc6da9b3a82c62515e55e87",
+      "source": "recovery/payloads/reconstructions/a8/a8de3873c648161f0ab8c80b2f9c67fabde5193b-301dc9a904e9-map.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 1
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "057c0d2d39228d236b8f35bb9da7df480752a7c673a69dd81f4172be26979557",
+        "sourceCommit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+        "sourceTree": "499f731a145cfb36da06de082a530c2e0e086176",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

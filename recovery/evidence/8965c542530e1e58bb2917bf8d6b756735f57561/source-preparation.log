@@ -1,0 +1,25 @@
+
+=== mapPosition ===
+{
+  "inputSha256": "58c08222bc273519ec215aa3ccbe3e84c8c09fd98d3dd1ca51d641c638d8b532",
+  "outputSha256": "bc8eb1b418428a937e9b1e832b474e55912a7438e7f145c8cc984f3731c3dd1d",
+  "replaySha256": "060d8b620e1c02a983258bd8adb94379b5fa851946fcbbf84aa7e21c09ece04d",
+  "sourceCommit": "8965c542530e1e58bb2917bf8d6b756735f57561"
+}
+
+=== windowsIncludeSeparators ===
+[
+  {
+    "afterSha256": "39118db32028056696f98ee018c79a739357240a433169155b27b28dc17b9db4",
+    "beforeSha256": "1d8245d11db6ddbb3ff6788de9fc5ef5baf20823df94aeef37f194669c7295fa",
+    "includes": [
+      {
+        "line": 14,
+        "originalInclude": "view\\playerlistview.h",
+        "preparedInclude": "view/playerlistview.h",
+        "resolvedHeader": "view/playerlistview.h"
+      }
+    ],
+    "path": "view/gamescene.cpp"
+  }
+]

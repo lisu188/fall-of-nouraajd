@@ -1,0 +1,196 @@
+{
+  "entries": [
+    {
+      "commit": "0dcab4e4099037c9b5fd233e232ff971c343f0a9",
+      "firstCatalogOrder": 110,
+      "originalBlob": "4dd0e79fc7bf66d54511947f49ca70786d44c306",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; qmake project regenerated with 39 sources from object_script.Game.Debug; settings from intact ae187ade:Game.pro",
+      "sha256": "9207b696b3fd17c82e2f0f7bb8b26d35d5587a45f8f871628272895c2e71ab52",
+      "source": "recovery/payloads/reconstructions/4d/4dd0e79fc7bf66d54511947f49ca70786d44c306-Game.pro"
+    },
+    {
+      "commit": "0dcab4e4099037c9b5fd233e232ff971c343f0a9",
+      "firstCatalogOrder": 110,
+      "originalBlob": "94827741b8c51768e1d2fc76b30655f60337dfdb",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 49ce48b5b1b1d941cf3e648b6abc0371a1683ccf (previous version of creatures/creature.cpp)",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "recovery/payloads/reconstructions/94/94827741b8c51768e1d2fc76b30655f60337dfdb-creature.cpp"
+    },
+    {
+      "commit": "0dcab4e4099037c9b5fd233e232ff971c343f0a9",
+      "firstCatalogOrder": 110,
+      "originalBlob": "166868328131edab82b0c1a8bcba62a9d5807383",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of d8eebeb95fdc4734ed2094dc13c298671c8b0529 (previous version of interactions/interaction.cpp)",
+      "sha256": "6a64f77947027d73148c6be8215fd54775f447b03bfc479ef305dde455e72d40",
+      "source": "recovery/payloads/reconstructions/16/166868328131edab82b0c1a8bcba62a9d5807383-interaction.cpp"
+    },
+    {
+      "commit": "66eff54a33083c0ea5d52283c4103681adb63508",
+      "firstCatalogOrder": 111,
+      "originalBlob": "1d26cac14d50c8d88afa6f256db58df5b41458b3",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project regenerated from genuine same-tree object_script.Game.Debug object list and nearest intact #109 Game.pro settings; retains original source/header/resource selection with no unmatched objects.",
+      "sha256": "9207b696b3fd17c82e2f0f7bb8b26d35d5587a45f8f871628272895c2e71ab52",
+      "source": "recovery/payloads/reconstructions/1d/1d26cac14d50c8d88afa6f256db58df5b41458b3-Game.pro"
+    },
+    {
+      "commit": "66eff54a33083c0ea5d52283c4103681adb63508",
+      "firstCatalogOrder": 111,
+      "originalBlob": "f6c7917cea6bf8831e4546072a676979eda5a560",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; #111 surviving declarations require no further body changes (Creature::applyEffects only becomes public). Original internal delta unavailable; prior provenance retained.",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "recovery/payloads/reconstructions/f6/f6c7917cea6bf8831e4546072a676979eda5a560-creature.cpp"
+    },
+    {
+      "commit": "66eff54a33083c0ea5d52283c4103681adb63508",
+      "firstCatalogOrder": 111,
+      "originalBlob": "00509e4451f6babbff847689d5736a04f4ac1efd",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Carried validated preceding reconstruction unchanged; #111 surviving declarations require no further body changes (Creature::applyEffects only becomes public). Original internal delta unavailable; prior provenance retained.",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "recovery/payloads/reconstructions/00/00509e4451f6babbff847689d5736a04f4ac1efd-map.cpp"
+    },
+    {
+      "commit": "66eff54a33083c0ea5d52283c4103681adb63508",
+      "firstCatalogOrder": 111,
+      "originalBlob": "382404a3259a4094aa00d3fc4de2e0ba4d38881b",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #108 reconstruction from genuine #107 Scene to genuine #111 Q_OBJECT, mouse event overrides, adjustStepTimer, clickMove and StepTimer direction getters/setters. Repeated left-click movement calls the actual surviving playerMove/map API; original Tile::mousePressEvent rejects non-editor tile clicks while original inventory controls consume their own events, so base dispatch runs first and accepted controls are preserved. Direction uses the dominant cardinal axis relative to the player tile center (same center convention as original GameView); repeat interval2*getStep clears the surviving1.5*getStep input throttle. Exact original direction/interval policy is inferred, not recovered. Original headers and all surviving files unchanged.",
+      "sha256": "27bb90a40b3a2a1da6577f5b722979c8ed9aeada400aa407280e6a360a9213d6",
+      "source": "recovery/payloads/reconstructions/38/382404a3259a4094aa00d3fc4de2e0ba4d38881b-gamescene.cpp"
+    },
+    {
+      "commit": "c440cf6f5b8fa478cbbd7476fb235dc7ed4f6c85",
+      "firstCatalogOrder": 112,
+      "originalBlob": "308a191c2034cf447d07568dee37ff91fb7461b4",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f6c7917cea6bf8831e4546072a676979eda5a560 (previous version of creatures/creature.cpp)",
+      "sha256": "d3ff92d52cf1e0b575b000c64044799bc10db3491c9b9097107fdb146f123ee8",
+      "source": "recovery/payloads/reconstructions/30/308a191c2034cf447d07568dee37ff91fb7461b4-creature.cpp"
+    },
+    {
+      "commit": "c440cf6f5b8fa478cbbd7476fb235dc7ed4f6c85",
+      "firstCatalogOrder": 112,
+      "originalBlob": "743f120075798d070062f756216332bafde33636",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 00509e4451f6babbff847689d5736a04f4ac1efd (previous version of map/map.cpp)",
+      "sha256": "8070bcc3a8e7631502503d2c25f324e5cf94901967a89eb60b2ea9e914d12983",
+      "source": "recovery/payloads/reconstructions/74/743f120075798d070062f756216332bafde33636-map.cpp"
+    },
+    {
+      "commit": "c440cf6f5b8fa478cbbd7476fb235dc7ed4f6c85",
+      "firstCatalogOrder": 112,
+      "originalBlob": "7ea20e7fe24da32b81173142137a39cf01f7790a",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 382404a3259a4094aa00d3fc4de2e0ba4d38881b (previous version of view/gamescene.cpp)",
+      "sha256": "27bb90a40b3a2a1da6577f5b722979c8ed9aeada400aa407280e6a360a9213d6",
+      "source": "recovery/payloads/reconstructions/7e/7ea20e7fe24da32b81173142137a39cf01f7790a-gamescene.cpp"
+    },
+    {
+      "commit": "b52fe7541c9f9a24fb1104b5f5e38a6dbb2d60a1",
+      "firstCatalogOrder": 113,
+      "originalBlob": "19901b8249b3f06c3b5089e97dd6166a41b68b91",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; qmake project regenerated with 39 sources from object_script.Game.Debug; settings from intact 84017c91:Game.pro",
+      "sha256": "f9a51887a5b1054e47c7b123137f09ec501a34c3f363b8aa587cc0f8e03d87de",
+      "source": "recovery/payloads/reconstructions/19/19901b8249b3f06c3b5089e97dd6166a41b68b91-Game.pro"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 5
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "37ed72f5890c69c42aea7ad08a3d83250966de0f1c7ca4c6ddd3aebe05a9ca2d",
+        "sourceCommit": "ae187ade45027e4a0786c4ba843758d32f79af5d",
+        "sourceTree": "de23b83456999cbf363e72398199771094e9a5b1",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "06fcf4816207f49cd29518c4f11b09ce5247503010af299fb5ea29ff92bce37a",
+        "sourceCommit": "0dcab4e4099037c9b5fd233e232ff971c343f0a9",
+        "sourceTree": "f05f6e80bb1e1b04030a218dddedd40f5e770d61",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "804757c3fd060f30c8558155f9c038fd2ef262774c3824758ea38e8b867798aa",
+        "sourceCommit": "66eff54a33083c0ea5d52283c4103681adb63508",
+        "sourceTree": "6606399a97f4fbce716a2cc44b6d0edd55ec4363",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "a8950301910d559f1955c6dadec8f7809ef0f575078203ea37d3a55971887ad4",
+        "sourceCommit": "c440cf6f5b8fa478cbbd7476fb235dc7ed4f6c85",
+        "sourceTree": "e004432950bef0c791a501ce0f2b2daace7a3260",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "4832d7fc4561559e745f47f45e44a5f5aeb83759a5753cd8c28381b57d7fba8f",
+        "sourceCommit": "b52fe7541c9f9a24fb1104b5f5e38a6dbb2d60a1",
+        "sourceTree": "98cebafa9c1a2b95ee411932a788f4129391accd",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

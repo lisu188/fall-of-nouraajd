@@ -1,0 +1,60 @@
+{
+  "entries": [
+    {
+      "originalBlob": "08ec144f196a9a5195e281997b5695828ccbd2ab",
+      "path": "creatures/creature.cpp",
+      "provenance": "Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited.",
+      "sha256": "ed9e1bc1401e2c6dcb98cc025f4773e6d5277f674ce9dc808bf1c9d04c1296d1",
+      "source": "recovery/payloads/reconstructions/08/08ec144f196a9a5195e281997b5695828ccbd2ab-creature.cpp"
+    },
+    {
+      "originalBlob": "0b0a9c19112914c23dcd4a6e2e032f335f7abf76",
+      "path": "interactions/interaction.cpp",
+      "provenance": "Missing #150 Interaction body inferred from native-verified #97 implementation and exact #150 surviving header: public/default/copy constructors, ListItem ordering and Effect state serialization added. Removed undeclared legacy setAnimation override, retaining inherited real resource loading. Historical ordering/effect persistence parity unverified.",
+      "sha256": "58c845dc10998af9d2593755795e2cbfce4f8fdd9e05369db918e2212cc511ec",
+      "source": "recovery/payloads/reconstructions/0b/0b0a9c19112914c23dcd4a6e2e032f335f7abf76-interaction.cpp"
+    },
+    {
+      "originalBlob": "6eb88a3320dbc6f6e1b994b86d9001da97fbe33b",
+      "path": "view/gameview.cpp",
+      "provenance": "Missing game view body inferred from earlier donor and exact #150 intact headers/UI sources: views are owned by GameView, constructed from surviving Creature collections, refreshed through declared signals; BackPackObject renders original PNG and emits declared clicked signal. Not exact original content; layout and gameplay parity unverified.",
+      "sha256": "c1549c7ecf8c52b7dd31870fcfff4bc10e3e174ec4d5741964271933a08ee51b",
+      "source": "recovery/payloads/reconstructions/6e/6eb88a3320dbc6f6e1b994b86d9001da97fbe33b-gameview.cpp"
+    },
+    {
+      "originalBlob": "74b5208082ffe0051446bac78b0e1e3eacdaa584",
+      "path": "creatures/player.cpp",
+      "provenance": "Missing #150 player body inferred from earlier surviving donor and exact original Player.h/GameView caller: restored declared update() to refresh inventory/action maps and emit statsChanged. Remaining donor combat preserved; historical behavior not proven.",
+      "sha256": "75da6d199f773ae6f971796626112c01f18ac91371f486f4b9304049acce94d8",
+      "source": "recovery/payloads/reconstructions/74/74b5208082ffe0051446bac78b0e1e3eacdaa584-player.cpp"
+    },
+    {
+      "originalBlob": "9a8894c8b2ad2550e0b28afe00d7c7c75d05da54",
+      "path": "view/gamescene.cpp",
+      "provenance": "Missing scene body inferred from earlier recovered donor and exact #150 intact declarations; restored declared map accessor/StepTimer mouse movement and kept player/game initialization and arrow movement. Removed undeclared later tile-size setter. Original behavior not proven; startup evidence and gameplay parity reported separately.",
+      "sha256": "0ff54d69a1d66b67ec744c7e4890a6bd6e585d095bf3d823d3368927b2dd42de",
+      "source": "recovery/payloads/reconstructions/9a/9a8894c8b2ad2550e0b28afe00d7c7c75d05da54-gamescene.cpp"
+    },
+    {
+      "originalBlob": "a8de3873c648161f0ab8c80b2f9c67fabde5193b",
+      "path": "map/map.cpp",
+      "provenance": "Missing map body inferred from earlier recovered donor; adapted to exact #150 intact Map/MapObject declarations: no later TMX/entry-coordinate API, original JSON map/state and declared ownership preserved. Not exact original content; gameplay parity unverified. Missing ensureSize background generation is inferred as GrassTile (declared in original tiles.json) when the original default string is empty; preserves every explicitly authored road/mountain and player coordinate. Before this missing-body repair native observer reported real healthy player but no terrain at authored spawn (0,0,0). Historical terrain parity is unverified.",
+      "sha256": "b59fa5b534394eec51e088f9a013e18c44eae4b09a025fd74e83a9ebb8ddd1fe",
+      "source": "recovery/payloads/reconstructions/a8/a8de3873c648161f0ab8c80b2f9c67fabde5193b-map.cpp"
+    }
+  ],
+  "limitations": [
+    "Missing implementations are inferred, not exact originals.",
+    "Terrain generation for blank default backgrounds is inferred; explicit map cells and authored player coordinates remain intact.",
+    "Compilation and genuine game startup are verified; historical gameplay parity is unverified."
+  ],
+  "position": 150,
+  "schemaVersion": 1,
+  "sourceCommit": "70449d6d217978ad3e1038ab138f38739b0a4ab8",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "fingerprint": "46330fea62b17fa15e6df78ca2cf3041a974fc87513ca9f277b765f2a03c3d61",
+    "sourceTree": "499f731a145cfb36da06de082a530c2e0e086176",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

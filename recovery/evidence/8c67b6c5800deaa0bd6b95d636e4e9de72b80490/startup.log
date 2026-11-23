@@ -1,0 +1,190 @@
+process 432: D-Bus library appears to be incorrectly set up; failed to read machine uuid: UUID file '/etc/machine-id' should contain a hex string of length 32, not length 0, with no other text
+See the manual page for dbus-uuidgen to correct this issue.
+Loaded configuration: "config/interactions.json" 
+
+Loaded configuration: "config/effects.json" 
+
+Loaded configuration: "config/weapons.json" 
+
+Loaded configuration: "config/items.json" 
+
+Loaded configuration: "config/monsters.json" 
+
+Loaded configuration: "maps/map1/config.json" 
+
+Loaded configuration: "config/tiles.json" 
+
+Loaded configuration: "config/misc.json" 
+
+Loaded configuration: "config/buildings.json" 
+
+Loaded configuration: "config/potions.json" 
+
+Loaded configuration: "config/armors.json" 
+
+Loaded animation: "images/arrows/right" 
+
+Loaded animation: "images/arrows/left" 
+
+Loaded animation: "images/interactions/abyssalshadows" 
+
+Loaded animation: "images/interactions/armorofendlesswinter" 
+
+Loaded configuration: "slots.json" 
+
+Loaded animation: "images/players/assasin" 
+
+Loaded animation: "images/interactions/attack" 
+
+Loaded animation: "images/items/potions/life" 
+
+Loaded animation: "images/items/potions/mana" 
+
+Loaded animation: "images/items/weapons/dagger" 
+
+"Assasin" equipped "Dagger" 
+
+Loaded animation: "images/items/armors/leatherarmor" 
+
+"Assasin" equipped "LeatherArmor" 
+
+Loaded animation: "images/interactions/sneakattack" 
+
+Loaded animation: "images/interactions/barrier" 
+
+Loaded animation: "images/tiles/beach" 
+
+Loaded animation: "images/items/weapons/bladeofdarkdreams" 
+
+Loaded animation: "images/interactions/bloodthirst" 
+
+Loaded animation: "images/interactions/bloodlash" 
+
+Loaded animation: "images/items/weapons/broadsword" 
+
+Loaded animation: "images/buildings/cave" 
+
+Loaded animation: "images/interactions/chaosblast" 
+
+Loaded animation: "images/items/weapons/chaossword" 
+
+Loaded animation: "images/items/armors/chestplateofnorth" 
+
+Loaded animation: "images/interactions/chloroform" 
+
+Loaded animation: "images/items/helmets/crownofnightmares" 
+
+Loaded animation: "images/items/weapons/daggerofvileheart" 
+
+Loaded animation: "images/interactions/deathstrike" 
+
+Loaded animation: "images/tiles/desert" 
+
+Loaded animation: "images/interactions/devour" 
+
+Loaded animation: "images/interactions/doubleattack" 
+
+Loaded animation: "images/interactions/endlesspain" 
+
+Loaded animation: "images/items/boots/eradicatorsboots" 
+
+Loaded animation: "images/interactions/frostbolt" 
+
+Loaded animation: "images/items/gloves/glovesoftheassasin" 
+
+Loaded animation: "images/monsters/gooby" 
+
+Loaded animation: "images/tiles/grass" 
+
+Loaded animation: "images/tiles/ground" 
+
+Loaded animation: "images/items/weapons/knife" 
+
+Loaded animation: "images/tiles/lava" 
+
+Loaded animation: "images/interactions/lethalpoison" 
+
+Loaded animation: "images/items/weapons/longsword" 
+
+Loaded animation: "images/interactions/magicmissile" 
+
+Loaded animation: "images/tiles/mountain" 
+
+Loaded animation: "images/interactions/mutilation" 
+
+Loaded configuration: "images/monsters/octobogz/time.json" 
+
+Loaded animation: "images/monsters/octobogz/" 
+
+Loaded animation: "images/items/armors/platearmor" 
+
+Loaded configuration: "images/monsters/pritz/time.json" 
+
+Loaded animation: "images/monsters/pritz/" 
+
+Loaded configuration: "images/monsters/pritzmage/time.json" 
+
+Loaded animation: "images/monsters/pritzmage/" 
+
+Loaded animation: "images/tiles/road" 
+
+Loaded animation: "images/items/armors/robe" 
+
+Loaded animation: "images/items/scroll" 
+
+Loaded animation: "images/items/weapons/shadowblade" 
+
+Loaded animation: "images/interactions/shadowbolt" 
+
+Loaded animation: "images/items/weapons/shortstaff" 
+
+Loaded animation: "images/items/weapons/shortsword" 
+
+Loaded animation: "images/tiles/snow" 
+
+Loaded animation: "images/players/sorcerer" 
+
+Loaded animation: "images/items/weapons/staff" 
+
+"Sorcerer" equipped "Staff" 
+
+"Sorcerer" equipped "Robe" 
+
+Loaded animation: "images/items/weapons/staffoftheabyss" 
+
+Loaded animation: "images/items/weapons/stiletto" 
+
+Loaded animation: "images/interactions/strike" 
+
+Loaded animation: "images/interactions/stun" 
+
+Loaded animation: "images/tiles/swamp" 
+
+Loaded animation: "images/items/weapons/sword" 
+
+Loaded animation: "images/buildings/teleporter" 
+
+Loaded animation: "images/items/belts/undestructiblebelt" 
+
+Loaded animation: "images/items/weapons/valkyrie" 
+
+Loaded animation: "images/items/weapons/void" 
+
+Loaded animation: "images/items/weapons/wand" 
+
+Loaded animation: "images/players/warrior" 
+
+"Warrior" equipped "Sword" 
+
+"Warrior" equipped "PlateArmor" 
+
+Loaded animation: "images/tiles/wasteland" 
+
+Loaded animation: "images/tiles/water" 
+
+Loaded configuration: "maps/map1/map.json" 
+
+"Assasin" equipped "Dagger" 
+
+"Assasin" equipped "LeatherArmor" 
+

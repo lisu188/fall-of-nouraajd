@@ -1,0 +1,28 @@
+{
+  "bundle": {
+    "bundle": "/tmp/nouraajd-bfg-recovery/publication/nouraajd-bfg-2026-11-16-prefix.bundle",
+    "bytes": 17964845,
+    "recoveryRefs": {
+      "refs/heads/recovery/bfg/2026-11-16/108bdcbeda04cefeba5e1895f91df023cea8487f": "c71ee387c03b31954c72ae1538ff075028aeca2d",
+      "refs/heads/recovery/bfg/2026-11-16/998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0": "8d728761901b4bc2a02ef6fd32faa57daa781fb0"
+    },
+    "sha256": "bb630b209f4cce4ffd875a9c644c50fafc8a7271552a96e70bf97508e9758401",
+    "status": "verified",
+    "verification": "The bundle contains these 3 refs:\nc71ee387c03b31954c72ae1538ff075028aeca2d refs/heads/recovery/bfg/2026-11-16/108bdcbeda04cefeba5e1895f91df023cea8487f\n8d728761901b4bc2a02ef6fd32faa57daa781fb0 refs/heads/recovery/bfg/2026-11-16/998e1e09c2ab203e7b5ad4a3a5b92fb39096cfa0\nc71ee387c03b31954c72ae1538ff075028aeca2d HEAD\nThe bundle records a complete history.\nThe bundle uses this hash algorithm: sha1"
+  },
+  "documentationAndStartupFramePresent": true,
+  "independentTransportVerification": {
+    "fsck": "git fsck --full --strict",
+    "noAlternates": true,
+    "objectCount": 2113,
+    "status": "passed"
+  },
+  "mainUpdated": false,
+  "mappedCommitCount": 109,
+  "mappingSha256": "f4c388cc001c7f888f616b2420992985f79eb2f8b38878b1d60a8ad8b52df256",
+  "messagesPreservedWithRecoveryFooter": true,
+  "parentOrderAndIdentitiesPreserved": true,
+  "preservedPreviouslyPublishedCommitCount": 65,
+  "schemaVersion": 1,
+  "survivingOriginalFilesAndModesPreserved": true
+}

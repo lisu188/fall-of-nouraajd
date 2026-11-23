@@ -1,0 +1,24 @@
+
+=== resourcesTransition ===
+{
+  "files": {
+    "game/CGameView.cpp": [
+      "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+      "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
+    ],
+    "game/CMapObject.cpp": [
+      "b30647c71eb7c4f0cd3ccd988cedc4db84df449137aeec0ea994756348c8a8ce",
+      "4a8462bec5abd35eb0530366897dceb934536c890a22f1a6b8593ca52d3b9e03"
+    ],
+    "game/CScriptEngine.cpp": [
+      "2349dd540d6dfefc3011726bd3a88fbf6d727a14dcacee0883f6ae37d366201d",
+      "263e2828b0a38343092589f048715de6a31a7306c8cbf58ba2fca560bd7cd001"
+    ],
+    "game/game.pro": [
+      "c7c9902a08cfebf4a31f3a5395567826d9122148c9acb58de9ad1abaabe59587",
+      "c96fc2305498bcb5e7e109bc75f41b6b025491cdf94d4dbde5adcd78a3fd0599"
+    ]
+  },
+  "replaySha256": "7fb0478d8d58034fde48e682798a484c43aa64049c384c647a7e4f72c5ac573f",
+  "sourceCommit": "9843aa0b06bc706fdaeee61f20339c29a9d3a6de"
+}

@@ -1,0 +1,17 @@
+
+=== windowsIncludeSeparators ===
+[
+  {
+    "afterSha256": "072b0ce5367291ea095748278d10eb05f59d788edc1b8c03b8ef1e361405ba45",
+    "beforeSha256": "8aa3d357929f6c4d0f51907727f4a61ac9130f5cfd4e1d55d0d82eec68bbebec",
+    "includes": [
+      {
+        "line": 13,
+        "originalInclude": "view\\playerlistview.h",
+        "preparedInclude": "view/playerlistview.h",
+        "resolvedHeader": "view/playerlistview.h"
+      }
+    ],
+    "path": "view/gamescene.cpp"
+  }
+]
