@@ -21,9 +21,13 @@ import zlib
 
 try:
     from scripts import history_source_prep as source_prep
+    from scripts import history_runtime_configs as runtime_configs
+    from scripts import history_static_lto as static_lto
     from scripts.history_qmake_compatibility import recipeForSource
 except ModuleNotFoundError:
     import history_source_prep as source_prep
+    import history_runtime_configs as runtime_configs
+    import history_static_lto as static_lto
     from history_qmake_compatibility import recipeForSource
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +37,17 @@ WINDOWS_PATHS_SOURCE = REPO_ROOT / "recovery/smoke/windows_paths.cpp"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 REQUIRED_CHECKS = ("map", "player", "eventLoop", "renderedFrame")
 EDITOR_CHECKS = ("map", "editor", "eventLoop", "renderedFrame")
+# Reviewed original editor routes with Qt metatype registration before view selection.
+REVIEWED_EDITOR_MAIN_SHA256 = frozenset(
+    {
+        "035bc5e41119a494f0abca5007dfd2783d94f758f1e1d557d0dee718c96b2b62",  # #122
+        "2d6e34b472015545231ca4c1c0dcb775ca2eb77e00eb13135244ac64bff9f129",  # #124
+        "25c1c0d44c34b2f6299c730d4321040c9628e09d7af71dce1a21d8f92a9186a4",  # #134
+        "c9a6650318801e75253b0c54ffb4d5b2b4d344fd794694bd37f0951b5776f936",  # #135
+        "82d28c2df4fb35f1453ef25e2d8fb30c04bba2a6875710b04f9cfea9a3491d3e",  # #141
+        "fa471718f3119672baf3b78564ccb3215351e4c69c637d4ca895b6513a98c5e1",  # #155
+    }
+)
 
 
 class VerificationError(ValueError):
@@ -201,6 +216,27 @@ def validateSmokeReport(
     return report
 
 
+def reusableCachedResult(cached_path: Path, startup_mode: str) -> dict | None:
+    """A cached success for this restored fingerprint, or None when the tree must be re-run.
+
+    Cache entries record absolute artifact paths. Once the work directory moves or its
+    snapshots are cleaned, those artifacts are gone; a missing artifact is a cache miss
+    that triggers a fresh build and startup, never evidence and never a startup failure.
+    Artifacts that exist but no longer validate still fail verification.
+    """
+    if not cached_path.is_file():
+        return None
+    cached = json.loads(cached_path.read_text())
+    if cached.get("status") != "success":
+        return None
+    report = Path(cached["smoke"]["startupReport"])
+    artifacts = Path(cached["artifactDir"])
+    if not report.is_file() or not artifacts.is_dir():
+        return None
+    validateSmokeReport(report, artifacts, startup_mode)
+    return cached
+
+
 def runSmoke(
     executable: Path | list[str],
     cwd: Path,
@@ -225,6 +261,7 @@ def runSmoke(
     child_environment.update(
         {
             "GAME_RECOVERY_SMOKE_REPORT": str(report_path),
+            "GAME_RECOVERY_LOAD_DEADLINE_MS": str(max(20000, int((timeout - 10) * 1000))),
             "SDL_VIDEODRIVER": "x11",
             "SDL_AUDIODRIVER": "dummy",
             "SDL_RENDER_DRIVER": "software",
@@ -283,7 +320,9 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
         config = json.loads(config_path.read_text())
     except (OSError, ValueError) as error:
         raise VerificationError(f"Cannot inspect historical startup configuration: {error}") from error
-    compact = re.sub(r"\s+", "", (source_root / "main.cpp").read_text()) if (source_root / "main.cpp").is_file() else ""
+    main_path = source_root / "main.cpp"
+    main_data = main_path.read_bytes() if main_path.is_file() else b""
+    compact = re.sub(r"\s+", "", main_data.decode())
     start = compact.find("intmain(")
     expected = (
         "intmain(intargc,char*argv[]){QApplicationa(argc,argv);QGraphicsView*view;"
@@ -291,7 +330,9 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
         "if(editor){view=newMapView();}else{view=newGameView();}"
         "intret=a.exec();deleteview;returnret;}"
     )
-    reviewed = start >= 0 and compact[start:] == expected
+    reviewed = (start >= 0 and compact[start:] == expected) or (
+        hashlib.sha256(main_data).hexdigest() in REVIEWED_EDITOR_MAIN_SHA256
+    )
     editor = isinstance(config, dict) and config.get("editor") is True
     if not editor and not reviewed:
         return {"mode": "game"}
@@ -328,7 +369,9 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
     }
 
 
-def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str = "game") -> dict:
+def prepareSmokeAdapter(
+    source_root: Path, build_root: Path, startup_mode: str = "game", *, embedded_view: bool = False
+) -> dict:
     """Add a startup observer to the real target, retaining its original main function."""
     editor = startup_mode == "editor"
     if startup_mode not in ("game", "editor"):
@@ -369,7 +412,13 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         raise VerificationError("Map needs a reviewed tile-readiness adapter")
     coords3 = contains.group(1).count(",") >= 2
     static_player = re.search(r"\bstatic\s+\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
-    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player else map_text)
+    # From #226 the player is an instance member of the scene and the map has no accessor.
+    scene_player = (
+        not static_player
+        and re.search(r"\b\w+\s*\*\s*getPlayer\s*\(", scene_text) is not None
+        and re.search(r"\bgetPlayer\s*\(", map_text) is None
+    )
+    player_getter = re.search(r"\b(\w+)\s*\*\s*getPlayer\s*\(", scene_text if static_player or scene_player else map_text)
     player_name = player_getter.group(1) if player_getter else ("CPlayer" if prefixed else "Player")
     # Several Qt trees define CPlayer alongside CCreature in the same header.
     if editor:
@@ -396,6 +445,8 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         f"#define GAME_RECOVERY_VIEW_TYPE {view_name}",
         f"#define GAME_RECOVERY_MAP_GETTER {'getMap' if has_map_getter else 'recoveryGetMap'}",
         f"#define GAME_RECOVERY_STATIC_PLAYER {int(static_player)}",
+        f"#define GAME_RECOVERY_EMBEDDED_VIEW {int(embedded_view)}",
+        f"#define GAME_RECOVERY_SCENE_PLAYER {int(scene_player)}",
         f"#define GAME_RECOVERY_COORDS3 {int(coords3)}",
         f"#define GAME_RECOVERY_OPENGL {int(opengl)}",
     ]
@@ -661,7 +712,11 @@ def selectRecipe(recipes: list[dict], source_root: Path, selected: str | None) -
         matching = [recipe for recipe in recipes if str(recipe.get("pythonAbi", "none")) == abi]
     if len(matching) != 1:
         raise VerificationError(f"Expected one build recipe; found {len(matching)}")
-    return recipeForSource(matching[0], source_root)
+    recipe = static_lto.recipeForSource(recipeForSource(matching[0], source_root), source_root)
+    arguments = source_prep.preparationArguments(source_root)
+    if arguments:
+        recipe = {**recipe, "qmakeArguments": [*recipe.get("qmakeArguments", []), *arguments]}
+    return recipe
 
 
 def toolchainFingerprint(recipe: dict, environment: dict[str, str]) -> dict:
@@ -692,6 +747,99 @@ def exportEvidence(result: dict, output_root: Path) -> None:
     )
     evidence_dir = output_root / "evidence" / result["fingerprint"]
     evidence_dir.mkdir(parents=True, exist_ok=True)
+    supplemental = result.get("sourcePreparation", {}).get("identity", {}).get("supplementalResources")
+    if supplemental:
+        if supplemental.get("path") != source_prep.SUPPLEMENTAL_QRC:
+            raise VerificationError("Unexpected supplemental Qt resource output")
+        resource = Path(result["restoration"]["outputDir"]) / source_prep.SUPPLEMENTAL_QRC
+        if hashlib.sha256(resource.read_bytes()).hexdigest() != supplemental.get("sha256"):
+            raise VerificationError("Supplemental Qt resource output differs from its preparation proof")
+        shutil.copyfile(resource, evidence_dir / "supplemental_images.qrc")
+    reflection = result.get("sourcePreparation", {}).get("identity", {}).get("reflectionRegistration")
+    if reflection:
+        helper = source_prep.reflection_prep
+        header = Path(result["restoration"]["outputDir"]) / helper.TARGET
+        if reflection.get("path") != helper.TARGET or header.is_symlink() or header.read_bytes() != helper.HEADER:
+            raise VerificationError("Reflection compatibility header differs from its reviewed bytes")
+        if hashlib.sha256(header.read_bytes()).hexdigest() != reflection.get("sha256"):
+            raise VerificationError("Reflection compatibility header differs from its preparation proof")
+        shutil.copyfile(header, evidence_dir / helper.ATTACHMENT)
+    coordinates = result.get("sourcePreparation", {}).get("identity", {}).get("coordinatesHash")
+    if coordinates:
+        helper = source_prep.coordinates_prep
+        header = Path(result["restoration"]["outputDir"]) / helper.TARGET
+        if coordinates.get("path") != helper.TARGET or header.is_symlink() or header.read_bytes() != helper.HEADER:
+            raise VerificationError("Coordinate hash compatibility header differs from its reviewed bytes")
+        if hashlib.sha256(header.read_bytes()).hexdigest() != coordinates.get("sha256"):
+            raise VerificationError("Coordinate hash compatibility header differs from its preparation proof")
+        shutil.copyfile(header, evidence_dir / helper.ATTACHMENT)
+    legacy_tiles = result.get("sourcePreparation", {}).get("identity", {}).get("legacyTileConfiguration")
+    if legacy_tiles:
+        helper = source_prep.legacy_tiles_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.legacyTilePlan(root)
+        if plan is None or legacy_tiles != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Legacy tile configuration differs from its reviewed preparation identity")
+        target = helper.containedPath(root, helper.TARGET)
+        if not target.is_file() or target.read_bytes() != plan["data"]:
+            raise VerificationError("Legacy tile configuration differs from its reviewed derived bytes")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    maps_manifest = result.get("sourcePreparation", {}).get("identity", {}).get("mapsManifest")
+    if maps_manifest:
+        helper = source_prep.maps_manifest_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.mapsManifestPlan(root)
+        if plan is None or maps_manifest != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Maps manifest differs from its reviewed preparation identity")
+        target = root / helper.TARGET
+        if target.is_symlink() or not target.is_file() or target.read_bytes() != plan["data"]:
+            raise VerificationError("Maps manifest differs from its authored corrected bytes")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    teleporter = result.get("sourcePreparation", {}).get("identity", {}).get("teleporterSerialization")
+    if teleporter:
+        helper = source_prep.teleporterHelper(teleporter.get("inputs"))
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.teleporterPlan(root)
+        if plan is None or teleporter != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Teleporter serialization differs from its reviewed preparation identity")
+        target = helper.containedPath(root, helper.TARGET)
+        if not target.is_file() or target.read_bytes() != plan["data"]:
+            raise VerificationError("Teleporter serialization differs from its reviewed derived source")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    conflicts = result.get("sourcePreparation", {}).get("identity", {}).get("trivialConflicts")
+    if conflicts:
+        helper = source_prep.conflicts_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.conflictPlan(root, allow_prepared=True)
+        if plan is None or conflicts != helper.reviewedIdentity():
+            raise VerificationError("Whitespace-only conflict source differs from its preparation proof")
+        helper.validatePreparation(result["sourcePreparation"])
+        if result.get("buildCompatibility") != "trivialConflicts":
+            raise VerificationError("Whitespace-only conflict preparation lacks its explicit build boundary")
+    if result["sourceCommit"] in source_prep.merged_prep.COMMITS:
+        helper = source_prep.merged_prep
+        root = Path(result["restoration"]["outputDir"])
+        companions = {name: (root / "lib/json" / name).read_bytes() for name in helper.COMPANIONS}
+        outputs = helper.validate(result["sourceCommit"], result["sourcePreparation"], companions)
+        if any((root / name).read_bytes() != content for name, content in outputs.items()):
+            raise VerificationError("Merged-header output differs from the reviewed bytes")
+    if result["sourceCommit"] == source_prep.cache_prep.COMMIT:
+        helper = source_prep.cache_prep
+        helper.validate(result["sourcePreparation"])
+        target = helper.containedPath(Path(result["restoration"]["outputDir"]), helper.TARGET)
+        if hashlib.sha256(target.read_bytes()).hexdigest() != helper.SHA256:
+            raise VerificationError("Pathfinder cache build input differs from the pinned child source")
+        shutil.copyfile(target, evidence_dir / helper.ATTACHMENT)
+    timing = result.get("sourcePreparation", {}).get("identity", {}).get("legacyTimingResources")
+    if timing:
+        helper = source_prep.timing_prep
+        root = Path(result["restoration"]["outputDir"])
+        plan = helper.legacyTimingPlan(root, allow_generated=True)
+        if plan is None or timing != {key: value for key, value in plan.items() if key != "data"}:
+            raise VerificationError("Legacy timing resources differ from their reviewed preparation identity")
+        for name, expected in plan["data"].items():
+            if helper.originalInput(root, name) != expected:
+                raise VerificationError("Legacy timing resource differs from its byte-identical renamed input")
     frame_path = Path(startup["frame"]["path"])
     if not frame_path.is_absolute():
         frame_path = artifact_root / frame_path
@@ -753,19 +901,83 @@ def verifySnapshot(
         startup = selectStartupMode(repo_root, source_commit, source_root)
         result.update(startupMode=startup["mode"], startupSelection=startup)
         preparation = source_prep.prepareSources(
-            source_root, work_root / "preparation", recipe, environment, runCommand, min(build_timeout, 120)
+            source_root, work_root / "preparation", recipe, environment, runCommand, min(build_timeout, 120),
+            source_commit=source_commit, repo_root=repo_root,
         )
         result["sourcePreparation"] = preparation
         if preparation["status"] == "failed":
             raise VerificationError(preparation["reason"])
+        supplemental = preparation["identity"].get("supplementalResources")
+        if supplemental:
+            startup["boundary"] = supplemental["validationBoundary"]
+            result["startupCompatibility"] = "supplementalQtResources"
+        reflection = preparation["identity"].get("reflectionRegistration")
+        if reflection:
+            if supplemental:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = reflection["validationBoundary"]
+            result["startupCompatibility"] = "parentReflectionRegistration"
+        coordinates = preparation["identity"].get("coordinatesHash")
+        if coordinates:
+            if supplemental or reflection:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = coordinates["validationBoundary"]
+            result["startupCompatibility"] = "originalCoordinateHash"
+        legacy_tiles = preparation["identity"].get("legacyTileConfiguration")
+        if legacy_tiles:
+            if supplemental or reflection or coordinates:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = legacy_tiles["validationBoundary"]
+            result["startupCompatibility"] = "legacyTileConfiguration"
+        maps_manifest = preparation["identity"].get("mapsManifest")
+        if maps_manifest:
+            if supplemental or reflection or coordinates or legacy_tiles:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = maps_manifest["validationBoundary"]
+            result["startupCompatibility"] = "authoredMapsManifest"
+        teleporter = preparation["identity"].get("teleporterSerialization")
+        if teleporter:
+            if supplemental or reflection or coordinates or legacy_tiles or maps_manifest:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = teleporter["validationBoundary"]
+            result["startupCompatibility"] = "teleporterSerialization"
+        timing = preparation["identity"].get("legacyTimingResources")
+        if timing:
+            if supplemental or reflection or coordinates or legacy_tiles or maps_manifest or teleporter:
+                raise VerificationError("Historical compatibility states unexpectedly overlap")
+            startup["boundary"] = timing["validationBoundary"]
+            result["startupCompatibility"] = "legacyTimingResources"
+        if preparation["identity"].get("trivialConflicts"):
+            result["buildCompatibility"] = "trivialConflicts"
+        config_plan = runtime_configs.plan(source_root, source_commit)
+        if config_plan:
+            result["runtimeConfiguration"] = config_plan[0]
+            result["startupCompatibility"] = "transitionalRuntimeConfiguration"
+            startup["boundary"] = runtime_configs.BOUNDARY
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
-        adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
+        runtime_root = projects["application"].parent
+        application_project = projects["application"].relative_to(source_root).as_posix()
+        runtime_layout = {"core/core.pro": ".", "game/game.pro": "files"}.get(application_project)
+        if runtime_layout is not None:
+            candidate = source_root / runtime_layout
+            if all((candidate / name).is_dir() for name in ("maps", "scripts", "config")):
+                runtime_root = candidate
+                result["runtimeWorkingDirectory"] = runtime_layout
+        adapter = prepareSmokeAdapter(
+            source_root,
+            work_root / "observer",
+            startup["mode"],
+            embedded_view=source_commit in source_prep.scene_prep.PINS,
+        )
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
         identity = {
             "sourceTree": tree["tree"],
             "startupSelection": startup,
             "sourcePreparation": preparation["identity"],
-            "runtimePreparation": {"directories": runtime_directories},
+            "runtimePreparation": {
+                "directories": runtime_directories,
+                "workingDirectory": runtime_root.relative_to(source_root).as_posix(),
+            },
             "recipe": recipe,
             "toolchain": toolchain,
             "toolchainImage": environment.get("GAME_RECOVERY_TOOLCHAIN_ID"),
@@ -778,6 +990,8 @@ def verifySnapshot(
             # The exact restored file set; unrelated override edits must not invalidate verified results.
             "restoredFiles": result["restoration"]["restoredFilesFingerprint"],
         }
+        if config_plan:
+            identity["runtimeConfiguration"] = config_plan[0]
         fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         result.update(
             {
@@ -791,15 +1005,11 @@ def verifySnapshot(
             }
         )
         cached_path = output_root / "results" / (fingerprint + ".json")
-        if cached_path.is_file():
-            cached = json.loads(cached_path.read_text())
-            if cached.get("status") == "success":
-                validateSmokeReport(
-                    Path(cached["smoke"]["startupReport"]), Path(cached["artifactDir"]), startup["mode"]
-                )
-                cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
-                exportEvidence(cached, output_root)
-                return cached
+        cached = reusableCachedResult(cached_path, startup["mode"])
+        if cached is not None:
+            cached = {**cached, "sourceCommit": source_commit, "sourceCommits": tree["commits"], "resumed": True}
+            exportEvidence(cached, output_root)
+            return cached
         build_base = work_root / "build"
         build_base.mkdir()
         dependencies = []
@@ -901,11 +1111,13 @@ def verifySnapshot(
             ).rstrip(":")
         if runtime_directories:
             result["runtimePreparation"] = source_prep.prepareRuntimeDirectories(
-                projects["application"].parent, runtime_directories
+                runtime_root, runtime_directories
             )
+        if config_plan:
+            runtime_configs.writeOutputs(source_root, config_plan[1])
         result["smoke"] = runSmoke(
             ["env", "LD_PRELOAD=" + str(preload), str(executable.resolve())],
-            projects["application"].parent,
+            runtime_root,
             artifact_dir,
             environment=smoke_environment,
             timeout=timeout,

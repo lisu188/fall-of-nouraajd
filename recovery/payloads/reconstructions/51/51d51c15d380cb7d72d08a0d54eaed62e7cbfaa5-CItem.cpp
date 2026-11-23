@@ -123,7 +123,9 @@ CInteraction *CWeapon::getInteraction() { return interaction; }
 
 void CItem::loadFromJson(QString name) {
   setTypeName(name);
-  QJsonObject properties = itemConfiguration(name)["properties"].toObject();
+  QJsonObject config = itemConfiguration(name);
+  QJsonObject properties =
+      config.contains("properties") ? config["properties"].toObject() : config;
   QJsonObject stats = properties["bonus"].toObject();
   for (auto it = stats.begin(); it != stats.end(); ++it) {
     bonus.setProperty(it.key(), it.value().toVariant());

@@ -1,0 +1,230 @@
+{
+  "identity": {
+    "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "1085453e4e5b77f6d4cf6bd99ae0422fb49d1784d1fc8114256cbc33f51cbcd6"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
+        },
+        "path": "animation/animatedobject.h",
+        "purpose": "exact-pinned whitespace-only conflict resolution"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "08ad22e3814f5d3dd0a8c5fe1b4ca53cb9a2e91cc02136e0011e8ef653bee22e"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
+        },
+        "path": "animation/animationprovider.h",
+        "purpose": "exact-pinned whitespace-only conflict resolution"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a"
+        },
+        "before": null,
+        "path": "buildings/recovery_teleporter.cpp",
+        "purpose": "teleporter coordinate-and-enabled object serialization"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "75acda2316c0db4e342d950ca14d7190425db85c94822e892df3216be7a61bee"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+        },
+        "path": "destroyer/destroyer.h",
+        "purpose": "exact-pinned whitespace-only conflict resolution"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "858972734e993f14e0e3ee44ba6b076f139349149c2a45f704a7eae251a99157"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
+        },
+        "path": "items/belt.cpp",
+        "purpose": "exact-pinned whitespace-only conflict resolution"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "db778ffa4e04790d5ef6f06385952f0782a1cb56801dd99426e2869009c92351"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
+        },
+        "path": "tmx/TmxPropertySet.cpp",
+        "purpose": "exact-pinned whitespace-only conflict resolution"
+      }
+    ],
+    "teleporterSerialization": {
+      "baseReplaySha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c",
+      "conflictReplaySha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f",
+      "inputs": {
+        "buildings/teleporter.cpp": "515e4087e4b9e43301c096ce0af4e271773604f6fbea60a5a8ed593e365e2258",
+        "buildings/teleporter.h": "83ba3da4c963f2c2ee135557e4f86dd06621f0a86278eb230b7cf90d03bd4064",
+        "json/json_value.cpp": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4"
+      },
+      "path": "buildings/recovery_teleporter.cpp",
+      "provenance": {
+        "legacyArrays": "Retain current enabled for legacy coordinate arrays; every reviewed original header initializes it to true",
+        "operation": "Replace only Teleporter save/load bodies with inverse JSON object coordinate-and-enabled storage",
+        "sourceCommit": "7022f82ba68e4b740e85915b1710dd0502837efe",
+        "whitespaceConflicts": "Remove only the original whitespace-equivalent merge conflict from the derived translation unit"
+      },
+      "qmakeArguments": [
+        "-after",
+        "SOURCES-=buildings/teleporter.cpp",
+        "SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp"
+      ],
+      "replaySha256": "c505aff39349d0dc499d7e2e45c911d471aeff6758389151ccff3a54e318d675",
+      "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a",
+      "validationBoundary": "Game startup and shutdown with coordinate-and-enabled teleporter serialization compatibility; original sources unchanged"
+    },
+    "trivialConflicts": {
+      "files": {
+        "animation/animatedobject.h": {
+          "afterSha256": "1085453e4e5b77f6d4cf6bd99ae0422fb49d1784d1fc8114256cbc33f51cbcd6",
+          "beforeSha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
+        },
+        "animation/animationprovider.h": {
+          "afterSha256": "08ad22e3814f5d3dd0a8c5fe1b4ca53cb9a2e91cc02136e0011e8ef653bee22e",
+          "beforeSha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
+        },
+        "destroyer/destroyer.h": {
+          "afterSha256": "75acda2316c0db4e342d950ca14d7190425db85c94822e892df3216be7a61bee",
+          "beforeSha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+        },
+        "items/belt.cpp": {
+          "afterSha256": "858972734e993f14e0e3ee44ba6b076f139349149c2a45f704a7eae251a99157",
+          "beforeSha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
+        },
+        "tmx/TmxPropertySet.cpp": {
+          "afterSha256": "db778ffa4e04790d5ef6f06385952f0782a1cb56801dd99426e2869009c92351",
+          "beforeSha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
+        }
+      },
+      "provenance": {
+        "operation": "Retain HEAD alternatives only after exact input pins and whitespace-equivalence checks",
+        "originals": "Original Git inputs remain unchanged; only the isolated build copy is prepared",
+        "sourceCommit": "7022f82ba68e4b740e85915b1710dd0502837efe"
+      },
+      "replaySha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f",
+      "validationBoundary": "Build with exact-pinned whitespace-only conflict resolution on an isolated source copy"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "1085453e4e5b77f6d4cf6bd99ae0422fb49d1784d1fc8114256cbc33f51cbcd6"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
+      },
+      "path": "animation/animatedobject.h",
+      "purpose": "exact-pinned whitespace-only conflict resolution"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "08ad22e3814f5d3dd0a8c5fe1b4ca53cb9a2e91cc02136e0011e8ef653bee22e"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
+      },
+      "path": "animation/animationprovider.h",
+      "purpose": "exact-pinned whitespace-only conflict resolution"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a"
+      },
+      "before": null,
+      "path": "buildings/recovery_teleporter.cpp",
+      "purpose": "teleporter coordinate-and-enabled object serialization"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "75acda2316c0db4e342d950ca14d7190425db85c94822e892df3216be7a61bee"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+      },
+      "path": "destroyer/destroyer.h",
+      "purpose": "exact-pinned whitespace-only conflict resolution"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "858972734e993f14e0e3ee44ba6b076f139349149c2a45f704a7eae251a99157"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
+      },
+      "path": "items/belt.cpp",
+      "purpose": "exact-pinned whitespace-only conflict resolution"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "db778ffa4e04790d5ef6f06385952f0782a1cb56801dd99426e2869009c92351"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
+      },
+      "path": "tmx/TmxPropertySet.cpp",
+      "purpose": "exact-pinned whitespace-only conflict resolution"
+    }
+  ],
+  "qmakeArguments": [
+    "-after",
+    "SOURCES-=buildings/teleporter.cpp",
+    "SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp"
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-teleporter-serialization"
+      ],
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/preparation/teleporter-serialization.log",
+      "name": "teleporterSerialization",
+      "returnCode": 0,
+      "timedOut": false
+    },
+    {
+      "command": [
+        "history_source_prep.py",
+        "resolve-reviewed-whitespace-conflicts"
+      ],
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/preparation/trivial-conflicts.log",
+      "name": "trivialConflicts",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}
