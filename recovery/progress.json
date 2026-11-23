@@ -2550,6 +2550,16 @@
       "validation": "build-and-startup-passed"
     },
     {
+      "evidence": "recovery/evidence/a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+      "originalCommit": "a9534481e30ae59be3bee52c6ff23aaba2dbae48",
+      "originalTree": "a9f6f99b6673e05c472f29ce72026ac08e985002",
+      "published": false,
+      "restoredFilesFingerprint": "6302dd122aa24cce8cb3c0b2d15931eaaa6f99f2a3cda6174bfb1b788e3eade9",
+      "startupMode": "game",
+      "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
+      "validation": "build-and-startup-passed"
+    },
+    {
       "evidence": "recovery/evidence/99979aa8abd08c9fcccb17277873beb1b204d8e1",
       "originalCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
       "originalTree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9",
@@ -2969,10 +2979,10 @@
   "targetCommitCount": 367,
   "targetTreeCount": 365,
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "validatedCommitCount": 283,
+  "validatedCommitCount": 284,
   "validatedEditorCommitCount": 11,
   "validatedEditorTreeCount": 11,
-  "validatedGameCommitCount": 272,
-  "validatedGameTreeCount": 270,
-  "validatedTreeCount": 281
+  "validatedGameCommitCount": 273,
+  "validatedGameTreeCount": 271,
+  "validatedTreeCount": 282
 }

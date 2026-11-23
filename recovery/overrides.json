@@ -94118,8 +94118,8 @@
     {
       "originalBlob": "ee49ba5ebb81e355b0effc08a4f07ead85652c5d",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "ae5081f3b9d9284e5992bd7f0365dfcf48bdd6be6d433ad388c56939a54d393c",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the Python 2 module, qmake source list and generated stats API to #253 main, ReflectTypes, Python imports and original property generator. Inferred templated comparator from ordered pointer containers; script aliases preserve config class names.",
+      "sha256": "59d23e605ab8a0107f4f198b770f9496c405372efebf15bfbe36e92df33fafc1",
       "source": "payloads/reconstructions/ee/ee49ba5ebb81e355b0effc08a4f07ead85652c5d-game.pro"
     },
     {
@@ -94195,8 +94195,8 @@
     {
       "originalBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
       "path": "src/GameScript.cpp",
-      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #253 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
-      "sha256": "b893619586cc9df4ca8c0538784b5f98478c6d500023b4559b0ba4e9acca76b2",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the Python 2 module, qmake source list and generated stats API to #253 main, ReflectTypes, Python imports and original property generator. Inferred templated comparator from ordered pointer containers; script aliases preserve config class names.",
+      "sha256": "f5ea272c433286cda03a550cdd07c749f37abaa0d4f216081f5fd9330b9f7459",
       "source": "payloads/reconstructions/6c/6c4a05d9307920fb93dce4771e2ecd5de069e25f-GameScript.cpp"
     },
     {
@@ -98244,6 +98244,69 @@
       "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
       "sha256": "02e1764e3b091afc7bbd0525e93aa7bfec3b42f592a47297a95bb487e2ce00b6",
       "source": "payloads/reconstructions/c6/c681391fe4b6b44f1e0781c8ca9bc051b88ee7c5-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "0fa475adfe542003e214d59f75d02b5405430158",
+      "path": "src/Stats.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the Python 2 module, qmake source list and generated stats API to #253 main, ReflectTypes, Python imports and original property generator. Inferred templated comparator from ordered pointer containers; script aliases preserve config class names.",
+      "sha256": "3175306313ecd72b7848c5623e821061f00cf8a348a76c89a78cd3aba09440bd",
+      "source": "payloads/reconstructions/0f/0fa475adfe542003e214d59f75d02b5405430158-Stats.cpp"
+    },
+    {
+      "originalBlob": "1d3f3faf8173321b382fcee0d472ac5c7ac4c7a8",
+      "path": "src/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the verified #249 logic to the #253 headers, CPlayer/CItem naming, typed Comparer containers and scripted action configs. The original CMap.h declares ensureTile inline, so its moc dispatcher is included with its definition.",
+      "sha256": "0c9ecf11d35f102134952696c77fd25fb86340e220ffdb8681e616f7a989b7b5",
+      "source": "payloads/reconstructions/1d/1d3f3faf8173321b382fcee0d472ac5c7ac4c7a8-CMap.cpp"
+    },
+    {
+      "originalBlob": "1df138feba3cbfe6eb67bd6dd2dd5131142b41ed",
+      "path": "src/CInteraction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the verified #249 logic to the #253 headers, CPlayer/CItem naming, typed Comparer containers and scripted action configs. The original CMap.h declares ensureTile inline, so its moc dispatcher is included with its definition.",
+      "sha256": "6a82345970f78fe73caaa834cecd125fbb9fa89a10bceb786e6cc157512f23b6",
+      "source": "payloads/reconstructions/1d/1df138feba3cbfe6eb67bd6dd2dd5131142b41ed-CInteraction.cpp"
+    },
+    {
+      "originalBlob": "4659b708d778d7907705507170664285198a7d47",
+      "path": "src/Util.h",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the Python 2 module, qmake source list and generated stats API to #253 main, ReflectTypes, Python imports and original property generator. Inferred templated comparator from ordered pointer containers; script aliases preserve config class names.",
+      "sha256": "779ca904be408b7480fc41e3c2e826151e1e8ee652cb48e05bdfe716b9b6c7c7",
+      "source": "payloads/reconstructions/46/4659b708d778d7907705507170664285198a7d47-Util.h"
+    },
+    {
+      "originalBlob": "4a031fddc1aa80dc6365182d5e26d96a54c34b24",
+      "path": "src/CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reassembled the earlier item/potion and player list/equipped/stats view translation units under the joined headers, following the surviving #253 call sites and renamed classes.",
+      "sha256": "8e9c3f543e0b07f16a90a8950bb9edd1ec2858e6e56bd83eb956122098ca4556",
+      "source": "payloads/reconstructions/4a/4a031fddc1aa80dc6365182d5e26d96a54c34b24-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "641118900767ee5e3d9498baa8f368017599fe32",
+      "path": "src/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the verified #249 logic to the #253 headers, CPlayer/CItem naming, typed Comparer containers and scripted action configs. The original CMap.h declares ensureTile inline, so its moc dispatcher is included with its definition.",
+      "sha256": "8a01930694f2ac9e1f6727cfd6ee3317ca2634b324b95262dc99c3c1e58272bc",
+      "source": "payloads/reconstructions/64/641118900767ee5e3d9498baa8f368017599fe32-CCreature.cpp"
+    },
+    {
+      "originalBlob": "73841b2fb8bec5eed0d65e5d868b2a2d6807064e",
+      "path": "src/CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reassembled the earlier item/potion and player list/equipped/stats view translation units under the joined headers, following the surviving #253 call sites and renamed classes.",
+      "sha256": "70b75cd910dcd74aa4a49d266f0d5b6f643f37e02c10f50439331e460993a2fb",
+      "source": "payloads/reconstructions/73/73841b2fb8bec5eed0d65e5d868b2a2d6807064e-CItem.cpp"
+    },
+    {
+      "originalBlob": "a3befdb89b555ba92fa89b8fddbc084dda861ecf",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the verified #249 logic to the #253 headers, CPlayer/CItem naming, typed Comparer containers and scripted action configs. The original CMap.h declares ensureTile inline, so its moc dispatcher is included with its definition.",
+      "sha256": "f8ad62c0b7c29c5d753b4fb755e2684a92fc6288e39b7552cb2ba6f24d3a74e9",
+      "source": "payloads/reconstructions/a3/a3befdb89b555ba92fa89b8fddbc084dda861ecf-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "b92003352a61872de8cd3b5c6eca70d283be6b0b",
+      "path": "src/CGameView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the verified #249 logic to the #253 headers, CPlayer/CItem naming, typed Comparer containers and scripted action configs. The original CMap.h declares ensureTile inline, so its moc dispatcher is included with its definition.",
+      "sha256": "4e01c83bcda444853534caafd21059c6528c4db659106489a865a6167d88a073",
+      "source": "payloads/reconstructions/b9/b92003352a61872de8cd3b5c6eca70d283be6b0b-CGameView.cpp"
     }
   ],
   "schemaVersion": 1
