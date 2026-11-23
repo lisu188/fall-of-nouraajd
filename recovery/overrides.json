@@ -100194,6 +100194,181 @@
       "provenance": "content reconstruction of the BFG-removed original; Configure QObject properties on objects from the surviving Constructible factory.",
       "sha256": "af28bc782321ebb72729cff0b96b7ee2f49db5b51ade8567da233a02994bc28c",
       "source": "payloads/reconstructions/fc/fc908c4a5542dd46e7b8232ea99a17fc29f4933e-CObjectHandler.cpp"
+    },
+    {
+      "commit": "8ccff81bf2bb22a0d526742eaef570653e47e63c",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "74594f17271a871a3241e60f19aaa8f5c587409e",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "61369722a47d404eddf30cd505d82066af4f9b6e",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "8ccff81bf2bb22a0d526742eaef570653e47e63c",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "74594f17271a871a3241e60f19aaa8f5c587409e",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "61369722a47d404eddf30cd505d82066af4f9b6e",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "8ccff81bf2bb22a0d526742eaef570653e47e63c",
+      "path": "GameScript.cpp",
+      "provenance": "Bind the shared Qt game-object base for map objects, tiles, effects and interactions.",
+      "sha256": "0d6810dc694818baf72cafb838220169a50ab5aa41ed5d098b4970a5d7897361",
+      "source": "payloads/reconstructions/game-object-322/GameScript.cpp"
+    },
+    {
+      "originalBlob": "0cbdeaab29da592c24a4832c22e94cc2a1253f13",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
+      "sha256": "0d6810dc694818baf72cafb838220169a50ab5aa41ed5d098b4970a5d7897361",
+      "source": "payloads/reconstructions/0c/0cbdeaab29da592c24a4832c22e94cc2a1253f13-GameScript.cpp"
+    },
+    {
+      "originalBlob": "0f02a9cdecc149093409730da85b4ce40f6e35f1",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Create the common game-object type and configure its historical properties.",
+      "sha256": "53f2d88165369734ecfbb93cd7957e73df7df423d7bf30d94c831db7e3fc6385",
+      "source": "payloads/reconstructions/0f/0f02a9cdecc149093409730da85b4ce40f6e35f1-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "108c165967a651035eb092ff46c340bb525af0e9",
+      "path": "CGamePanel.h",
+      "provenance": "content reconstruction of the BFG-removed original; Use the common game-object base for panels and their shared dynamic properties.",
+      "sha256": "24f512376110c3bd8f56a88c16413b4f09403bd614a77a1158d573b7c09683af",
+      "source": "payloads/reconstructions/10/108c165967a651035eb092ff46c340bb525af0e9-CGamePanel.h"
+    },
+    {
+      "originalBlob": "16507e33a4ab0f7c54270ccc116c719fbb39bc65",
+      "path": "handlers/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Create the common game-object type and configure its historical properties.",
+      "sha256": "7f14700bdf82667e490db665203221a9271f4d597feaa9bb1dd4f03c9eb708dc",
+      "source": "payloads/reconstructions/16/16507e33a4ab0f7c54270ccc116c719fbb39bc65-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "35ca7e2aaf319ac473284827806eb665c6409e92",
+      "path": "CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Route item drops through the historical item-use dispatcher.",
+      "sha256": "973ddbf8a191421761993caac6202459f15d3880c71ac21b0ca0b55cabddecde",
+      "source": "payloads/reconstructions/35/35ca7e2aaf319ac473284827806eb665c6409e92-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "38035a91963e074687eda2a2bf0df52a381bfedd",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
+      "sha256": "aeea545af67e0e69dd956cdf5b5d62b7ab7e7b226fd2b0a124f18f26def55b21",
+      "source": "payloads/reconstructions/38/38035a91963e074687eda2a2bf0df52a381bfedd-GameScript.cpp"
+    },
+    {
+      "originalBlob": "4124e759820d0122418008e44058fd3224812e57",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Place object type and map access on the common game-object base.",
+      "sha256": "3bbc6616a5e9eef0e17b529a6c42616ded9d86aa5a528f788f8c1785467bf59e",
+      "source": "payloads/reconstructions/41/4124e759820d0122418008e44058fd3224812e57-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "5dda1a9d58106454807980ae00d0817d284fbcce",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Place object type and map access on the common game-object base.",
+      "sha256": "3bbc6616a5e9eef0e17b529a6c42616ded9d86aa5a528f788f8c1785467bf59e",
+      "source": "payloads/reconstructions/5d/5dda1a9d58106454807980ae00d0817d284fbcce-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "5effdbe24714e9da257cc85156cfc6687dd702f1",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the common Qt game-object base and apply the surviving item-event interface.",
+      "sha256": "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db",
+      "source": "payloads/reconstructions/5e/5effdbe24714e9da257cc85156cfc6687dd702f1-CMapObject.h"
+    },
+    {
+      "originalBlob": "7a66bd6c7afb93ae8f021296eef6ea088d536b2c",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
+      "sha256": "0d6810dc694818baf72cafb838220169a50ab5aa41ed5d098b4970a5d7897361",
+      "source": "payloads/reconstructions/7a/7a66bd6c7afb93ae8f021296eef6ea088d536b2c-GameScript.cpp"
+    },
+    {
+      "originalBlob": "7f050d7d4f256df8c7f6fc44d72be0483b1c9cac",
+      "path": "mapObject/CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Place object type and map access on the common game-object base.",
+      "sha256": "3bbc6616a5e9eef0e17b529a6c42616ded9d86aa5a528f788f8c1785467bf59e",
+      "source": "payloads/reconstructions/7f/7f050d7d4f256df8c7f6fc44d72be0483b1c9cac-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "ca4cb9f0b52d233543cac522cf8ca78b334fd063",
+      "path": "Stats.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the verified historical Stats declarations through the refactor.",
+      "sha256": "f0b8effb872377549c52e993c0729d9cad3afb1efdd44f3d0029c541a63eb941",
+      "source": "payloads/reconstructions/ca/ca4cb9f0b52d233543cac522cf8ca78b334fd063-Stats.h"
+    },
+    {
+      "originalBlob": "d2c976612adcde304b222d308713c2cb7c97662c",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the common Qt game-object base and apply the surviving item-event interface.",
+      "sha256": "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db",
+      "source": "payloads/reconstructions/d2/d2c976612adcde304b222d308713c2cb7c97662c-CMapObject.h"
+    },
+    {
+      "originalBlob": "e027f546a54e0671d75d5ad8682dad678581276e",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch item-use events and preserve equipment, scroll and inventory behavior.",
+      "sha256": "7b8a01a9328350aa682e61a0fb8df97c92c4e76c3990092036ad211b3a779b1d",
+      "source": "payloads/reconstructions/e0/e027f546a54e0671d75d5ad8682dad678581276e-CItem.cpp"
+    },
+    {
+      "originalBlob": "e5209fe3c6b81df2cb9fedc1dd4ff9d20e5eedda",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the common Qt game-object base and apply the surviving item-event interface.",
+      "sha256": "9d9f34f4db854a969dc06c0aa194c860f4c69755b9f28bf147b4908a88d484fc",
+      "source": "payloads/reconstructions/e5/e5209fe3c6b81df2cb9fedc1dd4ff9d20e5eedda-CMapObject.h"
+    },
+    {
+      "originalBlob": "fdd111df4d25cf44409e0466e57da2479d33946c",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
+      "sha256": "7a2dfa12e62c564590cbc484b236c0b5c5dc6f920e381b8278cc2eee4c90c462",
+      "source": "payloads/reconstructions/fd/fdd111df4d25cf44409e0466e57da2479d33946c-GameScript.cpp"
     }
   ],
   "schemaVersion": 1
