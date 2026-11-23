@@ -268,6 +268,9 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         commit == vh.source_prep.console_prep.COMMIT
         or commit in vh.source_prep.scene_prep.PINS
         or commit in vh.source_prep.shutdown_prep.TARGETS
+        or commit in (
+            vh.source_prep.console_prep.COMMIT, vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT
+        )
         or commit in vh.source_prep.merged_prep.COMMITS
         or vh.source_prep.preparationRequired(source)
     ):
@@ -787,6 +790,7 @@ def progress() -> None:
                 or commit in vh.runtime_configs.INPUT_PINS
                 or commit in vh.source_prep.scene_prep.PINS
                 or commit in vh.source_prep.shutdown_prep.TARGETS
+                or commit in (vh.source_prep.trigger_prep.COMMIT, vh.source_prep.position_prep.COMMIT)
             )
             if requires_replay or commit in vh.source_prep.merged_prep.COMMITS or report.get("startupCompatibility") in (
                 "parentReflectionRegistration",
@@ -839,6 +843,10 @@ def progress() -> None:
                 item["buildCompatibility"] = ["sceneTransition"]
             if commit in vh.source_prep.shutdown_prep.TARGETS:
                 item["buildCompatibility"] = ["pythonShutdown"]
+            if commit == vh.source_prep.position_prep.COMMIT:
+                item["buildCompatibility"] = ["mapPosition"]
+            if commit == vh.source_prep.trigger_prep.COMMIT:
+                item["buildCompatibility"] = ["triggerDecorator"]
             if commit == vh.source_prep.console_prep.COMMIT:
                 item["buildCompatibility"] = ["consoleReader"]
             if commit in vh.source_prep.merged_prep.COMMITS:

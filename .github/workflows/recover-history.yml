@@ -15,6 +15,8 @@ on:
       - scripts/history_prepare_console_reader.py
       - scripts/history_prepare_scene_transition.py
       - scripts/history_prepare_python_shutdown.py
+      - scripts/history_prepare_trigger_decorator.py
+      - scripts/history_prepare_map_position.py
       - scripts/history_prepare_merged_headers.py
       - scripts/history_prepare_pathfinder_cache.py
       - scripts/history_runtime_configs.py
@@ -43,6 +45,8 @@ on:
       - tests/test_history_console_reader.py
       - tests/test_history_scene_transition.py
       - tests/test_history_python_shutdown.py
+      - tests/test_history_trigger_decorator.py
+      - tests/test_history_map_position.py
       - tests/test_history_merged_headers.py
       - tests/test_history_runtime_transitions.py
       - tests/test_history_resource_preparation.py
@@ -94,7 +98,8 @@ jobs:
             tests.test_history_static_lto tests.test_history_movement_completion \
             tests.test_history_runtime_transitions tests.test_history_merged_headers tests.test_history_console_reader \
             tests.test_history_scene_transition \
-            tests.test_history_python_shutdown
+            tests.test_history_python_shutdown \
+            tests.test_history_trigger_decorator tests.test_history_map_position
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

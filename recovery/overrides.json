@@ -98517,6 +98517,20 @@
       "provenance": "content reconstruction of the BFG-removed original; carry the preceding accepted object factory to the new game directory for the matching header",
       "sha256": "7dc340400040f71d1371a13ed523c80c4e4cc802140491e45c124a8f5706babb",
       "source": "payloads/reconstructions/ab/abfda3b3bd5e1011cbe0f65b26ae0b0f1422423a-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "b9e84eac1020681df13379f76c3654ff72acab4f",
+      "path": "game.pro",
+      "provenance": "content reconstruction of the BFG-removed original; reconstruct from the surviving translation units and retain the Python 3.4/Boost link ABI from the nearest historical project",
+      "sha256": "7a326993e88826a4c488c2fa27adb3e0e206ee84eff67b8e9b2c50fbb4321898",
+      "source": "payloads/reconstructions/b9/b9e84eac1020681df13379f76c3654ff72acab4f-game.pro"
+    },
+    {
+      "commit": "8965c542530e1e58bb2917bf8d6b756735f57561",
+      "path": "view/gamescene.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; include the complete TMX map type required by this startup reconstruction",
+      "sha256": "1d8245d11db6ddbb3ff6788de9fc5ef5baf20823df94aeef37f194669c7295fa",
+      "source": "payloads/reconstructions/89/8965c542-gamescene.cpp"
     }
   ],
   "schemaVersion": 1
