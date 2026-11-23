@@ -99021,6 +99021,150 @@
       "provenance": "content reconstruction of the BFG-removed original; Load the authored map script into the shared namespace for script-defined event classes.",
       "sha256": "d59c346006cd768eec27361a667157742df489b5f8a6480a628464d9c115fb9a",
       "source": "payloads/reconstructions/e3/e35b767748957fb8c032876a9dfb8e842ed1e785-CMap.cpp"
+    },
+    {
+      "commit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "5e6bd51644b16327a27dfe0f4c44cce307050146",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "add": true,
+      "commit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81",
+      "path": "CScriptLoader.h",
+      "provenance": "Use the earliest surviving loader declarations from #296 to satisfy the #295 project references.",
+      "sha256": "ac0553d9bc20ec958d17c411ef8712f8148c628311fd43f832de294ffc1cda51",
+      "source": "payloads/reconstructions/map-package-295/CScriptLoader.h"
+    },
+    {
+      "add": true,
+      "commit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81",
+      "path": "CScriptLoader.cpp",
+      "provenance": "Adapt the surviving #296 loader to #295 event.py and Python-managed loader ownership.",
+      "sha256": "7fe6284dbd3a0e48ada70531c97d1c09ddbdc72c75b5ee1b6c02b033e3555529",
+      "source": "payloads/reconstructions/map-package-295/CScriptLoader.cpp"
+    },
+    {
+      "add": true,
+      "commit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry the preceding reconstructed sparse map through the renamed map directory. Exact original coordinates remain unknown.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/map-package-295/maps/map1/map.json"
+    },
+    {
+      "add": true,
+      "commit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81",
+      "path": "maps/map1/event.py",
+      "provenance": "Carry the preceding authored event class into the renamed event module and explicitly import game.",
+      "sha256": "7cd7b192f236f62be4a05cd91477e285384cf9d46297358551018ef78fc1336e",
+      "source": "payloads/reconstructions/map-package-295/maps/map1/event.py"
+    },
+    {
+      "originalBlob": "50365f734a0ba94e7fe5777cb4161ae9828830e8",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the global and map-specific native resource loaders through Python 3.4.",
+      "sha256": "346f86a52ffb39561af2296c94a90f74c8a47ea93199670a4ef9585769f42555",
+      "source": "payloads/reconstructions/50/50365f734a0ba94e7fe5777cb4161ae9828830e8-GameScript.cpp"
+    },
+    {
+      "originalBlob": "505f861115f4aaa44e2869f3040a2fa31cb39466",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Use the renamed map directory and import its companion event module through the native loader.",
+      "sha256": "8809ebb2c5dd75229e86455acd9d6b89ac545decae48a5d0023692efd404c08e",
+      "source": "payloads/reconstructions/50/505f861115f4aaa44e2869f3040a2fa31cb39466-CMap.cpp"
+    },
+    {
+      "commit": "e899bef6df6f290bc79088296a169152ece3f10a",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "originalBlob": "07b081e15aba685bf1c30795279d6aabbdad2b42",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch the tile step to the authored creature callback and let the Python holder own its map importer.",
+      "sha256": "afcc358fa11530adcbc1ac06538515e1c3bb5af6547244a140a37a17e1411d86",
+      "source": "payloads/reconstructions/07/07b081e15aba685bf1c30795279d6aabbdad2b42-CMap.cpp"
+    },
+    {
+      "originalBlob": "258a7d91f98020a7cfea6e2bb1115cd3d8503ec2",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry native life and mana potion behavior without the removed effect field or onMove override.",
+      "sha256": "a185550c07ad9b8e302bebcf8c2ec8a0ef8dfcf40cdc3ba77dcae75f32f373e1",
+      "source": "payloads/reconstructions/25/258a7d91f98020a7cfea6e2bb1115cd3d8503ec2-CItem.cpp"
+    },
+    {
+      "originalBlob": "7b9af71b2102eed34897eac0f3a970bc3e19797c",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry native life and mana potion behavior without the removed effect field or onMove override.",
+      "sha256": "a185550c07ad9b8e302bebcf8c2ec8a0ef8dfcf40cdc3ba77dcae75f32f373e1",
+      "source": "payloads/reconstructions/7b/7b9af71b2102eed34897eac0f3a970bc3e19797c-CItem.cpp"
+    },
+    {
+      "originalBlob": "7fe9999aebd5cb1c20dd7878fbd5359077966a03",
+      "path": "maps/map1/map.json",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding reconstructed sparse map across the map directory transition. Original placements, including the new StartEvent, are unavailable.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/7f/7fe9999aebd5cb1c20dd7878fbd5359077966a03-map.json"
+    },
+    {
+      "originalBlob": "9bfae1dd9af50a8182e42e04c72056aacd06f292",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch the tile step to the authored creature callback and let the Python holder own its map importer.",
+      "sha256": "afcc358fa11530adcbc1ac06538515e1c3bb5af6547244a140a37a17e1411d86",
+      "source": "payloads/reconstructions/9b/9bfae1dd9af50a8182e42e04c72056aacd06f292-CMap.cpp"
+    },
+    {
+      "originalBlob": "c1de5823ec59c5c2306d16364f0d9c2636fb7bf2",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the authored scripted tile callback with a heap-backed wrapper and bind the map removal API used by the authored start event.",
+      "sha256": "49e1e82a3f15e2112f3ce3846d5d1ff89ab495155eae45c6142f8f99d97d94e0",
+      "source": "payloads/reconstructions/c1/c1de5823ec59c5c2306d16364f0d9c2636fb7bf2-GameScript.cpp"
+    },
+    {
+      "originalBlob": "d5cf201b81145c537d8e765654acb9327e901a82",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the authored scripted tile callback with a heap-backed wrapper and bind the map removal API used by the authored start event.",
+      "sha256": "49e1e82a3f15e2112f3ce3846d5d1ff89ab495155eae45c6142f8f99d97d94e0",
+      "source": "payloads/reconstructions/d5/d5cf201b81145c537d8e765654acb9327e901a82-GameScript.cpp"
+    },
+    {
+      "originalBlob": "f823508c7c97e89295c64c1f4c98a6d123e3aae3",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Load the authored map-local configuration along with global resource definitions.",
+      "sha256": "df1ac6173d391ab6746a0f0feddb62f937c16e9525fda4c443cb85714f766459",
+      "source": "payloads/reconstructions/f8/f823508c7c97e89295c64c1f4c98a6d123e3aae3-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "fb037e4e997f427c30669cdca0cd9d1790b9289e",
+      "path": "CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Load the authored map-local configuration along with global resource definitions.",
+      "sha256": "df1ac6173d391ab6746a0f0feddb62f937c16e9525fda4c443cb85714f766459",
+      "source": "payloads/reconstructions/fb/fb037e4e997f427c30669cdca0cd9d1790b9289e-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "fd700545d1060b0a95b7a07d79899e28e1e3c40d",
+      "path": "maps/map1/map.json",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding reconstructed sparse map across the map directory transition. Original placements, including the new StartEvent, are unavailable.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/fd/fd700545d1060b0a95b7a07d79899e28e1e3c40d-map.json"
+    },
+    {
+      "originalBlob": "6c106bd52d5dc992b925d812ad5a55fbef3b4ac5",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding creature implementation through the formatting revision against the unchanged native interface.",
+      "sha256": "a0dd6024e150b0e89e4e071e9b56af2859cb31bad087fa9d5bd01e322d9b3677",
+      "source": "payloads/reconstructions/6c/6c106bd52d5dc992b925d812ad5a55fbef3b4ac5-CCreature.cpp"
     }
   ],
   "schemaVersion": 1
