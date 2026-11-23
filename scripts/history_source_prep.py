@@ -42,6 +42,7 @@ try:
     from scripts import history_prepare_fight_system as fight_system_prep
     from scripts import history_prepare_creature_events as creature_events_prep
     from scripts import history_prepare_visitor_callbacks as visitor_callbacks_prep
+    from scripts import history_prepare_respawn as respawn_prep
     from scripts import history_prepare_script_loader as loader_prep
     from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -75,6 +76,7 @@ except ModuleNotFoundError:
     import history_prepare_fight_system as fight_system_prep
     import history_prepare_creature_events as creature_events_prep
     import history_prepare_visitor_callbacks as visitor_callbacks_prep
+    import history_prepare_respawn as respawn_prep
     import history_prepare_script_loader as loader_prep
     import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -370,6 +372,7 @@ def prepareSources(
     fight_system = source_commit in fight_system_prep.COMMITS
     creature_events = source_commit in creature_events_prep.COMMITS
     visitor_callbacks = source_commit in visitor_callbacks_prep.COMMITS
+    respawn = source_commit in respawn_prep.COMMITS
     script_loader = source_commit in loader_prep.COMMITS
     panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
@@ -435,6 +438,7 @@ def prepareSources(
         and not fight_system
         and not creature_events
         and not visitor_callbacks
+        and not respawn
         and not script_loader
         and not panel_refresh_transition
     ):
@@ -851,6 +855,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if respawn:
+        respawn_prep.apply(source_root, source_commit)
+        identity = respawn_prep.identity(source_commit)
+        result["identity"]["respawn"] = identity
+        log = output_root / "respawn.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "respawn",
+            "command": ["history_source_prep.py", "prepare-respawn"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if script_loader:
         loader_prep.apply(source_root, source_commit)
         identity = loader_prep.identity(source_commit)
@@ -1038,6 +1055,10 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in visitor_callbacks_prep.PROFILES[source_commit]:
                     entry["purpose"] = visitor_callbacks_prep.PURPOSE
+        if respawn:
+            for entry in outputs:
+                if entry["path"] in respawn_prep.PROFILES[source_commit]:
+                    entry["purpose"] = respawn_prep.PURPOSE
         if script_loader:
             for entry in outputs:
                 if entry["path"] in loader_prep.PINS:

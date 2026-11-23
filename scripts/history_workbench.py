@@ -282,6 +282,7 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         or commit in vh.source_prep.fight_system_prep.COMMITS
         or commit in vh.source_prep.creature_events_prep.COMMITS
         or commit in vh.source_prep.visitor_callbacks_prep.COMMITS
+        or commit in vh.source_prep.respawn_prep.COMMITS
         or commit in vh.source_prep.loader_prep.COMMITS
         or commit in vh.source_prep.panel_refresh_prep.PROFILES
         or commit in vh.source_prep.shutdown_prep.TARGETS
@@ -821,6 +822,7 @@ def progress() -> None:
                 or commit in vh.source_prep.fight_system_prep.COMMITS
                 or commit in vh.source_prep.creature_events_prep.COMMITS
                 or commit in vh.source_prep.visitor_callbacks_prep.COMMITS
+                or commit in vh.source_prep.respawn_prep.COMMITS
                 or commit in vh.source_prep.loader_prep.COMMITS
                 or commit in vh.source_prep.panel_refresh_prep.PROFILES
                 or commit in vh.source_prep.shutdown_prep.TARGETS
@@ -905,6 +907,8 @@ def progress() -> None:
                 item["buildCompatibility"] = ["creatureEvents"]
             if commit in vh.source_prep.visitor_callbacks_prep.COMMITS:
                 item["buildCompatibility"] = ["visitorCallbacks"]
+            if commit in vh.source_prep.respawn_prep.COMMITS:
+                item["buildCompatibility"] = ["respawn"]
             if commit in vh.source_prep.loader_prep.COMMITS:
                 item["buildCompatibility"] = ["scriptLoader"]
             if commit in vh.source_prep.effect_prep.COMMITS:

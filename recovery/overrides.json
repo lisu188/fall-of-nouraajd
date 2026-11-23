@@ -94349,15 +94349,15 @@
     {
       "originalBlob": "9b86f95898c8c8d1dcfd788d180b7cbb7a17eefc",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the recovered interface and creature respawn support.",
+      "sha256": "8bcc961e09efdb1fbe39ccef5be73acf9b870fcaee11bf74d0d6322e25c7de14",
       "source": "payloads/reconstructions/9b/9b86f95898c8c8d1dcfd788d180b7cbb7a17eefc-CCreature.h"
     },
     {
       "originalBlob": "f47b6186fc4ffebbc5b54b0564b561995f745f7e",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the recovered interface and creature respawn support.",
+      "sha256": "8bcc961e09efdb1fbe39ccef5be73acf9b870fcaee11bf74d0d6322e25c7de14",
       "source": "payloads/reconstructions/f4/f47b6186fc4ffebbc5b54b0564b561995f745f7e-CCreature.h"
     },
     {
@@ -99690,6 +99690,62 @@
       "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
       "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
       "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e",
+      "path": "CGamePanel.cpp",
+      "provenance": "Adapt the shared missing panel body to the surviving object type accessor. Earlier revisions retain their preceding reconstruction.",
+      "sha256": "ccddbd2a3b5e934023e6ad59ab9915bfa5e576be4a5e76296a0e1ec886513854",
+      "source": "payloads/reconstructions/visitor-callbacks-306/CGamePanel.cpp"
+    },
+    {
+      "commit": "d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66",
+      "path": "CGamePanel.cpp",
+      "provenance": "Adapt the shared missing panel body to the surviving object type accessor. Earlier revisions retain their preceding reconstruction.",
+      "sha256": "ccddbd2a3b5e934023e6ad59ab9915bfa5e576be4a5e76296a0e1ec886513854",
+      "source": "payloads/reconstructions/visitor-callbacks-306/CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "3c980904b60be9dd33f79a49624b54ec3de7b0c6",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct player respawn with restored resources and direct return to the map entry.",
+      "sha256": "c719490e3eac2f333a6b5960c092f6e70c24cfe5edfb8c5f3405ab438612ce74",
+      "source": "payloads/reconstructions/3c/3c980904b60be9dd33f79a49624b54ec3de7b0c6-CCreature.cpp"
+    },
+    {
+      "originalBlob": "847baa6e5628e247bfe801af35f81d8467e66da6",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct player respawn with restored resources and direct return to the map entry.",
+      "sha256": "c719490e3eac2f333a6b5960c092f6e70c24cfe5edfb8c5f3405ab438612ce74",
+      "source": "payloads/reconstructions/84/847baa6e5628e247bfe801af35f81d8467e66da6-CCreature.cpp"
     }
   ],
   "schemaVersion": 1
