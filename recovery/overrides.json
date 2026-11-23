@@ -94090,8 +94090,8 @@
     {
       "originalBlob": "10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d",
       "path": "game.pro",
-      "provenance": "Unverified missing-project reconstruction; app settings from intact 6367c6918ce9c141e0863d4e193fbd4a9e647ebb:game.pro; SOURCES/HEADERS/FORMS from the same-commit src path inventory and sole main/UI form, omitting include-only vestiges; selected changing lowercase pointer instead of fixed stale uppercase Game.pro pointer 6f9c9d7af7a5d5ff18c42a74932093a15501e312. Library dependencies for missing implementation bodies await pinned compilation. Original-path exists() adapter DEFINES select the real Tile/CTile and scene header across unchanged missing module blobs.",
-      "sha256": "a01f95592fc1d7a7226bed7370a37c9d96c1534f69a5ff695649304542bf9ce1",
+      "provenance": "content reconstruction of the BFG-removed original; Reconciled verified #247 qmake settings and vendored dependency closure with the #248 source inventory, retaining forms and CPython 2.7/Boost.Python.",
+      "sha256": "51abefe4b6ada9b1920216e138d43bc0e656e12a458308018756f596ccfe933c",
       "source": "payloads/reconstructions/10/10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d-game.pro"
     },
     {
@@ -94188,8 +94188,8 @@
     {
       "originalBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
       "path": "src/GameScript.cpp",
-      "provenance": "Unverified missing-module reconstruction; intact Boost donor 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp adapted to original #248 native class names and no-argument callbacks; original #246/247 Creature/Player/Monster and #249/253/257 Stats headers ground properties/combat; #253 intact CMap.h grounds map method names, original src/item.cpp grounds getScene()->getPlayer() bridge for earlier missing map headers. Native public name versus QObject objectName selected from actual C++ member presence; void/bool potion callback derives actual native return type. Mixed Tile/CTile and scene-header names selected only by exists() DEFINES in reconstructed missing projects. Native #266 compilation exposed Boost1.58 extract(method_result) ambiguity; PythonPotionCall now uses the genuine method_result::as<Result>() typed conversion, while void specialization still invokes the callback directly. Shared callback conversion compiled at both native #260 (void onUse) and #266 (bool onUse), and gcc-nm-5 verified init_game under sealed image sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8. This proves object compilation for the d59b1fb1 payload only; no link/startup or earlier-blob native acceptance.",
-      "sha256": "26cdfc17a783b7e2415fe69dd45e538c0b8e53eabae1c11fa0e8ce2927e1985b",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted the Boost.Python module donor to the surviving #248 Python 2 scriptmanager, game/object.py and interaction.py imports, string-keyed numeric Stats and Damage accessors and explicit Interaction alias; callback bodies are inferred.",
+      "sha256": "2a52d61e1dc16c590049b161755de849209f72aa0c8171f733099d1b0672c3ea",
       "source": "payloads/reconstructions/91/915429f2a1120af6bc034ec44568fd2eeb6f7965-GameScript.cpp"
     },
     {
@@ -94405,8 +94405,8 @@
     {
       "originalBlob": "113b26e2759a004a20050f4801e3230168443adb",
       "path": "src/CMap.h",
-      "provenance": "Reconstructed missing transitional CMap.h from nearest intact #253 CMap.h; corrected Player, tile, script-engine and utility include names against same-commit surviving declarations. Reconstructed required non-template Comparer from the genuine later Util.h comparator body. Original bytes and unspecified map-header deltas remain unknown; no compilation/runtime validation.",
-      "sha256": "7fb625c65abfc6de5f50854aac4155c5497658cea16f8354c9228dea5c16fda3",
+      "provenance": "content reconstruction of the BFG-removed original; Split the verified #247 map and event implementations according to the surviving #248 CMapObject header, script calls and CGameScene loader. Inferred CMap factory from #253 declarations with #248 ReflectTypes names, classless interaction configs and script factories.",
+      "sha256": "dc751eb7fe779f92790b70d9eba146213466662ce5cbb016c47a380873e2b639",
       "source": "payloads/reconstructions/11/113b26e2759a004a20050f4801e3230168443adb-CMap.h"
     },
     {
@@ -98125,6 +98125,55 @@
       "provenance": "content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them",
       "sha256": "99e76ec8cc28c1893225995bd9902d4d9ca0032221b712c98d4e0a1ee5f1d668",
       "source": "payloads/reconstructions/f6/f63384a3a48495e2d7f882abdb6b1131e9f09cd7-creature.cpp"
+    },
+    {
+      "originalBlob": "0951670bf901a367677da025e8cdce8d13082b74",
+      "path": "src/CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Split the verified #247 map and event implementations according to the surviving #248 CMapObject header, script calls and CGameScene loader. Inferred CMap factory from #253 declarations with #248 ReflectTypes names, classless interaction configs and script factories.",
+      "sha256": "9210e4a833585e8d3f06f4a1b13b738c6c02c9fbed45ce6b2d609a9707467599",
+      "source": "payloads/reconstructions/09/0951670bf901a367677da025e8cdce8d13082b74-CMap.cpp"
+    },
+    {
+      "originalBlob": "1b95f2c96b6ba020bfdeed9c70bca0783d9bf6c3",
+      "path": "src/CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted verified #247 implementations to surviving #248 C-prefixed headers, regrouped player/monster code, abstract panel and pathfinder interfaces, and the named Python combat callbacks.",
+      "sha256": "098a2178575c74d3bc4e0b25f825f1794f3036572c493127f7321bd70fdc54ca",
+      "source": "payloads/reconstructions/1b/1b95f2c96b6ba020bfdeed9c70bca0783d9bf6c3-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "81b202e1c507103d1650e4f3160ff3988c86b1a7",
+      "path": "src/CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted verified #247 implementations to surviving #248 C-prefixed headers, regrouped player/monster code, abstract panel and pathfinder interfaces, and the named Python combat callbacks.",
+      "sha256": "41f584eb5ec5f6e58905ca5a093c865a385c95c5e74eaa033d9d1d61374294c4",
+      "source": "payloads/reconstructions/81/81b202e1c507103d1650e4f3160ff3988c86b1a7-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "ae9056e513d2e8fcf9871bb0c71b462d8da8351d",
+      "path": "src/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted verified #247 implementations to surviving #248 C-prefixed headers, regrouped player/monster code, abstract panel and pathfinder interfaces, and the named Python combat callbacks.",
+      "sha256": "e8c9a67cbe22179b1219bd557c593c433ef91b0ecc0d3ba8d53c54122f0e72e6",
+      "source": "payloads/reconstructions/ae/ae9056e513d2e8fcf9871bb0c71b462d8da8351d-CCreature.cpp"
+    },
+    {
+      "originalBlob": "c2537515dd82480844311709ca91808be656e331",
+      "path": "src/CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Split the verified #247 map and event implementations according to the surviving #248 CMapObject header, script calls and CGameScene loader. Inferred CMap factory from #253 declarations with #248 ReflectTypes names, classless interaction configs and script factories.",
+      "sha256": "7cee88f51bea3ff5364d16adcf759aad5f0018c0d2811ba99983895569852ef3",
+      "source": "payloads/reconstructions/c2/c2537515dd82480844311709ca91808be656e331-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "d6e669a738d4c1fa2868220a66b9a717872b9e58",
+      "path": "src/CIteraction.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted verified #247 implementations to surviving #248 C-prefixed headers, regrouped player/monster code, abstract panel and pathfinder interfaces, and the named Python combat callbacks.",
+      "sha256": "07949918d4e926ce06b16d3c76346b6715f4f23fffa86ef0bf16a0d236b6e9c7",
+      "source": "payloads/reconstructions/d6/d6e669a738d4c1fa2868220a66b9a717872b9e58-CIteraction.cpp"
+    },
+    {
+      "originalBlob": "dae218334a21f4d2df8bd12c1043e9b51f1ab107",
+      "path": "src/gameview.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Adapted verified #247 implementations to surviving #248 C-prefixed headers, regrouped player/monster code, abstract panel and pathfinder interfaces, and the named Python combat callbacks.",
+      "sha256": "a27a5551a3d9937e16e2dca90327e6dcd1f2d91b36eb0f160f25dfd54d935f7b",
+      "source": "payloads/reconstructions/da/dae218334a21f4d2df8bd12c1043e9b51f1ab107-gameview.cpp"
     }
   ],
   "schemaVersion": 1
