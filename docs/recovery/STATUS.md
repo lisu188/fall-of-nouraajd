@@ -30,8 +30,8 @@ match the BFG pointers; SHA-256 pins and provenance are in
 `recovery/upstream/software-heritage/catalog.json` and
 `recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
 
-The pinned local toolchain currently accepts **293 commits / 291 trees** against the
-restored inputs: **282 game commits and 11 authored editor commits**. Each accepted
+The pinned local toolchain currently accepts **294 commits / 292 trees** against the
+restored inputs: **283 game commits and 11 authored editor commits**. Each accepted
 tree compiled, entered its real Qt event loop, rendered a frame and shut down cleanly
 under isolated Xvfb. Game startups also require a loaded map and healthy player;
 editor startups follow the surviving original editor entrypoint. Matching hashes,
@@ -82,6 +82,11 @@ reachable objects, preserving all 180 IDs from the #179 bundle. The mapping and
 verification are in `recovery/mappings/2026-11-23-through-203-prefix*.json`.
 Its SHA-256 is `41e24771115b9f7538d146654bde9acdd8e63f245a8005e68c7a4b6da48ed524`.
 
+The #223 bundle extends local replay to #1–#223 and #367. The independent clone
+passed strict fsck across 224 commits and 4,273 reachable objects and preserved
+all 204 IDs in the #203 bundle. The mapping and verification are in
+`recovery/mappings/2026-11-23-through-223-prefix*.json`.
+
 The first 65 recovered commits are already ancestors of main through merge commit
 `c3f6bb647cc276a7ea245cc38cca333ec83abcfe`. The 93-snapshot checkpoint was merged as
 `9acf3570ced5f0dcd8a9192184e169172d52ac28`. The additional 44 commits are published;
@@ -115,10 +120,12 @@ named in each reconstruction's provenance (for example `Creature::getCreature`,
 `MapObject::getMapObject`, `MapObject::loadFromProps`, `Map::getObjectByName`,
 `Map::removeTile`).
 It also accepted #205-#223 (scripted caves and teleporters, QString factories, the
-inventory API of #215 and the move of scripts/configs to disk at #219). Revision #204
-reaches readiness but cannot exit because its surviving `main.cpp` runs a stdin console
-script reader; the reconstructed `main.cpp` from #205 to #246 omits that reader, which
-is absent again from the next surviving `main.cpp` at #247 (removal point unknown).
+inventory API of #215 and the move of scripts/configs to disk at #219). Revision #204 uses a pinned build-copy repair that dispatches console input
+through Qt’s event loop instead of the blocking global-pool task. Native startup
+and clean shutdown passed with both EOF and an open idle stdin pipe. A separate
+probe confirmed command execution. The original entrypoint remains in the tree.
+The reconstructed `main.cpp` from #205 to #246 omits the console reader, which
+is absent again from the next surviving `main.cpp` at #247.
 Revisions #224 and #225 are mid-refactor commits whose surviving files cannot compile
 (static `GameScene` calls after the instance refactor; a commented-out `RoadTile`).
 Diagnostics: `recovery/diagnostics/native-204-original-shutdown-defect-2026-11-17.json`
@@ -292,11 +299,10 @@ exported evidence before removing reproducible build scratch.
 
 ## Remaining work
 
-- #204 is the first gap in the replay ancestry. Reproduce its console-reader
-  shutdown defect. #224–#225 need repairs for their documented mid-refactor
-  build defects.
+- #224–#225 are the first ancestry gap. Their pinned builds reproduce the
+  documented scene-access and tile-registration defects.
 - Continue the native walk at #269–#330, then #352–#359 and #366. The ledger
-  lists 74 catalog commits awaiting native acceptance.
+  lists 73 catalog commits awaiting native acceptance.
 - The published historical refs still cover 109 commits. Further publication is
   a separate operation. Keep the continuation PR open for review and track its
   GitHub build, suite and coverage results there.

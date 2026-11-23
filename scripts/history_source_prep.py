@@ -22,6 +22,7 @@ try:
     from scripts import history_prepare_conflicts as conflicts_prep
     from scripts import history_prepare_pathfinder_cache as cache_prep
     from scripts import history_prepare_merged_headers as merged_prep
+    from scripts import history_prepare_console_reader as console_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 except ModuleNotFoundError:
     import history_prepare_reflection as reflection_prep
@@ -33,6 +34,7 @@ except ModuleNotFoundError:
     import history_prepare_conflicts as conflicts_prep
     import history_prepare_pathfinder_cache as cache_prep
     import history_prepare_merged_headers as merged_prep
+    import history_prepare_console_reader as console_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
 
 EXPECTED_PYTHON_VERSION = "Python 2.7.18"
@@ -310,6 +312,7 @@ def prepareSources(
     timing = timing_prep.legacyTimingPlan(source_root)
     conflicts = conflicts_prep.conflictPlan(source_root)
     child_cache = source_commit == cache_prep.COMMIT
+    console_reader = source_commit == console_prep.COMMIT
     merged_headers = source_commit in merged_prep.COMMITS
     if child_cache and (not conflicts or not teleporter):
         raise ValueError("Pathfinder cache preparation requires the reviewed #176 build inputs")
@@ -349,6 +352,7 @@ def prepareSources(
         and not timing
         and not conflicts
         and not merged_headers
+        and not console_reader
     ):
         return result
     output_root.mkdir(parents=True, exist_ok=True)
@@ -503,6 +507,28 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if console_reader:
+        target = source_root / console_prep.TARGET
+        if target.resolve() != source_root.resolve() / console_prep.TARGET or target.is_symlink():
+            raise ValueError("Console reader source traverses a symbolic link")
+        data = console_prep.prepare(target.read_bytes())
+        target.write_bytes(data)
+        identity = {
+            "sourceCommit": source_commit,
+            "inputSha256": console_prep.INPUT_SHA256,
+            "outputSha256": console_prep.digest(data),
+            "replaySha256": console_prep.digest(Path(console_prep.__file__).read_bytes()),
+        }
+        result["identity"]["consoleReader"] = identity
+        log = output_root / "console-reader.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "consoleReader",
+            "command": ["history_source_prep.py", "prepare-console-reader"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if include_overlays:
         recorded = []
         for overlay in include_overlays:
@@ -589,6 +615,8 @@ def prepareSources(
                 or (timing and name in timing["paths"])
             )
         ]
+        if console_reader:
+            next(entry for entry in outputs if entry["path"] == console_prep.TARGET)["purpose"] = console_prep.PURPOSE
         if merged_headers:
             for entry in outputs:
                 if entry["path"] in generated:

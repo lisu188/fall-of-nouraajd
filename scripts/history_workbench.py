@@ -264,7 +264,11 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
     aliases = vh.prepareLibraryAliases(source, output)
     environment = ["env", *(name + "=" + str(value) for name, value in recipe.get("environment", {}).items())]
     commands = ["set -e"]
-    if commit in vh.source_prep.merged_prep.COMMITS or vh.source_prep.preparationRequired(source):
+    if (
+        commit == vh.source_prep.console_prep.COMMIT
+        or commit in vh.source_prep.merged_prep.COMMITS
+        or vh.source_prep.preparationRequired(source)
+    ):
         commands.append(
             shlex.join(
                 [
@@ -776,7 +780,10 @@ def progress() -> None:
                     continue
             except vh.VerificationError:
                 continue
-            requires_replay = commit == vh.source_prep.cache_prep.COMMIT or commit in vh.runtime_configs.INPUT_PINS
+            requires_replay = (
+                commit in (vh.source_prep.cache_prep.COMMIT, vh.source_prep.console_prep.COMMIT)
+                or commit in vh.runtime_configs.INPUT_PINS
+            )
             if requires_replay or commit in vh.source_prep.merged_prep.COMMITS or report.get("startupCompatibility") in (
                 "parentReflectionRegistration",
                 "originalCoordinateHash",
@@ -824,6 +831,8 @@ def progress() -> None:
             if report.get("startupCompatibility") == "legacyTimingResources":
                 item["startupCompatibility"] = "legacyTimingResources"
                 item["validation"] = "build-and-startup-with-legacy-timing-resource-compatibility-passed"
+            if commit == vh.source_prep.console_prep.COMMIT:
+                item["buildCompatibility"] = ["consoleReader"]
             if commit in vh.source_prep.merged_prep.COMMITS:
                 item["buildCompatibility"] = ["mergedHeaders"]
             if commit == vh.source_prep.cache_prep.COMMIT:
