@@ -1,0 +1,112 @@
+{
+  "identity": {
+    "historicalHandlers": {
+      "files": {
+        "CGameScene.cpp": [
+          "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
+          "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+        ],
+        "CGameView.cpp": [
+          "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
+          "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+        ],
+        "CScriptEngine.cpp": [
+          "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
+          "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+        ]
+      },
+      "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
+      "sourceCommit": "35b69687549d2b68864d26b1711931835b819670"
+    },
+    "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
+        },
+        "path": "CGameScene.cpp",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
+        },
+        "path": "CGameView.cpp",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
+        },
+        "path": "CScriptEngine.cpp",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
+      },
+      "path": "CGameScene.cpp",
+      "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
+      },
+      "path": "CGameView.cpp",
+      "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
+      },
+      "path": "CScriptEngine.cpp",
+      "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-historical-handlers"
+      ],
+      "log": "/tmp/nouraajd-326-handlers-final/verify/snapshot-aoypr062/preparation/historical-handlers.log",
+      "name": "historicalHandlers",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}

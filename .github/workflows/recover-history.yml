@@ -39,6 +39,7 @@ on:
       - scripts/history_prepare_typed_events.py
       - scripts/history_prepare_object_factories.py
       - scripts/history_prepare_game_objects.py
+      - scripts/history_prepare_historical_handlers.py
       - scripts/history_prepare_merged_headers.py
       - scripts/history_prepare_pathfinder_cache.py
       - scripts/history_runtime_configs.py
@@ -91,6 +92,7 @@ on:
       - tests/test_history_typed_events.py
       - tests/test_history_object_factories.py
       - tests/test_history_game_objects.py
+      - tests/test_history_historical_handlers.py
       - tests/test_history_merged_headers.py
       - tests/test_history_runtime_transitions.py
       - tests/test_history_resource_preparation.py
@@ -148,7 +150,7 @@ jobs:
             tests.test_history_named_event_transition tests.test_history_panel_refresh_transition tests.test_history_effect_transition \
             tests.test_history_resources_transition tests.test_history_script_loader tests.test_history_import_hook tests.test_history_map_events \
             tests.test_history_python_effects tests.test_history_class_loaders tests.test_history_map_packages tests.test_history_potion_movement tests.test_history_fight_system \
-            tests.test_history_creature_events tests.test_history_visitor_callbacks tests.test_history_respawn tests.test_history_dispatch_events tests.test_history_typed_events tests.test_history_object_factories tests.test_history_game_objects
+            tests.test_history_creature_events tests.test_history_visitor_callbacks tests.test_history_respawn tests.test_history_dispatch_events tests.test_history_typed_events tests.test_history_object_factories tests.test_history_game_objects tests.test_history_historical_handlers
           bash -n recovery/toolchains/build.sh
       - name: Plan exhaustive bounded shards
         id: shards

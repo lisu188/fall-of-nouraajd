@@ -94398,8 +94398,8 @@
     {
       "originalBlob": "ed39bc74efac2e60bcec9bb857ab74cb026436e8",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "854a822fe0ef3788c0ce9b74ecadc3f031041c062713dfb3c2bf7844f2fa7904",
+      "provenance": "content reconstruction of the BFG-removed original; Declare the movement hooks used by the authored map-object implementation.",
+      "sha256": "0acf8cdea640e469abd36a8f5aa0fd8e56278146429952a3f588abf1b8476d82",
       "source": "payloads/reconstructions/ed/ed39bc74efac2e60bcec9bb857ab74cb026436e8-CCreature.h"
     },
     {
@@ -100369,6 +100369,284 @@
       "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
       "sha256": "7a2dfa12e62c564590cbc484b236c0b5c5dc6f920e381b8278cc2eee4c90c462",
       "source": "payloads/reconstructions/fd/fdd111df4d25cf44409e0466e57da2479d33946c-GameScript.cpp"
+    },
+    {
+      "commit": "35b69687549d2b68864d26b1711931835b819670",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "a97769c921cf57d945ffc10f70fd940ac86f3774",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "35b69687549d2b68864d26b1711931835b819670",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "a97769c921cf57d945ffc10f70fd940ac86f3774",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "add": true,
+      "commit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381",
+      "path": "handlers/CEventHandler.cpp",
+      "provenance": "Carry the preceding dispatcher to the path named by the surviving qmake project.",
+      "sha256": "f512a74c7514b5a005fed257a65a90ca19f87fc5a6c076b96abbfb35b658d7b8",
+      "source": "payloads/reconstructions/handlers-328/handlers/CEventHandler.cpp"
+    },
+    {
+      "add": true,
+      "commit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
+      "path": "CEventHandler.h",
+      "provenance": "Forward surviving include sites to the grouped handler declarations.",
+      "sha256": "ec567d22898fd6cb0ba799585559f5a04d40ee5633fd33c3613aee2482710e7e",
+      "source": "payloads/reconstructions/handlers-329/CEventHandler.h"
+    },
+    {
+      "add": true,
+      "commit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
+      "path": "CObjectHandler.h",
+      "provenance": "Forward surviving include sites to the grouped handler declarations.",
+      "sha256": "ec567d22898fd6cb0ba799585559f5a04d40ee5633fd33c3613aee2482710e7e",
+      "source": "payloads/reconstructions/handlers-329/CObjectHandler.h"
+    },
+    {
+      "add": true,
+      "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+      "path": "CEventHandler.h",
+      "provenance": "Forward surviving include sites to the grouped handler declarations.",
+      "sha256": "ec567d22898fd6cb0ba799585559f5a04d40ee5633fd33c3613aee2482710e7e",
+      "source": "payloads/reconstructions/handlers-330/CEventHandler.h"
+    },
+    {
+      "add": true,
+      "commit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+      "path": "CObjectHandler.h",
+      "provenance": "Forward surviving include sites to the grouped handler declarations.",
+      "sha256": "ec567d22898fd6cb0ba799585559f5a04d40ee5633fd33c3613aee2482710e7e",
+      "source": "payloads/reconstructions/handlers-330/CObjectHandler.h"
+    },
+    {
+      "originalBlob": "0b004d0dabf94910b57900f21f6dd84ad2819e6b",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the adjacent handler and registry implementation with the surviving script and configuration interfaces.",
+      "sha256": "7cfcb1868f6a27b6cd2e6c462552a9eae35d5e4fb0e2ed08a0c7b1d110cecef3",
+      "source": "payloads/reconstructions/0b/0b004d0dabf94910b57900f21f6dd84ad2819e6b-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "0be726181eb8fb46c3225bf5209d8187ba03a9ca",
+      "path": "CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Retain common panel behavior and the combat panel across the file split.",
+      "sha256": "f8b5bd0c1bd331da387085146e3d57b6a414282efb9af1c38429c87b085b813b",
+      "source": "payloads/reconstructions/0b/0be726181eb8fb46c3225bf5209d8187ba03a9ca-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "145d0664bbdca6b4a431737240fdfb735c043870",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Resolve the creature from the equip and unequip event cause.",
+      "sha256": "10d6026d6002c9f15e9f97ff3094f0d50126007ee66361657df2f1fe5594b97e",
+      "source": "payloads/reconstructions/14/145d0664bbdca6b4a431737240fdfb735c043870-CItem.cpp"
+    },
+    {
+      "originalBlob": "335a552a3f46fe3e16dd4bf02e54b248e3d744e3",
+      "path": "panel/CFightPanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Retain common panel behavior and the combat panel across the file split.",
+      "sha256": "4269b4b6010b4c6e35142e79d89de58bef5f6b5a0ecc68a6637eaed06112c3b0",
+      "source": "payloads/reconstructions/33/335a552a3f46fe3e16dd4bf02e54b248e3d744e3-CFightPanel.cpp"
+    },
+    {
+      "originalBlob": "3facb7c509c2eedb319137b86648a855e33282a5",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the adjacent handler and registry implementation with the surviving script and configuration interfaces.",
+      "sha256": "e017f6194aafa6934c780de2b1fd08708f7b97bc756812257e66c80a6daa7dd5",
+      "source": "payloads/reconstructions/3f/3facb7c509c2eedb319137b86648a855e33282a5-CMap.cpp"
+    },
+    {
+      "originalBlob": "54c501b27f8de59f4abbc544e90765f5bfd3dfe2",
+      "path": "mapObject/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Route equipment and tile-step events through the surviving dispatcher.",
+      "sha256": "6dd179a2f0a767554ba5fa178d55edeecbad8bdced65bca4dcb66970970f51ce",
+      "source": "payloads/reconstructions/54/54c501b27f8de59f4abbc544e90765f5bfd3dfe2-CCreature.cpp"
+    },
+    {
+      "originalBlob": "699585d7f5ee45288d6ebe1f59fa357d1f11b2b7",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Keep map object and tile ownership, and follow the surviving map and script interfaces.",
+      "sha256": "35d284c4dc55a68eeb7850b2f197801fc3efc7c7158854349ca0ef4e2d55f9a4",
+      "source": "payloads/reconstructions/69/699585d7f5ee45288d6ebe1f59fa357d1f11b2b7-CMap.cpp"
+    },
+    {
+      "originalBlob": "862f7aa7d0855cb5a617240499c161f69915ca13",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Fit the named event, game-object and moveable interfaces to surviving bodies.",
+      "sha256": "942ded1923b12af18cb83a194f63e9e21aebb95d8902d0407324d24ae0a0ad57",
+      "source": "payloads/reconstructions/86/862f7aa7d0855cb5a617240499c161f69915ca13-CMapObject.h"
+    },
+    {
+      "originalBlob": "8a5528225ffe07f58a0c4df111adc4398bdc20a3",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Fit the named event, game-object and moveable interfaces to surviving bodies.",
+      "sha256": "942ded1923b12af18cb83a194f63e9e21aebb95d8902d0407324d24ae0a0ad57",
+      "source": "payloads/reconstructions/8a/8a5528225ffe07f58a0c4df111adc4398bdc20a3-CMapObject.h"
+    },
+    {
+      "originalBlob": "8f240327ee7ed5b9b7ff9824fbf37abb971578ba",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the configuration factory through the dispatcher and folder transitions.",
+      "sha256": "4a735c3148ad2eac115e64997963ff492fa443a712818252ccd2e19554ea5fc8",
+      "source": "payloads/reconstructions/8f/8f240327ee7ed5b9b7ff9824fbf37abb971578ba-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "90ae759b5249bc6e507b265ea64793811332f7a5",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the adjacent handler and registry implementation with the surviving script and configuration interfaces.",
+      "sha256": "374e8e3995f6f57e5fae9cfd4d5e02b8bf1e81ffce06d8e40700559396b52fcf",
+      "source": "payloads/reconstructions/90/90ae759b5249bc6e507b265ea64793811332f7a5-GameScript.cpp"
+    },
+    {
+      "originalBlob": "928646b1d2e3b4ba3411c1ecf945f46a6864668b",
+      "path": "handler/CObjectHandler.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the configuration factory through the dispatcher and folder transitions.",
+      "sha256": "7f14700bdf82667e490db665203221a9271f4d597feaa9bb1dd4f03c9eb708dc",
+      "source": "payloads/reconstructions/92/928646b1d2e3b4ba3411c1ecf945f46a6864668b-CObjectHandler.cpp"
+    },
+    {
+      "originalBlob": "9b3de7d201e2362efbb503e596fc27d2298e925f",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Resolve the creature from the equip and unequip event cause.",
+      "sha256": "10d6026d6002c9f15e9f97ff3094f0d50126007ee66361657df2f1fe5594b97e",
+      "source": "payloads/reconstructions/9b/9b3de7d201e2362efbb503e596fc27d2298e925f-CItem.cpp"
+    },
+    {
+      "originalBlob": "9ca07123c6442a112b2570ed5a7b76862a6ba908",
+      "path": "CGamePanel.h",
+      "provenance": "content reconstruction of the BFG-removed original; Keep named panel declarations and defer character panel children until a player exists.",
+      "sha256": "1bbf984c04b43275937b94e5826e73c7ccec4ff0ee0300bc496fa62a7391dac6",
+      "source": "payloads/reconstructions/9c/9ca07123c6442a112b2570ed5a7b76862a6ba908-CGamePanel.h"
+    },
+    {
+      "originalBlob": "ae0bd0051ce0b9bcb7369e515935ae3e53338f84",
+      "path": "CGamePanel.h",
+      "provenance": "content reconstruction of the BFG-removed original; Keep named panel declarations and defer character panel children until a player exists.",
+      "sha256": "58fe141da1415b026e363a391a481ad833009bf2a4634a390534cfaed44bb8c0",
+      "source": "payloads/reconstructions/ae/ae0bd0051ce0b9bcb7369e515935ae3e53338f84-CGamePanel.h"
+    },
+    {
+      "originalBlob": "b66181bf4e074c5ebc425e5a9146dfb24c5aa4db",
+      "path": "mapObjects/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Route equipment and tile-step events through the surviving dispatcher.",
+      "sha256": "d1dc88750d0657944b49755bee8e1dfc6637223607c6d29a43bc9cd153c3366f",
+      "source": "payloads/reconstructions/b6/b66181bf4e074c5ebc425e5a9146dfb24c5aa4db-CCreature.cpp"
+    },
+    {
+      "originalBlob": "c942ca452cda0e04e0553b3cc8b09ec2b2016d1a",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Connect surviving Python scripts to native item, turn, and tile events.",
+      "sha256": "aeea545af67e0e69dd956cdf5b5d62b7ab7e7b226fd2b0a124f18f26def55b21",
+      "source": "payloads/reconstructions/c9/c942ca452cda0e04e0553b3cc8b09ec2b2016d1a-GameScript.cpp"
+    },
+    {
+      "originalBlob": "cc627a84da721ffe6cc0f66cd67a453b358b113d",
+      "path": "mapObject/CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Route equipment and tile-step events through the surviving dispatcher.",
+      "sha256": "d1dc88750d0657944b49755bee8e1dfc6637223607c6d29a43bc9cd153c3366f",
+      "source": "payloads/reconstructions/cc/cc627a84da721ffe6cc0f66cd67a453b358b113d-CCreature.cpp"
+    },
+    {
+      "originalBlob": "d03dbc3588df91bf72ca5094627ec78bbca19141",
+      "path": "CMapObject.h",
+      "provenance": "content reconstruction of the BFG-removed original; Fit the named event, game-object and moveable interfaces to surviving bodies.",
+      "sha256": "25cac0d38df2fa85da608ebccd63c0c1c8d5348f084a9aaf845bf3e2b2b34947",
+      "source": "payloads/reconstructions/d0/d03dbc3588df91bf72ca5094627ec78bbca19141-CMapObject.h"
+    },
+    {
+      "originalBlob": "d1c83bc0fe30b8ec2bf5c5b60cc68735a2c3e9cd",
+      "path": "scripts/game/interaction.py",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the adjacent handler and registry implementation with the surviving script and configuration interfaces.",
+      "sha256": "5dfd6e94822f576fc5763dfc7ed801513f6762a1f303c9e233d7ef143e1d3cd5",
+      "source": "payloads/reconstructions/d1/d1c83bc0fe30b8ec2bf5c5b60cc68735a2c3e9cd-interaction.py"
+    },
+    {
+      "originalBlob": "d9ca2ddfa330e238b5fe9ce2bf8d355ee3b12b8c",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Keep map object and tile ownership, and follow the surviving map and script interfaces.",
+      "sha256": "277838faf2991a9ae06aab17748485af2e4d10ca6d541a016151db834d7864fb",
+      "source": "payloads/reconstructions/d9/d9ca2ddfa330e238b5fe9ce2bf8d355ee3b12b8c-CMap.cpp"
+    },
+    {
+      "originalBlob": "ecb6dbdd8fab1d0f16f31a9e368fe997256b70d3",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Connect surviving Python scripts to native item, turn, and tile events.",
+      "sha256": "aeea545af67e0e69dd956cdf5b5d62b7ab7e7b226fd2b0a124f18f26def55b21",
+      "source": "payloads/reconstructions/ec/ecb6dbdd8fab1d0f16f31a9e368fe997256b70d3-GameScript.cpp"
+    },
+    {
+      "originalBlob": "f558e3cb11cb9ffd2447c4dedccd2a0241fb356d",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Connect surviving Python scripts to native item, turn, and tile events.",
+      "sha256": "aa12c1e0765ba3f9b9bca5787d9fab8b09fcd9b666ffb2dd1a406c83334a959c",
+      "source": "payloads/reconstructions/f5/f558e3cb11cb9ffd2447c4dedccd2a0241fb356d-GameScript.cpp"
+    },
+    {
+      "commit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
+      "path": "CMapObject.h",
+      "provenance": "Declare Turnable for the surviving grouped event dispatcher while preserving the preceding folder revision.",
+      "sha256": "f3abaaf7ba10e2ef44b90674db0434968f4008346883a2087b7973ac7e70a4db",
+      "source": "payloads/reconstructions/handlers-329/CMapObject.h"
     }
   ],
   "schemaVersion": 1

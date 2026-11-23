@@ -180,7 +180,19 @@ class HistoricalWorkbenchBuildTest(unittest.TestCase):
             ),
         ):
             workbench.progress()
-        result = json.loads((repository / "recovery/progress.json").read_text())
+            progress = repository / "recovery/progress.json"
+            result = json.loads(progress.read_text())
+            evidence = repository / "recovery/evidence" / commits[-1]
+            report = json.loads((evidence / "verification.json").read_text())
+            startup = report["smoke"]["startup"]
+            startup["checks"]["player"] = True
+            (evidence / "verification.json").write_text(json.dumps(report))
+            (evidence / "startup.json").write_text(json.dumps(startup))
+            workbench.progress()
+            complete = json.loads(progress.read_text())
+        self.assertEqual("in-progress", result["status"])
+        self.assertEqual("complete", complete["status"])
+        self.assertEqual(3, complete["validatedCommitCount"])
         self.assertEqual(2, result["validatedCommitCount"])
         self.assertEqual(1, result["validatedGameCommitCount"])
         self.assertEqual(1, result["validatedGameTreeCount"])

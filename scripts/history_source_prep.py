@@ -47,6 +47,7 @@ try:
     from scripts import history_prepare_typed_events as typed_events_prep
     from scripts import history_prepare_object_factories as object_factories_prep
     from scripts import history_prepare_game_objects as game_objects_prep
+    from scripts import history_prepare_historical_handlers as historical_handlers_prep
     from scripts import history_prepare_script_loader as loader_prep
     from scripts import history_prepare_panel_refresh_transition as panel_refresh_prep
     from scripts import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -85,6 +86,7 @@ except ModuleNotFoundError:
     import history_prepare_typed_events as typed_events_prep
     import history_prepare_object_factories as object_factories_prep
     import history_prepare_game_objects as game_objects_prep
+    import history_prepare_historical_handlers as historical_handlers_prep
     import history_prepare_script_loader as loader_prep
     import history_prepare_panel_refresh_transition as panel_refresh_prep
     import history_prepare_teleporter_conflicts as teleporter_conflicts_prep
@@ -385,6 +387,7 @@ def prepareSources(
     typed_events = source_commit in typed_events_prep.COMMITS
     object_factories = source_commit in object_factories_prep.COMMITS
     game_objects = source_commit in game_objects_prep.COMMITS
+    historical_handlers = source_commit in historical_handlers_prep.COMMITS
     script_loader = source_commit in loader_prep.COMMITS
     panel_refresh_transition = source_commit in panel_refresh_prep.PROFILES
     panel_transition = source_commit == panel_prep.COMMIT
@@ -455,6 +458,7 @@ def prepareSources(
         and not typed_events
         and not object_factories
         and not game_objects
+        and not historical_handlers
         and not script_loader
         and not panel_refresh_transition
     ):
@@ -936,6 +940,19 @@ def prepareSources(
             "timedOut": False,
             "log": str(log),
         })
+    if historical_handlers:
+        historical_handlers_prep.apply(source_root, source_commit)
+        identity = historical_handlers_prep.identity(source_commit)
+        result["identity"]["historicalHandlers"] = identity
+        log = output_root / "historical-handlers.log"
+        log.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result["steps"].append({
+            "name": "historicalHandlers",
+            "command": ["history_source_prep.py", "prepare-historical-handlers"],
+            "returnCode": 0,
+            "timedOut": False,
+            "log": str(log),
+        })
     if script_loader:
         loader_prep.apply(source_root, source_commit)
         identity = loader_prep.identity(source_commit)
@@ -1143,6 +1160,10 @@ def prepareSources(
             for entry in outputs:
                 if entry["path"] in game_objects_prep.PROFILES[source_commit]:
                     entry["purpose"] = game_objects_prep.PURPOSE
+        if historical_handlers:
+            for entry in outputs:
+                if entry["path"] in historical_handlers_prep.PROFILES[source_commit]:
+                    entry["purpose"] = historical_handlers_prep.PURPOSE
         if script_loader:
             for entry in outputs:
                 if entry["path"] in loader_prep.PINS:

@@ -355,6 +355,8 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
             raise VerificationError("Missing Object factories preparation")
         if report.get("sourceCommit") in source_prep.game_objects_prep.COMMITS:
             raise VerificationError("Missing Game objects preparation")
+        if report.get("sourceCommit") in source_prep.historical_handlers_prep.COMMITS:
+            raise VerificationError("Missing Historical handlers preparation")
         if report.get("sourceCommit") in source_prep.loader_prep.COMMITS:
             raise VerificationError("Missing script loader preparation")
         if report.get("sourceCommit") in source_prep.panel_refresh_prep.PROFILES:
@@ -447,6 +449,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_game_objects = "gameObjects" in names
     if has_game_objects != (report.get("sourceCommit") in source_prep.game_objects_prep.COMMITS):
         raise VerificationError("Game objects preparation differs from the catalog commit")
+    has_historical_handlers = "historicalHandlers" in names
+    if has_historical_handlers != (report.get("sourceCommit") in source_prep.historical_handlers_prep.COMMITS):
+        raise VerificationError("Historical handlers preparation differs from the catalog commit")
     has_script_loader = "scriptLoader" in names
     if has_script_loader != (report.get("sourceCommit") in source_prep.loader_prep.COMMITS):
         raise VerificationError("Script loader preparation differs from the catalog commit")
@@ -506,6 +511,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["typedEvents"] if has_typed_events else [])
         + (["objectFactories"] if has_object_factories else [])
         + (["gameObjects"] if has_game_objects else [])
+        + (["historicalHandlers"] if has_historical_handlers else [])
         + (["scriptLoader"] if has_script_loader else [])
         + (["effectTransition"] if has_effect else [])
         + (["panelRefreshTransition"] if has_panel_refresh else [])
@@ -732,6 +738,13 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_game_objects.py"] = Path(helper.__file__).read_bytes()
+    if has_historical_handlers:
+        helper = source_prep.historical_handlers_prep
+        try:
+            helper.validate(report["sourceCommit"], preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        attachments["recovery/prepare_historical_handlers.py"] = Path(helper.__file__).read_bytes()
     if has_script_loader:
         helper = source_prep.loader_prep
         try:
@@ -818,6 +831,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (has_typed_events and name in source_prep.typed_events_prep.PROFILES[report["sourceCommit"]])
                 or (has_object_factories and name in source_prep.object_factories_prep.PROFILES[report["sourceCommit"]])
                 or (has_game_objects and name in source_prep.game_objects_prep.PROFILES[report["sourceCommit"]])
+                or (has_historical_handlers and name in source_prep.historical_handlers_prep.PROFILES[report["sourceCommit"]])
                 or (has_resources_transition and name in source_prep.resources_prep.PINS)
                 or (has_panel_refresh and name in source_prep.panel_refresh_prep.PROFILES[report["sourceCommit"]])
                 or name in scene_outputs
@@ -1311,6 +1325,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_typed_events.py"] if "recovery/prepare_typed_events.py" in preparation_files else []),
         *(["python3 recovery/prepare_object_factories.py"] if "recovery/prepare_object_factories.py" in preparation_files else []),
         *(["python3 recovery/prepare_game_objects.py"] if "recovery/prepare_game_objects.py" in preparation_files else []),
+        *(["python3 recovery/prepare_historical_handlers.py"] if "recovery/prepare_historical_handlers.py" in preparation_files else []),
         *(["python3 recovery/prepare_resources_transition.py"] if "recovery/prepare_resources_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_panel_refresh_transition.py"] if "recovery/prepare_panel_refresh_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),

@@ -287,6 +287,7 @@ def build(ref: str, clean: bool = True, lines: int = 40) -> bool:
         or commit in vh.source_prep.typed_events_prep.COMMITS
         or commit in vh.source_prep.object_factories_prep.COMMITS
         or commit in vh.source_prep.game_objects_prep.COMMITS
+        or commit in vh.source_prep.historical_handlers_prep.COMMITS
         or commit in vh.source_prep.loader_prep.COMMITS
         or commit in vh.source_prep.panel_refresh_prep.PROFILES
         or commit in vh.source_prep.shutdown_prep.TARGETS
@@ -831,6 +832,7 @@ def progress() -> None:
                 or commit in vh.source_prep.typed_events_prep.COMMITS
                 or commit in vh.source_prep.object_factories_prep.COMMITS
                 or commit in vh.source_prep.game_objects_prep.COMMITS
+                or commit in vh.source_prep.historical_handlers_prep.COMMITS
                 or commit in vh.source_prep.loader_prep.COMMITS
                 or commit in vh.source_prep.panel_refresh_prep.PROFILES
                 or commit in vh.source_prep.shutdown_prep.TARGETS
@@ -925,6 +927,8 @@ def progress() -> None:
                 item["buildCompatibility"] = ["objectFactories"]
             if commit in vh.source_prep.game_objects_prep.COMMITS:
                 item["buildCompatibility"] = ["gameObjects"]
+            if commit in vh.source_prep.historical_handlers_prep.COMMITS:
+                item["buildCompatibility"] = ["historicalHandlers"]
             if commit in vh.source_prep.loader_prep.COMMITS:
                 item["buildCompatibility"] = ["scriptLoader"]
             if commit in vh.source_prep.effect_prep.COMMITS:
@@ -951,6 +955,7 @@ def progress() -> None:
     order = {commit: index for index, commit in enumerate(ORDER)}
     snapshots.sort(key=lambda item: order.get(item["originalCommit"], len(order)))
     trees = {item["originalTree"] for item in snapshots}
+    complete = len(snapshots) == len(ORDER) and len(trees) == len(CATALOG["trees"])
     value = {
         **{
             key: previous[key]
@@ -958,7 +963,7 @@ def progress() -> None:
             if key in previous and key != "toolchainImage"
         },
         "schemaVersion": 1,
-        "status": "in-progress",
+        "status": "complete" if complete else "in-progress",
         "targetCommitCount": len(ORDER),
         "targetTreeCount": len(CATALOG["trees"]),
         "validatedCommitCount": len(snapshots),
