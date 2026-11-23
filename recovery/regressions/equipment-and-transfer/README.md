@@ -1,0 +1,7 @@
+# Historical equipment and transfer regression
+
+`comparison.json` records a real native #150 before/fix comparison under the pinned GCC5/Qt5 image. The corrected sources pass equipment/stat persistence, empty equipment slots, actual Teleporter actor persistence, and live item transfer from map to inventory. Restoring the earlier missing Creature body fails equipped identities; restoring the earlier missing Map body destroys the actual item before inventory transfer. All three variants compile and link against the same real historical objects.
+
+The retained runner is `scripts/history_state_regression.py`; its fixture is `tests/fixtures/history-state/history_state_roundtrip.cpp`. First build/start #150 through `scripts/verify_history.py` with current `recovery/overrides.json` and retain its native build objects. Run the fixture using `--verification <verification.json> --output-dir <new-directory> --toolchain-rootfs <pinned-rootfs> --repo-root .`. `--replacement-creature` and `--replacement-map` compile a selected earlier inferred body against those same objects for causal comparisons. The runner verifies the toolchain image and uses a private network namespace and Xvfb. Missing retained objects are an error; exported logs alone cannot run the fixture.
+
+Compiled fixture outputs are reproducible intermediates. Compact reports, native output, source hashes, original failed bodies and corrected versioned payloads are retained. This regression does not prove complete historical gameplay parity.

@@ -7,10 +7,11 @@
   },
   "frame": {
     "height": 718,
-    "path": "/tmp/nouraajd-bfg-recovery/native-root/verify/snapshot-gkmdah_u/smoke/startup.png",
-    "sha256": "e83e97556322c6580c148a276ab8969de64397f8310b5764c90661544c410f6b",
+    "path": "/tmp/nouraajd-bfg-recovery/native-middle-recheck-b/verify/snapshot-5vcf_i2j/smoke/startup.png",
+    "sha256": "efce585e49b05be8a01440ee11fd795351fca25833f4ff197fa6c1ebc27ffed7",
     "width": 1278
   },
+  "mode": "game",
   "reason": "",
   "schemaVersion": 1,
   "status": "ready"

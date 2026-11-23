@@ -1,0 +1,55 @@
+{
+  "entries": [
+    {
+      "commit": "12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+      "firstCatalogOrder": 124,
+      "originalBlob": "59d5eac7f9b9aea005b57389eae9c06912fc98f7",
+      "path": "creatures/creature.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted validated #120\u2013123 Creature reconstruction to genuine #124 direct base ListItem and its original four-argument constructor. Preserves actual origin/layer2 initialization through the real ListItem\u2192MapObject path. Existing real tooltip, stats, animation, collections and signals remain; prior documented original-style collection cast ABI limitation and unknown formulas/deltas retained. No surviving original changed.",
+      "sha256": "7f2204c9f17b2c4706c52d903aeffc1e70a7958fd8c6a4bb4129ae08fe3e3217",
+      "source": "recovery/payloads/reconstructions/59/59d5eac7f9b9aea005b57389eae9c06912fc98f7-creature.cpp"
+    },
+    {
+      "commit": "12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+      "firstCatalogOrder": 124,
+      "originalBlob": "27eb10ea230c1cf4b8bb45432fc6a83f81a74751",
+      "path": "view/mapview.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Adapted genuine surviving immediately preceding #123 251c727c2a6957bcaca2335e2632bf2a60a772d3:view/mapview.cpp to genuine #124 loadCreatures declaration and actual Comparer creature palette. Loads real Monster objects from restored monster-animation templates (Pritz/PritzMage corroborated by original Cave callers), preserving player-class templates outside normal editor actor palettes. Space cycles actual items/buildings/creatures; dropped monster prototypes are replaced by real configured Monster objects because original main does not register Monster metatypes yet. Exact original filtering, palette cycling and clone policy are inferred; all original main/config/headers/MapScene/list views/assets unchanged. This is genuine default editor startup, not verified gameplay or ordinary control parity.",
+      "sha256": "227f6d6efb791853eb272757d8f786c8d420acd689a0365228f80b9036c4f96d",
+      "source": "recovery/payloads/reconstructions/27/27eb10ea230c1cf4b8bb45432fc6a83f81a74751-mapview.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 1,
+      "game": 0
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "editor",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "a591c69f646dc14672b767329284b089048358c3219647b07876a8f76f7c914f",
+        "sourceCommit": "12f2a671ce7e158779270d260d4a43b0d5f1f97e",
+        "sourceTree": "5c1e61cf5ec289d3b3fe3f3b7e24d6a3ee77cef5",
+        "startupMode": "editor",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

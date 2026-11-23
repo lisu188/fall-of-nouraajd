@@ -1,0 +1,75 @@
+{
+  "entries": [
+    {
+      "originalBlob": "6f0d957ff87d37a8b522950ace21d73d05c8a518",
+      "path": "CPlayerView.cpp",
+      "provenance": "Missing #346 reconstruction, not exact original. Prior verified panel-owned view replaces only trade inventory getter with genuine intact55e6516 method using actual same-commit CPlayer::getMarket/CMarket::getTradeItems; original CTradePanel no longer owns its own item set. Pending native verification; surviving original source retained.",
+      "sha256": "694f58c018fb1736300a379a45fbea29f7ec397ada8687079a2b9554a29b0af8",
+      "source": "recovery/payloads/reconstructions/6f/6f0d957ff87d37a8b522950ace21d73d05c8a518-CPlayerView.cpp",
+      "validatedByOriginalCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc"
+    },
+    {
+      "originalBlob": "f9572f59e59fe81622d18cecb433e13fda7960f9",
+      "path": "GameScript.cpp",
+      "provenance": "Missing #346 reconstruction, not exact original. Preserves verified native/script bindings; existing CCreature.trade binding matches genuine new CPlayer override and original Python Market onEnter caller. Pending native verification; surviving original source retained.",
+      "sha256": "0c0398251247a74491b28f9ad5f33eaaef647a86cdac89c17721662702b3f263",
+      "source": "recovery/payloads/reconstructions/f9/f9572f59e59fe81622d18cecb433e13fda7960f9-GameScript.cpp",
+      "validatedByOriginalCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc"
+    },
+    {
+      "originalBlob": "cd0832f2650635ed1666f11c7f82d36c1d778ac7",
+      "path": "game.pro",
+      "provenance": "Missing #346 reconstruction, not exact original. Prior project adds only genuine newly authored native CMarket translation unit/header. Pending native verification; surviving original source retained.",
+      "sha256": "d994bbe2b3b9ff5772354dbfce76a8b33f9dee90b9816c2c9e52cf326ceea32f",
+      "source": "recovery/payloads/reconstructions/cd/cd0832f2650635ed1666f11c7f82d36c1d778ac7-game.pro",
+      "validatedByOriginalCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc"
+    },
+    {
+      "originalBlob": "f4d31793c3bef781c0ad7229587f5786e77f2b97",
+      "path": "maps/map1/map.json",
+      "provenance": "Missing #346 reconstruction, not exact original. Preserves previously staged intact55e6516 donor map including Market object with market=exampleMarket, matching genuine new same-commit market template and Python caller. Donor map is not exact original. Pending native verification; surviving original source retained.",
+      "sha256": "c30adeeb2c1192a4378512e0e7630547c29e52d2e693bc33ada9b8bb6b0e9ad4",
+      "source": "recovery/payloads/reconstructions/f4/f4d31793c3bef781c0ad7229587f5786e77f2b97-map.json",
+      "validatedByOriginalCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc"
+    },
+    {
+      "originalBlob": "c8dba2c378da43ff4c78e6e62e669b80f4a2f265",
+      "path": "object/CCreature.cpp",
+      "provenance": "Missing #346 reconstruction, not exact original. Preserves real previous creature inventory/combat/loot bodies; getLoot already matches intact55e6516 body now inherited by genuine CMonster after it removes its own override. Pending native verification; surviving original source retained.",
+      "sha256": "9880271b13277a7472a6a87b4e0226ff2cf0f634b0a2840296838e49f47e64bc",
+      "source": "recovery/payloads/reconstructions/c8/c8dba2c378da43ff4c78e6e62e669b80f4a2f265-CCreature.cpp",
+      "validatedByOriginalCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc"
+    },
+    {
+      "originalBlob": "60c71d28811d1706c1322cb38e96d8e497ab8055",
+      "path": "object/CCreature.h",
+      "provenance": "Missing #346 reconstruction, not exact original. Intact55e6516 same-era header donor, not recovered original; declarations include real virtual trade/getLoot needed by genuine CPlayer and CMonster sources. All other declarations/members match prior staged header ignoring formatting. Pending native verification; surviving original source retained.",
+      "sha256": "e0bc02e3272515774ac858f63c09144f615ad72e9aba9eea040e35d3e2bcb536",
+      "source": "recovery/payloads/reconstructions/60/60c71d28811d1706c1322cb38e96d8e497ab8055-CCreature.h",
+      "validatedByOriginalCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc"
+    }
+  ],
+  "limitations": [
+    "Reconstructed missing content is not exact original content.",
+    "Isolated game startup/rendered-frame proof; gameplay parity remains unverified.",
+    "Reviewed provider include compatibility must be active in authoritative shared recipe.",
+    "Resource manifest is tree/path scoped; never convert pointerBlob into a global originalBlob override."
+  ],
+  "originalAudit": {
+    "edits": 0,
+    "files": 142,
+    "inventory": "surviving-originals.json"
+  },
+  "position": 346,
+  "schemaVersion": 1,
+  "scopedEntries": [],
+  "sourceCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc",
+  "status": "fresh-full-native-verified",
+  "verification": {
+    "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/b695046601fd021fc9dee98b6419d08b57e24453463d75354e6807aba47f41f2",
+    "fingerprint": "b695046601fd021fc9dee98b6419d08b57e24453463d75354e6807aba47f41f2",
+    "sourceCommit": "f25cffe508b1d872875d941854c4b6170c9cbefc",
+    "sourceTree": "70b01787e6064dac4a67961cf3086cc655c1db99",
+    "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "entries": [
+    {
+      "commit": "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2",
+      "firstCatalogOrder": 170,
+      "originalBlob": "9d0668cc53b82faaec2241677f0d8f4cce905ccc",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed.",
+      "sha256": "df25b36bdcd749b2213884ba0a7e3f78f548849a57e05cc14ef8bfce5a53d485",
+      "source": "recovery/payloads/reconstructions/9d/9d0668cc53b82faaec2241677f0d8f4cce905ccc-df25b36bdcd7-Game.pro"
+    },
+    {
+      "commit": "fde9faf210ad1f0ef12b1b09a98b163a7efa6672",
+      "firstCatalogOrder": 171,
+      "originalBlob": "91ca6d2109710d7b1ad45e45832ca112a54844e5",
+      "path": "Game.pro",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed.",
+      "sha256": "df25b36bdcd749b2213884ba0a7e3f78f548849a57e05cc14ef8bfce5a53d485",
+      "source": "recovery/payloads/reconstructions/91/91ca6d2109710d7b1ad45e45832ca112a54844e5-df25b36bdcd7-Game.pro"
+    },
+    {
+      "commit": "fde9faf210ad1f0ef12b1b09a98b163a7efa6672",
+      "firstCatalogOrder": 171,
+      "originalBlob": "d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #170 reconstruction 6b6244e51180200914bebe6d31d0fc5f372d925b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "b8a62295421837dd1e98de6cb922f72641fa6b33296a8020a5f1749decf9b7ad",
+      "source": "recovery/payloads/reconstructions/d0/d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524-b8a622954218-map.cpp"
+    },
+    {
+      "commit": "8e8064fc1aecdee89fe581c3e6f46876859082bf",
+      "firstCatalogOrder": 174,
+      "originalBlob": "c548ce5f125c54267f1484b032cc96d30efb5cf1",
+      "path": "creatures/player.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing #174 Player body candidate adapted from restored same-version compatible donor and accepted #150 Player refresh bridge: missing update() calls actual updateViews and emits genuine statsChanged. Unknown original body behavior/parity remains inferred.",
+      "sha256": "d956f42506aa95525bfc00e2978aba6160134145b3d55053206a1e2dc34ba746",
+      "source": "recovery/payloads/reconstructions/c5/c548ce5f125c54267f1484b032cc96d30efb5cf1-d956f42506aa-player.cpp"
+    },
+    {
+      "commit": "8e8064fc1aecdee89fe581c3e6f46876859082bf",
+      "firstCatalogOrder": 174,
+      "originalBlob": "e68747958a819c2970e08a08a025e8818bca5f13",
+      "path": "map/map.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #173 reconstruction d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #170 reconstruction 6b6244e51180200914bebe6d31d0fc5f372d925b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+      "sha256": "b8a62295421837dd1e98de6cb922f72641fa6b33296a8020a5f1749decf9b7ad",
+      "source": "recovery/payloads/reconstructions/e6/e68747958a819c2970e08a08a025e8818bca5f13-b8a622954218-map.cpp"
+    },
+    {
+      "commit": "8e8064fc1aecdee89fe581c3e6f46876859082bf",
+      "firstCatalogOrder": 174,
+      "originalBlob": "505c83cd030ea813067aad1b8edae31fd4d2e6ac",
+      "path": "view/gamescene.cpp",
+      "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #173 reconstruction 38e482ddb223b7f3e4c6fe6392186bda488ccda4; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #166 reconstruction f50450a42a588a0a036ebff412b6ff245a8222cc; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.",
+      "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+      "source": "recovery/payloads/reconstructions/50/505c83cd030ea813067aad1b8edae31fd4d2e6ac-36f343a29f06-gamescene.cpp"
+    }
+  ],
+  "schemaVersion": 1,
+  "validation": {
+    "boundary": "Historical gameplay equivalence and unknown original implementation deltas remain unverified.",
+    "checks": [
+      "compilation",
+      "eventLoop",
+      "map",
+      "renderedFrame",
+      "cleanExit"
+    ],
+    "modeCounts": {
+      "editor": 0,
+      "game": 6
+    },
+    "proofs": [
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "852f33c09c02e0bb7d88f112942b37d6ef856beb30472872714512531efe1b9a",
+        "sourceCommit": "78f01f818cc3d73e47af8af1b9946653eeb8b6bf",
+        "sourceTree": "2934df35394ed0639015903c8b00c0f11d4936cf",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "b42e5e182fff1590602fb002bf3f64afc5e4e838328a30ea8361a9c4a7be01e4",
+        "sourceCommit": "87cdb93cb3d1e3a8df1e4f9186a525aa826e02e2",
+        "sourceTree": "6e611b1eea33fe5a8420623bc3d3d19970f7e25b",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "6b6dbbe9dd3feb201b90c683ed70e201a98a8d9a419b95a513747d1a295b7715",
+        "sourceCommit": "fde9faf210ad1f0ef12b1b09a98b163a7efa6672",
+        "sourceTree": "c525dc0cee9323bb5e60ae83531fb312cceb2460",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "6f312f4aa8cad2ccfbc964049d7f401a235fd680692d7d31a8c5ec6c1251745d",
+        "sourceCommit": "f1be75d6ad474f4841acef0388b3c5f47dc06119",
+        "sourceTree": "9b5e0a2459a4e1941087b609114063bd18b1aae8",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "f3aaa358a7af222efe44a97933c2beb2f5296ffdd44b0408fea72dc60c68befb",
+        "sourceCommit": "fef8eedb3fd0bda998d4dd59b7cd725c6c1540ab",
+        "sourceTree": "9c3a27ac2857eb9d2b3295de5ee476ba71b0bba9",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      },
+      {
+        "checks": [
+          "compilation",
+          "eventLoop",
+          "map",
+          "player",
+          "renderedFrame",
+          "cleanExit"
+        ],
+        "fingerprint": "68428efdd5fad432314bb8693f55b726f9e06c304c004986fd9ef3f0bdbd77cf",
+        "sourceCommit": "8e8064fc1aecdee89fe581c3e6f46876859082bf",
+        "sourceTree": "e002397fb2b3cef593c3faa2ebfe63d7a543354e",
+        "startupMode": "game",
+        "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8"
+      }
+    ],
+    "status": "success"
+  }
+}

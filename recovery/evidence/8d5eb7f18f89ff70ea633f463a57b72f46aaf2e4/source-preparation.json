@@ -1,0 +1,52 @@
+{
+  "identity": {
+    "implementationSha256": "1b5800a44d5a44b53a22a82de98f707228763bf438ceead0a5a22d857769c5cc",
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "e3c73972358732cb25915b9c734a94dda15934042ac5e77d33c76eba65a690d0"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892"
+        },
+        "path": "game/CScriptEngine.cpp",
+        "purpose": "Release Boost.Python module and namespace handles before interpreter finalization"
+      }
+    ],
+    "pythonShutdown": {
+      "inputSha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892",
+      "outputSha256": "e3c73972358732cb25915b9c734a94dda15934042ac5e77d33c76eba65a690d0",
+      "replaySha256": "55d450b2e1e89d7300d8eff39fa91498d251c23f3b83df64cebe967929cf2d73",
+      "sourceCommit": "8d5eb7f18f89ff70ea633f463a57b72f46aaf2e4"
+    }
+  },
+  "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "e3c73972358732cb25915b9c734a94dda15934042ac5e77d33c76eba65a690d0"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892"
+      },
+      "path": "game/CScriptEngine.cpp",
+      "purpose": "Release Boost.Python module and namespace handles before interpreter finalization"
+    }
+  ],
+  "status": "success",
+  "steps": [
+    {
+      "command": [
+        "history_source_prep.py",
+        "prepare-python-shutdown"
+      ],
+      "log": "/tmp/nouraajd-272-split-final/verify/snapshot-2506u3yq/preparation/python-shutdown.log",
+      "name": "pythonShutdown",
+      "returnCode": 0,
+      "timedOut": false
+    }
+  ]
+}
