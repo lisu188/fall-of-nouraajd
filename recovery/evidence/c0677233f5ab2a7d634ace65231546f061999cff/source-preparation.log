@@ -1,0 +1,20 @@
+
+=== dispatchEvents ===
+{
+  "files": {
+    "CGameScene.cpp": [
+      "8c98327a87c8d55bd30c05abd2e2f0c8b6db3789d615600f5740dd17d408b557",
+      "c55555aeb7406205132066cf3afe0f425a3b346b921a88b68e431b66f54388d3"
+    ],
+    "CGameView.cpp": [
+      "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
+      "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+    ],
+    "CScriptEngine.cpp": [
+      "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
+      "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+    ]
+  },
+  "replaySha256": "ffc63162d6c61a3840e06c4d705aa9749e5fbb1d97e6cb9cdd46f10d315c3d66",
+  "sourceCommit": "c0677233f5ab2a7d634ace65231546f061999cff"
+}

@@ -94363,8 +94363,8 @@
     {
       "originalBlob": "ae348d4b20379ec078d9aeefbaafadeec22b83b9",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "b97cde7c72d19fe74737c2e0a1472f85d456b02a5b3ca54674e206ef376ba5ce",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding creature interface across the fight fix.",
+      "sha256": "8bcc961e09efdb1fbe39ccef5be73acf9b870fcaee11bf74d0d6322e25c7de14",
       "source": "payloads/reconstructions/ae/ae348d4b20379ec078d9aeefbaafadeec22b83b9-CCreature.h"
     },
     {
@@ -99746,6 +99746,90 @@
       "provenance": "content reconstruction of the BFG-removed original; Reconstruct player respawn with restored resources and direct return to the map entry.",
       "sha256": "c719490e3eac2f333a6b5960c092f6e70c24cfe5edfb8c5f3405ab438612ce74",
       "source": "payloads/reconstructions/84/847baa6e5628e247bfe801af35f81d8467e66da6-CCreature.cpp"
+    },
+    {
+      "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "c0677233f5ab2a7d634ace65231546f061999cff",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "bf5670cf24fbfe04f4c3b1be827a94a593230bb5",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "c0677233f5ab2a7d634ace65231546f061999cff",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "bf5670cf24fbfe04f4c3b1be827a94a593230bb5",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "originalBlob": "0a1f78abca49856bb91d062cdb076ce26d70774f",
+      "path": "CGamePanel.h",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding panel declarations and creature accessors.",
+      "sha256": "4f45a9a72b2168da5ab307a34e6e026d36e760e1ad616b3d6c8af7417209a502",
+      "source": "payloads/reconstructions/0a/0a1f78abca49856bb91d062cdb076ce26d70774f-CGamePanel.h"
+    },
+    {
+      "originalBlob": "4645b0d0ee52f3095fb8930a248761bed7c5df9f",
+      "path": "CGamePanel.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding fight panel, which displays the active opponent.",
+      "sha256": "ccddbd2a3b5e934023e6ad59ab9915bfa5e576be4a5e76296a0e1ec886513854",
+      "source": "payloads/reconstructions/46/4645b0d0ee52f3095fb8930a248761bed7c5df9f-CGamePanel.cpp"
+    },
+    {
+      "originalBlob": "58a4c806f37951685adc3a848720b160e4749533",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding fight reconstruction. A focused probe confirmed that a surviving opponent stays indexed and in the fight.",
+      "sha256": "c719490e3eac2f333a6b5960c092f6e70c24cfe5edfb8c5f3405ab438612ce74",
+      "source": "payloads/reconstructions/58/58a4c806f37951685adc3a848720b160e4749533-CCreature.cpp"
+    },
+    {
+      "originalBlob": "63fe0ed5a06aa77b69b8adf8548f9b5fc897844a",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry the preceding fight reconstruction. A focused probe confirmed that a surviving opponent stays indexed and in the fight.",
+      "sha256": "c719490e3eac2f333a6b5960c092f6e70c24cfe5edfb8c5f3405ab438612ce74",
+      "source": "payloads/reconstructions/63/63fe0ed5a06aa77b69b8adf8548f9b5fc897844a-CCreature.cpp"
+    },
+    {
+      "originalBlob": "66e0cdab8663716cb24dafcfd93ae688ed396690",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Route map lifecycle and contact events through the surviving CEventHandler implementation.",
+      "sha256": "3ddce241a7af1338de9006ebd482678ef3b68cf3169767e4a6d127010c74cf4c",
+      "source": "payloads/reconstructions/66/66e0cdab8663716cb24dafcfd93ae688ed396690-CMap.cpp"
+    },
+    {
+      "originalBlob": "a60f9fbe316598bb4467a1647956fe5c7852c26a",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Route map lifecycle and contact events through the surviving CEventHandler implementation.",
+      "sha256": "3ddce241a7af1338de9006ebd482678ef3b68cf3169767e4a6d127010c74cf4c",
+      "source": "payloads/reconstructions/a6/a60f9fbe316598bb4467a1647956fe5c7852c26a-CMap.cpp"
     }
   ],
   "schemaVersion": 1
