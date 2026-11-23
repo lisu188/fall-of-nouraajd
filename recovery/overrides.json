@@ -94370,22 +94370,22 @@
     {
       "originalBlob": "5a21646570aa1b83490e21515d6b51889d993ff9",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "e592c0876e1d98f0b876d6518519ea6bd5cd81e03566dd22b68fbdc1ce8981de",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct creature declarations against surviving typed events and movement interfaces.",
+      "sha256": "25c864784de5bd73fce6e68a36bed04787dbb9d06b2f442b9af70de6c37d01c4",
       "source": "payloads/reconstructions/5a/5a21646570aa1b83490e21515d6b51889d993ff9-CCreature.h"
     },
     {
       "originalBlob": "49bf8c5df78af24ab592774e04f0c36428c4c863",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "e592c0876e1d98f0b876d6518519ea6bd5cd81e03566dd22b68fbdc1ce8981de",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct creature declarations against surviving typed events and movement interfaces.",
+      "sha256": "25c864784de5bd73fce6e68a36bed04787dbb9d06b2f442b9af70de6c37d01c4",
       "source": "payloads/reconstructions/49/49bf8c5df78af24ab592774e04f0c36428c4c863-CCreature.h"
     },
     {
       "originalBlob": "dba92cbb333824995f7bf91ad457dad5eef5a10b",
       "path": "CCreature.h",
-      "provenance": "Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.",
-      "sha256": "b93cfd53305846f863590c54e3ae277297cb85dbb044e39ef0eda3836b3efb68",
+      "provenance": "content reconstruction of the BFG-removed original; Reconstruct creature declarations against surviving typed events and movement interfaces.",
+      "sha256": "87e40e6159f08a2298fd89515d289b2c8a8ba75f7569f5d5583cb085dcf57512",
       "source": "payloads/reconstructions/db/dba92cbb333824995f7bf91ad457dad5eef5a10b-CCreature.h"
     },
     {
@@ -99830,6 +99830,195 @@
       "provenance": "content reconstruction of the BFG-removed original; Route map lifecycle and contact events through the surviving CEventHandler implementation.",
       "sha256": "3ddce241a7af1338de9006ebd482678ef3b68cf3169767e4a6d127010c74cf4c",
       "source": "payloads/reconstructions/a6/a60f9fbe316598bb4467a1647956fe5c7852c26a-CMap.cpp"
+    },
+    {
+      "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "34edc762d65df823025750663241ff65fd6c060d",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "a763a6322c2e2d3dc7785ffbb04fc54f1e71c2e3",
+      "path": "images.qrc",
+      "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
+      "sha256": "a6e7cb74d031364c65d65e92bc271935aa96fd95bf7c522e6c015640410ff9bb",
+      "source": "payloads/reconstructions/d7/d7689ea5fab1282d3a9b9599a2815a92ac0f1813-images.qrc"
+    },
+    {
+      "commit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "34edc762d65df823025750663241ff65fd6c060d",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "commit": "a763a6322c2e2d3dc7785ffbb04fc54f1e71c2e3",
+      "path": "maps/map1/map.json",
+      "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
+      "sha256": "6d18d1491ad53c0a3805d435fe60d6f347492f63280258e3a971919307d0980e",
+      "source": "payloads/reconstructions/e7/e7c3240bb09d0ffa7967859efa7eafb6f4913f5f-map.json"
+    },
+    {
+      "originalBlob": "01b5b1d4b632d55d5da5d4f605597e08119e7192",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the typed event cause to scripts and explicitly convert Python removal predicate results.",
+      "sha256": "78ee8ca1bf2a0927d3fc2ecbdc070c835507a7ae56146fa3d4f375a2a0220031",
+      "source": "payloads/reconstructions/01/01b5b1d4b632d55d5da5d4f605597e08119e7192-GameScript.cpp"
+    },
+    {
+      "originalBlob": "0441a43b31854d4796de1018dd48498a173075a9",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry coordinate operations and implement the surviving typed event methods.",
+      "sha256": "4e703913ffc7ed15b4b8b4d35db2d9390c53d857bf52671ca623082c9156e50d",
+      "source": "payloads/reconstructions/04/0441a43b31854d4796de1018dd48498a173075a9-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "27269cf3c2fa2de8a97e7f1a809f195f9d2fe7fc",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry coordinate operations and implement the surviving typed event methods.",
+      "sha256": "36af562ef5432b71d96ad8029ebf7e7ed04cda096422594a9072230acc087883",
+      "source": "payloads/reconstructions/27/27269cf3c2fa2de8a97e7f1a809f195f9d2fe7fc-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "389348518bf29a8810af37c2e366bef19fc19eee",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry fight and respawn behavior through typed contacts and the moveable interface.",
+      "sha256": "0a2e9ab3766a6f8adc6f983fca5396c32fd9735523bfd63013a62d3aabe0fd9e",
+      "source": "payloads/reconstructions/38/389348518bf29a8810af37c2e366bef19fc19eee-CCreature.cpp"
+    },
+    {
+      "originalBlob": "5ef3da9b8a9eff879e7be1dffc9e123b159a3657",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch typed lifecycle and contact events. For the movement revision, consume queued relative creature steps.",
+      "sha256": "777089feb31719b34bd852e3fffc82697b89b5f5d4f22db0a006cfa408bf9c31",
+      "source": "payloads/reconstructions/5e/5ef3da9b8a9eff879e7be1dffc9e123b159a3657-CMap.cpp"
+    },
+    {
+      "originalBlob": "6d0139ecf38e100efce8116e35edea5b9ba889e6",
+      "path": "CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Lay out generic graphics items using the accessor introduced by the surviving animation class.",
+      "sha256": "9747388626bee3608c8439d282383a2904363903c41202e1f1b21bcff1e3b980",
+      "source": "payloads/reconstructions/6d/6d0139ecf38e100efce8116e35edea5b9ba889e6-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "6dcf20e470e781b199e5ca0bd2cf55fc150fbaa7",
+      "path": "CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Fit the preceding pathfinders to the surviving synchronous movement interface.",
+      "sha256": "1c07ad4a3046bd00bcf337092ae3cedc0e01d5acc6145bb489fabbfaff26ce7f",
+      "source": "payloads/reconstructions/6d/6dcf20e470e781b199e5ca0bd2cf55fc150fbaa7-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "736d9214eb0ed3b853ab6f84058ae1ed25ef8c40",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry fight and respawn behavior through typed contacts and the moveable interface.",
+      "sha256": "0a2e9ab3766a6f8adc6f983fca5396c32fd9735523bfd63013a62d3aabe0fd9e",
+      "source": "payloads/reconstructions/73/736d9214eb0ed3b853ab6f84058ae1ed25ef8c40-CCreature.cpp"
+    },
+    {
+      "originalBlob": "7dfd0f71a162cd688a3b5f8d1c539c3c8e2f5dc4",
+      "path": "CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Fit the preceding pathfinders to the surviving synchronous movement interface.",
+      "sha256": "e04a0d34900edd7c32a8fbf2892e88092afae7c416dffa8054cc9125c78187ff",
+      "source": "payloads/reconstructions/7d/7dfd0f71a162cd688a3b5f8d1c539c3c8e2f5dc4-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "8680cbbfff97d1a8609bc918655732d0b7b81068",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the typed event cause to scripts and explicitly convert Python removal predicate results.",
+      "sha256": "78ee8ca1bf2a0927d3fc2ecbdc070c835507a7ae56146fa3d4f375a2a0220031",
+      "source": "payloads/reconstructions/86/8680cbbfff97d1a8609bc918655732d0b7b81068-GameScript.cpp"
+    },
+    {
+      "originalBlob": "91a96b199a12938d4037d139d75ebb4a46c1bcd7",
+      "path": "CCreature.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry fight and respawn behavior through typed contacts and the moveable interface.",
+      "sha256": "750ac03bc64ca88b7da9b26362cc21d504d185a3b927da09d99705414f920954",
+      "source": "payloads/reconstructions/91/91a96b199a12938d4037d139d75ebb4a46c1bcd7-CCreature.cpp"
+    },
+    {
+      "originalBlob": "91f18ad2f8b8d71e6c0d3a06ebcbf874204be605",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Resolve a visiting creature through the event cause supplied by the surviving handler.",
+      "sha256": "da0079dff309b532f4fd31a0e86fcf0472f8260156031b05323eaea4bae6161d",
+      "source": "payloads/reconstructions/91/91f18ad2f8b8d71e6c0d3a06ebcbf874204be605-CItem.cpp"
+    },
+    {
+      "originalBlob": "9ea34e560e615452df720ffdfb20cfb9cd3c87f3",
+      "path": "CMapObject.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Carry coordinate operations and implement the surviving typed event methods.",
+      "sha256": "36af562ef5432b71d96ad8029ebf7e7ed04cda096422594a9072230acc087883",
+      "source": "payloads/reconstructions/9e/9ea34e560e615452df720ffdfb20cfb9cd3c87f3-CMapObject.cpp"
+    },
+    {
+      "originalBlob": "b1f2337e7e812b44f1a02ffa5fae6abcabd496f9",
+      "path": "CPathFinder.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Fit the preceding pathfinders to the surviving synchronous movement interface.",
+      "sha256": "1c07ad4a3046bd00bcf337092ae3cedc0e01d5acc6145bb489fabbfaff26ce7f",
+      "source": "payloads/reconstructions/b1/b1f2337e7e812b44f1a02ffa5fae6abcabd496f9-CPathFinder.cpp"
+    },
+    {
+      "originalBlob": "b7966d35e92bf5fa76c2dc0ab28f6204cbf3ad1c",
+      "path": "CItem.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Resolve a visiting creature through the event cause supplied by the surviving handler.",
+      "sha256": "da0079dff309b532f4fd31a0e86fcf0472f8260156031b05323eaea4bae6161d",
+      "source": "payloads/reconstructions/b7/b7966d35e92bf5fa76c2dc0ab28f6204cbf3ad1c-CItem.cpp"
+    },
+    {
+      "originalBlob": "e06452de22b80d65db896b8d5a3c8cb06ff0b536",
+      "path": "CPlayerView.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Lay out generic graphics items using the accessor introduced by the surviving animation class.",
+      "sha256": "9747388626bee3608c8439d282383a2904363903c41202e1f1b21bcff1e3b980",
+      "source": "payloads/reconstructions/e0/e06452de22b80d65db896b8d5a3c8cb06ff0b536-CPlayerView.cpp"
+    },
+    {
+      "originalBlob": "e0a82080608a72074e1d792d480afe6976830068",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch typed lifecycle and contact events. For the movement revision, consume queued relative creature steps.",
+      "sha256": "3693ad49f085c44a2428a36c9ca39e905703fd26605872b3454d16f85412db48",
+      "source": "payloads/reconstructions/e0/e0a82080608a72074e1d792d480afe6976830068-CMap.cpp"
+    },
+    {
+      "originalBlob": "e417b8b1862fa6758d7db78f393f4939d36087c6",
+      "path": "CMap.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Dispatch typed lifecycle and contact events. For the movement revision, consume queued relative creature steps.",
+      "sha256": "777089feb31719b34bd852e3fffc82697b89b5f5d4f22db0a006cfa408bf9c31",
+      "source": "payloads/reconstructions/e4/e417b8b1862fa6758d7db78f393f4939d36087c6-CMap.cpp"
+    },
+    {
+      "originalBlob": "f3dc3dd7762e28f7206f1bb81be5ac38b35fedaa",
+      "path": "GameScript.cpp",
+      "provenance": "content reconstruction of the BFG-removed original; Expose the typed event cause to scripts and explicitly convert Python removal predicate results.",
+      "sha256": "78ee8ca1bf2a0927d3fc2ecbdc070c835507a7ae56146fa3d4f375a2a0220031",
+      "source": "payloads/reconstructions/f3/f3dc3dd7762e28f7206f1bb81be5ac38b35fedaa-GameScript.cpp"
     }
   ],
   "schemaVersion": 1
