@@ -105,7 +105,7 @@ class RecoveryStartupProbe : public QObject {
         if (QThreadPool::globalInstance()->activeThreadCount() > 0) {
             backgroundBusy = true;
         }
-        if (elapsed.elapsed() > (backgroundBusy ? loadDeadlineMs() : 20000)) {
+        if (elapsed.elapsed() > ((backgroundBusy || GAME_RECOVERY_EMBEDDED_VIEW) ? loadDeadlineMs() : 20000)) {
 #if GAME_RECOVERY_EDITOR
             finish(false, "Editor map and rendered frame did not become ready");
 #else
@@ -116,6 +116,14 @@ class RecoveryStartupProbe : public QObject {
         if (!view) {
             for (QWidget *widget : QApplication::topLevelWidgets()) {
                 view = dynamic_cast<RecoveryView *>(widget);
+#if GAME_RECOVERY_EMBEDDED_VIEW
+                if (!view) {
+                    QMainWindow *window = qobject_cast<QMainWindow *>(widget);
+                    if (window) {
+                        view = dynamic_cast<RecoveryView *>(window->centralWidget());
+                    }
+                }
+#endif
                 // A game that shows its view only after background loading (#226 LoadGameTask)
                 // must not be shown early; a still-hidden view is shown once the game is idle.
                 if (view && !view->isVisible() &&
@@ -124,9 +132,14 @@ class RecoveryStartupProbe : public QObject {
                     continue;
                 }
                 if (view) {
-                    view->setWindowState(Qt::WindowNoState);
-                    view->QWidget::resize(1280, 720);
-                    view->show();
+                    QWidget *window = view->window();
+                    window->setWindowState(Qt::WindowNoState);
+                    window->QWidget::resize(1280, 720);
+                    if (window == view) {
+                        view->show();
+                    } else {
+                        window->show();
+                    }
                     view->viewport()->installEventFilter(this);
                     break;
                 }

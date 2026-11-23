@@ -311,6 +311,8 @@ def legacyTimingAttachments(report: dict, preparation: dict) -> dict[str, bytes]
 def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, bytes]:
     preparation = report.get("sourcePreparation", {})
     if not preparation or preparation.get("status") == "not-required":
+        if report.get("sourceCommit") in source_prep.scene_prep.PINS:
+            raise VerificationError("Missing scene transition preparation")
         if report.get("sourceCommit") == source_prep.console_prep.COMMIT:
             raise VerificationError("Missing console reader preparation")
         if report.get("sourceCommit") in source_prep.merged_prep.COMMITS:
@@ -332,6 +334,9 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
     has_teleporter = "teleporterSerialization" in names
     has_timing = "legacyTimingResources" in names
     has_conflicts = "trivialConflicts" in names
+    has_scene = "sceneTransition" in names
+    if has_scene != (report.get("sourceCommit") in source_prep.scene_prep.PINS):
+        raise VerificationError("Scene transition preparation differs from the catalog commit")
     has_console = "consoleReader" in names
     if has_console != (report.get("sourceCommit") == source_prep.console_prep.COMMIT):
         raise VerificationError("Console reader preparation differs from the catalog commit")
@@ -353,6 +358,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         + (["childPathfinderCache"] if has_cache else [])
         + (["mergedHeaders"] if has_merged_headers else [])
         + (["consoleReader"] if has_console else [])
+        + (["sceneTransition"] if has_scene else [])
         + (["windowsIncludeSeparators"] if has_includes else [])
         + (["interpreter", "generator"] if has_generator else [])
     )
@@ -412,6 +418,16 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
         except ValueError as error:
             raise VerificationError(str(error)) from error
         attachments["recovery/prepare_console_reader.py"] = Path(helper.__file__).read_bytes()
+    scene_outputs = {}
+    if has_scene:
+        helper = source_prep.scene_prep
+        commit = report["sourceCommit"]
+        try:
+            helper.validate(commit, preparation)
+        except ValueError as error:
+            raise VerificationError(str(error)) from error
+        scene_outputs = helper.PINS[commit]
+        attachments["recovery/prepare_scene_transition.py"] = Path(helper.__file__).read_bytes()
     merged_outputs = {}
     if has_merged_headers:
         helper = source_prep.merged_prep
@@ -457,6 +473,7 @@ def sourcePreparationAttachments(report: dict, evidence_dir: Path) -> dict[str, 
                 or (name.startswith("src/") and name.endswith(".h"))
                 or name in include_files
                 or name in merged_outputs
+                or name in scene_outputs
                 or (has_console and name == source_prep.console_prep.TARGET)
                 or (has_conflicts and name in source_prep.conflicts_prep.FILES)
                 or (has_cache and name == source_prep.cache_prep.TARGET)
@@ -840,6 +857,10 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
             ["The Linux build copy reads console commands through Qt’s stdin notifier so the game can exit.", ""]
             if "recovery/prepare_console_reader.py" in preparation_files else []
         ),
+        *(
+            ["The isolated Linux build updates the surviving scene or tile call sites for this revision.", ""]
+            if "recovery/prepare_scene_transition.py" in preparation_files else []
+        ),
         f"![Actual startup of this recovered {mode}](recovery/startup.png)",
         "",
         "## Build and run",
@@ -883,6 +904,7 @@ def snapshotDocumentation(report: dict, evidence_dir: Path) -> dict[str, bytes]:
         *(["python3 recovery/prepare_pathfinder_cache.py"] if cache_preparation else []),
         *(["python3 recovery/prepare_merged_headers.py"] if "recovery/prepare_merged_headers.py" in preparation_files else []),
         *(["python3 recovery/prepare_console_reader.py"] if "recovery/prepare_console_reader.py" in preparation_files else []),
+        *(["python3 recovery/prepare_scene_transition.py"] if "recovery/prepare_scene_transition.py" in preparation_files else []),
         *(["python3 recovery/prepare_build_sources.py"] if include_preparation else []),
         *(["python2.7 -B preprocessor.py"] if generator_preparation else []),
         qmake,

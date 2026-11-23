@@ -369,7 +369,9 @@ def selectStartupMode(repo_root: Path, source_commit: str, source_root: Path) ->
     }
 
 
-def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str = "game") -> dict:
+def prepareSmokeAdapter(
+    source_root: Path, build_root: Path, startup_mode: str = "game", *, embedded_view: bool = False
+) -> dict:
     """Add a startup observer to the real target, retaining its original main function."""
     editor = startup_mode == "editor"
     if startup_mode not in ("game", "editor"):
@@ -443,6 +445,7 @@ def prepareSmokeAdapter(source_root: Path, build_root: Path, startup_mode: str =
         f"#define GAME_RECOVERY_VIEW_TYPE {view_name}",
         f"#define GAME_RECOVERY_MAP_GETTER {'getMap' if has_map_getter else 'recoveryGetMap'}",
         f"#define GAME_RECOVERY_STATIC_PLAYER {int(static_player)}",
+        f"#define GAME_RECOVERY_EMBEDDED_VIEW {int(embedded_view)}",
         f"#define GAME_RECOVERY_SCENE_PLAYER {int(scene_player)}",
         f"#define GAME_RECOVERY_COORDS3 {int(coords3)}",
         f"#define GAME_RECOVERY_OPENGL {int(opengl)}",
@@ -952,7 +955,12 @@ def verifySnapshot(
             result["startupCompatibility"] = "transitionalRuntimeConfiguration"
             startup["boundary"] = runtime_configs.BOUNDARY
         runtime_directories = source_prep.runtimeDirectoryPlan(source_root)
-        adapter = prepareSmokeAdapter(source_root, work_root / "observer", startup["mode"])
+        adapter = prepareSmokeAdapter(
+            source_root,
+            work_root / "observer",
+            startup["mode"],
+            embedded_view=source_commit in source_prep.scene_prep.PINS,
+        )
         libraries = prepareLibraryAliases(source_root, work_root / "observer")
         identity = {
             "sourceTree": tree["tree"],
