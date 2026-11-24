@@ -1,0 +1,61 @@
+{
+  "historicalParents": [
+    "36058fb3817f5caf1e4337866683dfa4be6747bb"
+  ],
+  "intent": "Connect the recovered old master branch (master_original) to main ancestry while preserving the current game tree.",
+  "mainParent": "b39812e382be653a3b4fa6cd1788e90e8600c153",
+  "masterOriginal": {
+    "commitMapSource": "the Recovered-from-commit footer on every master_original commit",
+    "droppedSignatureHeaders": {
+      "gpgsig": 45
+    },
+    "messageFooter": "Recovered-from-commit: <old master commit>",
+    "recoveredCommitsReused": 365,
+    "rewrittenCommits": 765,
+    "tip": "36058fb3817f5caf1e4337866683dfa4be6747bb",
+    "tipTreeEqualsOldMasterTip": true
+  },
+  "mergeMethodRequired": "merge commit; squash and rebase would discard historical parents",
+  "newlyConnectedCommitCount": 1066,
+  "oldMaster": {
+    "commitCount": 1130,
+    "firstParentCount": 1096,
+    "mergeCount": 15,
+    "note": "Former default branch; main continues from its tip at 0a3827ab (#38). Its first 365 commits carry BFG removal markers.",
+    "tip": "56b12c67742e5691b1324fcd960b4ed559a2260d"
+  },
+  "previouslySharedWithMain": {
+    "commitCount": 64,
+    "connectedBy": "c3f6bb647cc276a7ea245cc38cca333ec83abcfe (#1659)",
+    "mergeBase": "21327410befc18aac2b3d10bae939e25ba3e0f3f"
+  },
+  "protectedPaths": {
+    "CMakeLists.txt": "a59c66caefa18cdfe94a980e7f2d9fdddaad58b3",
+    "random-dungeon-generator": "7818e6dc4c60f9b08ba6ed1921a40051ee40eea5",
+    "res": "19989a8cce94eb3c4e75cf743229998df891aabf",
+    "src": "4a58913485095fdc5633e8bc7d9d64e847482bc0",
+    "vstd": "01a67405b9831f67c8c34890b0c15ddae30aabcf"
+  },
+  "protectedPathsChanged": 0,
+  "recoveredSource": {
+    "pullRequest": 1697,
+    "recoveredTip": "6f8ef86eebd1ed9c4e07598358e54d0c62f873fc",
+    "recoveredTipRef": "refs/heads/recovery/bfg/2026-11-23-complete-367/4b3902d44f874a1fae86054d7240a2af76901bb4",
+    "recoveryEvidenceRevision": "8ef5551f4b17f1ef56b45c28c853a98450ae3d1b",
+    "replayMappingPathAtEvidenceRevision": "recovery/mappings/2026-11-23-complete-367-replay.json",
+    "replayMappingSha256": "8b022f56c7bfc6fc5ccd2863f7d5e7eb08baac7a59f6d56adfadc24bc2ef6217",
+    "replayMappingUrl": "https://github.com/lisu188/fall-of-nouraajd/blob/8ef5551f4b17f1ef56b45c28c853a98450ae3d1b/recovery/mappings/2026-11-23-complete-367-replay.json"
+  },
+  "recoveryRefs": {
+    "refs/heads/master_original": "36058fb3817f5caf1e4337866683dfa4be6747bb"
+  },
+  "schemaVersion": 1,
+  "verification": {
+    "authorCommitterDatesSubjectsIdentical": true,
+    "bfgMarkerPathsReachable": 0,
+    "commitCountFirstParentMergesMatchOldMaster": true,
+    "footersMapOneToOneToOldMaster": true,
+    "missingObjects": 0,
+    "tipTreeMatchesOldMasterTip": true
+  }
+}
