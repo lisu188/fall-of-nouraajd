@@ -145,9 +145,93 @@ def compareResource(name, classic, index, reference):
         )
         if ext == "ARE":
             row["placements"] = compareAreaPlacements(old, new)
+        elif ext == "ITM":
+            row["itemRules"] = {"classic": itemRules(classic, old), "ee": itemRules(enhanced, new)}
     else:
         row["comparison"] = "fingerprintsOnly"
     return row
+
+
+def itemRules(payload, header):
+    detailed = reader.decodeItemEffects(payload)
+    data = reader.Binary(payload)
+    abilities = []
+    for ability in detailed["abilities"]:
+        start = ability["offset"]
+        abilities.append(
+            {
+                **{
+                    key: ability[key]
+                    for key in (
+                        "index",
+                        "attackTypeU8",
+                        "identificationRequirementU8",
+                        "locationU8",
+                        "targetTypeU8",
+                        "targetCountU8",
+                        "rangeU16",
+                        "maxChargesU16",
+                        "depletionU16",
+                        "projectileU16",
+                        "flagsU32",
+                        "featureIndicesInOrder",
+                        "recordSha256",
+                    )
+                },
+                "launcher": data.number(start + 0x10, "B"),
+                "speedFactor": data.number(start + 0x12, "B"),
+                "thac0Bonus": data.number(start + 0x14, "h"),
+                "diceSides": data.number(start + 0x16, "B"),
+                "diceThrown": data.number(start + 0x18, "B"),
+                "damageBonus": data.number(start + 0x1A, "h"),
+                "damageType": data.number(start + 0x1C, "H"),
+            }
+        )
+    effect_fields = (
+        "index",
+        "opcodeU16",
+        "targetU8",
+        "powerU8",
+        "parameter1U32",
+        "parameter2U32",
+        "timingU8",
+        "resistanceU8",
+        "durationU32",
+        "probabilityFirstU8",
+        "probabilitySecondU8",
+        "diceThrownOrMaxLevelU32",
+        "diceSidesOrMinLevelU32",
+        "savingThrowTypeU32",
+        "savingThrowBonusSigned32",
+        "specialU32",
+        "recordSha256",
+    )
+    effects = [
+        {
+            **{key: effect[key] for key in effect_fields},
+            "resourceField": effect["resourceOrOpcodeSpecificField"]["text"],
+            "resourceFieldSha256": effect["resourceOrOpcodeSpecificField"]["fieldSha256"],
+        }
+        for effect in detailed["effects"]
+    ]
+    return {
+        "header": {
+            key: header[key]
+            for key in (
+                "item_type",
+                "flags",
+                "price",
+                "stack_size",
+                "lore",
+                "weight",
+                "enchantment",
+                "unusable_mask",
+            )
+        },
+        "abilities": abilities,
+        "equippingEffectIndices": detailed["equippingEffectIndicesInOrder"],
+        "effects": effects,
+    }
 
 
 def compareAreaPlacements(classic, enhanced):

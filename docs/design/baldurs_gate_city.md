@@ -59,6 +59,14 @@ references, flags and transition targets are significant. Each record also compa
 used for entry priority and records the EE hostile-interruption header flags. A string reference identifies a TLK entry within its
 own edition. Matching references alone leave the actual wording unverified. The comparison covers the fields
 decoded by the existing parsers. The two compiled scripts have fingerprint comparisons only.
+
+For all nine patched city item records, the fixture separates effects applied while equipped from effects attached
+to each individual ability. It preserves ordered references, attack and damage fields, targeting, charges, and the
+effect parameters and saving throws from both editions. The classic Bolt of Lightning (`BOLT03`) attaches two
+opcode 12 records to its attack. EE attaches one. The classic Ring of Free Action (`RING09`) has 12 equipping
+effects and its EE counterpart has 54. `POTN40` declares two classic abilities and one EE ability. These are
+source records. Each corresponding native effect and its timing still require gameplay validation.
+[Infinity Engine item format](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm)
 [Infinity Engine dialogue layout](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/dlg_v1.htm)
 
 | Source location (zero-based) | Verified original patch record | Outstanding city behavior |

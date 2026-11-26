@@ -45,6 +45,51 @@ def sampleGraph():
 
 
 class CityPatchAuditTest(unittest.TestCase):
+    def testItemAbilityEffectsStayAttachedToTheirOwnerAndPreserveSignedDamage(self):
+        from tests.test_candlekeep_source import itemWithInlineEffects
+
+        classic = bytearray(itemWithInlineEffects((1, 1), equipping=(0, 1)))
+        enhanced = bytearray(classic)
+        struct.pack_into("<h", classic, 0x72 + 0x1A, -2)
+        struct.pack_into("<H", enhanced, 0x72 + 0x20, 1)
+        index = Mock()
+        index.read.return_value = (bytes(enhanced), {})
+        report = audit.compareResource("CITY.ITM", bytes(classic), index, {"sha256": audit.reader.sha256(enhanced)})
+        old, new = report["itemRules"]["classic"], report["itemRules"]["ee"]
+        self.assertEqual([0], old["equippingEffectIndices"])
+        self.assertEqual([[0], [1]], [row["featureIndicesInOrder"] for row in old["abilities"]])
+        self.assertEqual([[1], [1]], [row["featureIndicesInOrder"] for row in new["abilities"]])
+        self.assertEqual([-2, 0], [row["damageBonus"] for row in old["abilities"]])
+        self.assertEqual([0, 1], [row["index"] for row in old["effects"]])
+        self.assertEqual(old["effects"], new["effects"])
+
+    def testSavedItemFactsDistinguishAbilityEffectsFromEquippingEffectsInBothEditions(self):
+        rows = json.loads((audit.ROOT / "tests/fixtures/baldurs_gate_city_classic_patch.json").read_bytes())[
+            "resources"
+        ]
+        items = {name: row["itemRules"] for name, row in rows.items() if name.endswith(".ITM")}
+        self.assertEqual(9, len(items))
+        for rules in items.values():
+            for edition in ("classic", "ee"):
+                record = rules[edition]
+                referenced = set(record["equippingEffectIndices"])
+                for ability in record["abilities"]:
+                    referenced.update(ability["featureIndicesInOrder"])
+                self.assertEqual(sorted(referenced), [effect["index"] for effect in record["effects"]])
+        potion = items["POTN40.ITM"]
+        self.assertEqual(
+            [[0, 1, 2, 3, 4, 5], [6, 7]],
+            [row["featureIndicesInOrder"] for row in potion["classic"]["abilities"]],
+        )
+        self.assertEqual(1, len(potion["ee"]["abilities"]))
+        ring = items["RING09.ITM"]
+        self.assertEqual([12, 54], [len(ring[edition]["equippingEffectIndices"]) for edition in ("classic", "ee")])
+        bolt = items["BOLT03.ITM"]
+        for edition, expected in (("classic", [12, 12, 174]), ("ee", [12, 174])):
+            rules = bolt[edition]
+            effects = {row["index"]: row["opcodeU16"] for row in rules["effects"]}
+            self.assertEqual(expected, [effects[index] for index in rules["abilities"][0]["featureIndicesInOrder"]])
+
     def testEntryPriorityAndHostileInterruptFlagsSurviveIdenticalTriggerText(self):
         def payload(header, triggers):
             pool = header + 32
