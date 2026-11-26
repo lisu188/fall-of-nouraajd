@@ -164,22 +164,24 @@ struct PreviewFixture {
 
     ~PreviewFixture() { game->getContext()->shutdown(); }
 
-    void waitForPlanning() {
-        expect_true(pumpUntil([this] { return !world->isTravelling() || map->isMoving(); }),
-                    "worker route planning must finish before movement assertions");
+    void waitForCommittedPlayerStep() {
+        expect_true(pumpUntil([this] {
+                        const auto &origin = player->getPendingMoveOrigin();
+                        return map->isMoving() && origin && player->getCoords() != *origin;
+                    }),
+                    "posted work must commit the player step before inspecting or replacing it");
     }
 
     void frame() {
-        waitForPlanning();
         world->renderObject(gui, world->getLayout()->getRect(world), static_cast<int>(frameTime));
         frameTime += 75;
         auto loop = vstd::event_loop<>::instance();
         loop->runFrame();
         loop->runUntilIdle();
+        game_async::waitForProgress(loop->hasReadyWork());
     }
 
     void finishMovement() {
-        waitForPlanning();
         for (int frames = 0; frames < 128 && (world->isTravelling() || map->isMoving()); ++frames)
             frame();
         expect_true(!world->isTravelling() && !map->isMoving(),
@@ -526,10 +528,16 @@ void testOneClickWalksEveryStepWithoutEnterAndStopsAtDestination() {
     const auto turn = fixture.map->getTurn();
     const auto searches = fixture.map->getNavigationService()->searchCount();
     expect_true(fixture.clickDestination(Coords(3, 0, 0)), "one left click starts the selected route");
-    fixture.waitForPlanning();
+    fixture.waitForCommittedPlayerStep();
     expect_true(fixture.world->isTravelling() && fixture.map->isMoving() && fixture.map->getTurn() == turn &&
                     fixture.player->getCoords() == Coords(1, 0, 0),
                 "posted-work draining must leave the first committed step waiting for its visible animation");
+    for (int frames = 0; frames < 8 && fixture.map->getTurn() == turn; ++frames) {
+        fixture.frame();
+    }
+    expect_true(fixture.world->isTravelling() && !fixture.map->isMoving() && fixture.map->getTurn() == turn + 1 &&
+                    fixture.player->getCoords() == Coords(1, 0, 0),
+                "the GUI must await its next display frame between committed steps of one route");
     fixture.finishMovement();
     expect_true(fixture.player->getCoords() == Coords(3, 0, 0) && fixture.map->getTurn() == turn + 3,
                 "a single click walks three real steps and consumes exactly three turns without Enter");
@@ -583,13 +591,13 @@ void testNewClickAndEscapeInterruptAtTheNextStepBoundary() {
     PreviewFixture fixture;
     const auto turn = fixture.map->getTurn();
     fixture.world->startTravel(fixture.gui, Coords(6, 0, 0));
-    fixture.waitForPlanning();
+    fixture.waitForCommittedPlayerStep();
     fixture.world->startTravel(fixture.gui, Coords(1, 1, 0));
     fixture.finishMovement();
     expect_true(fixture.player->getCoords() == Coords(1, 1, 0) && fixture.map->getTurn() == turn + 2,
                 "a new destination replaces the old route after the already committed step finishes");
     fixture.world->startTravel(fixture.gui, Coords(6, 1, 0));
-    fixture.waitForPlanning();
+    fixture.waitForCommittedPlayerStep();
     SDL_Event escape{};
     escape.type = SDL_KEYDOWN;
     escape.key.keysym.sym = SDLK_ESCAPE;
