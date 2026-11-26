@@ -230,13 +230,13 @@ def approachCityObject(d, name, *, reenter=False, movement_cells=None):
             dialog = name + "Dialog"
             key = d.call(target_object, "getStringProperty", "lockKey")
             if key and resources(d)[2][key]:
-                d.chooseUi(dialog, "useKey", dialogue_choices=[])
+                d.chooseUi(dialog, "useKey", immediate=True)
             else:
                 action, condition = (
                     ("unlock", "canUnlock") if d.condition(dialog, "canUnlock") else ("force", "canForce")
                 )
                 d.test.assertTrue(d.condition(dialog, condition), ("Cannot open the authored doorway", name))
-                d.chooseUi(dialog, action, dialogue_choices=[])
+                d.chooseUi(dialog, action, immediate=True)
             d.test.assertFalse(d.call(target_object, "getBoolProperty", "locked"), ("Door is still locked", name))
         d.navigateCoords(point, limit=remaining)
         d.test.assertLessEqual(d.turns - initial_turns, budget, ("City approach turn budget exhausted", name, budget))

@@ -25,9 +25,9 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
         driver.call.side_effect = lambda actor, method, key: locked if key == "locked" else ""
         driver.condition.side_effect = lambda dialog, method: method == "canForce"
 
-        def choose(dialog, action, *, dialogue_choices):
+        def choose(dialog, action, *, immediate):
             nonlocal locked
-            self.assertEqual(("doorDialog", "force", []), (dialog, action, dialogue_choices))
+            self.assertEqual(("doorDialog", "force", True), (dialog, action, immediate))
             self.assertEqual(origin, driver.coords())
             locked = False
 

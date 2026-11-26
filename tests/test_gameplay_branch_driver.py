@@ -212,6 +212,18 @@ class GameplayBranchDriverTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "Native inventory reader contents"):
             driver.chooseUi("nativeDialog", action, reader_title="Niklos", reader_lines=["Potion x1"])
 
+    def testImmediateReplyRequiresRecordedSelectionAndNoNestedInteraction(self):
+        driver, state, action = self.guiDriver(missing=True)
+        witness = driver.chooseUi("nativeDialog", action, immediate=True)
+        self.assertEqual(("nativeImmediateReply", 1), (witness["kind"], witness["nativeOptionSeq"]))
+        self.assertEqual([], state["children"])
+        driver, _, action = self.guiDriver()
+        with self.assertRaisesRegex(AssertionError, "Unexpected nested interaction"):
+            driver.chooseUi("nativeDialog", action, immediate=True)
+        driver, _, action = self.guiDriver(missing=True, wrong_receipt=True)
+        with self.assertRaisesRegex(AssertionError, "exact input receipt"):
+            driver.chooseUi("nativeDialog", action, immediate=True)
+
     def testUiRouteRejectsHeadlessCancellationMissingNativeReceiptAndAbsentSelection(self):
         for mutation in ({"missing": True}, {"wrong_receipt": True}, {}):
             with self.subTest(mutation=mutation):

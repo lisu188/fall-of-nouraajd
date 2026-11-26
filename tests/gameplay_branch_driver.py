@@ -272,6 +272,7 @@ class GameplayBranchDriver:
         cancel_choice=False,
         cancel_after_dialogue_choices=False,
         forbidden_choice_ids=(),
+        immediate=False,
     ):
         """Use authored dialog keys and the real nested native reader/choice; never inject a selection result."""
         gui = self.enableIsolatedGui()
@@ -284,7 +285,18 @@ class GameplayBranchDriver:
             self.test.assertIsInstance(forbidden_choice_ids, (tuple, list))
             self.test.assertLessEqual(len(forbidden_choice_ids), 256)
             self.test.assertTrue(all(isinstance(value, str) and value for value in forbidden_choice_ids))
-        if cancel_choice:
+        if immediate:
+            self.test.assertFalse(
+                cancel_choice
+                or cancel_after_dialogue_choices
+                or forbidden_choice_ids
+                or reader_lines
+                or selected_id is not None
+                or reader_title is not None
+                or dialogue_choices is not None,
+                "An immediate reply cannot also expect a nested interaction",
+            )
+        elif cancel_choice:
             self.test.assertIsNone(selected_id, "Cancellation cannot confirm an inventory row")
             self.test.assertIsNone(reader_title, "Cancellation requires the actual native chooser")
             self.test.assertIsNone(dialogue_choices, "Cancellation cannot replace a dialogue sequence")
@@ -343,7 +355,12 @@ class GameplayBranchDriver:
         self.call(panel, "keyboardEvent", gui, 768, 13)
         self.pump()
         witness = {"dialog": dialog_id, "action": action, "option": option["number"], "state": "ENTRY"}
-        if cancel_choice:
+        if immediate:
+            self.test.assertEqual(panel, self.nativePanel("CGameDialogPanel"))
+            for nested_type in ("CGameCampaignPanel", "CGameCampaignBrowserPanel"):
+                self.test.assertIsNone(self.nativePanel(nested_type, required=False), "Unexpected nested interaction")
+            witness["kind"] = "nativeImmediateReply"
+        elif cancel_choice:
             nested = self.nativePanel("CGameCampaignBrowserPanel")
             witness.update(self._cancelUiChoice(gui, nested, forbidden_choice_ids))
         elif dialogue_choices is not None:
