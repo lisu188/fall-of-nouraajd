@@ -21,8 +21,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 PREFIX = "maps/baldursGate/images/npc/"
 # The reviewed Seven Suns integration adds its stock, warning quest and dialogue metadata to the ff0b baseline.
+# Harbor delivery additionally consumes its audited MISC55 input; a separate inverse regression proves that delta.
 # Restore reviewed environment paths and remove source actor artwork/assets; all gameplay fields remain frozen.
-GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
+GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "63f8bc0a0027852238ce5aac7f8139a641eb8728f176fb7b344e0c0ae5017a24"
 
 
 def readJson(path):
@@ -180,6 +181,21 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
             self.assertEqual(row, changed, key)
         untouched = self.config.keys() - sourceActors(self.config).keys()
         self.assertEqual({key: before[key] for key in untouched}, {key: config[key] for key in untouched})
+
+    def testHarborDeliveryExtendsFrozenGameplayOnlyAtAuditedConsumption(self):
+        baseline = withoutAppearance(self.document, self.config, self.geometry, self.dialogs)
+        properties = baseline["config"]["cityClock"]["properties"]
+        quests = json.loads(properties["questDefinitions"].removeprefix("city-json:"))
+        delivery = next(row for row in quests["quests"] if row["id"] == "rescueEltan")
+        complete = next(row for row in delivery["outcomes"] if row["id"] == "complete")
+        self.assertEqual([{"anyOf": ["MISC55"], "count": 1, "consume": True}], complete["effects"]["takeItems"])
+        del complete["effects"]["takeItems"][0]["consume"]
+        self.assertEqual(
+            "Delivery consumes the portable body; source journals, EltanMove/BroughtEltan and the returned Duke remain pending.",
+            delivery["acceptanceGaps"].pop(),
+        )
+        properties["questDefinitions"] = "city-json:" + json.dumps(quests, separators=(",", ":"))
+        self.assertEqual("3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02", digest(baseline))
 
     def testAppearanceCoverageIsCompleteStableAndIndependentOfInputOrdering(self):
         apply = self.requireAppearanceHelper()

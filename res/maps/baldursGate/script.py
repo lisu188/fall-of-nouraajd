@@ -1100,7 +1100,8 @@ def load(self, context):
         if player.getGold() < cost or any(not hasItems(player, row) for row in effects.get("takeItems", [])):
             return False
         for row in effects.get("takeItems", []):
-            if not takeItems(player, row, owner if isinstance(owner, CCreature) else None):
+            recipient = owner if isinstance(owner, CCreature) and not row.get("consume") else None
+            if not takeItems(player, row, recipient):
                 return False
         player.addGold(effects.get("gold", 0))
         player.addExp(effects.get("xp", 0))
@@ -2631,7 +2632,17 @@ def load(self, context):
                 return False
             row = quest(self, key)
             outcome = firstMatch(entry for entry in row["outcomes"] if entry["id"] == outcome_key)
-            if not applyEffects(self, outcome.get("effects", {}), self.actor()):
+            effects = outcome.get("effects", {})
+            if key == "rescueEltan" and outcome_key == "complete":
+                # Retained quest definitions from older saves also require the audited body disposal.
+                effects = dict(
+                    effects,
+                    takeItems=[
+                        dict(row, consume=True) if row.get("anyOf", [row.get("item", "")]) == ["MISC55"] else row
+                        for row in effects.get("takeItems", [])
+                    ],
+                )
+            if not applyEffects(self, effects, self.actor()):
                 return False
             if not row.get("repeatable"):
                 world(self).setBoolProperty("plugin_cityOutcome_" + key + "_" + outcome_key, True)
