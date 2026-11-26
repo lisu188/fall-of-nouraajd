@@ -1830,10 +1830,12 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             for tileset in document["tilesets"]
             for index, row in tileset["tileproperties"].items()
         }
+        tile_recipes = json.loads((ROOT / "res/config/tiles.json").read_text(encoding="utf-8"))
+        tile_recipes.update(routes.documents()["config"])
         cells = {
             (index % document["width"], index // document["width"], 0)
             for index, gid in enumerate(ground["data"])
-            if tile_names[gid] in {"GroundTile", "cityStreetTile"}
+            if tile_recipes[tile_names[gid]]["properties"]["canStep"]
         }
         links = {tuple(row["origin"]): row for row in geometry["connections"]}
         optional = defaultdict(list)

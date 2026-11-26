@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 from scripts import build_baldurs_gate_city as builder
 from tests.test_baldurs_gate_city_environment import normalizeEnvironmentAnimations
+from tests.city_material_review import normalizeFloorMaterials
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
@@ -48,6 +49,7 @@ def sourceActors(config):
 def withoutAppearance(document, config, geometry, dialogs):
     document, config = deepcopy(document), deepcopy(config)
     document.pop("assets", None)
+    normalizeFloorMaterials(document, config, geometry)
     normalizeEnvironmentAnimations(config)
     for row in sourceActors(config).values():
         row["properties"].pop("animation", None)

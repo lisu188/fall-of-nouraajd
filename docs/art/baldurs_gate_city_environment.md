@@ -27,10 +27,27 @@ the eastern gate marker. The explicit source identities and destinations are doc
 `baldurs_gate_city_environment_mapping.json`. The renderer displays each building as one map-cell icon;
 these images do not add a larger building footprint or alter an entrance.
 
-The existing city street and wall tiles use `streetCobble` and `stoneWall`. Their resource IDs, tile types,
-passability and other fields remain unchanged. The global `GroundTile` is unchanged. The other ten materials
-are staged for later floor authoring, and `ruinedTemple` is staged for a later underground appearance pass.
-Interior exits and stairs keep their current graphics.
+The city now uses all twelve terrain materials. The explicit decisions for all 212 areas, including every
+one of the 203 interiors and underground areas, are recorded in `baldurs_gate_city_floor_materials.json`.
+The manifest distinguishes 53 classic-guide location/floor identities from the chosen artistic materials.
+Unidentified ordinary interiors receive a neutral wooden floor without inventing a building identity.
+The palace, temples and Sorcerous Sundries use marble; civic/trading premises use flagstone; the maze and
+final temple use worn dungeon paving; the Undercity uses earth; and the three sewer areas use wet masonry.
+These are visual adaptations, not claims about original BG1 TIS or WED pixels.
+
+Outdoor grass, earth, boardwalk and water accents follow the dominant raw search-map samples in each
+already projected native cell. Source value 12 also supplies water appearances in already blocked cells.
+The [IESDP terrain legend](https://gibberlings3.github.io/iesdp/appendices/search.html) documents BG2, so
+interpreting those supporting EE indices is an explicit aesthetic conversion with unresolved classic
+material differences. Water-looking walkable cells remain walkable; blocked water-looking cells remain
+blocked. Appearance supplies no swimming, hazards, footstep effects or new movement rules.
+
+Sixteen map-local recipes clone the exact existing `CTile` street, ground or wall properties and change
+only their texture references. Class, `canStep`, `tileType`, label and movement cost remain unchanged.
+The global `GroundTile` is unchanged. Existing tile identities remain in the first palette, which now
+uses an image collection referencing the existing PNGs; the loader reads that palette's type table and
+requires no additional tileset or native API. Interior exits and stairs keep their current graphics.
+The `ruinedTemple` building icon remains staged for a later underground appearance pass.
 
 All 24 assets are declared in the map's `assets` list alongside the existing 41 NPC PNGs. The existing
 CMake map-asset hook copies them and the map directory installation rule includes them. Animation IDs omit
@@ -49,10 +66,16 @@ but perfect seamless joins have not been certified.
 
 ## Validation boundaries
 
-The frozen gameplay guard keeps its existing digest. Test-owned normalization first checks each approved
-new animation and restores only those exact 55 environmental fields to their old values. The existing
-NPC normalization then proves the rest of the gameplay configuration is unchanged. Tests also preserve
-the original 41-NPC asset checks, portal targets, locks, tile data, passability, inventories and rewards.
+The frozen gameplay guard keeps its existing digest. A separate test-owned area table and an independently
+expanded source raster check every material assignment and every new recipe. The independently reconstructed
+legacy masks must match the five layer hashes from immutable main `9acf3570`, covering all 215,040 cells.
+Only after checking every current cell and the complete palette may normalization restore the original
+GIDs and remove the sixteen exact appearance recipes. Wrong walkable appearances, blocked appearances,
+outside cells, classes, movement properties and palette image paths are rejected.
+
+Normalization then checks and restores the existing 55 environment animations and removes the reviewed
+NPC appearances. The unchanged frozen digest proves the remaining map, actors, portals, quests, inventories,
+rewards, geometry and dialogs remain unchanged. No digest is rebased to accept the material pass.
 
 The interaction ledger retains all 7,811 rows and their statuses; only the configuration input fingerprint
 changes. The catalog's reviewed content fingerprint changes because it includes animation references and
