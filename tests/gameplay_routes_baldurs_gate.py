@@ -1650,14 +1650,30 @@ def palaceAndTrap(d):
     d.test.assertTrue(d.flag("plugin_cityFlag_palaceCourtyardOpen"))
     travel(d, "AR0108")
     d.check("baldursGate.palace.twoSwitches", currentArea(d) == "AR0108")
-    planner.contact("cityAr0200Door12")
-    dialog = "cityAr0200Door12Dialog"
+    door_name = "cityAr0200Door12"
+    planner.contact(door_name)
+    dialog = door_name + "Dialog"
+    animation = "maps/baldursGate/images/interactions/"
+
+    def requireDoorState(opened):
+        door = d.object(door_name)
+        d.test.assertEqual("AR0200#door12", d.call(door, "getStringProperty", "sourceDoor"))
+        d.test.assertIs(opened, d.call(door, "getBoolProperty", "open"))
+        d.test.assertEqual(
+            animation + ("openDoor" if opened else "closedDoor"), d.call(door, "getStringProperty", "animation")
+        )
+        d.test.assertTrue(d.call(door, "getBoolProperty", "canStep"))
+
+    requireDoorState(False)
     if d.condition(dialog, "canUnlock"):
         d.choose(dialog, "unlock")
     d.choose(dialog, "open")
-    d.test.assertTrue(d.call(d.object("cityAr0200Door12"), "getBoolProperty", "open"))
+    requireDoorState(True)
+    d.saveAndReload("city-open-north-ward-door")
+    requireDoorState(True)
     d.choose(dialog, "close")
-    d.check("baldursGate.doors.openAndClose", not d.call(d.object("cityAr0200Door12"), "getBoolProperty", "open"))
+    requireDoorState(False)
+    d.check("baldursGate.doors.openAndClose", True, sourceDoor="AR0200#door12", restoredOpenState=True)
     planner.contact("cityAr0803Container1")
     d.test.assertTrue(d.condition("cityAr0803Container1Dialog", "canDisarm"))
     hp = d.call(d.player, "getHp")

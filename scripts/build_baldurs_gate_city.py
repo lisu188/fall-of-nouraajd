@@ -294,7 +294,11 @@ def applyCityEnvironmentAppearances(source, config):
         config[name]["properties"]["animation"] = animation
     return [
         {"path": "images/" + directory + "/" + appearance + ".png", "kind": "file"}
-        for directory, appearances in (("buildings", CITY_BUILDING_ASSETS), ("tiles", CITY_TILE_ASSETS))
+        for directory, appearances in (
+            ("buildings", CITY_BUILDING_ASSETS),
+            ("tiles", CITY_TILE_ASSETS),
+            ("interactions", ("closedDoor", "openDoor")),
+        )
         for appearance in appearances
     ]
 
@@ -1317,7 +1321,7 @@ def compileCity(source, quests=None):
             config[name] = definition(
                 "BaldursGateDoor",
                 label="Door",
-                animation="images/misc/closed_door",
+                animation="maps/baldursGate/images/interactions/" + ("openDoor" if door["flags"] & 1 else "closedDoor"),
                 canStep=True,
                 sourceArea=area_id,
                 simulationRegion=area_id,
