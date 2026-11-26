@@ -26,6 +26,7 @@ try:
     from scripts.build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
     from scripts.build_baldurs_gate_city_poison import preparePoisonSource
     from scripts.build_baldurs_gate_merchant_stock import stockDefinitions
+    from scripts.build_baldurs_gate_city_materials import applyCityFloorMaterials
 except ModuleNotFoundError:
     from build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from build_baldurs_gate_city_relocations import buildRelocations
@@ -33,6 +34,7 @@ except ModuleNotFoundError:
     from build_baldurs_gate_city_custody import custodyDefinitions, prepareCustodyActors
     from build_baldurs_gate_city_poison import preparePoisonSource
     from build_baldurs_gate_merchant_stock import stockDefinitions
+    from build_baldurs_gate_city_materials import applyCityFloorMaterials
 
 # Supporting EE BASE facts: each CRE SHA256 equals the existing source fixture.
 # These are visual adaptations; original-game parity remains unestablished.
@@ -1545,6 +1547,7 @@ def compileCity(source, quests=None):
         applyCityAppearances(source, config) + applyCityEnvironmentAppearances(source, config),
         key=lambda row: row["path"],
     )
+    applyCityFloorMaterials(source, document, config, geometry)
     protectCityDefinitions(config)
     return document, config, geometry
 

@@ -10,6 +10,12 @@ import re
 import unittest
 
 from scripts import build_baldurs_gate_city as builder
+from tests.city_material_review import (
+    REVIEWED_AREA_MATERIALS,
+    normalizeFloorMaterials,
+    reviewedMaterialCells,
+    reviewedRecipes,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
@@ -180,7 +186,9 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
         self.assertEqual("GroundTile", types["9"]["type"])
         self.assertEqual("cityWallTile", types["11"]["type"])
         self.assertNotIn("staticTerrainData", self.document["properties"])
-        for layer in self.document["layers"]:
+        normalized_document, normalized_config = deepcopy(self.document), deepcopy(self.config)
+        normalizeFloorMaterials(normalized_document, normalized_config, self.geometry)
+        for layer in normalized_document["layers"]:
             if layer["type"] == "tilelayer":
                 self.assertEqual({6, 12} if layer["properties"]["level"] == "0" else {10, 12}, set(layer["data"]))
 
@@ -244,12 +252,10 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
             normalizeEnvironmentAnimations(config)
         document = deepcopy(self.document)
         document["layers"][0]["data"][0] = 6
-        self.assertNotEqual(
-            GAMEPLAY_SHA256_WITH_SEVEN_SUNS,
-            digest(withoutAppearance(document, self.config, self.geometry, dialogs)),
-        )
+        with self.assertRaisesRegex(ValueError, "Unreviewed city material cell assignment"):
+            withoutAppearance(document, self.config, self.geometry, dialogs)
 
-    def testDeclarationsIncludeAllTwentyFourEnvironmentAssetsAndOnlyTwoActiveTileTextures(self):
+    def testDeclarationsIncludeAllTwentyFourEnvironmentAssetsAndAllTwelveTileTextures(self):
         expected = {
             "images/buildings/" + appearance + ".png" for appearance in (*REVIEWED_BUILDING_TARGETS, "ruinedTemple")
         } | {"images/tiles/" + appearance + ".png" for appearance in REVIEWED_TILE_ASSETS}
@@ -272,8 +278,110 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
             if row.get("properties", {}).get("animation", "").startswith("maps/baldursGate/images/tiles/")
         }
         self.assertEqual(
-            {"maps/baldursGate/images/tiles/streetCobble", "maps/baldursGate/images/tiles/stoneWall"}, active_tiles
+            {"maps/baldursGate/images/tiles/" + material for material in REVIEWED_TILE_ASSETS}, active_tiles
         )
+
+    def testEveryDeclaredAreaHasAnExplicitMaterialDecisionAndEveryCellKeepsItsNativeSemantics(self):
+        manifest = readJson(ROOT / "docs/art/baldurs_gate_city_floor_materials.json")
+        assignments = {area: material for material, areas in REVIEWED_AREA_MATERIALS.items() for area in areas}
+        self.assertEqual(212, len(assignments))
+        self.assertEqual(set(self.source["areas"]), set(assignments))
+        self.assertEqual(set(assignments), set(manifest["areas"]))
+        self.assertFalse(manifest["originalArtworkParityEstablished"])
+        self.assertEqual(
+            hashlib.sha256((ROOT / manifest["sourceFixture"]).read_bytes()).hexdigest(), manifest["sourceFixtureSha256"]
+        )
+        for area, facts in self.source["areas"].items():
+            with self.subTest(area=area):
+                decision = manifest["areas"][area]
+                self.assertEqual(assignments[area], decision["floorMaterial"])
+                self.assertEqual(facts["sha256"], decision["areaSha256"])
+                self.assertEqual(facts["searchMap"]["sha256"], decision["searchMapSha256"])
+                self.assertEqual(facts["classification"], decision["classification"])
+                self.assertIn("visual adaptation", decision["materialEvidence"])
+        self.assertEqual(203, sum(row["classification"] != "exterior" for row in manifest["areas"].values()))
+        document, config = deepcopy(self.document), deepcopy(self.config)
+        normalizeFloorMaterials(document, config, self.geometry)
+        self.assertEqual(self.config.keys() - config.keys(), {name for _base, name, _row in reviewedRecipes().values()})
+        self.assertEqual(65, len(document["assets"]))
+        self.assertEqual(self.document["properties"], document["properties"])
+        self.assertEqual(
+            [row for row in self.document["layers"] if row["type"] == "objectgroup"],
+            [row for row in document["layers"] if row["type"] == "objectgroup"],
+        )
+
+    def testMaterialConservationRejectsWrongAppearanceClassMovementAndAnyCellChange(self):
+        old, expected, _baseline = reviewedMaterialCells()
+        self.assertEqual(215040, sum(map(len, old.values())))
+        for mutation in (
+            "walkAppearance",
+            "blockedAppearance",
+            "outside",
+            "class",
+            "canStep",
+            "tileType",
+            "movementCost",
+            "image",
+        ):
+            document, config = deepcopy(self.document), deepcopy(self.config)
+            layer = next(
+                row for row in document["layers"] if row["type"] == "tilelayer" and row["properties"]["level"] == "1"
+            )
+            name = reviewedRecipes()[18][1]
+            if mutation == "walkAppearance":
+                index = expected[1].index(18)
+                layer["data"][index] = 20
+            elif mutation == "blockedAppearance":
+                index = next(index for index, gid in enumerate(expected[1]) if gid in (26, 27, 28))
+                layer["data"][index] = 12
+            elif mutation == "outside":
+                layer["data"][0] = 26
+            elif mutation == "class":
+                config[name]["class"] = "RoadTile"
+            elif mutation == "image":
+                document["tilesets"][0]["tiles"][-1]["image"] = "images/tiles/woodenFloor.png"
+            else:
+                config[name]["properties"][mutation] = {"canStep": False, "tileType": "road", "movementCost": 7}[
+                    mutation
+                ]
+            with self.subTest(mutation=mutation), self.assertRaisesRegex(ValueError, "Unreviewed city material"):
+                normalizeFloorMaterials(document, config, self.geometry)
+
+    def testMaterialPassIsDeterministicAndUsesEveryExistingMaterialOnActualCells(self):
+        document, config = deepcopy(self.document), deepcopy(self.config)
+        builder.applyCityFloorMaterials(self.source, document, config, self.geometry)
+        self.assertTrue(self.document == document, "Reapplying materials must preserve the complete map")
+        self.assertTrue(self.config == config, "Reapplying materials must preserve every complete recipe")
+        types = document["tilesets"][0]["tileproperties"]
+        materials = {
+            config[types[str(gid - 1)]["type"]]["properties"]["animation"].rsplit("/", 1)[1]
+            for layer in document["layers"]
+            if layer["type"] == "tilelayer"
+            for gid in set(layer["data"])
+        }
+        self.assertEqual(set(REVIEWED_TILE_ASSETS), materials)
+        self.assertEqual(0, document["tilesets"][0]["columns"])
+        self.assertEqual(len(document["tilesets"][0]["tiles"]), document["tilesets"][0]["tilecount"])
+        for row in document["tilesets"][0]["tiles"]:
+            self.assertTrue((MAP_ROOT / row["image"]).is_file(), row)
+
+    def testMaterialSourceAndRecipeRejectionsOccurBeforeAnyMutation(self):
+        for mutation in ("areaMissing", "areaFingerprint", "searchFingerprint", "recipe", "class"):
+            source, document, config = deepcopy(self.source), deepcopy(self.document), deepcopy(self.config)
+            if mutation == "areaMissing":
+                del source["areas"]["AR0125"]
+            elif mutation == "areaFingerprint":
+                source["areas"]["AR0125"]["sha256"] = "0" * 64
+            elif mutation == "searchFingerprint":
+                source["areas"]["AR0125"]["searchMap"]["sha256"] = "0" * 64
+            elif mutation == "class":
+                config["cityStreetTile"]["class"] = "RoadTile"
+            else:
+                config[reviewedRecipes()[18][1]]["properties"]["canStep"] = False
+            before = deepcopy((document, config))
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                builder.applyCityFloorMaterials(source, document, config, self.geometry)
+            self.assertEqual(before, (document, config))
 
 
 class BaldursGateCityEnvironmentAssetTest(unittest.TestCase):
