@@ -153,6 +153,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getPlayer",
         "getTile",
         "getTurn",
+        "getViewAreaAt",
         "isMoving",
         "lookupNavigationStepCost",
         "move",
