@@ -51,7 +51,7 @@ AUTHORED_MAPS = (
 EVENT_CALLBACKS = frozenset(
     {"trigger", "onEnter", "onTurn", "onCreate", "onDestroy", "onOpen", "onUse", "onComplete", "isCompleted"}
 )
-REVIEWED_GAMEPLAY_DIGEST = "fb33352bd3af04bd38c11a492ea1801e6ff52bcb88e7856a99e754ad8a77f638"
+REVIEWED_GAMEPLAY_DIGEST = "b9026cbdc5318373dc3ac659499c6410bc8c2b3c712abf476ba05d802463e3f3"
 
 
 @dataclass(frozen=True)
@@ -748,6 +748,16 @@ def contractEvidence():
     native = "test.py:GameTest."
     city = "tests/test_baldurs_gate_city_content.py:BaldursGateCityContentTest."
     return {
+        "res/maps/baldursGate/script.py:BaldursGateDialog.acceptCythandriaDiary": (
+            "source-double",
+            "tests/test_baldurs_gate_tamoko_early_routes.py:BaldursGateTamokoEarlyRoutesTest."
+            "testLegacyDiaryEntryCallbacksDenyBothConditionAndActionAfterRefusal",
+        ),
+        "res/maps/baldursGate/script.py:BaldursGateDialog.canAcceptCythandriaDiary": (
+            "source-double",
+            "tests/test_baldurs_gate_tamoko_early_routes.py:BaldursGateTamokoEarlyRoutesTest."
+            "testLegacyDiaryEntryCallbacksDenyBothConditionAndActionAfterRefusal",
+        ),
         "baldursGate.eldothGuard.spawnFailure": (
             "source-double",
             city + "testEldothHistorySpawnFailurePreservesModelStateAndExactExceptionThenRetries",
