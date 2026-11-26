@@ -1075,7 +1075,7 @@ class GameplayBranchDriver:
                 self.call(controller, "setTarget", self.player, self._coordinateHandle(target))
         self.test.fail(("Native route budget exhausted", target, budget, self.snapshot()))
 
-    def navigateTo(self, name, adjacent=False, *, after_tick=None):
+    def navigateTo(self, name, adjacent=False, *, after_tick=None, can_depart=None):
         target = self.object(name)
         initial = self.coords(target)
         moving_npc = self.call(target, "getBoolProperty", "npc") is True
@@ -1137,6 +1137,7 @@ class GameplayBranchDriver:
                             for coords in neighbors
                             if coords[2] == departure_origin[2]
                             and sum(abs(a - b) for a, b in zip(departure_origin, coords)) == 1
+                            and (can_depart is None or can_depart(tuple(coords)))
                             and self.canStep(tuple(coords))
                         ),
                         None,

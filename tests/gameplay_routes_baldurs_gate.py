@@ -296,7 +296,19 @@ def contactCityObject(d, name):
         requireCurrent()
         d.test.assertEqual(point, d.coords(), ("City contact waypoint was not actually reached", name, point))
     requireCurrent()
-    d.navigateTo(name, after_tick=requireCurrent)
+
+    def canDepart(point):
+        # A reloaded overlap needs a fresh entry. Some adjacent walkable cells are compulsory stairs.
+        x, y, z, width, height = bounds
+        return (
+            point not in portals
+            and point in walkable
+            and point[2] == z
+            and x <= point[0] < x + width
+            and y <= point[1] < y + height
+        )
+
+    d.navigateTo(name, after_tick=requireCurrent, can_depart=canDepart)
     requireCurrent()
 
 

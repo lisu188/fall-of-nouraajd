@@ -1650,10 +1650,13 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                         if mutation == "wrongArrival":
                             driver.position = (156, 35, 0)
 
-                def contact(key, *, after_tick):
+                def contact(key, *, after_tick, can_depart):
                     self.assertEqual(name, key)
                     self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], driver.transitions)
                     self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, target)))
+                    self.assertTrue(can_depart(driver.position))
+                    self.assertFalse(any(can_depart(portal) for portal in portals))
+                    self.assertFalse(can_depart((-1, -1, 0)))
                     after_tick()
                     driver.contacts.append(key)
 
@@ -2300,7 +2303,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             elif mutation == "missing":
                 driver.identity = None
 
-        def visit(actual, *, after_tick=None):
+        def visit(actual, *, after_tick=None, can_depart=None):
             self.assertEqual(name, actual)
             driver.actions.append(("navigate", actual))
             budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, driver.target_position)) + 128)
@@ -2462,7 +2465,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     self.assertGreater(limit, 0)
                     advance(point)
 
-                def navigateTo(actual, *, after_tick=None):
+                def navigateTo(actual, *, after_tick=None, can_depart=None):
                     self.assertEqual(name, actual)
                     budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, target)) + 128)
                     for _ in range(budget):

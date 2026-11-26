@@ -2231,6 +2231,19 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 self.assertEqual(2 + int(not initial), after_tick.call_count)
                 driver.step.assert_not_called()
 
+    def testNpcReentryFiltersWalkablePortalsBeforeRequestingNativeMovement(self):
+        for safe_neighbor in ((0, 0, 0), None):
+            with self.subTest(safe_neighbor=safe_neighbor), tempfile.TemporaryDirectory() as directory:
+                driver, state, _actor, _ = self.npcOverlapDriver(directory)
+                if safe_neighbor:
+                    driver.navigateTo("ritualWitness", can_depart=lambda point: point == safe_neighbor)
+                    self.assertEqual([(1, 0, 0), safe_neighbor, (1, 0, 0)], [point for _, _, point in state["targets"]])
+                    self.assertEqual((2, 1), (driver.steps, len(driver._player_entries)))
+                else:
+                    with self.assertRaisesRegex(AssertionError, "No authored NPC re-entry departure"):
+                        driver.navigateTo("ritualWitness", can_depart=lambda point: False)
+                    self.assertEqual((0, 0), (driver.steps, len(driver._player_entries)))
+
     def testNpcDepartureReplansARealBlockedTargetWithoutCountingTheStationaryAttempt(self):
         with tempfile.TemporaryDirectory() as directory:
             driver, state, _actor, _ = self.npcOverlapDriver(directory)
