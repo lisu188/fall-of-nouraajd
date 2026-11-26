@@ -2487,7 +2487,8 @@
                 "anyOf": [
                   "MISC55"
                 ],
-                "count": 1
+                "count": 1,
+                "consume": true
               }
             ],
             "flags": {
@@ -2502,7 +2503,8 @@
       ],
       "sourceStatus": "classic-guide-supported; original-data parity pending",
       "acceptanceGaps": [
-        "Original alternate body access and full Rashad transformation dialogue remain pending."
+        "Original alternate body access and full Rashad transformation dialogue remain pending.",
+        "Delivery consumes the portable body; source journals, EltanMove/BroughtEltan and the returned Duke remain pending."
       ]
     },
     {
