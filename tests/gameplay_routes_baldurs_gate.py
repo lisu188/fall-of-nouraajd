@@ -214,7 +214,8 @@ def cityTravelPath(
 
 def approachCityObject(d, name, *, reenter=False, movement_cells=None):
     area_id, origin = currentArea(d), d.coords()
-    target = d.coords(d.object(name))
+    target_object = d.object(name)
+    target = d.coords(target_object)
     walkable, portals = movement_cells or cityMovementCells()
     bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
     initial_turns = d.turns
@@ -223,6 +224,20 @@ def approachCityObject(d, name, *, reenter=False, movement_cells=None):
     def advance(point, *, final=False):
         remaining = budget - (d.turns - initial_turns)
         d.test.assertGreater(remaining, 0, ("City approach turn budget exhausted", name, budget))
+        if final and movement_cells and d.call(target_object, "getBoolProperty", "locked"):
+            # Entering a locked doorway opens a blocking modal inside the movement call.
+            # Use the actual door panel while standing beside it, before requesting the crossing.
+            dialog = name + "Dialog"
+            key = d.call(target_object, "getStringProperty", "lockKey")
+            if key and resources(d)[2][key]:
+                d.chooseUi(dialog, "useKey", dialogue_choices=[])
+            else:
+                action, condition = (
+                    ("unlock", "canUnlock") if d.condition(dialog, "canUnlock") else ("force", "canForce")
+                )
+                d.test.assertTrue(d.condition(dialog, condition), ("Cannot open the authored doorway", name))
+                d.chooseUi(dialog, action, dialogue_choices=[])
+            d.test.assertFalse(d.call(target_object, "getBoolProperty", "locked"), ("Door is still locked", name))
         d.navigateCoords(point, limit=remaining)
         d.test.assertLessEqual(d.turns - initial_turns, budget, ("City approach turn budget exhausted", name, budget))
         if not final or point not in portals:

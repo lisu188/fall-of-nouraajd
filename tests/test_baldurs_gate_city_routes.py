@@ -17,6 +17,32 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testGuiRouteOpensLockedPortalFromAdjacentFloorBeforeCommittingMovement(self):
+        driver = mock.Mock(test=self, turns=0)
+        origin, door = (0, 0, 0), (1, 0, 0)
+        locked = True
+        driver.coords.side_effect = lambda actor=None: door if actor else origin
+        driver.call.side_effect = lambda actor, method, key: locked if key == "locked" else ""
+        driver.condition.side_effect = lambda dialog, method: method == "canForce"
+
+        def choose(dialog, action, *, dialogue_choices):
+            nonlocal locked
+            self.assertEqual(("doorDialog", "force", []), (dialog, action, dialogue_choices))
+            self.assertEqual(origin, driver.coords())
+            locked = False
+
+        driver.chooseUi.side_effect = choose
+        driver.navigateCoords.side_effect = lambda point, **options: self.assertFalse(locked)
+        with (
+            mock.patch.object(routes, "currentArea", return_value="AR0600"),
+            mock.patch.object(
+                routes, "documents", return_value={"geometry": {"atlas": {"AR0600": {"bounds": (0, 0, 0, 2, 1)}}}}
+            ),
+        ):
+            routes.approachCityObject(driver, "door", movement_cells=({origin, door}, {door}))
+        driver.chooseUi.assert_called_once()
+        driver.navigateCoords.assert_called_once()
+
     def testFentenGuiRouteCanWalkToTheHouseWithoutOpeningAStreetResidentsDialog(self):
         geometry = routes.documents()["geometry"]
         default, default_portals = routes.cityMovementCells()
