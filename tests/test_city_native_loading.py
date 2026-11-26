@@ -423,6 +423,18 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 world = instance.getMap()
                 marek = world.getObjectByName('cityAr0300Actor29')
                 clock = world.getObjectByName('cityClock')
+                def verifyViewAreas(world, clock):
+                    atlas = decodeCityData(clock.getStringProperty('areaAtlas'))
+                    assert len(atlas) == 212
+                    for code, entry in atlas.items():
+                        x, y, z, width, height = entry['bounds']
+                        label = entry['label']
+                        if label == code:
+                            label = entry['classification'].capitalize() + ' ' + code
+                        expected = (label, entry['bounds'])
+                        for point in ((x, y, z), (x + width - 1, y + height - 1, z)):
+                            assert world.getViewAreaAt(game.Coords(*point)) == expected, (code, point)
+                verifyViewAreas(world, clock)
                 def snapshot(actor):
                     owned = {id(item): item for item in (*actor.getItems(), *actor.getEquipped().values()) if item}
                     return sorted(
@@ -448,6 +460,7 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
                 assert saved_world.getStringProperty('mapName') == 'baldursGate'
                 saved_actor = saved_world.getObjectByName('cityAr0300Actor29')
                 saved_clock = saved_world.getObjectByName('cityClock')
+                verifyViewAreas(saved_world, saved_clock)
                 assert saved_actor.getStringProperty('sourceInventory') == inventory
                 assert saved_clock.getStringProperty('questDefinitions') == definitions
                 assert saved_world.getStringProperty('plugin_cityStartingProfile') == profile

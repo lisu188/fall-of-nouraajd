@@ -6708,6 +6708,21 @@ def load(self, context):
 
     @register(context)
     class BaldursGateClock(CBuilding):
+        def installViewAreas(self):
+            areas = read(self, "areaAtlas", {})
+            self.getMap().setViewAreas(
+                [
+                    (
+                        entry["label"] if entry["label"] != area else f"{entry['classification'].capitalize()} {area}",
+                        entry["bounds"],
+                    )
+                    for area, entry in areas.items()
+                ]
+            )
+
+        def onCreate(self, event):
+            self.installViewAreas()
+
         class PoisonBindingChanged(RuntimeError):
             pass
 
@@ -7652,6 +7667,7 @@ def load(self, context):
         def resumeAfterVerifiedLoad(self):
             if not self.ensureCitySourceKillXp():
                 return
+            self.installViewAreas()
             if self.getBoolProperty("plugin_cityPoisonSourceEnabled"):
                 self.poisonInitializeSource()
             if False:

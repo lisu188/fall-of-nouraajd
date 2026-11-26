@@ -103,7 +103,10 @@ void CSideBar::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect>
     const auto mapName = map->getMapName();
     const auto location =
         map->getLabel().empty() ? (mapName.empty() ? "Random map" : vstd::camel(mapName)) : map->getLabel();
-    const auto locationLine = location + " · Elevation " + std::to_string(player->getCoords().z) +
+    const auto area = map->getViewAreaAt(player->getCoords());
+    const auto place =
+        area && !area->label.empty() ? area->label : "Elevation " + std::to_string(player->getCoords().z);
+    const auto locationLine = location + " · " + place +
                               (compact ? " · Level " + std::to_string(player->getLevel()) + " · " +
                                              std::to_string(player->getGold()) + " gold"
                                        : "");

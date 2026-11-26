@@ -266,6 +266,17 @@ void bindGraphicsAndWorld(py::module_ &m) {
         .def("canStep", canStep, "Return whether coordinates are walkable.")
         .def("getMovementCost", getMovementCost, "Return the pathfinding movement cost at coordinates.")
         .def("getTile", getTile, "Return the tile at coordinates, creating the layer default when missing.")
+        .def("setViewAreas", &CMap::setViewAreas, "Frame the map display by named [x, y, z, width, height] rectangles.")
+        .def(
+            "getViewAreaAt",
+            [](CMap &map, Coords viewer) -> std::optional<std::pair<std::string, std::array<int, 5>>> {
+                auto area = map.getViewAreaAt(viewer);
+                if (!area || area->label.empty())
+                    return std::nullopt;
+                return std::pair{area->label, std::array{area->minX, area->minY, area->z, area->maxX - area->minX + 1,
+                                                         area->maxY - area->minY + 1}};
+            },
+            "Return the named display rectangle containing the coordinates, if any.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
         .def("getNavigationRevision", &CMap::getNavigationRevision,
              "Return the revision counter for registered navigation edges.")

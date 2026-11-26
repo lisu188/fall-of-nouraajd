@@ -214,6 +214,9 @@ class CompactMap(NativeObject):
     def getObjects(self):
         return set(self.objects.values())
 
+    def setViewAreas(self, areas):
+        self.viewAreas = areas
+
     def getAssignedPlayer(self):
         """Explicit double of query API9f6df499; no native cache execution proof."""
         return self.player

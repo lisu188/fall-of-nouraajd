@@ -1157,6 +1157,40 @@ void testMinimapTerrainRevisionAvoidsUnchangedCollectionWork() {
                 "all64 actual shared-marker moves must update B alone while A keeps its registry snapshot");
     expect_true(map->getTurn() == turn && player->getCoords() == coords && player->getHp() == hp && !map->isMoving(),
                 "minimap work measurement must preserve gameplay turns, player state and movement");
+    map->setViewAreas({{"West room", {0, 0, 0, 2, 2}}, {"East room", {2, 0, 0, 2, 2}}});
+    const auto firstArea = map->getViewAreaAt({0, 0, 0});
+    expect_true(firstArea && firstArea->label == "West room" && map->getPlacedTilesInViewArea(*firstArea).size() == 4 &&
+                    map->isViewCellVisible({0, 0, 0}, {1, 1, 0}) && !map->isViewCellVisible({0, 0, 0}, {2, 0, 0}) &&
+                    !map->isViewCellVisible({0, 0, 0}, {0, 0, 1}),
+                "a packed room includes only its own tiles and actors");
+    player->relocateWithoutMoveHooks({0, 0, 0});
+    const auto roomBuilds = minimap->getTerrainTextureBuildCount();
+    performance_guard::resetMapTileTraversalProbe();
+    minimap->renderObject(gui, rect, 0);
+    minimap->renderObject(gui, rect, 0);
+    player->relocateWithoutMoveHooks({2, 0, 0});
+    minimap->renderObject(gui, rect, 0);
+    const auto roomWork = performance_guard::mapTileTraversalWork();
+    performance_guard::disableMapTileTraversalProbe();
+    const auto secondArea = map->getViewAreaAt(player->getCoords());
+    expect_true(secondArea && secondArea->label == "East room" && roomWork.viewAreaCandidates == 8 &&
+                    roomWork.snapshots == 0 && roomWork.directVisits == 0 &&
+                    minimap->getTerrainTextureBuildCount() == roomBuilds + 2,
+                "two four-cell rooms must redraw once each with eight tile probes across the level transition");
+    bool invalid = false;
+    try {
+        map->setViewAreas({{"West room", {0, 0, 0, 3, 3}}, {"Overlapping", {2, 0, 0, 2, 2}}});
+    } catch (const std::invalid_argument &) {
+        invalid = true;
+    }
+    expect_true(invalid && !map->isViewCellVisible({3, 1, 0}, {1, 1, 0}) &&
+                    !map->isViewCellVisible({4, 1, 0}, {3, 1, 0}),
+                "invalid atlas replacement preserves the last atlas and unassigned cells hide their neighbors");
+    map->setViewAreas({});
+    expect_true(!map->getViewAreaAt({2, 1, 0}) && map->isViewCellVisible({2, 1, 0}, {0, 0, 0}),
+                "maps without an atlas retain full level visibility");
+    std::cout << "[minimap packed rooms] areas=2 tileCandidates=" << roomWork.viewAreaCandidates
+              << " fullSnapshots=" << roomWork.snapshots << "\n";
     std::cout << "[minimap terrain revision] tiles=" << tileCount << " frames=" << frames
               << " warm snapshots=" << warm.snapshots << " snapshot references=" << warm.snapshotReferences
               << " snapshot budget=0 fresh visits=" << warm.directVisits << " visit budget=0"
