@@ -212,6 +212,18 @@ class GameplayBranchDriverTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "Native inventory reader contents"):
             driver.chooseUi("nativeDialog", action, reader_title="Niklos", reader_lines=["Potion x1"])
 
+    def testImmediateReplyRequiresRecordedSelectionAndNoNestedInteraction(self):
+        driver, state, action = self.guiDriver(missing=True)
+        witness = driver.chooseUi("nativeDialog", action, immediate=True)
+        self.assertEqual(("nativeImmediateReply", 1), (witness["kind"], witness["nativeOptionSeq"]))
+        self.assertEqual([], state["children"])
+        driver, _, action = self.guiDriver()
+        with self.assertRaisesRegex(AssertionError, "Unexpected nested interaction"):
+            driver.chooseUi("nativeDialog", action, immediate=True)
+        driver, _, action = self.guiDriver(missing=True, wrong_receipt=True)
+        with self.assertRaisesRegex(AssertionError, "exact input receipt"):
+            driver.chooseUi("nativeDialog", action, immediate=True)
+
     def testUiRouteRejectsHeadlessCancellationMissingNativeReceiptAndAbsentSelection(self):
         for mutation in ({"missing": True}, {"wrong_receipt": True}, {}):
             with self.subTest(mutation=mutation):
@@ -2218,6 +2230,19 @@ class GameplayBranchDriverTest(unittest.TestCase):
                 self.assertTrue(driver._player_entries[0]["cause"]["isPlayer"])
                 self.assertEqual(2 + int(not initial), after_tick.call_count)
                 driver.step.assert_not_called()
+
+    def testNpcReentryFiltersWalkablePortalsBeforeRequestingNativeMovement(self):
+        for safe_neighbor in ((0, 0, 0), None):
+            with self.subTest(safe_neighbor=safe_neighbor), tempfile.TemporaryDirectory() as directory:
+                driver, state, _actor, _ = self.npcOverlapDriver(directory)
+                if safe_neighbor:
+                    driver.navigateTo("ritualWitness", can_depart=lambda point: point == safe_neighbor)
+                    self.assertEqual([(1, 0, 0), safe_neighbor, (1, 0, 0)], [point for _, _, point in state["targets"]])
+                    self.assertEqual((2, 1), (driver.steps, len(driver._player_entries)))
+                else:
+                    with self.assertRaisesRegex(AssertionError, "No authored NPC re-entry departure"):
+                        driver.navigateTo("ritualWitness", can_depart=lambda point: False)
+                    self.assertEqual((0, 0), (driver.steps, len(driver._player_entries)))
 
     def testNpcDepartureReplansARealBlockedTargetWithoutCountingTheStationaryAttempt(self):
         with tempfile.TemporaryDirectory() as directory:

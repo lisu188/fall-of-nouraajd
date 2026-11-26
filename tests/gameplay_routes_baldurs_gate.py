@@ -101,8 +101,8 @@ def pathBetween(start_area, destination, connections, allowed):
     raise AssertionError(f"No currently permitted source route from {start_area} to {destination}")
 
 
-@lru_cache(maxsize=1)
-def cityMovementCells():
+@lru_cache(maxsize=2)
+def cityMovementCells(avoid_interactions=False):
     document = json.loads((ROOT / "res/maps/baldursGate/map.json").read_text(encoding="utf-8"))
     definitions = json.loads((ROOT / "res/config/tiles.json").read_text(encoding="utf-8"))
     definitions.update(documents()["config"])
@@ -112,7 +112,7 @@ def cityMovementCells():
         for index, row in tileset.get("tileproperties", {}).items()
         if definitions[row["type"]]["properties"].get("canStep", False)
     }
-    walkable, portals = set(), set()
+    walkable, portals, interactions = set(), set(), set()
     for layer in document["layers"]:
         level = int(layer["properties"]["level"])
         if layer["type"] == "tilelayer":
@@ -122,12 +122,19 @@ def cityMovementCells():
                 if gid in walkable_ids
             )
         elif layer["type"] == "objectgroup":
+            if avoid_interactions:
+                interactions.update(
+                    (int(row["x"] // document["tilewidth"]), int(row["y"] // document["tileheight"]), level)
+                    for row in layer["objects"]
+                    if definitions[row["name"]].get("class")
+                    in {"CCreature", "BaldursGateContainer", "BaldursGateDoor", "BaldursGateRegion"}
+                )
             portals.update(
                 (int(row["x"] // document["tilewidth"]), int(row["y"] // document["tileheight"]), level)
                 for row in layer["objects"]
                 if definitions[row["name"]].get("class") == "BaldursGatePortal"
             )
-    return frozenset(walkable), frozenset(portals)
+    return frozenset(walkable - interactions), frozenset(portals)
 
 
 def cityApproachParents(origin, bounds, walkable, portals):
@@ -205,10 +212,11 @@ def cityTravelPath(
     raise AssertionError(f"No currently permitted source route from {start_area} at {origin} to {destination}")
 
 
-def approachCityObject(d, name, *, reenter=False):
+def approachCityObject(d, name, *, reenter=False, movement_cells=None):
     area_id, origin = currentArea(d), d.coords()
-    target = d.coords(d.object(name))
-    walkable, portals = cityMovementCells()
+    target_object = d.object(name)
+    target = d.coords(target_object)
+    walkable, portals = movement_cells or cityMovementCells()
     bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
     initial_turns = d.turns
     budget = max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128)
@@ -216,6 +224,20 @@ def approachCityObject(d, name, *, reenter=False):
     def advance(point, *, final=False):
         remaining = budget - (d.turns - initial_turns)
         d.test.assertGreater(remaining, 0, ("City approach turn budget exhausted", name, budget))
+        if final and movement_cells and d.call(target_object, "getBoolProperty", "locked"):
+            # Entering a locked doorway opens a blocking modal inside the movement call.
+            # Use the actual door panel while standing beside it, before requesting the crossing.
+            dialog = name + "Dialog"
+            key = d.call(target_object, "getStringProperty", "lockKey")
+            if key and resources(d)[2][key]:
+                d.chooseUi(dialog, "useKey", immediate=True)
+            else:
+                action, condition = (
+                    ("unlock", "canUnlock") if d.condition(dialog, "canUnlock") else ("force", "canForce")
+                )
+                d.test.assertTrue(d.condition(dialog, condition), ("Cannot open the authored doorway", name))
+                d.chooseUi(dialog, action, immediate=True)
+            d.test.assertFalse(d.call(target_object, "getBoolProperty", "locked"), ("Door is still locked", name))
         d.navigateCoords(point, limit=remaining)
         d.test.assertLessEqual(d.turns - initial_turns, budget, ("City approach turn budget exhausted", name, budget))
         if not final or point not in portals:
@@ -274,11 +296,23 @@ def contactCityObject(d, name):
         requireCurrent()
         d.test.assertEqual(point, d.coords(), ("City contact waypoint was not actually reached", name, point))
     requireCurrent()
-    d.navigateTo(name, after_tick=requireCurrent)
+
+    def canDepart(point):
+        # A reloaded overlap needs a fresh entry. Some adjacent walkable cells are compulsory stairs.
+        x, y, z, width, height = bounds
+        return (
+            point not in portals
+            and point in walkable
+            and point[2] == z
+            and x <= point[0] < x + width
+            and y <= point[1] < y + height
+        )
+
+    d.navigateTo(name, after_tick=requireCurrent, can_depart=canDepart)
     requireCurrent()
 
 
-def travel(d, destination, *, destination_point=None, target=None):
+def travel(d, destination, *, destination_point=None, target=None, movement_cells=None):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
 
@@ -305,7 +339,7 @@ def travel(d, destination, *, destination_point=None, target=None):
         geometry["connections"],
         allowed,
         geometry["atlas"],
-        *cityMovementCells(),
+        *(movement_cells or cityMovementCells()),
         **destination_options,
     )
     traversed = []
@@ -318,7 +352,7 @@ def travel(d, destination, *, destination_point=None, target=None):
             tuple(d.call(portal, "getNumericProperty", "target" + axis) for axis in "XYZ"),
             (name, "Actual source destination"),
         )
-        approachCityObject(d, name)
+        approachCityObject(d, name, movement_cells=movement_cells)
         if currentArea(d) != link["to"]:
             portal = d.object(name)
             if d.call(portal, "getBoolProperty", "locked"):
@@ -329,7 +363,7 @@ def travel(d, destination, *, destination_point=None, target=None):
                     condition = "canUnlock" if method == "unlock" else "canForce"
                     d.test.assertTrue(d.condition(dialog, condition), ("Source entrance remains locked", name))
                     d.choose(dialog, method)
-            approachCityObject(d, name, reenter=True)
+            approachCityObject(d, name, reenter=True, movement_cells=movement_cells)
         d.test.assertEqual(link["to"], currentArea(d), (name, "Actual portal arrival"))
         d.test.assertEqual(tuple(link["target"]), d.coords(), (name, "Actual source arrival coordinates"))
         d.test.assertEqual(link["to"], d.string("activeSimulationRegion"))
@@ -1190,6 +1224,9 @@ class QuestRoute:
 
 def questRoute(d, key, outcome_key, *, item_first=False):
     start(d)
+    if key == "fentenShells":
+        d.navigateTo("cityStart")
+        d.choose("cityStartDialog", "historyBringAnkhegShells")
     planner = QuestRoute(d)
     planner.tamoko_refuse = key == "tamokoMercy" and outcome_key == "fight"
     row = planner.quests[key]
@@ -1743,6 +1780,143 @@ def itemInstances(d, owner):
     return {d.call(item, "getName"): item for item in d.call(owner, "getItems")}
 
 
+def approachCitySpeakerUi(d, name, doorstep):
+    actor = d.object(name)
+    area = currentArea(d, actor)
+    d.test.assertEqual(1, sum(abs(a - b) for a, b in zip(doorstep, d.coords(actor))))
+    movement_cells = cityMovementCells(avoid_interactions=True)
+    travel(d, area, target=doorstep, movement_cells=movement_cells)
+    bounds = documents()["geometry"]["atlas"][area]["bounds"]
+    for point in cityApproachPath(d.coords(), doorstep, bounds, *movement_cells):
+        d.navigateCoords(point)
+    d.test.assertEqual(doorstep, d.coords())
+    d.test.assertEqual(1, sum(abs(a - b) for a, b in zip(d.coords(), d.coords(d.object(name)))))
+
+
+def fentenShellHistory(d):
+    start(d)
+    d.navigateTo("cityStart")
+    initial = resources(d)
+    historyDialogUi(d, "historyBringAnkhegShells")
+    shells = {
+        name: d.call(item, "getStringProperty", "plugin_cityStartingPossession")
+        for name, item in itemInstances(d, d.player).items()
+        if d.call(item, "getStringProperty", "plugin_citySourceItem") == "MISC12"
+    }
+    d.test.assertEqual(set(shells.values()), {"ankhegShell1", "ankhegShell2"})
+    d.test.assertEqual(initial[:2], resources(d)[:2])
+    historyDialogUi(d, "finishHistoryChoices")
+    return shells
+
+
+def fentenShellTrade(d):
+    shells = fentenShellHistory(d)
+    name = "cityAr0619Actor1"
+    approachCitySpeakerUi(d, name, (202, 97, 3))
+    actor = d.object(name)
+    before = resources(d)
+    initial_owner = set(itemInstances(d, actor))
+    reaction = d.call(d.call(d.player, "getStats"), "getNumericProperty", "intelligence") + d.number(
+        "plugin_cityStanding"
+    )
+    d.test.assertGreaterEqual(reaction, 7)
+    d.test.assertEqual(d.class_id == "Inquisitor", reaction >= 12)
+    line = (
+        "Bad iron has put ankheg armor in demand. I'll buy your shells. Ask Gerde where to hunt."
+        if reaction >= 12
+        else "The ankhegs are swarming south of the river. Gerde could use another pair of hands."
+    )
+    d.chooseUi(name + "Dialog", "talk", reader_title="Fenten", reader_lines=[line])
+    d.test.assertEqual("active", state(d, "fentenShells"))
+    d.test.assertEqual(15752 if reaction >= 12 else 15751, d.number("plugin_cityFentenJournal"))
+    d.test.assertEqual(before, resources(d))
+    d.saveAndReload("city-fenten-before-sale")
+    d.test.assertTrue(set(shells) <= set(itemInstances(d, d.player)))
+    witness = d.chooseUi(
+        name + "Dialog",
+        "talk",
+        reader_title="Fenten",
+        reader_lines=["A good haul. Here are 250 gold pieces for the whole lot."],
+    )
+    after = resources(d)
+    expected_items = before[2].copy()
+    del expected_items["MISC12"]
+    d.test.assertEqual((before[0] + 250, before[1], expected_items), after)
+    d.saveAndReload("city-fenten-after-sale")
+    owned = itemInstances(d, d.object(name))
+    d.test.assertEqual(initial_owner | set(shells), set(owned))
+    for item, origin in shells.items():
+        d.test.assertEqual(origin, d.call(owned[item], "getStringProperty", "plugin_cityStartingPossession"))
+    d.chooseUi(
+        name + "Dialog", "talk", reader_title="Fenten", reader_lines=["Word is the ankheg swarms are thinning out."]
+    )
+    d.test.assertEqual(after, resources(d))
+    d.test.assertEqual("active", state(d, "fentenShells"))
+    d.check(
+        "baldursGate.fenten.classicShellLot",
+        True,
+        receipt=witness,
+        shells=sorted(shells),
+        goldDelta=250,
+        journal=d.number("plugin_cityFentenJournal"),
+        reaction=reaction,
+    )
+
+
+def fentenDeparture(d):
+    shells = fentenShellHistory(d)
+    niklos = "cityAr0800Actor73"
+    approachCitySpeakerUi(d, niklos, (177, 91, 0))
+    owner = d.object(niklos)
+    possessions = itemInstances(d, owner)
+    (potion,) = [
+        key
+        for key, item in possessions.items()
+        if d.call(item, "getStringProperty", "plugin_citySourceItem") == "POTN36"
+    ]
+    standing = d.number("plugin_cityStanding")
+    crimes = d.number("plugin_cityCrimes")
+    before = resources(d)
+    d.chooseUi(niklos + "Dialog", "pickPocket", selected_id=potion)
+    d.test.assertEqual(set(possessions), set(itemInstances(d, owner)))
+    d.test.assertEqual(standing - 2, d.number("plugin_cityStanding"))
+    d.test.assertEqual(crimes + 1, d.number("plugin_cityCrimes"))
+    d.test.assertEqual(before, resources(d))
+
+    name = "cityAr0619Actor1"
+    approachCitySpeakerUi(d, name, (202, 97, 3))
+    reaction = d.call(d.call(d.player, "getStats"), "getNumericProperty", "intelligence") + d.number(
+        "plugin_cityStanding"
+    )
+    d.test.assertEqual(6, reaction)
+    d.saveAndReload("city-fenten-before-departure")
+    d.test.assertEqual("AR0619", currentArea(d, d.object(name)))
+    witness = d.chooseUi(
+        name + "Dialog",
+        "talk",
+        reader_title="Fenten",
+        reader_lines=["You'll have to excuse me. I've had a long day and I'm heading home."],
+    )
+
+    def assertDeparted():
+        d.test.assertIsNone(d.object(name, required=False))
+        clock = d.object("cityClock")
+        d.test.assertIn(name, read(d, clock, "plugin_cityParkedActors", []))
+        retired = d.call(clock, "getObjectProperty", "plugin_cityParked_" + name)
+        d.test.assertEqual(name, d.call(retired, "getName"))
+        d.test.assertTrue(d.call(retired, "getBoolProperty", "plugin_cityDeparted"))
+        d.test.assertEqual("notStarted", state(d, "fentenShells"))
+        d.test.assertEqual(0, d.number("plugin_cityFentenJournal"))
+        d.test.assertNotIn("cityFentenShellsQuest", d.questNames() + d.questNames(completed=True))
+        d.test.assertEqual(before, resources(d))
+        d.test.assertTrue(set(shells) <= set(itemInstances(d, d.player)))
+
+    assertDeparted()
+    d.saveAndReload("city-fenten-after-departure")
+    assertDeparted()
+    d.check("baldursGate.fenten.unfavorableDeparture", True, receipt=witness, shells=sorted(shells), reaction=reaction)
+
+
 def inventoryReaderLines(d, owner):
     owned = itemInstances(d, owner)
     owned.update((d.call(item, "getName"), item) for item in d.call(owner, "getEquipped").values() if item is not None)
@@ -2206,6 +2380,29 @@ def custodyUi(d):
 CASES = (
     (
         RouteCase(
+            "baldurs-gate-fenten-shells",
+            MAP,
+            (MAP,),
+            ("baldursGate.fenten.classicShellLot",),
+            fentenShellTrade,
+            classes=("Warrior", "Inquisitor"),
+            sources=SOURCES,
+            duration_seconds=600,
+            isolated_gui=True,
+        ),
+        RouteCase(
+            "baldurs-gate-fenten-departure",
+            MAP,
+            (MAP,),
+            ("baldursGate.fenten.unfavorableDeparture",),
+            fentenDeparture,
+            classes=("Warrior",),
+            race="highlanderRace",
+            sources=SOURCES,
+            duration_seconds=600,
+            isolated_gui=True,
+        ),
+        RouteCase(
             "baldurs-gate-tour",
             MAP,
             (MAP,),
@@ -2456,6 +2653,15 @@ CASES += (
 
 
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateDialog.fentenConversation": (
+        "baldursGate.fenten.classicShellLot",
+        "baldursGate.fenten.unfavorableDeparture",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.fentenShellLot": ("baldursGate.fenten.classicShellLot",),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.historyBringAnkhegShells": (
+        "baldursGate.fenten.classicShellLot",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.canBringAnkhegShells": ("baldursGate.fenten.classicShellLot",),
     "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse": ("baldursGate.book08.disabledUseNoMutation",),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),

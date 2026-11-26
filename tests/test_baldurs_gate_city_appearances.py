@@ -20,9 +20,8 @@ from tests.test_baldurs_gate_city_environment import normalizeEnvironmentAnimati
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 PREFIX = "maps/baldursGate/images/npc/"
-# The reviewed Seven Suns integration adds its stock, warning quest and dialogue metadata to the ff0b baseline.
-# Restore reviewed environment paths and remove source actor artwork/assets; all gameplay fields remain frozen.
-GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
+# The Fenten quest record and optional starting-shell reply are the only gameplay changes since the 3c62c252 baseline.
+GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "e5563b390dacd524302e71dfd66b165944179935626e9d52dbef89d293f1aa03"
 
 
 def readJson(path):

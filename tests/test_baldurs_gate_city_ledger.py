@@ -21,6 +21,7 @@ from scripts.build_baldurs_gate_poison_followup_ledger import FOLLOWUP_PATH
 WARNING_PATH = "tests/fixtures/baldurs_gate_seven_suns_warning.json"
 DOPMER_PATH = "tests/fixtures/baldurs_gate_seven_suns_merchants.json"
 STOCK_PATH = "tests/fixtures/baldurs_gate_seven_suns_stock.json"
+FENTEN_STATE_IDS = {f"FENTEN.DLG:classicState{state}" for state in range(6)}
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -65,6 +66,8 @@ def expectedIds(source, quests, warning=None, dopmer=None, stock=None, *, poison
         for family, kind in (("stock", "stock"), ("drinks", "drink"), ("cures", "cure"), ("room_prices", "room")):
             result.update(f"{store_id}:{kind}{index}" for index in range(1, len(store[family]) + 1))
     for quest in quests["quests"]:
+        if quest["id"] == "fentenShells":
+            result.update(FENTEN_STATE_IDS)
         result.add(f"quest:{quest['id']}:accept")
         result.update(f"quest:{quest['id']}:{choice['id']}" for choice in quest["outcomes"])
     if poison is not None:
@@ -833,8 +836,8 @@ class BaldursGateSevenSunsWarningLedgerTest(unittest.TestCase):
         updated = buildLedger(source, quests, {}, "", warning=self.warning)
         old_ids = {row["id"] for row in original["entries"]}
         new_ids = {row["id"] for row in updated["entries"]}
-        self.assertEqual(7472, len(old_ids))
-        self.assertEqual(7501, len(new_ids))
+        self.assertEqual(7472, len(old_ids - FENTEN_STATE_IDS))
+        self.assertEqual(7501, len(new_ids - FENTEN_STATE_IDS))
         self.assertTrue(old_ids < new_ids)
         self.assertEqual(expectedIds(source, quests, self.warning), new_ids)
         self.assertEqual(29, len(self.warningRows(updated)))
@@ -1009,8 +1012,8 @@ class BaldursGateClock:
         updated = buildLedger(self.full_source, self.full_quests, {}, "", warning=self.warning, dopmer=self.dopmer)
         before = {row["id"]: row for row in original["entries"]}
         after = {row["id"]: row for row in updated["entries"]}
-        self.assertEqual(7501, len(before))
-        self.assertEqual(7549, len(after))
+        self.assertEqual(7501, len(before.keys() - FENTEN_STATE_IDS))
+        self.assertEqual(7549, len(after.keys() - FENTEN_STATE_IDS))
         self.assertEqual(before, {key: after[key] for key in before})
         self.assertEqual(expectedIds(self.full_source, self.full_quests, self.warning, self.dopmer), set(after))
         rows = self.dopmerRows(updated)
@@ -1285,7 +1288,7 @@ class BaldursGateClock:
         )
         before = {row["id"]: row for row in original["entries"]}
         after = {row["id"]: row for row in updated["entries"]}
-        self.assertEqual(7552, len(after))
+        self.assertEqual(7552, len(after.keys() - FENTEN_STATE_IDS))
         self.assertEqual(before, {key: after[key] for key in before})
         self.assertEqual(
             expectedIds(self.full_source, self.full_quests, self.warning, self.dopmer, self.stock), set(after)
@@ -1427,6 +1430,31 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         self.assertEqual([], validateLedger(self.ledger, expected=self.expected))
         self.assertEqual(212, len(self.source["areas"]))
         self.assertGreater(len(self.ledger["entries"]), 7000)
+
+    def testEveryReachableClassicFentenStateNamesAnIsolatedCharacterRoute(self):
+        from tests.gameplay_routes_baldurs_gate import CASES
+
+        cases = {case.id: case for case in CASES}
+        rows = {row["facts"]["state"]: row for row in self.ledger["entries"] if row["id"] in FENTEN_STATE_IDS}
+        expected_classes = {
+            0: {"Warrior"},
+            1: {"Warrior"},
+            2: {"Inquisitor"},
+            3: {"Warrior", "Inquisitor"},
+            4: set(),
+            5: {"Warrior", "Inquisitor"},
+        }
+        self.assertEqual(set(expected_classes), set(rows))
+        for state, row in rows.items():
+            observed_classes = set()
+            for route in row["testStatus"]["nativeCases"]:
+                case_id, hero = route.rsplit("_", 1)
+                case = cases[case_id]
+                self.assertTrue(case.isolated_gui)
+                self.assertIn(hero, case.classes)
+                self.assertEqual(state == 0, case.id == "baldurs-gate-fenten-departure")
+                observed_classes.add(hero)
+            self.assertEqual(expected_classes[state], observed_classes)
 
     def testEveryEvidencePointerResolvesAndFingerprintIsAvailable(self):
         fixtures = {

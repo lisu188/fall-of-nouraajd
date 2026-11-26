@@ -38,6 +38,19 @@ Unlinked branches remain in the inventory without a claim of natural reachabilit
 are refused before mutation. These holds and the original-versus-EE differences remain acceptance requirements;
 staging these graphs does not close their ledger obligations.
 
+## Fenten and the ankheg trade
+
+Fenten’s house in AR0619 uses the six states in the international BG1 1.1.4315 patch dialogue.
+His first greeting precedes any shell purchase. An unfavorable reaction makes him leave. An ordinary
+reaction records the lead about Gerde. A favorable reaction also records his offer to buy shells.
+When the party returns, Fenten takes every carried ankheg shell from the hero and living recruited
+companions and pays 250 gold for the lot. The same shells move into his inventory and keep their identity.
+Later visits can sell a new lot. The trade stays active in the journal.
+
+An optional earlier-history choice supplies two identified shells at the gate. Each is a separate starting
+possession. This choice records imported inventory without awarding a quest or claiming an outside hunt.
+The native acceptance route is `baldurs-gate-fenten-shells` for the Inquisitor.
+
 ## Opt-in regional simulation
 
 `CMap.activeSimulationRegion` is a serialized string. An empty value preserves the existing all-object simulation. With a nonempty value, objects with a matching `simulationRegion` receive turn hooks, controller planning, movement commits and controller turn-end callbacks. The actual map player, objects with no region and objects with `alwaysSimulate=true` remain active.

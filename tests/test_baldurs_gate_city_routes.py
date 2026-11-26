@@ -17,6 +17,53 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testGuiRouteOpensLockedPortalFromAdjacentFloorBeforeCommittingMovement(self):
+        driver = mock.Mock(test=self, turns=0)
+        origin, door = (0, 0, 0), (1, 0, 0)
+        locked = True
+        driver.coords.side_effect = lambda actor=None: door if actor else origin
+        driver.call.side_effect = lambda actor, method, key: locked if key == "locked" else ""
+        driver.condition.side_effect = lambda dialog, method: method == "canForce"
+
+        def choose(dialog, action, *, immediate):
+            nonlocal locked
+            self.assertEqual(("doorDialog", "force", True), (dialog, action, immediate))
+            self.assertEqual(origin, driver.coords())
+            locked = False
+
+        driver.chooseUi.side_effect = choose
+        driver.navigateCoords.side_effect = lambda point, **options: self.assertFalse(locked)
+        with (
+            mock.patch.object(routes, "currentArea", return_value="AR0600"),
+            mock.patch.object(
+                routes, "documents", return_value={"geometry": {"atlas": {"AR0600": {"bounds": (0, 0, 0, 2, 1)}}}}
+            ),
+        ):
+            routes.approachCityObject(driver, "door", movement_cells=({origin, door}, {door}))
+        driver.chooseUi.assert_called_once()
+        driver.navigateCoords.assert_called_once()
+
+    def testFentenGuiRouteCanWalkToTheHouseWithoutOpeningAStreetResidentsDialog(self):
+        geometry = routes.documents()["geometry"]
+        default, default_portals = routes.cityMovementCells()
+        streets, portals = routes.cityMovementCells(avoid_interactions=True)
+        self.assertEqual(default_portals, portals)
+        self.assertIn((196, 85, 0), default)
+        self.assertNotIn((196, 85, 0), streets)  # The native trace identified AR0800 actor 42 at this cell.
+        path = routes.cityTravelPath(
+            (207, 85, 0),
+            "AR0800",
+            "AR0619",
+            geometry["connections"],
+            lambda link: True,
+            geometry["atlas"],
+            streets,
+            portals,
+            target=(202, 97, 3),
+        )
+        self.assertEqual("AR0619", path[-1]["to"])
+        self.assertIn((202, 97, 3), streets)
+        self.assertNotIn((203, 97, 3), streets)  # Fenten is reached from the adjacent empty floor.
 
     def testCityTravelTargetAliasesPreservePlannerRoutesAndRejectDisagreement(self):
         geometry = routes.documents()["geometry"]
@@ -1603,10 +1650,13 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                         if mutation == "wrongArrival":
                             driver.position = (156, 35, 0)
 
-                def contact(key, *, after_tick):
+                def contact(key, *, after_tick, can_depart):
                     self.assertEqual(name, key)
                     self.assertEqual(["cityAr0300Portal11", "cityAr0226Portal12"], driver.transitions)
                     self.assertEqual(1, sum(abs(a - b) for a, b in zip(driver.position, target)))
+                    self.assertTrue(can_depart(driver.position))
+                    self.assertFalse(any(can_depart(portal) for portal in portals))
+                    self.assertFalse(can_depart((-1, -1, 0)))
                     after_tick()
                     driver.contacts.append(key)
 
@@ -2083,6 +2133,8 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-trading",
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
+                "baldurs-gate-fenten-shells",
+                "baldurs-gate-fenten-departure",
                 "baldurs-gate-book08-disabled-use",
                 "baldurs-gate-history-helped",
                 "baldurs-gate-history-killed",
@@ -2252,7 +2304,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
             elif mutation == "missing":
                 driver.identity = None
 
-        def visit(actual, *, after_tick=None):
+        def visit(actual, *, after_tick=None, can_depart=None):
             self.assertEqual(name, actual)
             driver.actions.append(("navigate", actual))
             budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, driver.target_position)) + 128)
@@ -2414,7 +2466,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                     self.assertGreater(limit, 0)
                     advance(point)
 
-                def navigateTo(actual, *, after_tick=None):
+                def navigateTo(actual, *, after_tick=None, can_depart=None):
                     self.assertEqual(name, actual)
                     budget = max(128, 4 * sum(abs(a - b) for a, b in zip(driver.position, target)) + 128)
                     for _ in range(budget):
