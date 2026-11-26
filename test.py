@@ -17,6 +17,7 @@ import ast
 import builtins
 import concurrent.futures
 import contextlib
+import hashlib
 import http.client
 import io
 import importlib
@@ -19246,8 +19247,21 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_indentation(self):
         offenders = []
+        pinned_libraries = None
         for file_path in git_tracked_files("*.py"):
             path = REPO_ROOT / file_path
+            if file_path.startswith("recovery/upstream/libraries/"):
+                if pinned_libraries is None:
+                    overrides = json.loads((REPO_ROOT / "recovery/overrides.json").read_text(encoding="utf-8"))
+                    pinned_libraries = {}
+                    for entry in overrides["entries"]:
+                        source = entry.get("source", "")
+                        if source.startswith("upstream/libraries/") and source.endswith(".py"):
+                            pinned_libraries.setdefault("recovery/" + source, set()).add(entry["sha256"])
+                if file_path in pinned_libraries:
+                    if pinned_libraries[file_path] != {hashlib.sha256(path.read_bytes()).hexdigest()}:
+                        offenders.append(f"{path}: recovery sha256 mismatch")
+                    continue
             with open(path, encoding="utf-8", errors="replace") as f:
                 for i, line in enumerate(f, 1):
                     if line.startswith("\t"):
