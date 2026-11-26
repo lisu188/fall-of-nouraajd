@@ -1935,6 +1935,34 @@ def book08DisabledUse(d):
     )
 
 
+def degrodelRingName(d):
+    start(d)
+    name = "cityAr0161Actor1"
+    QuestRoute(d).contact(name)
+    ring_names, readers = [], []
+    for visit in range(2):
+        if visit:
+            d.saveAndReload("degrodel-ring-name")
+        owner = d.object(name)
+        d.test.assertEqual("DEGROD", d.call(owner, "getStringProperty", "sourceCreature"))
+        bag = d.call(owner, "getItems")
+        equipment = d.call(owner, "getEquipped").values()
+        (ring,) = [
+            item
+            for item in (*bag, *equipment)
+            if item and d.call(item, "getStringProperty", "plugin_citySourceItem") == "MAGE04"
+        ]
+        d.test.assertEqual("Ring", d.call(ring, "getStringProperty", "label"))
+        d.test.assertTrue(d.call(ring, "getBoolProperty", "plugin_cityUnidentified"))
+        d.test.assertTrue(d.call(ring, "getBoolProperty", "plugin_cityUndroppable"))
+        lines = inventoryReaderLines(d, owner)
+        d.test.assertIn("Ring x1", lines)
+        d.test.assertNotIn("MAGE04 x1", lines)
+        readers.append(d.chooseUi(name + "Dialog", "showInventory", reader_title="Degrodel", reader_lines=lines))
+        ring_names.append(d.call(ring, "getName"))
+    d.check("baldursGate.items.degrodelRingName", ring_names[0] == ring_names[1], item=ring_names[0], readers=readers)
+
+
 def inventoryUi(d, *, failed=False):
     start(d)
     name = "cityAr0800Actor73"  # Niklos's authored backpack holds a Potion of Master Thievery.
@@ -2452,13 +2480,26 @@ CASES += (
         duration_seconds=300,
         isolated_gui=True,
     ),
+    RouteCase(
+        "baldurs-gate-degrodel-ring-name",
+        MAP,
+        (MAP,),
+        ("baldursGate.items.degrodelRingName",),
+        degrodelRingName,
+        classes=("Warrior",),
+        sources=SOURCES,
+        isolated_gui=True,
+    ),
 )
 
 
 SOURCE_BRANCHES = {
     "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse": ("baldursGate.book08.disabledUseNoMutation",),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
-    "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": (
+        "baldursGate.inventory.nativeReader",
+        "baldursGate.items.degrodelRingName",
+    ),
     "res/maps/baldursGate/script.py:BaldursGateDialog.pickPocket": (
         "baldursGate.theft.nativeSucceeded",
         "baldursGate.theft.nativeFailed",
