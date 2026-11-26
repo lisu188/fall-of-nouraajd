@@ -1816,7 +1816,8 @@
                 "anyOf": [
                   "MISC12"
                 ],
-                "count": 1
+                "count": 1,
+                "owners": "livingParty"
               }
             ]
           },
@@ -1827,7 +1828,8 @@
                 "anyOf": [
                   "MISC12"
                 ],
-                "count": 1
+                "allCarried": true,
+                "owners": "livingParty"
               }
             ]
           },
@@ -1837,7 +1839,20 @@
       "sources": [
         "https://www.forgottenwars.com/bg1/ar0600.htm"
       ],
-      "sourceStatus": "classic-guide-supported; original-data parity pending",
+      "classicDialogue": {
+        "resource": "FENTEN.DLG",
+        "patch": "BG1 international 1.1.4315",
+        "sha256": "0377db70accd864af6db918eb22b7c3e5f1b8ed57bfe5145acf0726c5e0075c6",
+        "states": [
+          "First greeting, unfavorable reaction: leave without starting a journal.",
+          "First greeting, ordinary reaction: refer the party to Gerde and record journal 15751.",
+          "First greeting, favorable reaction: offer to buy shells and record journal 15752.",
+          "On a later conversation, transfer all carried MISC12 shells to Fenten for one payment of 250 gold.",
+          "The state has a constant false entry condition and no incoming dialogue transition.",
+          "When no earlier state applies, talk about the dwindling swarm without paying a reward."
+        ]
+      },
+      "sourceStatus": "original international patch dialogue audited; native acceptance pending",
       "acceptanceGaps": [],
       "repeatable": true
     },

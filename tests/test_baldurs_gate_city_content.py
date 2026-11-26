@@ -354,6 +354,95 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+    def testFentenStartingShellsAreOptionalWriteOnceAndRollBackOnFailedDelivery(self):
+        model = CityModel()
+        start = model.createObject("BaldursGateStart")
+        start.setStringProperty("name", "cityStart")
+        model.game_map.addObject(start)
+        dialog = model.dialog(start)
+        self.assertFalse(model.player.getItems())
+        add = model.player.addItem
+        model.player.addItem = lambda item: None if model.player.getItems() else add(item)
+        self.assertFalse(dialog.historyBringAnkhegShells())
+        self.assertFalse(model.player.getItems())
+        self.assertTrue(dialog.canBringAnkhegShells())
+        model.player.addItem = add
+        self.assertTrue(dialog.historyBringAnkhegShells())
+        self.assertFalse(dialog.historyBringAnkhegShells())
+        self.assertTrue(dialog.finishHistoryChoices())
+        self.assertFalse(dialog.canBringAnkhegShells())
+        self.assertEqual(2, len(model.player.getItems()))
+        self.assertEqual(
+            {"ankhegShell1", "ankhegShell2"},
+            {shell.getStringProperty("plugin_cityStartingPossession") for shell in model.player.getItems()},
+        )
+        self.assertEqual(
+            "notStarted", model.game_map.getStringProperty("plugin_cityQuest_fentenShells") or "notStarted"
+        )
+
+    def testFentenUsesFirstReactionBeforeCheckingThePartyShells(self):
+        for reaction, expected in ((6, "departed"), (7, "ordinary"), (11, "ordinary"), (12, "favorable")):
+            with self.subTest(reaction=reaction):
+                model = CityModel(intelligence=reaction)
+                actor = model.actor("Fenten", "AR0619", sourceCreature="FENTEN", sourceDialogue="FENTEN")
+                shell = model.item("MISC12")
+                dialog = model.dialog(actor)
+                gold = model.player.getGold()
+                dialog.talk()
+                self.assertEqual(expected, actor.getStringProperty("plugin_cityFentenGreeting"))
+                self.assertIn(shell, model.player.getItems())
+                self.assertEqual(gold, model.player.getGold())
+                if reaction < 7:
+                    self.assertTrue(actor.getBoolProperty("plugin_cityDeparted"))
+                    self.assertIsNone(model.game_map.getObjectByName(actor.getName()))
+                    model.clock.applySchedules()
+                    self.assertIsNone(model.game_map.getObjectByName(actor.getName()))
+                else:
+                    self.assertEqual("active", model.game_map.getStringProperty("plugin_cityQuest_fentenShells"))
+                    self.assertFalse(dialog.acceptFentenShells())
+
+    def testFentenBuysAllActualPartyShellsForOnePaymentAndAcceptsLaterLots(self):
+        model = CityModel(intelligence=11)
+        actor = model.actor("Fenten", "AR0619", sourceCreature="FENTEN", sourceDialogue="FENTEN")
+        follower = model.actor("Follower", "AR0619")
+        model.clock.setObjectProperty("plugin_cityCompanion_" + follower.getName(), follower)
+        model.clock.setStringProperty("plugin_cityRoster", json.dumps([follower.getName()]))
+        dialog = model.dialog(actor)
+        self.assertTrue(dialog.acceptFentenShells())  # Includes the previously supported quest-menu entry.
+        shells = [model.item("MISC12"), model.item("MISC12"), model.item("MISC12", follower)]
+        other = model.item("MISC55", follower)
+        gold = model.player.getGold()
+        dialog.talk()
+        self.assertEqual(gold + 250, model.player.getGold())
+        self.assertEqual(set(shells), set(actor.getItems()))
+        self.assertEqual([other], follower.getItems())
+        self.assertEqual([], model.player.getItems())
+        self.assertFalse(dialog.questFentenShellsComplete())
+        dialog.talk()
+        self.assertEqual(gold + 250, model.player.getGold())
+        later = model.item("MISC12", follower)
+        self.assertTrue(dialog.canQuestFentenShellsComplete())
+        self.assertTrue(dialog.questFentenShellsComplete())
+        self.assertIn(later, actor.getItems())
+        self.assertEqual(gold + 500, model.player.getGold())
+
+    def testFentenRestoresShellsToTheirOwnersIfRemovalFailsMidSale(self):
+        model = CityModel(intelligence=12)
+        actor = model.actor("Fenten", "AR0619", sourceCreature="FENTEN", sourceDialogue="FENTEN")
+        dialog = model.dialog(actor)
+        self.assertTrue(dialog.acceptFentenShells())
+        first, second = model.item("MISC12"), model.item("MISC12")
+        remove = model.player.removeQuestItem
+        model.player.removeQuestItem = lambda predicate: None if predicate(second) else remove(predicate)
+        gold = model.player.getGold()
+        self.assertFalse(dialog.questFentenShellsComplete())
+        self.assertEqual({first, second}, set(model.player.getItems()))
+        self.assertEqual([], actor.getItems())
+        self.assertEqual(gold, model.player.getGold())
+        model.player.removeQuestItem = remove
+        self.assertTrue(dialog.questFentenShellsComplete())
+        self.assertEqual({first, second}, set(actor.getItems()))
+        self.assertEqual(gold + 250, model.player.getGold())
 
     def testAngelKillSelectorsUseTheSameAuditedAreaCreature(self):
         from tests.gameplay_routes_baldurs_gate import documents, selectorMatches

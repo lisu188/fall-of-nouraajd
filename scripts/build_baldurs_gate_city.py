@@ -1578,6 +1578,7 @@ def compileDialogs(config, quests):
                 ("Outside encounter: meet Quayle at the bridge.", "encounterQuayle", "ENTRY"),
                 ("Finish earlier-history choices.", "finishHistoryChoices", "ENTRY"),
                 ("Wait one city hour.", "waitHour", "ENTRY"),
+                ("Earlier history: I arrived carrying two ankheg shells.", "historyBringAnkhegShells", "ENTRY"),
             ]
         else:
             choices = [
@@ -1595,6 +1596,8 @@ def compileDialogs(config, quests):
         for option in options:
             if option["properties"].get("action") == "finishHistoryChoices":
                 option["properties"]["condition"] = "canFinishHistoryChoices"
+            elif option["properties"].get("action") == "historyBringAnkhegShells":
+                option["properties"]["condition"] = "canBringAnkhegShells"
             elif option["properties"].get("action") == "cityInterlude":
                 option["properties"]["condition"] = "canCityInterlude"
             elif option["properties"].get("action") == "returnFromInterlude":

@@ -1190,6 +1190,9 @@ class QuestRoute:
 
 def questRoute(d, key, outcome_key, *, item_first=False):
     start(d)
+    if key == "fentenShells":
+        d.navigateTo("cityStart")
+        d.choose("cityStartDialog", "historyBringAnkhegShells")
     planner = QuestRoute(d)
     planner.tamoko_refuse = key == "tamokoMercy" and outcome_key == "fight"
     row = planner.quests[key]
@@ -1743,6 +1746,63 @@ def itemInstances(d, owner):
     return {d.call(item, "getName"): item for item in d.call(owner, "getItems")}
 
 
+def fentenShellTrade(d):
+    start(d)
+    d.navigateTo("cityStart")
+    initial = resources(d)
+    historyDialogUi(d, "historyBringAnkhegShells")
+    initial_items = itemInstances(d, d.player)
+    shells = {
+        name: d.call(item, "getStringProperty", "plugin_cityStartingPossession")
+        for name, item in initial_items.items()
+        if d.call(item, "getStringProperty", "plugin_citySourceItem") == "MISC12"
+    }
+    d.test.assertEqual(set(shells.values()), {"ankhegShell1", "ankhegShell2"})
+    d.test.assertEqual(initial[:2], resources(d)[:2])
+    historyDialogUi(d, "finishHistoryChoices")
+    name = "cityAr0619Actor1"
+    QuestRoute(d).contact(name)
+    actor = d.object(name)
+    before = resources(d)
+    initial_owner = set(itemInstances(d, actor))
+    reaction = d.call(d.call(d.player, "getStats"), "getNumericProperty", "intelligence") + d.number(
+        "plugin_cityStanding"
+    )
+    d.test.assertGreaterEqual(reaction, 7)
+    line = (
+        "Bad iron has put ankheg armor in demand. I'll buy your shells. Ask Gerde where to hunt."
+        if reaction >= 12
+        else "The ankhegs are swarming south of the river. Gerde could use another pair of hands."
+    )
+    d.chooseUi(name + "Dialog", "talk", reader_title="Fenten", reader_lines=[line])
+    d.test.assertEqual("active", state(d, "fentenShells"))
+    d.test.assertEqual(15752 if reaction >= 12 else 15751, d.number("plugin_cityFentenJournal"))
+    d.test.assertEqual(before, resources(d))
+    d.saveAndReload("city-fenten-before-sale")
+    d.test.assertTrue(set(shells) <= set(itemInstances(d, d.player)))
+    witness = d.chooseUi(
+        name + "Dialog",
+        "talk",
+        reader_title="Fenten",
+        reader_lines=["A good haul. Here are 250 gold pieces for the whole lot."],
+    )
+    after = resources(d)
+    expected_items = before[2].copy()
+    del expected_items["MISC12"]
+    d.test.assertEqual((before[0] + 250, before[1], expected_items), after)
+    d.saveAndReload("city-fenten-after-sale")
+    owned = itemInstances(d, d.object(name))
+    d.test.assertEqual(initial_owner | set(shells), set(owned))
+    for item, origin in shells.items():
+        d.test.assertEqual(origin, d.call(owned[item], "getStringProperty", "plugin_cityStartingPossession"))
+    d.chooseUi(
+        name + "Dialog", "talk", reader_title="Fenten", reader_lines=["Word is the ankheg swarms are thinning out."]
+    )
+    d.test.assertEqual(after, resources(d))
+    d.test.assertEqual("active", state(d, "fentenShells"))
+    d.check("baldursGate.fenten.classicShellLot", True, receipt=witness, shells=sorted(shells), goldDelta=250)
+
+
 def inventoryReaderLines(d, owner):
     owned = itemInstances(d, owner)
     owned.update((d.call(item, "getName"), item) for item in d.call(owner, "getEquipped").values() if item is not None)
@@ -2206,6 +2266,17 @@ def custodyUi(d):
 CASES = (
     (
         RouteCase(
+            "baldurs-gate-fenten-shells",
+            MAP,
+            (MAP,),
+            ("baldursGate.fenten.classicShellLot",),
+            fentenShellTrade,
+            classes=("Inquisitor",),
+            sources=SOURCES,
+            duration_seconds=600,
+            isolated_gui=True,
+        ),
+        RouteCase(
             "baldurs-gate-tour",
             MAP,
             (MAP,),
@@ -2456,6 +2527,10 @@ CASES += (
 
 
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateDialog.historyBringAnkhegShells": (
+        "baldursGate.fenten.classicShellLot",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.canBringAnkhegShells": ("baldursGate.fenten.classicShellLot",),
     "res/maps/baldursGate/script.py:BaldursGateUnderstandingTome.onUse": ("baldursGate.book08.disabledUseNoMutation",),
     "res/maps/baldursGate/script.py:BaldursGateCustodyQuest.isCompleted": ("baldursGate.custody.escapeNoReward",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.showInventory": ("baldursGate.inventory.nativeReader",),

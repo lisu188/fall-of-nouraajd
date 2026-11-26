@@ -651,6 +651,30 @@ def buildLedger(
         )
 
     for index, row in enumerate(quests.get("quests", [])):
+        if row["id"] == "fentenShells" and "classicDialogue" in row:
+            classic = row["classicDialogue"]
+            for state, fact in enumerate(classic["states"]):
+                add(
+                    f"FENTEN.DLG:classicState{state}",
+                    "dialogueBehavior",
+                    [
+                        evidence(
+                            f"/quests/{index}/classicDialogue/states/{state}",
+                            classic["sha256"],
+                            "FENTEN.DLG",
+                            quest=True,
+                        )
+                    ],
+                    area="AR0619",
+                    facts={"edition": classic["patch"], "state": state, "edge": state, "behavior": fact},
+                    targets=selectTargets(row["givers"]),
+                    callbacks=["talk", "fentenConversation"],
+                    gaps=(
+                        ["Native route and owner acceptance pending."]
+                        if state != 4
+                        else ["Unreachable in the patched dialogue. External script entry remains unverified."]
+                    ),
+                )
         key = row["id"][:1].upper() + row["id"][1:]
         choices = [
             (

@@ -2348,6 +2348,12 @@ def load(self, context):
             return stage(self, self.getStringProperty("questKey")) in ("completed", "failed", "refused")
 
         def getObjective(self):
+            if self.getStringProperty("questKey") == "fentenShells":
+                journal = world(self).getNumericProperty("plugin_cityFentenJournal")
+                if journal == 15751:
+                    return "Gerde can tell me about the ankheg outbreak south of the river."
+                if journal == 15752:
+                    return "Fenten will buy ankheg shells. Gerde knows where to hunt them."
             source_row = clock(self).poisonQuestPresentation(self.getStringProperty("questKey"))
             if source_row is not None:
                 return source_row["objective"]
@@ -2593,6 +2599,14 @@ def load(self, context):
             seedRewardStock(self, self.actor())
             if not applyEffects(self, row.get("acceptEffects", {}), self.actor()):
                 return False
+            if key == "fentenShells":
+                favorable = social(self) >= 12
+                actor = self.actor()
+                actor.setStringProperty("plugin_cityFentenGreeting", "favorable" if favorable else "ordinary")
+                actor.setNumericProperty(
+                    "plugin_cityTalkCount", max(1, actor.getNumericProperty("plugin_cityTalkCount"))
+                )
+                world(self).setNumericProperty("plugin_cityFentenJournal", 15752 if favorable else 15751)
             setStage(self, key, "active")
             hero(self).addQuest(questId(key))
             clock(self).spawnActors()
@@ -2621,6 +2635,8 @@ def load(self, context):
             outcome = firstMatch((entry for entry in row["outcomes"] if entry["id"] == outcome_key), None)
             if not outcome or not any(matches(self.actor(), selector) for selector in outcome.get("at", row["givers"])):
                 return False
+            if key == "fentenShells" and outcome_key == "complete":
+                return not self.actor().getBoolProperty("plugin_cityFentenTrading") and bool(self.fentenShellLot())
             return applyCondition(self, outcome.get("conditions", {})) and not world(self).getBoolProperty(
                 "plugin_cityOutcome_" + key + "_" + outcome_key
             )
@@ -2631,7 +2647,10 @@ def load(self, context):
                 return False
             row = quest(self, key)
             outcome = firstMatch(entry for entry in row["outcomes"] if entry["id"] == outcome_key)
-            if not applyEffects(self, outcome.get("effects", {}), self.actor()):
+            if key == "fentenShells" and outcome_key == "complete":
+                if not self.tradeFentenShells():
+                    return False
+            elif not applyEffects(self, outcome.get("effects", {}), self.actor()):
                 return False
             if not row.get("repeatable"):
                 world(self).setBoolProperty("plugin_cityOutcome_" + key + "_" + outcome_key, True)
@@ -2965,6 +2984,8 @@ def load(self, context):
             write(world(self), "plugin_cityTalked", talked)
             count = actor.getNumericProperty("plugin_cityTalkCount") + 1
             actor.setNumericProperty("plugin_cityTalkCount", count)
+            if actor.getStringProperty("sourceDialogue") == "FENTEN":
+                return (yield from self.fentenConversation(actor))
             yield uiRequest(
                 "showReader",
                 flowGame(self.getGame()),
@@ -2973,6 +2994,65 @@ def load(self, context):
                 or "Keep your purse close in Baldur's Gate. The inns offer a bed and city news; "
                 "the Flaming Fist keeps watch, and the Iron Throne's business troubles the streets.",
             )
+
+        def fentenShellLot(self):
+            party = [hero(self)] + [actor for actor in companions(self) if actor and actor.isAlive()]
+            return [(owner, item) for owner in party for item in owner.getItems() if sourceCode(item) == "MISC12"]
+
+        def tradeFentenShells(self):
+            actor, player = self.actor(), hero(self)
+            if not self.canQuestFentenShellsComplete():
+                return False
+            lot = self.fentenShellLot()
+            actor.setBoolProperty("plugin_cityFentenTrading", True)
+            removed = []
+            committed = False
+            try:
+                for owner, item in lot:
+                    owner.removeQuestItem(lambda candidate: candidate == item)
+                    if item in owner.getItems():
+                        return False
+                    removed.append((owner, item))
+                for owner, item in removed:
+                    actor.addItem(item)
+                    if item not in actor.getItems():
+                        return False
+                player.addGold(250)
+                committed = True
+                return True
+            finally:
+                if not committed:
+                    for owner, item in removed:
+                        if item in actor.getItems():
+                            actor.removeQuestItem(lambda candidate: candidate == item)
+                        if item not in actor.getItems() and item not in owner.getItems():
+                            owner.addItem(item)
+                actor.setBoolProperty("plugin_cityFentenTrading", False)
+
+        def fentenConversation(self, actor):
+            if stage(self, "fentenShells") == "notStarted":
+                if social(self) < 7:
+                    actor.setStringProperty("plugin_cityFentenGreeting", "departed")
+                    actor.setBoolProperty("plugin_cityDeparted", True)
+                    clock(self).applySchedules()
+                    message = "You'll have to excuse me. I've had a long day and I'm heading home."
+                elif self.acceptFentenShells():
+                    if actor.getStringProperty("plugin_cityFentenGreeting") == "favorable":
+                        message = (
+                            "Bad iron has put ankheg armor in demand. I'll buy your shells. Ask Gerde where to hunt."
+                        )
+                    else:
+                        message = "The ankhegs are swarming south of the river. Gerde could use another pair of hands."
+                else:
+                    return False
+            elif self.canQuestFentenShellsComplete():
+                if not (yield from self.performQuestOutcomeFlow("fentenShells", "complete")):
+                    return False
+                message = "A good haul. Here are 250 gold pieces for the whole lot."
+            else:
+                message = "Word is the ankheg swarms are thinning out."
+            yield uiRequest("showReader", flowGame(self.getGame()), "Fenten", message)
+            return True
 
         @resumableHook
         def attack(self):
@@ -3469,6 +3549,38 @@ def load(self, context):
 
         def historyAldethHelped(self):
             return self.recordHistory("aldeth", "helped")
+
+        def canBringAnkhegShells(self):
+            return self.canFinishHistoryChoices() and "ankhegShells" not in read(world(self), "plugin_cityHistory", {})
+
+        def historyBringAnkhegShells(self):
+            if not self.canBringAnkhegShells():
+                return False
+            game_map, owner, player = world(self), clock(self), hero(self)
+            if owner in pending_history_clocks:
+                return False
+            pending_history_clocks.add(owner)
+            shells = []
+            recorded = False
+            try:
+                for index in range(2):
+                    shell = makeSourceItem(self, {"item": "MISC12", "flags": 1})
+                    shell.setStringProperty("plugin_cityStartingPossession", "ankhegShell" + str(index + 1))
+                    shells.append(shell)
+                    player.addItem(shell)
+                if (
+                    world(self) == game_map
+                    and hero(self) == player
+                    and clock(self) == owner
+                    and all(shell in player.getItems() for shell in shells)
+                ):
+                    recorded = self.recordHistory("ankhegShells", 2)
+                return recorded
+            finally:
+                if not recorded:
+                    for shell in shells:
+                        player.removeQuestItem(lambda candidate: candidate == shell)
+                pending_history_clocks.discard(owner)
 
         def historyAldethKilled(self):
             return self.recordHistory("aldeth", "killed")
