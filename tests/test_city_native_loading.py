@@ -474,6 +474,78 @@ class CityNativeLoadingRuntimeTest(unittest.TestCase):
         )
         self.assertIn("native city metadata and item ownership survived save reload", output)
 
+    def testSavedCityItemsKeepTheirOwnersAndIdentificationWhenOldLabelsAreRestored(self):
+        output = self.runChild(
+            """
+            from pathlib import Path
+            import uuid
+
+            slot = 'city-old-item-labels-' + uuid.uuid4().hex
+            instance = game.CGameLoader.loadGame()
+            restored = None
+            try:
+                game.CGameLoader.startGameWithPlayer(instance, 'baldursGate', 'Warrior')
+                loop.run()
+                world = instance.getMap()
+                player = world.getPlayer()
+                clock = world.getObjectByName('cityClock')
+                assert clock.getBoolProperty('plugin_cityItemNamesCurrent')
+                clock.setBoolProperty('plugin_cityItemNamesCurrent', False)
+                owner_name = 'cityAr0132Actor1'
+                owner = world.getObjectByName(owner_name)
+                items = {}
+                for code, label, unknown in (
+                    ('MAGE04', 'Ring', True), ('MAGE06', 'Ring', False), ('REGHP2', 'Ring', False),
+                    ('SW1H11', 'Flame Blade', True), ('GHOUL1', 'Ghoul Touch', False),
+                ):
+                    item = instance.createObject('cityItem' + code.capitalize())
+                    assert item.getStringProperty('label') == label
+                    item.setStringProperty('label', code)
+                    item.setBoolProperty('plugin_cityUnidentified', unknown)
+                    item.setStringProperty('plugin_cityCharges', 'city-json:[2,0,0]')
+                    items[code] = (item.getName(), label, unknown)
+                    if code == 'REGHP2':
+                        world.addObject(item)
+                    elif code == 'SW1H11':
+                        player.addItem(item)
+                        player.equipItem('0', item)
+                        assert player.getItemAtSlot('0') is item
+                    elif code == 'GHOUL1':
+                        owner.addItem(item)
+                    else:
+                        player.addItem(item)
+
+                assert game.CMapLoader.saveWithResult(world, slot)
+                restored = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(restored, slot)
+                loop.run()
+                loaded = restored.getMap()
+                hero = loaded.getPlayer()
+                assert loaded.getObjectByName('cityClock').getBoolProperty('plugin_cityItemNamesCurrent')
+                for code, (name, label, unknown) in items.items():
+                    if code == 'REGHP2':
+                        item = loaded.getObjectByName(name)
+                    elif code == 'SW1H11':
+                        item = hero.getItemAtSlot('0')
+                    else:
+                        holder = loaded.getObjectByName(owner_name) if code == 'GHOUL1' else hero
+                        item, = [candidate for candidate in holder.getItems() if candidate.getName() == name]
+                    assert item.getName() == name and item.getStringProperty('plugin_citySourceItem') == code
+                    assert item.getStringProperty('label') == label, (code, item.getStringProperty('label'))
+                    assert item.getBoolProperty('plugin_cityUnidentified') == unknown
+                    assert item.getStringProperty('plugin_cityCharges') == 'city-json:[2,0,0]'
+                print('five city labels restored across native save and reload', flush=True)
+            finally:
+                if restored is not None:
+                    restored.getContext().shutdown()
+                instance.getContext().shutdown()
+                for suffix in ('.json', '.json.bak'):
+                    (Path('save') / (slot + suffix)).unlink(missing_ok=True)
+            """,
+            timeout_seconds=60,
+        )
+        self.assertIn("five city labels restored across native save and reload", output)
+
     def testNativeSaveDiagnosticsAreSilentByDefaultAndPreserveTheSavedDocument(self):
         import json
 

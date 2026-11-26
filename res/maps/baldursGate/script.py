@@ -7652,10 +7652,47 @@ def load(self, context):
         def resumeAfterVerifiedLoad(self):
             if not self.ensureCitySourceKillXp():
                 return
+            self.restoreLegacyItemNames()
             if self.getBoolProperty("plugin_cityPoisonSourceEnabled"):
                 self.poisonInitializeSource()
             if False:
                 yield None
+
+        def restoreLegacyItemNames(self):
+            if self.getBoolProperty("plugin_cityItemNamesCurrent"):
+                return
+            codes = {"MAGE04", "MAGE06", "REGHP2", "SW1H11", "GHOUL1"}
+            labels = {}
+
+            def restore(item):
+                code = sourceCode(item)
+                if code not in codes or item.getTypeId() != itemId(code) or item.getStringProperty("label") != code:
+                    return
+                if code not in labels:
+                    template = self.getGame().createObject(itemId(code))
+                    labels[code] = template.getStringProperty("label")
+                item.setStringProperty("label", labels[code])
+
+            game_map = world(self)
+            player = game_map.getPlayer()
+            holders = set(game_map.getObjects())
+            holders.add(player)
+            for prefix, names in (
+                ("plugin_cityParked_", read(self, "plugin_cityParkedActors", [])),
+                ("plugin_cityCompanion_", read(self, "plugin_cityRoster", [])),
+                ("plugin_cityCorpse_", read(game_map, "plugin_cityDeaths", {})),
+            ):
+                for name in names:
+                    retained = optionalObjectProperty(self, prefix + name)
+                    if retained:
+                        holders.add(retained)
+            for obj in holders:
+                if obj is player or isinstance(obj, CCreature):
+                    for item in possessions(obj):
+                        restore(item)
+                else:
+                    restore(obj)
+            self.setBoolProperty("plugin_cityItemNamesCurrent", True)
 
         def poisonRecordDeath(self, actor):
             """Native onDestroy producer must match a prospective actual-instance witness despite registry erasure."""

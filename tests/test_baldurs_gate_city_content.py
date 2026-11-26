@@ -354,6 +354,78 @@ class CityModel:
 
 
 class BaldursGateCityContentTest(unittest.TestCase):
+    def testCityItemNameUsesTheIdentifiedThenUnidentifiedNameThenSourceCode(self):
+        from scripts.build_baldurs_gate_city import nativeItem
+
+        source = json.loads((ROOT / "tests/fixtures/baldurs_gate_city_source.json").read_text(encoding="utf-8"))
+        fallback = {
+            key: row["unidentifiedName"]
+            for key, row in source["items"].items()
+            if not row.get("displayName") and row.get("unidentifiedName")
+        }
+        self.assertEqual(
+            {"MAGE04": "Ring", "MAGE06": "Ring", "REGHP2": "Ring", "SW1H11": "Flame Blade", "GHOUL1": "Ghoul Touch"},
+            fallback,
+        )
+        for code, label in fallback.items():
+            with self.subTest(code=code):
+                row = source["items"][code]
+                self.assertEqual(0xFFFFFFFF, row["identified_name_strref"])
+                self.assertEqual(label, nativeItem(code, row)["properties"]["label"])
+                self.assertEqual(code, nativeItem(code, {**row, "unidentifiedName": ""})["properties"]["label"])
+                self.assertEqual(
+                    "Identified", nativeItem(code, {**row, "displayName": "Identified"})["properties"]["label"]
+                )
+
+    def testOldCityItemNamesUpdateOnceAcrossOwnersEquipmentAndGround(self):
+        model = CityModel()
+        model.resources.update(json.loads((ROOT / "res/maps/baldursGate/config.json").read_text(encoding="utf-8")))
+        clock = model.clock
+        owner = model.createObject("cityAr0132Actor1")
+        model.game_map.addObject(owner)
+        book = model.createObject("cityItemBook10")
+        model.player.addItem(book)
+        held = []
+        for code, expected, identified in (
+            ("MAGE04", "Ring", False),
+            ("SW1H11", "Flame Blade", True),
+            ("GHOUL1", "Ghoul Touch", False),
+            ("MAGE06", "Ring", True),
+            ("REGHP2", "Ring", False),
+        ):
+            key = "cityItem" + code.capitalize()
+            item = model.createObject(key)
+            item.setStringProperty("label", code)
+            item.setBoolProperty("plugin_cityUnidentified", not identified)
+            held.append((item, expected, identified))
+        model.player.items.append(held[0][0])
+        model.player.equipped["rightHand"] = held[1][0]
+        owner.items.append(held[2][0])
+        owner.equipped["other"] = held[3][0]
+        model.game_map.addObject(held[4][0])
+        renamed = model.createObject("cityItemMage04")
+        renamed.setStringProperty("label", "Copper band")
+        owner.items.append(renamed)
+        parked = model.createObject("cityAr0161Actor1")
+        parked_ring = model.createObject("cityItemMage04")
+        parked_ring.setStringProperty("label", "MAGE04")
+        parked.addItem(parked_ring)
+        clock.setObjectProperty("plugin_cityParked_" + parked.getName(), parked)
+        clock.setStringProperty("plugin_cityParkedActors", "city-json:" + json.dumps([parked.getName()]))
+        clock.restoreLegacyItemNames()
+        for item, expected, identified in held:
+            self.assertEqual(expected, item.getStringProperty("label"))
+            self.assertEqual(not identified, item.getBoolProperty("plugin_cityUnidentified"))
+        self.assertIs(model.player.equipped["rightHand"], held[1][0])
+        self.assertIs(owner.equipped["other"], held[3][0])
+        self.assertEqual("Copper band", renamed.getStringProperty("label"))
+        self.assertEqual("Ring", parked_ring.getStringProperty("label"))
+        self.assertEqual("History of Calimshan", book.getStringProperty("label"))
+        self.assertTrue(clock.getBoolProperty("plugin_cityItemNamesCurrent"))
+        with patch.object(
+            model.game_map, "getObjects", side_effect=AssertionError("Completed name migration repeated")
+        ):
+            clock.restoreLegacyItemNames()
 
     def testAngelKillSelectorsUseTheSameAuditedAreaCreature(self):
         from tests.gameplay_routes_baldurs_gate import documents, selectorMatches
