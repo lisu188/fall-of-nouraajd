@@ -101,8 +101,8 @@ def pathBetween(start_area, destination, connections, allowed):
     raise AssertionError(f"No currently permitted source route from {start_area} to {destination}")
 
 
-@lru_cache(maxsize=1)
-def cityMovementCells():
+@lru_cache(maxsize=2)
+def cityMovementCells(avoid_interactions=False):
     document = json.loads((ROOT / "res/maps/baldursGate/map.json").read_text(encoding="utf-8"))
     definitions = json.loads((ROOT / "res/config/tiles.json").read_text(encoding="utf-8"))
     definitions.update(documents()["config"])
@@ -112,7 +112,7 @@ def cityMovementCells():
         for index, row in tileset.get("tileproperties", {}).items()
         if definitions[row["type"]]["properties"].get("canStep", False)
     }
-    walkable, portals = set(), set()
+    walkable, portals, interactions = set(), set(), set()
     for layer in document["layers"]:
         level = int(layer["properties"]["level"])
         if layer["type"] == "tilelayer":
@@ -122,12 +122,19 @@ def cityMovementCells():
                 if gid in walkable_ids
             )
         elif layer["type"] == "objectgroup":
+            if avoid_interactions:
+                interactions.update(
+                    (int(row["x"] // document["tilewidth"]), int(row["y"] // document["tileheight"]), level)
+                    for row in layer["objects"]
+                    if definitions[row["name"]].get("class")
+                    in {"CCreature", "BaldursGateContainer", "BaldursGateDoor", "BaldursGateRegion"}
+                )
             portals.update(
                 (int(row["x"] // document["tilewidth"]), int(row["y"] // document["tileheight"]), level)
                 for row in layer["objects"]
                 if definitions[row["name"]].get("class") == "BaldursGatePortal"
             )
-    return frozenset(walkable), frozenset(portals)
+    return frozenset(walkable - interactions), frozenset(portals)
 
 
 def cityApproachParents(origin, bounds, walkable, portals):
@@ -205,10 +212,10 @@ def cityTravelPath(
     raise AssertionError(f"No currently permitted source route from {start_area} at {origin} to {destination}")
 
 
-def approachCityObject(d, name, *, reenter=False):
+def approachCityObject(d, name, *, reenter=False, movement_cells=None):
     area_id, origin = currentArea(d), d.coords()
     target = d.coords(d.object(name))
-    walkable, portals = cityMovementCells()
+    walkable, portals = movement_cells or cityMovementCells()
     bounds = documents()["geometry"]["atlas"][area_id]["bounds"]
     initial_turns = d.turns
     budget = max(128, 4 * sum(abs(a - b) for a, b in zip(origin, target)) + 128)
@@ -278,7 +285,7 @@ def contactCityObject(d, name):
     requireCurrent()
 
 
-def travel(d, destination, *, destination_point=None, target=None):
+def travel(d, destination, *, destination_point=None, target=None, movement_cells=None):
     config, geometry = documents()["config"], documents()["geometry"]
     phase = d.number("plugin_cityPhase") or 5
 
@@ -305,7 +312,7 @@ def travel(d, destination, *, destination_point=None, target=None):
         geometry["connections"],
         allowed,
         geometry["atlas"],
-        *cityMovementCells(),
+        *(movement_cells or cityMovementCells()),
         **destination_options,
     )
     traversed = []
@@ -318,7 +325,7 @@ def travel(d, destination, *, destination_point=None, target=None):
             tuple(d.call(portal, "getNumericProperty", "target" + axis) for axis in "XYZ"),
             (name, "Actual source destination"),
         )
-        approachCityObject(d, name)
+        approachCityObject(d, name, movement_cells=movement_cells)
         if currentArea(d) != link["to"]:
             portal = d.object(name)
             if d.call(portal, "getBoolProperty", "locked"):
@@ -329,7 +336,7 @@ def travel(d, destination, *, destination_point=None, target=None):
                     condition = "canUnlock" if method == "unlock" else "canForce"
                     d.test.assertTrue(d.condition(dialog, condition), ("Source entrance remains locked", name))
                     d.choose(dialog, method)
-            approachCityObject(d, name, reenter=True)
+            approachCityObject(d, name, reenter=True, movement_cells=movement_cells)
         d.test.assertEqual(link["to"], currentArea(d), (name, "Actual portal arrival"))
         d.test.assertEqual(tuple(link["target"]), d.coords(), (name, "Actual source arrival coordinates"))
         d.test.assertEqual(link["to"], d.string("activeSimulationRegion"))
@@ -1761,7 +1768,16 @@ def fentenShellTrade(d):
     d.test.assertEqual(initial[:2], resources(d)[:2])
     historyDialogUi(d, "finishHistoryChoices")
     name = "cityAr0619Actor1"
-    QuestRoute(d).contact(name)
+    # With the native GUI open, walking onto an unrelated resident starts their blocking conversation.
+    # Approach the buyer from the street and select Speak from an adjacent cell.
+    movement_cells = cityMovementCells(avoid_interactions=True)
+    target = d.coords(d.object(name))
+    doorstep = (target[0] - 1, target[1], target[2])
+    travel(d, "AR0619", target=doorstep, movement_cells=movement_cells)
+    bounds = documents()["geometry"]["atlas"]["AR0619"]["bounds"]
+    for point in cityApproachPath(d.coords(), doorstep, bounds, *movement_cells):
+        d.navigateCoords(point)
+    d.test.assertEqual(doorstep, d.coords())
     actor = d.object(name)
     before = resources(d)
     initial_owner = set(itemInstances(d, actor))

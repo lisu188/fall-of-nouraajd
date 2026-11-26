@@ -17,6 +17,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaldursGateCityRoutesTest(unittest.TestCase):
+    def testFentenGuiRouteCanWalkToTheHouseWithoutOpeningAStreetResidentsDialog(self):
+        geometry = routes.documents()["geometry"]
+        default, default_portals = routes.cityMovementCells()
+        streets, portals = routes.cityMovementCells(avoid_interactions=True)
+        self.assertEqual(default_portals, portals)
+        self.assertIn((196, 85, 0), default)
+        self.assertNotIn((196, 85, 0), streets)  # The native trace identified AR0800 actor 42 at this cell.
+        path = routes.cityTravelPath(
+            (207, 85, 0),
+            "AR0800",
+            "AR0619",
+            geometry["connections"],
+            lambda link: True,
+            geometry["atlas"],
+            streets,
+            portals,
+            target=(202, 97, 3),
+        )
+        self.assertEqual("AR0619", path[-1]["to"])
+        self.assertIn((202, 97, 3), streets)
+        self.assertNotIn((203, 97, 3), streets)  # Fenten is reached from the adjacent empty floor.
 
     def testCityTravelTargetAliasesPreservePlannerRoutesAndRejectDisagreement(self):
         geometry = routes.documents()["geometry"]
