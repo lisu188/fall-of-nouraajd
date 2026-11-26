@@ -15,6 +15,7 @@ import unittest
 from unittest.mock import patch
 
 from scripts import build_baldurs_gate_city as builder
+from tests.city_item_art_review import normalizeItemAnimations
 from tests.test_baldurs_gate_city_environment import normalizeEnvironmentAnimations
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +50,7 @@ def withoutAppearance(document, config, geometry, dialogs):
     document, config = deepcopy(document), deepcopy(config)
     document.pop("assets", None)
     normalizeEnvironmentAnimations(config)
+    normalizeItemAnimations(config)
     for row in sourceActors(config).values():
         row["properties"].pop("animation", None)
     return {"map": document, "config": config, "geometry": geometry, "dialogs": dialogs}
@@ -65,6 +67,37 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
     def requireAppearanceHelper(self):
         self.assertTrue(callable(getattr(builder, "applyCityAppearances", None)), "A final appearance pass is required")
         return builder.applyCityAppearances
+
+    def testItemAndChestArtTargetsMatchAuditedSourceIdentities(self):
+        self.assertEqual(
+            "maps/baldursGate/images/items/understandingTomeV2",
+            self.config["cityItemBook08"]["properties"]["animation"],
+        )
+        config = deepcopy(self.config)
+        normalizeItemAnimations(config)
+        classes = {name: row["class"] for name, row in config.items()}
+        self.assertEqual("BaldursGateUnderstandingTome", classes["cityItemBook08"])
+        self.assertEqual(
+            {"images/misc/chest"},
+            {
+                config["cityAr0004Container1"]["properties"]["animation"],
+                config["cityAr0006Container1"]["properties"]["animation"],
+            },
+        )
+
+    def testItemArtCannotHideSwappedChestIdentitiesOrAClosedSpriteOnAnOpenDoor(self):
+        chest = "maps/baldursGate/images/interactions/woodenChest"
+        door = "maps/baldursGate/images/interactions/closedDoor"
+        swapped = deepcopy(self.config)
+        swapped["cityAr0006Container1"]["properties"]["animation"] = "images/misc/chest"
+        swapped["cityAr0004Container1"]["properties"]["animation"] = chest
+        with self.assertRaisesRegex(ValueError, "chest identities"):
+            normalizeItemAnimations(swapped)
+        swapped = deepcopy(self.config)
+        source_door = next(row for row in swapped.values() if row["class"] == "BaldursGateDoor")
+        source_door["properties"]["animation"] = door
+        with self.assertRaisesRegex(ValueError, "Unreviewed city interaction"):
+            normalizeItemAnimations(swapped)
 
     def testNamedActorsUseAuditedRolesInsteadOfOneSharedHumanSprite(self):
         expected = {
@@ -265,7 +298,7 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
         assets = self.document.get("assets")
         self.assertIsInstance(assets, list)
         self.assertEqual(41, sum(row["path"].startswith("images/npc/") for row in assets))
-        self.assertEqual(65, len(assets))
+        self.assertEqual(73, len(assets))
         cmake_source = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         match = re.search(r"(?ms)^function\(stage_map_declared_assets map_name\).*?^endfunction\(\)", cmake_source)
         self.assertIsNotNone(match)
@@ -274,7 +307,7 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
         self.assertIn("baldursGate", registered.group(1).split())
         self.assertIn("install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)", cmake_source)
         cmake = [shutil.which("cmake")] if shutil.which("cmake") else [sys.executable, "-m", "cmake"]
-        # COPYONLY treats bytes opaquely; real generated-PNG decoding is checked separately below.
+        # Exercise the new item and interaction PNGs themselves through the production CMake copy hook.
         payload = b"synthetic city appearance staging fixture\x00\xff"
         with tempfile.TemporaryDirectory(prefix="city-appearance-staging-") as temporary:
             root = Path(temporary)
@@ -285,7 +318,12 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
             for row in assets:
                 target = map_root / row["path"]
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(payload)
+                data = (
+                    (MAP_ROOT / row["path"]).read_bytes()
+                    if row["path"].startswith(("images/items/", "images/interactions/"))
+                    else payload
+                )
+                target.write_bytes(data)
             (map_root / "images/npc/notDeclared.png").write_bytes(payload)
             (source / "CMakeLists.txt").write_text(
                 "cmake_minimum_required(VERSION 3.20)\nproject(cityAppearanceStaging NONE)\n"
@@ -303,10 +341,37 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
                 {p.relative_to(staged_root).as_posix() for p in staged_root.rglob("*.png")},
             )
             for row in assets:
-                self.assertEqual(payload, (staged_root / row["path"]).read_bytes(), row["path"])
+                self.assertEqual(
+                    (map_root / row["path"]).read_bytes(), (staged_root / row["path"]).read_bytes(), row["path"]
+                )
 
 
 class BaldursGateCityAppearanceAssetTest(unittest.TestCase):
+    def testDeclaredItemInteractionPngsMatchTheirProvenanceAndAlphaBudget(self):
+        from PIL import Image
+
+        manifest = readJson(ROOT / "docs/art/baldurs_gate_city_items_interactions_prompts.json")
+        document = readJson(MAP_ROOT / "map.json")
+        paths = {
+            row["path"]
+            for row in document["assets"]
+            if row["path"].startswith(("images/items/", "images/interactions/"))
+        }
+        expected = {row["path"].removeprefix("res/maps/baldursGate/"): row for row in manifest["assets"]}
+        self.assertEqual(paths, expected.keys())
+        self.assertEqual(8, len(paths))
+        self.assertEqual(8, len({row["sha256"] for row in expected.values()}))
+        for name, record in expected.items():
+            with self.subTest(name=name):
+                path = MAP_ROOT / name
+                self.assertEqual(record["sha256"], hashlib.sha256(path.read_bytes()).hexdigest())
+                with Image.open(path) as image:
+                    self.assertEqual(("PNG", "RGBA", (1254, 1254)), (image.format, image.mode, image.size))
+                    self.assertLessEqual(image.width * image.height, manifest["nativePixelBudget"]["value"])
+                    for x in (0, image.width - 1):
+                        for y in (0, image.height - 1):
+                            self.assertEqual(0, image.getpixel((x, y))[3])
+
     def testDeclaredGeneratedPngsAreDistinctTransparentAndFitTheNativePixelBudget(self):
         try:
             from PIL import Image

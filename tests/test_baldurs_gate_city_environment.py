@@ -254,10 +254,10 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
             "images/buildings/" + appearance + ".png" for appearance in (*REVIEWED_BUILDING_TARGETS, "ruinedTemple")
         } | {"images/tiles/" + appearance + ".png" for appearance in REVIEWED_TILE_ASSETS}
         assets = self.document["assets"]
-        self.assertEqual(65, len(assets))
+        self.assertEqual(73, len(assets))
         self.assertEqual(assets, sorted(assets, key=lambda row: row["path"]))
         self.assertEqual(len(assets), len({row["path"] for row in assets}))
-        environment = [row for row in assets if not row["path"].startswith("images/npc/")]
+        environment = [row for row in assets if row["path"].startswith(("images/buildings/", "images/tiles/"))]
         self.assertEqual(expected, {row["path"] for row in environment})
         for row in environment:
             self.assertEqual({"path", "kind"}, set(row))
@@ -284,7 +284,7 @@ class BaldursGateCityEnvironmentAssetTest(unittest.TestCase):
         expected = {
             "res/maps/baldursGate/" + row["path"]
             for row in readJson(MAP_ROOT / "map.json")["assets"]
-            if not row["path"].startswith("images/npc/")
+            if row["path"].startswith(("images/buildings/", "images/tiles/"))
         }
         self.assertEqual(expected, {row["path"] for row in manifest["assets"]})
         self.assertEqual(24, len({row["sha256"] for row in manifest["assets"]}))
@@ -311,7 +311,11 @@ class BaldursGateCityEnvironmentAssetTest(unittest.TestCase):
         limit = re.search(r"constexpr int MAX_ALPHA_MASK_PIXELS = ([\d']+);", native)
         self.assertIsNotNone(limit)
         pixel_budget = int(limit.group(1).replace("'", ""))
-        assets = [row for row in readJson(MAP_ROOT / "map.json")["assets"] if not row["path"].startswith("images/npc/")]
+        assets = [
+            row
+            for row in readJson(MAP_ROOT / "map.json")["assets"]
+            if row["path"].startswith(("images/buildings/", "images/tiles/"))
+        ]
         self.assertEqual(24, len(assets))
         hashes = set()
         for row in assets:
