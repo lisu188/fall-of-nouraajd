@@ -1,8 +1,9 @@
 # Historical recovery status
 
-Work in progress on recovering the BFG-damaged history. The tooling branch is
-`recovery/bfg-history` (draft PR #1653); follow-up increments are stacked on it.
-Existing branches, tags, and `main` are preserved.
+The BFG-damaged history has been recovered, and on 2026-11-26 `main` was rewritten
+into one linear history that starts with the recovered snapshots. This page records
+the outcome. The tooling under `scripts/history_*.py` and `scripts/recover_history.py`
+and the data under `recovery/` are kept as an archive of how the recovery was done.
 
 ## Objective and acceptance
 
@@ -20,77 +21,35 @@ BFG removed the largest blobs, so the damage concentrates on the big core source
 (`creature.cpp`, `map.cpp`, `gamescene.cpp`, `interaction.cpp`, `stats.cpp`), the
 vendored jsoncpp/zlib/tmxparser/Boost.Python sources, images, and often `Game.pro`.
 
-## Current state
+## Outcome
 
-The continuation imports **55 additional exact original source/image payloads**
-(1,387,269 bytes): fifty-two from the preserved pre-BFG object archive and three
-CRLF variants derived from verified originals. Their Git blob hashes
-match the BFG pointers; SHA-256 pins and provenance are in
-`recovery/upstream/software-heritage/catalog.json` and
-`recovery/upstream/layout-variants/catalog.json`. Compiled binaries remain inventoried.
+- **Verification.** Draft PR #1697 reports pinned builds and startups for all 367
+  cataloged damaged revisions (365 distinct trees), with the complete replay mapping
+  `recovery/mappings/2026-11-23-complete-367-replay.json`. That PR was closed unmerged
+  when its branch was deleted; GitHub keeps it as `refs/pull/1697/head`. The `recovery/`
+  data in `main` is the earlier 93-snapshot checkpoint from PR #1660.
+- **Linear history.** `main` now has 2,532 single-parent commits, one per former
+  first-parent commit:
+  - The first 362 commits (2013–2015) use the recovered trees without the per-commit
+    recovery notes (README section, startup screenshot, verification and preparation
+    files). Each stripped tree reproduces its recorded `restoredFilesFingerprint`.
+  - Later trees are unchanged. Former merges became ordinary commits holding the merge
+    result, so the 1,257 commits that existed only on side branches are folded into
+    them, including 3 damaged side commits and the duplicate recovered copies that
+    #1659 and #1698 had merged in.
+  - Authors, committers and dates are unchanged. Every message was regenerated from the
+    old message and the commit's diff.
+  - The tip tree is identical to the pre-rewrite tip `268d11a6`.
+- **Branches and tags.** Every other branch was deleted. Tags `v0.0.1`, `0.0.1` and
+  `v0.0.2` point to the corresponding rewritten commits.
+- **Commit IDs.** Every commit ID changed. `linear-history-map-2026-11-26.json` maps
+  each former first-parent commit, and each recovered commit used from the complete
+  replay, to its linear commit. IDs quoted in older PRs and issues, and in files under
+  `recovery/`, refer to the pre-rewrite history.
 
-The pinned local toolchain has now revalidated the earlier checkpoint and accepted
-**81 commits / 81 trees** against the current restored inputs (catalog #1–#80 and
-#367). Each accepted tree compiled and started its real game under isolated Xvfb,
-with map/player, rendered frame and clean shutdown. Matching hashes, compiler logs,
-startup records and screenshots are retained in `recovery/evidence/<commit>/`.
-`recovery/progress.json` is the authoritative current count; it rejects evidence
-whose restored fingerprint or explicit toolchain image identity no longer matches.
-
-**65 verified commits (#1–#64 plus #367) are published** under new refs:
-
-- `recovery/bfg/2026-11-15/e1131adb2c47336c7dbe62dee0246216feb554eb`
-- `recovery/bfg/2026-11-15/108bdcbeda04cefeba5e1895f91df023cea8487f`
-
-`recovery/mappings/2026-11-15-prefix.json` records original-to-recovered identities.
-A 14,437,423-byte portable bundle was independently cloned without alternates and
-passed strict fsck, topology/identity checks and documentation/frame verification.
-Its SHA-256 is `e5a86fa8f5d69a74fb2727ae8c49ba70a0eb18f1cb3bb9e2d590a6baac4d5ad6`;
-compact verification and publication records accompany the mapping. Existing
-branches/tags are unchanged. The continuation PR is draft #1658, stacked on the
-explicitly approved PR #1655 branch; it has not been merged.
-
-All 365 trees restore without unresolved inputs or BFG markers, preserving every
-surviving original file and mode. **Source readiness is not native acceptance.**
-Most later replacements remain unverified donor proposals. The chronological walk
-has passed #79 using a recorded Linux build-copy translation of the surviving
-Windows include path and an empty save-directory prerequisite. Reconstructions are derived from same-version headers,
-callers and configuration; underdetermined formulas, map transitions and layouts
-are labeled as inference. Compilation/startup do not prove historical gameplay parity.
-
-Startup uses case-insensitive Windows file lookup only in the game process
-(`recovery/smoke/windows_paths.cpp`), including the original `Robe.json`/`robe.json`
-mismatch. Verification force-includes `<functional>` as recorded in `qt5.json`;
-original MinGW headers supplied it transitively. Missing Windows zlib import
-libraries are aliased to the installed library with the same API. No original
-source or packaged binary is replaced for these compatibility steps.
-
-Linux qmake selection follows the active application and declared subdirectory
-dependencies. Reconstructed projects resolve the historical case-only project
-rename; intact projects are unchanged. Combined creature/player headers and
-Python 2.7 binding reconstructions now follow the surviving APIs. The reconstructed
-binding compiles as a real native object at #260 and #266 and exports `init_game`;
-those whole games still fail on other unverified donor sources and are not accepted.
-
-Where surviving `preprocessor.py` generates property headers, verification runs
-that exact generator under pinned Python 2.7.18 in the private build-source copy.
-Inputs, outputs and hashes are recorded separately from the restored snapshot.
-The real generators at #250 and #257 succeeded; this proves preparation only.
-
-A real two-process save/reload regression exposed equipment bonuses being saved
-as base stats in the missing Creature implementation (#71–#79). The corrected
-reconstruction passes complete map/creature state comparison; it fails before the
-fix. Both versions start and exit cleanly. The portable regression and compact
-before/after proof are in `recovery/regressions/save-roundtrip/`.
-
-GitHub has no forks. Three sampled missing-blob API probes returned HTTP 404;
-this does not prove all originals unavailable. Fetching exact catalog commit SHAs
-recovered 44 missing original commits without replacing refs. The 1,432 unique
-original tips are pinned under new local preservation refs. The clone still uses
-read-only object alternates, which must be retained.
-
-GitHub's build and Historical recovery jobs for the latest pushed checkpoint
-remain pending. No GitHub compilation, full-suite or coverage success is claimed.
+Some removed files could only be reconstructed. Their exact original bytes remain
+unavailable, and each reconstruction's provenance is in the override records.
+Compilation and startup evidence do not establish historical gameplay parity.
 
 ## How reconstruction works
 
@@ -130,41 +89,22 @@ It contains GCC 5.4, Qt 5.5.1, CPython 2.7/3.3/3.4 and their Boost.Python librar
 Compact provenance is in `recovery/toolchains/evidence/local-2026-11-15/`.
 This local image identity is separate from any future CI-built image.
 
-## Resume
+## Working with the pre-rewrite history
+
+The recovery tooling reads the original damaged commits, which are no longer in `main`.
+GitHub still serves them through pull-request refs:
 
 ```sh
-git fetch origin && git switch <recovery branch> && git pull --ff-only
-python3 recovery/toolchains/stage_sources.py --lock recovery/toolchains/sources-git.json /tmp/sources
-docker build --build-context source-cache=/tmp/sources --build-arg RECOVERY_SOURCE_LOCK=sources-git.json \
-    --tag nouraajd-recovery:qt5 recovery/toolchains        # see README for proxy-restricted hosts
-export HISTORY_WORK_DIR=/path/to/scratch
-python3 scripts/history_workbench.py auto 81 367 --verify  # stop at the first failure
-python3 scripts/history_workbench.py prep N         # then reconstruct, build, keep, verify by hand
-python3 scripts/history_workbench.py verify N
-python3 scripts/history_workbench.py save && python3 scripts/history_workbench.py export
-python3 scripts/history_workbench.py progress
+git fetch origin refs/pull/1697/head:refs/recovery/complete-367  # final tooling, evidence and old history
+git fetch origin refs/pull/1698/head:refs/recovery/old-main      # old main with the recovered old master
 ```
 
-On a Linux host without Docker, retrieve the `historical-qt5-toolchain` artifact from
-a successful Historical recovery toolchain job. Verify/materialize its Docker-save
-archive with `scripts/history_rootfs.py materialize image.tar.gz /absolute/rootfs
---image-id <Id-from-image.json>`, then set `HISTORY_TOOLCHAIN_ROOTFS` to that directory
-and `HISTORY_WORK_DIR` to a separate writable scratch directory. The workbench uses
-the image's own compiler, libraries and controller through isolated `bwrap` namespaces;
-the source/Git stores are read-only. Run one previously verified commit first.
+Run `scripts/history_workbench.py` and `scripts/recover_history.py` from a checkout of
+`refs/recovery/complete-367`; the `docs/recovery/STATUS.md` in that revision describes
+the workbench commands. Translate pre-rewrite commit IDs with
+`linear-history-map-2026-11-26.json`.
 
-Catalog positions enumerate 367 commits, not 365 distinct trees. Keep compact
-exported evidence before removing reproducible build scratch.
-
-## Remaining work
-
-- Continue the chronological reconstruction/build/startup walk through all 365 trees.
-  Continue from #80 using the recorded #79 include and save-directory prerequisites.
-- Replace later donor implementations that conflict with surviving APIs, including
-  the whole-game blockers at #260/#266. Object compilation and generator preparation
-  are supporting evidence only.
-- Extend verified replay/publication beyond the 65-commit prefix and verify another
-  independent portable bundle when ready. Preserve prior recovery publications.
-- Obtain successful current-head GitHub build, full-suite and coverage evidence;
-  the current queued jobs have supplied none yet. Keep the PR draft while acceptance
-  is incomplete.
+The ancestry records `verified-ancestry-2026-11-15.json` (#1659) and
+`verified-ancestry-2026-11-24-master-original.json` (#1698) described merge parents
+that the rewrite removed. They were deleted from `main` and remain in the pre-rewrite
+history.
