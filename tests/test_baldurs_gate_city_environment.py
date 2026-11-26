@@ -5,9 +5,11 @@
 from copy import deepcopy
 import hashlib
 import json
+import math
 from pathlib import Path, PurePosixPath
 import re
 import unittest
+from unittest.mock import patch
 
 from scripts import build_baldurs_gate_city as builder
 
@@ -109,6 +111,20 @@ def reviewedEnvironmentAnimations():
     return result
 
 
+def normalizeDoorAnimations(config):
+    for name, source in (("cityAr0111Door1", "AR0111#door1"), ("cityAr0200Door12", "AR0200#door12")):
+        row = config[name]
+        props = row["properties"]
+        if (
+            row["class"] != "BaldursGateDoor"
+            or props["sourceDoor"] != source
+            or props["open"]
+            or props["animation"] != "maps/baldursGate/images/interactions/closedDoor"
+        ):
+            raise ValueError("Unexpected reviewed City door: " + name)
+        props["animation"] = "images/misc/closed_door"
+
+
 def normalizeEnvironmentAnimations(config):
     for name, (current, original) in reviewedEnvironmentAnimations().items():
         if config[name]["properties"].get("animation") != current:
@@ -125,6 +141,57 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
     def setUpClass(cls):
         cls.source = readJson(ROOT / "tests/fixtures/baldurs_gate_city_source.json")
         cls.document, cls.config, cls.geometry = builder.compileCity(deepcopy(cls.source))
+
+    def testOnlyTheTwoStandaloneDoorsUseStatefulArtAndTheirNativeCellsRemainAccessible(self):
+        from tests.test_baldurs_gate_city_content import CityModel
+
+        expected = {"cityAr0111Door1": ("AR0111", 1, True), "cityAr0200Door12": ("AR0200", 12, False)}
+        prefix = "maps/baldursGate/images/interactions/"
+        self.assertEqual(
+            set(expected), {name for name, row in self.config.items() if row.get("class") == "BaldursGateDoor"}
+        )
+        self.assertEqual(
+            {"images/interactions/closedDoor.png", "images/interactions/openDoor.png"},
+            {row["path"] for row in self.document["assets"] if row["path"].startswith("images/interactions/")},
+        )
+        model = CityModel(agility=18)
+        model.resources.update(self.config)
+        for name, (area, index, one_way) in expected.items():
+            record = self.source["areas"][area]["doors"][index - 1]
+            self.assertFalse(record["travel_trigger"])
+            self.assertEqual(one_way, bool(record["flags"] & 32))
+            door = model.createObject(name)
+            model.game_map.addObject(door)
+            dialog = model.dialog(door)
+            self.assertEqual(prefix + "closedDoor", door.getStringProperty("animation"))
+            if record["flags"] & 2:
+                self.assertFalse(dialog.open())
+                self.assertEqual(prefix + "closedDoor", door.getStringProperty("animation"))
+                self.assertTrue(dialog.unlock())
+            self.assertTrue(dialog.open())
+            self.assertEqual(prefix + "openDoor", door.getStringProperty("animation"))
+            self.assertTrue(door.getBoolProperty("canStep"))
+            self.assertIs(dialog.close(), not one_way)
+            self.assertEqual(prefix + ("openDoor" if one_way else "closedDoor"), door.getStringProperty("animation"))
+            self.assertTrue(door.getBoolProperty("canStep"))
+            old_state = dict(door.properties)
+            door.setStringProperty("animation", "images/misc/closed_door")
+            with patch.object(model.clock, "ensureCitySourceKillXp", return_value=True):
+                list(model.clock.resumeAfterVerifiedLoadFlow())
+            self.assertEqual(old_state, door.properties)
+
+            search = self.source["areas"][area]["searchMap"]
+            terrain = builder.rowsFromRuns(search)
+            for state in ("open", "closed"):
+                blocked = set(map(tuple, record[state + "_impeded"]))
+                for column, row in {(x // 4, y * 12 // 64) for x, y in blocked}:
+                    native_cell = {
+                        (x, y)
+                        for x in range(column * 4, min((column + 1) * 4, search["width"]))
+                        for y in range(row * 64 // 12, min(math.ceil((row + 1) * 64 / 12), search["height"]))
+                        if terrain[y][x] not in builder.BLOCKED_TERRAINS
+                    }
+                    self.assertEqual(bool(native_cell), bool(native_cell - blocked), (area, state, column, row))
 
     def testOnlyReviewedOutdoorLandmarksReceiveBuildingSprites(self):
         expected = reviewedEnvironmentAnimations()
@@ -254,10 +321,10 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
             "images/buildings/" + appearance + ".png" for appearance in (*REVIEWED_BUILDING_TARGETS, "ruinedTemple")
         } | {"images/tiles/" + appearance + ".png" for appearance in REVIEWED_TILE_ASSETS}
         assets = self.document["assets"]
-        self.assertEqual(65, len(assets))
+        self.assertEqual(67, len(assets))
         self.assertEqual(assets, sorted(assets, key=lambda row: row["path"]))
         self.assertEqual(len(assets), len({row["path"] for row in assets}))
-        environment = [row for row in assets if not row["path"].startswith("images/npc/")]
+        environment = [row for row in assets if row["path"].startswith(("images/buildings/", "images/tiles/"))]
         self.assertEqual(expected, {row["path"] for row in environment})
         for row in environment:
             self.assertEqual({"path", "kind"}, set(row))
@@ -277,6 +344,14 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
 
 
 class BaldursGateCityEnvironmentAssetTest(unittest.TestCase):
+    def testGeneratedDoorFramesMatchTheReviewedSprites(self):
+        for frame, expected in (
+            ("closedDoor", "bb8eba391a7b6c1b2e8c080d04af0f1abf4380c01f9b6147b66ee6d2498fd3b5"),
+            ("openDoor", "6630fea5943940d6857c12ff954eea626862f121be32a815780628e470d718fe"),
+        ):
+            data = (MAP_ROOT / "images" / "interactions" / (frame + ".png")).read_bytes()
+            self.assertEqual(expected, hashlib.sha256(data).hexdigest())
+
     def testPromptManifestMatchesEverySelectedPng(self):
         manifest = readJson(ROOT / "docs/art/baldurs_gate_city_environment_prompts.json")
         self.assertEqual(1, manifest["schemaVersion"])
@@ -284,7 +359,7 @@ class BaldursGateCityEnvironmentAssetTest(unittest.TestCase):
         expected = {
             "res/maps/baldursGate/" + row["path"]
             for row in readJson(MAP_ROOT / "map.json")["assets"]
-            if not row["path"].startswith("images/npc/")
+            if row["path"].startswith(("images/buildings/", "images/tiles/"))
         }
         self.assertEqual(expected, {row["path"] for row in manifest["assets"]})
         self.assertEqual(24, len({row["sha256"] for row in manifest["assets"]}))
@@ -311,7 +386,11 @@ class BaldursGateCityEnvironmentAssetTest(unittest.TestCase):
         limit = re.search(r"constexpr int MAX_ALPHA_MASK_PIXELS = ([\d']+);", native)
         self.assertIsNotNone(limit)
         pixel_budget = int(limit.group(1).replace("'", ""))
-        assets = [row for row in readJson(MAP_ROOT / "map.json")["assets"] if not row["path"].startswith("images/npc/")]
+        assets = [
+            row
+            for row in readJson(MAP_ROOT / "map.json")["assets"]
+            if row["path"].startswith(("images/buildings/", "images/tiles/"))
+        ]
         self.assertEqual(24, len(assets))
         hashes = set()
         for row in assets:

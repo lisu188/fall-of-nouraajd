@@ -2525,7 +2525,11 @@ def load(self, context):
 
     @register(context)
     class BaldursGateDoor(BaldursGateContainer):
-        pass
+        def updateDoorAppearance(self):
+            state = "openDoor" if self.getBoolProperty("open") else "closedDoor"
+            animation = "maps/baldursGate/images/interactions/" + state
+            if self.getStringProperty("animation") != animation:
+                self.setStringProperty("animation", animation)
 
     @register(context)
     class BaldursGateSwitch(BaldursGateContainer):
@@ -3172,6 +3176,8 @@ def load(self, context):
             if isinstance(owner, BaldursGateDoor) or isinstance(owner, BaldursGatePortal):
                 owner.setBoolProperty("open", True)
                 owner.setBoolProperty("canStep", True)
+                if isinstance(owner, BaldursGateDoor):
+                    owner.updateDoorAppearance()
                 return True
             for row in read(owner, "contents", []):
                 if row.get("item") == "MISC07":
@@ -3200,7 +3206,10 @@ def load(self, context):
                 return False
             if self.actor().getBoolProperty("forbidClosing"):
                 return False
-            self.actor().setBoolProperty("open", False)
+            owner = self.actor()
+            owner.setBoolProperty("open", False)
+            if isinstance(owner, BaldursGateDoor):
+                owner.updateDoorAppearance()
             return True
 
         def canTamokoFirstMeeting(self):
@@ -7652,6 +7661,10 @@ def load(self, context):
         def resumeAfterVerifiedLoad(self):
             if not self.ensureCitySourceKillXp():
                 return
+            for name in ("cityAr0111Door1", "cityAr0200Door12"):
+                door = world(self).getObjectByName(name)
+                if isinstance(door, BaldursGateDoor):
+                    door.updateDoorAppearance()
             if self.getBoolProperty("plugin_cityPoisonSourceEnabled"):
                 self.poisonInitializeSource()
             if False:

@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 
 from scripts import build_baldurs_gate_city as builder
-from tests.test_baldurs_gate_city_environment import normalizeEnvironmentAnimations
+from tests.test_baldurs_gate_city_environment import normalizeDoorAnimations, normalizeEnvironmentAnimations
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
@@ -48,6 +48,7 @@ def sourceActors(config):
 def withoutAppearance(document, config, geometry, dialogs):
     document, config = deepcopy(document), deepcopy(config)
     document.pop("assets", None)
+    normalizeDoorAnimations(config)
     normalizeEnvironmentAnimations(config)
     for row in sourceActors(config).values():
         row["properties"].pop("animation", None)
@@ -265,7 +266,7 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
         assets = self.document.get("assets")
         self.assertIsInstance(assets, list)
         self.assertEqual(41, sum(row["path"].startswith("images/npc/") for row in assets))
-        self.assertEqual(65, len(assets))
+        self.assertEqual(67, len(assets))
         cmake_source = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         match = re.search(r"(?ms)^function\(stage_map_declared_assets map_name\).*?^endfunction\(\)", cmake_source)
         self.assertIsNotNone(match)
