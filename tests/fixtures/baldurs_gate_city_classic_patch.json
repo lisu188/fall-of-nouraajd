@@ -69,6 +69,24 @@
       "byteEqual": false,
       "changedParsedFields": [
         "containers"
+      ],
+      "placements": [
+        {
+          "collection": "containers",
+          "index": 1,
+          "classic": {
+            "position": [
+              707,
+              662
+            ]
+          },
+          "ee": {
+            "position": [
+              703,
+              662
+            ]
+          }
+        }
       ]
     },
     "AR0111.ARE": {
@@ -78,6 +96,42 @@
       "changedParsedFields": [
         "actors",
         "containers"
+      ],
+      "placements": [
+        {
+          "collection": "actors",
+          "index": 3,
+          "classic": {
+            "name": "Slave",
+            "creature": "SLAVE4",
+            "position": [
+              996,
+              278
+            ],
+            "schedule": 4294967295,
+            "flags": 1,
+            "dialogue": "",
+            "scripts": [
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          "ee": null
+        },
+        {
+          "collection": "containers",
+          "index": 0,
+          "classic": {
+            "lock_difficulty": 100
+          },
+          "ee": {
+            "lock_difficulty": 90
+          }
+        }
       ]
     },
     "AR0145.ARE": {
@@ -86,6 +140,24 @@
       "byteEqual": false,
       "changedParsedFields": [
         "actors"
+      ],
+      "placements": [
+        {
+          "collection": "actors",
+          "index": 3,
+          "classic": {
+            "position": [
+              595,
+              511
+            ]
+          },
+          "ee": {
+            "position": [
+              575,
+              517
+            ]
+          }
+        }
       ]
     },
     "AR0146.ARE": {
@@ -94,6 +166,18 @@
       "byteEqual": false,
       "changedParsedFields": [
         "doors"
+      ],
+      "placements": [
+        {
+          "collection": "doors",
+          "index": 0,
+          "classic": {
+            "travel_trigger": ""
+          },
+          "ee": {
+            "travel_trigger": "Door0123"
+          }
+        }
       ]
     },
     "BELT.CRE": {

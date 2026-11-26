@@ -70,6 +70,13 @@ decoded by the existing parsers. The two compiled scripts have fingerprint compa
 These records cover a subset of the game data. Original-game execution, the rest of the installation, text
 comparisons and native city acceptance remain open. No EE ledger obligations are retired by this audit.
 
+The original AR0111 area places a fourth actor, `SLAVE4`, at source coordinates (996, 278). The EE area has
+three placements. Its first container also reduces the original lock difficulty from 100 to 90. In AR0109 the
+second container moves four source pixels horizontally between editions. Ithmeera in AR0145 stands at
+(595, 511) in the patch and (575, 517) in EE. The AR0146 maze door has an empty travel-trigger reference in
+the classic record and `Door0123` in EE. The area's region and door connections require separate checks
+before treating that difference as a change to playable access.
+
 ## Opt-in regional simulation
 
 `CMap.activeSimulationRegion` is a serialized string. An empty value preserves the existing all-object simulation. With a nonempty value, objects with a matching `simulationRegion` receive turn hooks, controller planning, movement commits and controller turn-end callbacks. The actual map player, objects with no region and objects with `alwaysSimulate=true` remain active.

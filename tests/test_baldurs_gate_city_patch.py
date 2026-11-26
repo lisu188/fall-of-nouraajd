@@ -160,5 +160,25 @@ class CityPatchAuditTest(unittest.TestCase):
         self.assertEqual(rows["FENTEN.DLG"]["dialogue"]["classicCounts"], [6, 6])
         self.assertEqual(rows["FENTEN.DLG"]["dialogue"]["eeCounts"], [6, 9])
         self.assertIn("actors", rows["AR0111.ARE"]["changedParsedFields"])
+        actor, lock = rows["AR0111.ARE"]["placements"]
+        self.assertEqual(
+            ("actors", 3, "SLAVE4", [996, 278], None),
+            (
+                actor["collection"],
+                actor["index"],
+                actor["classic"]["creature"],
+                actor["classic"]["position"],
+                actor["ee"],
+            ),
+        )
+        self.assertEqual((100, 90), (lock["classic"]["lock_difficulty"], lock["ee"]["lock_difficulty"]))
+        for area, key, classic, enhanced in (
+            ("AR0109", "position", [707, 662], [703, 662]),
+            ("AR0145", "position", [595, 511], [575, 517]),
+            ("AR0146", "travel_trigger", "", "Door0123"),
+        ):
+            with self.subTest(area=area):
+                (placement,) = rows[area + ".ARE"]["placements"]
+                self.assertEqual((classic, enhanced), (placement["classic"][key], placement["ee"][key]))
         self.assertTrue(rows["BENJY.CRE"]["byteEqual"])
         self.assertEqual(rows["SAREVOK.BCS"]["comparison"], "fingerprintsOnly")

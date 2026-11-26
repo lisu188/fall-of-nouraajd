@@ -21,6 +21,11 @@ PATCH_SHA256 = "42d66f2e273e7c7c34a25616787e322158c87d48c0f012e179e3b51cb4cd2cfa
 CITY_MEMBERS_SHA256 = "7e7ef9021b9adf1d9e861a17d1a3f306bab6f20da4dc78a8fee1cca906860e1d"
 TOKEN = re.compile(r'"(?:[^"\\]|\\.)*"|[a-zA-Z0-9_]+|[^\s"]')
 PARSERS = {"ARE": reader.parseArea, "CRE": reader.parseCreature, "ITM": reader.parseItem}
+AREA_FIELDS = {
+    "actors": ("name", "creature", "position", "schedule", "flags", "dialogue", "scripts"),
+    "containers": ("name", "position", "lock_difficulty"),
+    "doors": ("name", "travel_trigger"),
+}
 
 
 def scriptTokens(script):
@@ -138,9 +143,31 @@ def compareResource(name, classic, index, reference):
         row["changedParsedFields"] = sorted(
             old.keys() ^ new.keys() | {key for key in old.keys() & new.keys() if old[key] != new[key]}
         )
+        if ext == "ARE":
+            row["placements"] = compareAreaPlacements(old, new)
     else:
         row["comparison"] = "fingerprintsOnly"
     return row
+
+
+def compareAreaPlacements(classic, enhanced):
+    changes = []
+    for collection, fields in AREA_FIELDS.items():
+        old_rows, new_rows = classic[collection], enhanced[collection]
+        for index in range(max(len(old_rows), len(new_rows))):
+            old = old_rows[index] if index < len(old_rows) else None
+            new = new_rows[index] if index < len(new_rows) else None
+            selected = fields if old is None or new is None else [key for key in fields if old[key] != new[key]]
+            if selected:
+                changes.append(
+                    {
+                        "collection": collection,
+                        "index": index,
+                        "classic": {key: old[key] for key in selected} if old is not None else None,
+                        "ee": {key: new[key] for key in selected} if new is not None else None,
+                    }
+                )
+    return changes
 
 
 def buildAudit(patch_file, override_dir, ee_root):
