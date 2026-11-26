@@ -24,6 +24,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -598,6 +599,55 @@ void testForObjectsRetainsItsSnapshotAcrossNestedMutation() {
                 "nested forObjects calls must see new membership without mutating the outer snapshot");
 }
 
+void testIdleCachesReleaseOwnersAndLiveTraversalSurvivesRegistryReplacement() {
+    RegionFixture fixture;
+    std::vector<std::weak_ptr<CMapObject>> residents;
+    for (const auto name : {"originalA", "originalB", "originalC"}) {
+        auto object = std::make_shared<CMapObject>();
+        object->setGame(fixture.game);
+        object->setName(name);
+        fixture.map->addObject(object);
+        residents.emplace_back(object);
+    }
+    fixture.map->move();
+    for (const auto &resident : residents) {
+        expect_true(resident.use_count() == 1, "only the registry should own a resident between traversals");
+    }
+
+    std::size_t visited = 0;
+    fixture.map->forObjects([&](auto) {
+        if (++visited == 1) {
+            fixture.map->setObjects({});
+            for (const auto &resident : residents) {
+                expect_true(!resident.expired(), "an in-flight traversal must retain its original members");
+            }
+        }
+    });
+    expect_true(visited == residents.size(), "registry replacement must preserve all original callbacks");
+    for (const auto &resident : residents) {
+        expect_true(resident.expired(), "the completed traversal must release all former residents");
+    }
+}
+
+void testTraversalCanFinishAfterCallerReleasesTheMap() {
+    auto map = std::make_shared<CMap>();
+    std::weak_ptr<CMap> lifetime = map;
+    std::set<std::shared_ptr<CMapObject>> residents;
+    for (const auto name : {"firstResident", "secondResident"}) {
+        auto object = std::make_shared<CMapObject>();
+        object->setName(name);
+        residents.insert(object);
+    }
+    map->setObjects(std::move(residents));
+    std::size_t visited = 0;
+    map->forObjects([&](auto object) {
+        expect_true(bool(object), "the traversal must still deliver each original object");
+        ++visited;
+        map.reset();
+    });
+    expect_true(visited == 2 && lifetime.expired(), "the traversal must finish and release its map");
+}
+
 void testSyntheticCityRegionCallbackAndControlBudget() {
     constexpr int WARD_ACTORS = 545;
     constexpr int GLOBAL_ACTORS = 3;
@@ -706,5 +756,7 @@ void run_simulation_region_tests() {
     testRegisteredActivityGettersRemainLiveWithoutNotifications();
     testInvalidatedSnapshotsReleaseRemovedOwners();
     testForObjectsRetainsItsSnapshotAcrossNestedMutation();
+    testIdleCachesReleaseOwnersAndLiveTraversalSurvivesRegistryReplacement();
+    testTraversalCanFinishAfterCallerReleasesTheMap();
     testSyntheticCityRegionCallbackAndControlBudget();
 }

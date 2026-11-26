@@ -86,7 +86,8 @@ int normalize_wrapped_axis(int value, int max_value) {
 } // namespace
 
 struct CMap::ObjectSnapshot {
-    std::vector<std::shared_ptr<CMapObject>> objects;
+    std::vector<std::weak_ptr<CMapObject>> objects;
+    std::vector<std::shared_ptr<CMapObject>> traversalOwners;
 };
 
 struct CMap::SimulationSnapshot {
@@ -116,7 +117,7 @@ class CMap::SimulationCursor {
                 ++mapTurnSelectionWork->candidateVisits;
                 ++mapTurnSelectionWork->fallbackVisits;
             }
-            return snapshot->objects->objects[nextPosition++];
+            return snapshot->objects->objects[nextPosition++].lock();
         }
         if (activeOffset == snapshot->activeIndices.size()) {
             nextPosition = snapshot->objects->objects.size();
@@ -127,7 +128,7 @@ class CMap::SimulationCursor {
         if (mapTurnSelectionWork) {
             ++mapTurnSelectionWork->candidateVisits;
         }
-        return snapshot->objects->objects[index];
+        return snapshot->objects->objects[index].lock();
     }
 
   private:
@@ -1214,8 +1215,8 @@ bool CMap::addObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) 
         vstd::logger::warning("Ignoring duplicate map object after initialization:", mapObject->getName());
         return false;
     }
-    mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     invalidateObjectSnapshot();
+    mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
     if (!mapObject->getCanStep())
@@ -1252,8 +1253,8 @@ vstd::task<void> CMap::removeObjectAsync(std::shared_ptr<CMapObject> mapObject) 
             co_return;
         }
         const auto registeredName = registered->first;
-        map->mapObjects.erase(registered);
         map->invalidateObjectSnapshot();
+        map->mapObjects.erase(registered);
         vstd::erase_if(map->mapObjectsCache, [&registeredName](auto entry) { return entry.second == registeredName; });
         map->bumpNavigationRevision();
         if (!object->getCanStep()) {
@@ -1327,8 +1328,8 @@ bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObjec
 
     const auto registeredName = map_object_it->first;
     const auto coords = mapObject->getCoords();
-    mapObjects.erase(map_object_it);
     invalidateObjectSnapshot();
+    mapObjects.erase(map_object_it);
     vstd::erase_if(mapObjectsCache, [&registeredName](auto it) { return it.second == registeredName; });
     mapObject->clearOwningMap(this->ptr<CMap>());
     bumpNavigationRevision();
@@ -1364,8 +1365,11 @@ bool CMap::isMoving() { return moving; }
 
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
+    // A callback may release the caller's last reference to this registry.
+    const auto mapLifetime = weak_from_this().lock();
     const auto snapshot = getObjectSnapshot();
-    for (const auto &object : snapshot->objects) {
+    for (const auto &entry : snapshot->objects) {
+        const auto object = entry.lock();
         if (predicate(object)) {
             func(object);
         }
@@ -1400,7 +1404,7 @@ std::shared_ptr<const CMap::SimulationSnapshot> CMap::getSimulationSnapshot() {
         ++mapTurnSelectionWork->selectionBuilds;
     }
     for (std::size_t index = 0; index < snapshot->objects->objects.size(); ++index) {
-        const auto &object = snapshot->objects->objects[index];
+        const auto object = snapshot->objects->objects[index].lock();
         const auto &properties = static_cast<const CGameObject &>(*object).dynamic_props();
         const bool liveProperties =
             (!properties.contains("simulationRegion") && object->hasProperty("simulationRegion")) ||
@@ -1419,8 +1423,16 @@ std::shared_ptr<const CMap::SimulationSnapshot> CMap::getSimulationSnapshot() {
 CMap::SimulationCursor CMap::simulationObjects() { return SimulationCursor(*this, getSimulationSnapshot()); }
 
 void CMap::invalidateObjectSnapshot() {
-    objectSnapshot.reset();
     invalidateSimulationSelection();
+    if (objectSnapshot && objectSnapshot.use_count() > 1) {
+        // A traversal still needs its original membership after registry mutation.
+        // The registry owns all entries until this point.
+        objectSnapshot->traversalOwners.reserve(objectSnapshot->objects.size());
+        for (const auto &entry : objectSnapshot->objects) {
+            objectSnapshot->traversalOwners.push_back(entry.lock());
+        }
+    }
+    objectSnapshot.reset();
 }
 
 void CMap::invalidateSimulationSelection() {
