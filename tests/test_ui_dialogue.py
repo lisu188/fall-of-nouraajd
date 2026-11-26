@@ -237,6 +237,51 @@ def assertCustodyDialogueProvenance(test, definitions, prison):
     return facts
 
 
+def beforeTamokoMeetingChoices(dialog):
+    """Reverse only the reviewed Tamoko entry choices for the earlier city dialogue fingerprint."""
+
+    def entryOption(text, action, condition=None):
+        props = {"text": text, "action": action, "nextStateId": "ENTRY"}
+        if condition:
+            props["condition"] = condition
+        return {"class": "CDialogOption", "properties": props}
+
+    result = copy.deepcopy(dialog)
+    options = result["properties"]["states"][0]["properties"]["options"]
+    new_prefix = [
+        entryOption(
+            "Complete: Sarevok's conspiracy", "questCythandriaDiaryComplete", "canQuestCythandriaDiaryComplete"
+        ),
+        entryOption("Accept: Tamoko's last appeal", "acceptTamokoMercy", "canAcceptTamokoMercy"),
+        entryOption("Discuss Tamoko's final stand.", "discussTamokoFinalMeeting", "canDiscussTamokoFinalMeeting"),
+        entryOption("Discuss Tamoko's first meeting.", "discussTamokoFirstMeeting", "canTamokoFirstMeeting"),
+        entryOption("Continue Tamoko's request.", "discussTamokoSecondMeeting", "canTamokoSecondMeeting"),
+    ]
+    for index, opt in enumerate(new_prefix):
+        opt["properties"]["number"] = index
+    if len(options) != 9 or options[:5] != new_prefix:
+        raise ValueError("Tamoko's source meeting choices changed")
+    for index, option in enumerate(options):
+        number = option["properties"].get("number")
+        if type(number) is not int or number != index:
+            raise ValueError("Tamoko's dialogue option numbering changed")
+    options[:5] = [
+        entryOption("Speak.", "talk"),
+        entryOption("Accept: Sarevok's conspiracy", "acceptCythandriaDiary", "canAcceptCythandriaDiary"),
+        *options[:2],
+        entryOption("Complete: Tamoko's last appeal", "questTamokoMercyComplete", "canQuestTamokoMercyComplete"),
+        entryOption("Refuse Tamoko and fight her.", "questTamokoMercyFight", "canQuestTamokoMercyFight"),
+        entryOption("Hear Tamoko's warning.", "hearTamokoWarning", "canTamokoFirstMeeting"),
+        entryOption("Decline Tamoko's first approach.", "declineTamokoFirstMeeting", "canTamokoFirstMeeting"),
+        entryOption("Discuss Tamoko's request.", "discussTamokoRequest", "canTamokoSecondMeeting"),
+        entryOption("Agree to Tamoko's request.", "acceptTamokoRequest", "canFinishTamokoSecondMeeting"),
+        entryOption("Refuse Tamoko's request.", "refuseTamokoRequest", "canFinishTamokoSecondMeeting"),
+    ]
+    for index, option in enumerate(options):
+        option["properties"]["number"] = index
+    return result
+
+
 def poisonSourceContentFacts(config, source, document, dialogue, followup):
     """Validate the finite source-owned poison additions before deriving structural audit counts."""
 
@@ -352,6 +397,9 @@ def poisonSourceContentFacts(config, source, document, dialogue, followup):
         and isinstance(row.get("properties", {}).get("states"), list)
         and name not in new_dialogues
     }
+    tamoko = "cityAr0800ScriptActorTamokoDialog"
+    require(tamoko in legacy, "Tamoko's dialogue owner is missing")
+    legacy[tamoko] = beforeTamokoMeetingChoices(legacy[tamoko])
     legacy_sha = hashlib.sha256(json.dumps(legacy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     require(
         len(legacy) == 1323 and legacy_sha == "621bc6f055fe8c143a6ebe3480fdc6093ec8734d737ae3c4e248dff5b09c430a",
@@ -1223,6 +1271,19 @@ class DialogueContentTest(unittest.TestCase):
             readJson("tests/fixtures/baldurs_gate_city_poison_dialogue.json"),
             readJson("tests/fixtures/baldurs_gate_city_poison_followup.json"),
         )
+
+    def testTamokoMeetingChoiceProjectionRetainsTheOriginalDialogueFingerprint(self):
+        dialog = readJson("res/maps/baldursGate/config.json")["cityAr0800ScriptActorTamokoDialog"]
+        original = beforeTamokoMeetingChoices(dialog)
+        canonical = json.dumps(original, sort_keys=True, separators=(",", ":")).encode()
+        self.assertEqual(
+            "2c6338765e64673b322be13a885d9d122d56437c98e4934237b5aac36630a69b", hashlib.sha256(canonical).hexdigest()
+        )
+        for index, field, value in ((2, "condition", "always"), (3, "number", 0), (7, "number", False)):
+            changed = copy.deepcopy(dialog)
+            changed["properties"]["states"][0]["properties"]["options"][index]["properties"][field] = value
+            with self.subTest(index=index, field=field), self.assertRaises(ValueError):
+                beforeTamokoMeetingChoices(changed)
 
     def testPoisonSourceFactoryCountsComeFromExactOwnedBlueprints(self):
         args = self.poisonSourceFixture()
