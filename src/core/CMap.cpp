@@ -61,6 +61,7 @@ std::atomic_bool mapTileTraversalProbeEnabled{false};
 std::atomic_size_t mapTileSnapshotCounter{0};
 std::atomic_size_t mapTileSnapshotReferenceCounter{0};
 std::atomic_size_t mapDirectTileVisitCounter{0};
+std::atomic_size_t mapViewAreaCandidates{0};
 
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
 std::atomic_size_t mapCoordinateLookupProbeCounter{0};
@@ -977,13 +978,15 @@ void performance_guard::resetMapTileTraversalProbe() {
     mapTileSnapshotCounter.store(0, std::memory_order_relaxed);
     mapTileSnapshotReferenceCounter.store(0, std::memory_order_relaxed);
     mapDirectTileVisitCounter.store(0, std::memory_order_relaxed);
+    mapViewAreaCandidates.store(0, std::memory_order_relaxed);
     mapTileTraversalProbeEnabled.store(true, std::memory_order_relaxed);
 }
 
 performance_guard::MapTileTraversalWork performance_guard::mapTileTraversalWork() {
     return {mapTileSnapshotCounter.load(std::memory_order_relaxed),
             mapTileSnapshotReferenceCounter.load(std::memory_order_relaxed),
-            mapDirectTileVisitCounter.load(std::memory_order_relaxed)};
+            mapDirectTileVisitCounter.load(std::memory_order_relaxed),
+            mapViewAreaCandidates.load(std::memory_order_relaxed)};
 }
 
 void performance_guard::disableMapTileTraversalProbe() {
@@ -1113,6 +1116,81 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
 }
 
 std::shared_ptr<CTile> CMap::getTile(Coords coords) { return getTile(coords.x, coords.y, coords.z); }
+
+std::vector<std::shared_ptr<CTile>> CMap::getPlacedTilesInViewArea(const CMapViewArea &area) const {
+    std::lock_guard lock(navigationMutex);
+    std::vector<std::shared_ptr<CTile>> result;
+    const auto width = static_cast<std::int64_t>(area.maxX) - area.minX + 1;
+    const auto height = static_cast<std::int64_t>(area.maxY) - area.minY + 1;
+    if (width <= 0 || height <= 0)
+        return result;
+    const bool byCoordinate = static_cast<std::uint64_t>(width) <= tiles.size() / static_cast<std::uint64_t>(height);
+    std::size_t candidates = 0;
+    if (byCoordinate) {
+        for (std::int64_t y = area.minY; y <= area.maxY; ++y) {
+            for (std::int64_t x = area.minX; x <= area.maxX; ++x) {
+                ++candidates;
+                const auto tile = tiles.find({static_cast<int>(x), static_cast<int>(y), area.z});
+                if (tile != tiles.end())
+                    result.push_back(tile->second);
+            }
+        }
+    } else {
+        for (const auto &[coords, tile] : tiles) {
+            ++candidates;
+            if (area.contains(coords))
+                result.push_back(tile);
+        }
+    }
+    if (mapTileTraversalProbeEnabled.load(std::memory_order_relaxed))
+        mapViewAreaCandidates.fetch_add(candidates, std::memory_order_relaxed);
+    return result;
+}
+
+void CMap::setViewAreas(const std::vector<std::pair<std::string, std::array<int, 5>>> &areas) {
+    std::vector<CMapViewArea> parsed;
+    parsed.reserve(areas.size());
+    for (const auto &[label, bounds] : areas) {
+        const auto [x, y, z, width, height] = bounds;
+        const auto right = static_cast<std::int64_t>(x) + width - 1;
+        const auto bottom = static_cast<std::int64_t>(y) + height - 1;
+        if (label.empty() || width <= 0 || height <= 0 || right > std::numeric_limits<int>::max() ||
+            bottom > std::numeric_limits<int>::max()) {
+            throw std::invalid_argument("Invalid map view area dimensions or label");
+        }
+        if (std::ranges::any_of(parsed, [&](const CMapViewArea &area) {
+                return z == area.z && x <= area.maxX && right >= area.minX && y <= area.maxY && bottom >= area.minY;
+            }))
+            throw std::invalid_argument("Overlapping map view areas");
+        parsed.push_back({label, x, y, static_cast<int>(right), static_cast<int>(bottom), z});
+    }
+    std::lock_guard lock(navigationMutex);
+    viewAreas = std::move(parsed);
+    currentViewArea.reset();
+}
+
+const CMapViewArea *CMap::cachedViewAreaAt(Coords viewer) {
+    if (viewAreas.empty())
+        return nullptr;
+    if (!currentViewArea || !currentViewArea->contains(viewer)) {
+        const auto found = std::ranges::find_if(viewAreas, [&](const auto &area) { return area.contains(viewer); });
+        currentViewArea =
+            found != viewAreas.end() ? *found : CMapViewArea{"", viewer.x, viewer.y, viewer.x, viewer.y, viewer.z};
+    }
+    return &*currentViewArea;
+}
+
+std::optional<CMapViewArea> CMap::getViewAreaAt(Coords viewer) {
+    std::lock_guard lock(navigationMutex);
+    const auto area = cachedViewAreaAt(viewer);
+    return area ? std::optional(*area) : std::nullopt;
+}
+
+bool CMap::isViewCellVisible(Coords viewer, Coords target) {
+    std::lock_guard lock(navigationMutex);
+    const auto area = cachedViewAreaAt(viewer);
+    return !area || area->contains(target);
+}
 
 bool CMap::canStep(int x, int y, int z) { return lookupNavigationCell(Coords(x, y, z), std::nullopt).walkable; }
 

@@ -280,8 +280,15 @@ std::string default_tile_type(const std::shared_ptr<CMap> &map, int z) {
 
 SDL_Color default_tile_color(const std::shared_ptr<CMap> &map, int z) { return tile_color(default_tile_type(map, z)); }
 
-template <typename T> void draw_terrain(T *target, const std::shared_ptr<CMap> &map, int z, const MinimapScale &scale) {
+template <typename T>
+void draw_terrain(T *target, const std::shared_ptr<CMap> &map, int z, const MinimapScale &scale,
+                  const std::optional<CMapViewArea> &area) {
     draw_default_terrain(target, scale, default_tile_color(map, z));
+    if (area) {
+        for (const auto &tile : map->getPlacedTilesInViewArea(*area))
+            draw_cell(target, scale, tile->getCoords(), tile_color(tile_type(tile)));
+        return;
+    }
     for (const auto &tile : map->getTiles()) {
         if (!tile || !z_matches(tile->getCoords(), z)) {
             continue;
@@ -296,7 +303,8 @@ terrain_signature(const std::shared_ptr<CMap> &map, int z, const LevelBounds &bo
 }
 
 fn::sdl::TexturePtr build_terrain_texture(SDL_Renderer *renderer, const std::shared_ptr<CMap> &map, int z,
-                                          const std::shared_ptr<SDL_Rect> &rect, LevelBounds bounds) {
+                                          const std::shared_ptr<SDL_Rect> &rect, LevelBounds bounds,
+                                          const std::optional<CMapViewArea> &area) {
     if (rect->w <= 0 || rect->h <= 0) {
         return nullptr;
     }
@@ -308,7 +316,7 @@ fn::sdl::TexturePtr build_terrain_texture(SDL_Renderer *renderer, const std::sha
 
     auto localRect = CUtil::rect(0, 0, rect->w, rect->h);
     fill_rect(surface.get(), localRect, MINIMAP_BACKGROUND);
-    draw_terrain(surface.get(), map, z, make_scale(localRect, bounds));
+    draw_terrain(surface.get(), map, z, make_scale(localRect, bounds), area);
 
     fn::sdl::TexturePtr texture(SDL_SAFE(SDL_CreateTextureFromSurface(renderer, surface.get())));
     if (texture) {
@@ -416,13 +424,15 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
         if (levelChanged)
             cache.boundsInitialized = false;
     }
-    if (!cache.boundsInitialized || cache.boundsTerrainRevision != terrainRevision) {
+    const auto area = map->getViewAreaAt(playerCoords);
+    if (!area && (!cache.boundsInitialized || cache.boundsTerrainRevision != terrainRevision)) {
         cache.terrainBounds = get_terrain_bounds(map, playerCoords.z);
         cache.boundsTerrainRevision = terrainRevision;
         cache.boundsInitialized = true;
     }
-    const auto maybeBounds = get_level_bounds(cache.terrainBounds, playerCoords, cache.objects);
-    if (!maybeBounds) {
+    const auto maybeBounds = area ? std::optional(LevelBounds{area->minX, area->minY, area->maxX, area->maxY})
+                                  : get_level_bounds(cache.terrainBounds, playerCoords, cache.objects);
+    if (!maybeBounds || (area && !bounds_within_limits(*maybeBounds))) {
         fill_rect(renderer, rect, MINIMAP_BACKGROUND);
         return;
     }
@@ -430,7 +440,7 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     const auto signature = terrain_signature(map, playerCoords.z, *maybeBounds, rect->w, rect->h);
     if (!terrainTexture || terrainTexture.get_deleter().owner.lock() != gui || terrainMap.lock() != map ||
         terrainSignature != signature) {
-        auto texture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds);
+        auto texture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds, area);
         terrainTexture = fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{gui});
         ++terrainTextureBuildCount;
         terrainMap = map;
@@ -440,12 +450,13 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
         gui->getRenderContext().copy(terrainTexture.get(), nullptr, rect.get());
     } else {
         fill_rect(renderer, rect, MINIMAP_BACKGROUND);
-        draw_terrain(renderer, map, playerCoords.z, scale);
+        draw_terrain(renderer, map, playerCoords.z, scale, area);
     }
 
     for (const auto &entry : cache.objects) {
         const auto object = entry.lock();
-        if (!object || object == player || !z_matches(object->getCoords(), playerCoords.z)) {
+        if (!object || object == player || !z_matches(object->getCoords(), playerCoords.z) ||
+            (area && !area->contains(object->getCoords()))) {
             continue;
         }
         if (vstd::cast<CCreature>(object)) {
@@ -465,7 +476,8 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     UiTheme::stroke(renderer, *rect, UiTheme::Accent);
     if (expanded) {
         gui->getTextManager()->drawTextStyled(
-            "+ You   · Creatures   □ Objects   |   Elevation " + std::to_string(playerCoords.z),
+            "+ You   · Creatures   □ Objects   |   " +
+                (area && !area->label.empty() ? area->label : "Elevation " + std::to_string(playerCoords.z)),
             CUtil::rect(outer->x, rect->y + rect->h + 4, outer->w, UiTheme::scaled(gui, 44)), "body", UiTheme::Text,
             true);
     }
@@ -538,10 +550,11 @@ vstd::task<void> CMinimapGraphicsObject::browseLandmarksAsync(std::shared_ptr<CG
         if (!player)
             co_return;
         auto entries = json::array();
+        const auto area = map->getViewAreaAt(player->getCoords());
         std::vector<std::shared_ptr<CMapObject>> landmarks;
         for (const auto &object : map->getObjects()) {
             if (!object || object == player || object->getCoords().z != player->getCoords().z ||
-                object->getLabel().empty())
+                object->getLabel().empty() || (area && !area->contains(object->getCoords())))
                 continue;
             auto coords = object->getCoords();
             auto id = std::to_string(landmarks.size());
@@ -557,6 +570,8 @@ vstd::task<void> CMinimapGraphicsObject::browseLandmarksAsync(std::shared_ptr<CG
             co_return;
         auto index = std::stoul(selected);
         if (index >= landmarks.size())
+            co_return;
+        if (area && (!area->contains(player->getCoords()) || !area->contains(landmarks[index]->getCoords())))
             co_return;
         auto controller = vstd::cast<CPlayerController>(player->getController());
         if (!controller)

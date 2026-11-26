@@ -353,6 +353,12 @@ def visit(d, actor, action="talk"):
 
 def cityTour(d):
     start(d)
+
+    def checkView(area_id):
+        area = documents()["geometry"]["atlas"][area_id]
+        view = d.call(d.game_map, "getViewAreaAt", d.call(d.player, "getCoords"))
+        d.test.assertEqual([area["label"], area["bounds"]], view, ("Current city view", area_id))
+
     region_document = read(d, d.object("cityClock"), "regionDefinitions", {})
     candidate = next(
         (
@@ -377,6 +383,7 @@ def cityTour(d):
     )
     for area_id in WARDS:
         traversed = travel(d, area_id)
+        checkView(area_id)
         d.check(
             "baldursGate.travel." + area_id,
             area_id in read(d, d.game_map, "plugin_cityVisitedAreas", []),
@@ -384,10 +391,12 @@ def cityTour(d):
         )
     for area_id in ("AR0705", "AR0706", "AR0002"):
         travel(d, area_id)
+        checkView(area_id)
         d.check("baldursGate.interior." + area_id, currentArea(d) == area_id)
     visited = read(d, d.game_map, "plugin_cityVisitedAreas", [])
     regions = read(d, d.game_map, "plugin_cityRegionVisits", {})
     d.saveAndReload("city-nine-wards-and-interiors")
+    checkView("AR0002")
     d.test.assertEqual(visited, read(d, d.game_map, "plugin_cityVisitedAreas", []))
     d.test.assertEqual(regions, read(d, d.game_map, "plugin_cityRegionVisits", {}))
     travel(d, "AR0800")
@@ -2499,6 +2508,7 @@ SOURCE_BRANCHES = {
     "res/maps/baldursGate/script.py:BaldursGateDialog.requestJalanthaAudience": ("baldursGate.temple.audience",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.donate": ("baldursGate.temple.donation",),
     "res/maps/baldursGate/script.py:BaldursGateStart.onEnter": ("baldursGate.travel.AR0800",),
+    "res/maps/baldursGate/script.py:BaldursGateClock.onCreate": ("baldursGate.travel.AR0700",),
     "res/maps/baldursGate/script.py:BaldursGateClock.onTurn": ("baldursGate.travel.AR0700",),
     "res/maps/baldursGate/script.py:BaldursGatePortal.onCreate": ("baldursGate.travel.AR0700",),
     "res/maps/baldursGate/script.py:BaldursGatePortal.onTurn": ("baldursGate.travel.AR0700",),

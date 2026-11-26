@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <cstddef>
 #include <atomic>
+#include <array>
 #include <mutex>
 #include <span>
 
@@ -61,6 +62,15 @@ struct CNavigationEdge {
     std::optional<std::string> sourceObjectName;
 
     bool operator==(const CNavigationEdge &other) const = default;
+};
+
+struct CMapViewArea {
+    std::string label;
+    int minX, minY, maxX, maxY, z;
+
+    bool contains(Coords point) const {
+        return point.z == z && point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
+    }
 };
 
 class CMap : public CGameObject {
@@ -122,6 +132,11 @@ class CMap : public CGameObject {
     std::shared_ptr<CTile> getTile(int x, int y, int z);
 
     std::shared_ptr<CTile> getTile(Coords coords);
+
+    std::vector<std::shared_ptr<CTile>> getPlacedTilesInViewArea(const CMapViewArea &area) const;
+    void setViewAreas(const std::vector<std::pair<std::string, std::array<int, 5>>> &areas);
+    std::optional<CMapViewArea> getViewAreaAt(Coords viewer);
+    bool isViewCellVisible(Coords viewer, Coords target);
 
     bool contains(int x, int y, int z);
 
@@ -391,6 +406,9 @@ class CMap : public CGameObject {
     std::shared_ptr<CPlayer> defeatedPlayer;
     std::string mapName;
     std::string activeSimulationRegion;
+    std::vector<CMapViewArea> viewAreas;
+    std::optional<CMapViewArea> currentViewArea;
+    const CMapViewArea *cachedViewAreaAt(Coords viewer);
     std::uint64_t simulationRegionRevision = 0;
     std::string combatHistory;
     std::uint64_t navigationRevision = 0;
@@ -461,6 +479,7 @@ struct MapTileTraversalWork {
     std::size_t snapshots = 0;
     std::size_t snapshotReferences = 0;
     std::size_t directVisits = 0;
+    std::size_t viewAreaCandidates = 0;
 };
 void resetMapTileTraversalProbe();
 MapTileTraversalWork mapTileTraversalWork();

@@ -169,6 +169,10 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
     auto rawCoords =
         Coords(playerCoords.x - tileCountX / 2 + x - 1, playerCoords.y - tileCountY / 2 + y - 1, playerCoords.z);
     auto actualCoords = map->normalizeCoords(rawCoords);
+    if (!map->isViewCellVisible(playerCoords, actualCoords)) {
+        proxyAnimations.erase(proxyCoords);
+        return {};
+    }
     auto &slot = proxyAnimations[proxyCoords];
 
     std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
@@ -473,10 +477,11 @@ bool CMapGraphicsObject::motionIsCurrent(const std::shared_ptr<CGui> &gui, const
     const auto map = motion.map.lock();
     const auto context = motion.context.lock();
     const auto game = gui->getGame();
-    return actor && map && context && context->isActive() &&
+    const auto player = map ? map->getPlayer() : nullptr;
+    return actor && player && context && context->isActive() &&
            context->isTransitionGenerationCurrent(motion.generation) && game && game->getMap() == map &&
            actor->getMap() == map && map->getObjectByName(actor->getName()) == actor &&
-           actor->getCoords() == motion.destination;
+           actor->getCoords() == motion.destination && map->isViewCellVisible(player->getCoords(), motion.destination);
 }
 
 bool CMapGraphicsObject::stepNeedsSequentialPresentation(const std::shared_ptr<CMapObject> &actor, Coords origin,
@@ -608,6 +613,9 @@ bool CMapGraphicsObject::enqueueMotion(const std::shared_ptr<CGui> &gui, const s
     const auto player = map ? map->getPlayer() : nullptr;
     if (!player || !actor || actor->getMap() != map || !gui->isActive() || !gui->getRenderer() ||
         !isAttachedToGui(gui) || !isVisible() || origin.z != destination.z || destination.z != player->getCoords().z)
+        return false;
+    if (!map->isViewCellVisible(player->getCoords(), origin) ||
+        !map->isViewCellVisible(player->getCoords(), destination))
         return false;
     const auto delta = map->getShortestDelta(origin, destination);
     if (delta.z || std::abs(delta.x) + std::abs(delta.y) != 1)
