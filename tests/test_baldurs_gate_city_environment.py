@@ -219,7 +219,7 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
             self.assertEqual(before, config)
 
     def testFrozenGameplayGuardStillDetectsNonVisualMutations(self):
-        from tests.test_baldurs_gate_city_appearances import digest, withoutAppearance, GAMEPLAY_SHA256_WITH_SEVEN_SUNS
+        from tests.test_baldurs_gate_city_appearances import digest, withoutAppearance, GAMEPLAY_SHA256
 
         dialogs = builder.compileDialogs(self.config, readJson(ROOT / "tests/fixtures/baldurs_gate_city_quests.json"))
         for name, field, value in (
@@ -235,7 +235,7 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
             config[name]["properties"][field] = value
             with self.subTest(name=name, field=field):
                 self.assertNotEqual(
-                    GAMEPLAY_SHA256_WITH_SEVEN_SUNS,
+                    GAMEPLAY_SHA256,
                     digest(withoutAppearance(self.document, config, self.geometry, dialogs)),
                 )
         config = deepcopy(self.config)
@@ -245,7 +245,7 @@ class BaldursGateCityEnvironmentTest(unittest.TestCase):
         document = deepcopy(self.document)
         document["layers"][0]["data"][0] = 6
         self.assertNotEqual(
-            GAMEPLAY_SHA256_WITH_SEVEN_SUNS,
+            GAMEPLAY_SHA256,
             digest(withoutAppearance(document, self.config, self.geometry, dialogs)),
         )
 

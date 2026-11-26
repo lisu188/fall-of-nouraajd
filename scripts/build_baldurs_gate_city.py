@@ -585,7 +585,7 @@ def nativeItem(source_id, item):
     elif item_type == 9:
         animation = "images/items/potions/life"
     props = {
-        "label": item.get("displayName") or source_id,
+        "label": item.get("displayName") or item.get("unidentifiedName") or source_id,
         "animation": animation,
         "description": "A city possession converted to native item rules. Its source identity and ownership persist.",
         "plugin_citySourceItem": source_id,
@@ -1388,6 +1388,7 @@ def compileCity(source, quests=None):
         canStep=True,
         animation="images/ambient/street_lantern",
         alwaysSimulate=True,
+        plugin_cityItemNamesCurrent=True,
         sevenSunsMerchantDefinition=json.dumps(
             {
                 "version": 1,

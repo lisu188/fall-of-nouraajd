@@ -20,9 +20,9 @@ from tests.test_baldurs_gate_city_environment import normalizeEnvironmentAnimati
 ROOT = Path(__file__).resolve().parents[1]
 MAP_ROOT = ROOT / "res/maps/baldursGate"
 PREFIX = "maps/baldursGate/images/npc/"
-# The reviewed Seven Suns integration adds its stock, warning quest and dialogue metadata to the ff0b baseline.
-# Restore reviewed environment paths and remove source actor artwork/assets; all gameplay fields remain frozen.
-GAMEPLAY_SHA256_WITH_SEVEN_SUNS = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
+# The pre-name baseline covers the Seven Suns stock, warning quest and dialogue metadata.
+GAMEPLAY_SHA256_BEFORE_ITEM_NAMES = "3c62c252a5790d00b209aa0b3c9bdf98daf5a9d4d2578f1b49c35f9948648f02"
+GAMEPLAY_SHA256 = "d4eee9b1cbe308eb0d468f7dff4970e931fdbe5591e039e5ef5f443225b64cf5"
 
 
 def readJson(path):
@@ -158,7 +158,7 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
         self.assertEqual(1327, len(actors.keys() - {"citySevenSunsRevealedDoppss"}))
         self.assertEqual(PREFIX + "doppelganger", actors["citySevenSunsRevealedDoppss"]["properties"]["animation"])
         self.assertEqual(
-            GAMEPLAY_SHA256_WITH_SEVEN_SUNS,
+            GAMEPLAY_SHA256,
             digest(withoutAppearance(self.document, self.config, self.geometry, self.dialogs)),
             "Actor identity, ownership, stats, placement, schedules, quests, dialogue and collision must remain intact",
         )
@@ -180,6 +180,22 @@ class BaldursGateCityAppearanceTest(unittest.TestCase):
             self.assertEqual(row, changed, key)
         untouched = self.config.keys() - sourceActors(self.config).keys()
         self.assertEqual({key: before[key] for key in untouched}, {key: config[key] for key in untouched})
+
+    def testFiveReviewedNamesAndTheMigrationMarkerReconstructThePreviousGameplay(self):
+        previous = withoutAppearance(self.document, self.config, self.geometry, self.dialogs)
+        config = previous["config"]
+        self.assertIs(config["cityClock"]["properties"].pop("plugin_cityItemNamesCurrent"), True)
+        for code, label in (
+            ("GHOUL1", "Ghoul Touch"),
+            ("MAGE04", "Ring"),
+            ("MAGE06", "Ring"),
+            ("REGHP2", "Ring"),
+            ("SW1H11", "Flame Blade"),
+        ):
+            item = config["cityItem" + code.capitalize()]["properties"]
+            self.assertEqual((code, label), (item["plugin_citySourceItem"], item["label"]))
+            item["label"] = code
+        self.assertEqual(GAMEPLAY_SHA256_BEFORE_ITEM_NAMES, digest(previous))
 
     def testAppearanceCoverageIsCompleteStableAndIndependentOfInputOrdering(self):
         apply = self.requireAppearanceHelper()
