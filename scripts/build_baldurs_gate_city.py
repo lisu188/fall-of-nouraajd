@@ -19,6 +19,7 @@ POISON_DIALOGUE = ROOT / "tests/fixtures/baldurs_gate_city_poison_dialogue.json"
 POISON_FOLLOWUP = ROOT / "tests/fixtures/baldurs_gate_city_poison_followup.json"
 POISON_TEXT = ROOT / "tests/fixtures/baldurs_gate_city_poison_semantic.json"
 MERCHANT_STOCK_SOURCE = ROOT / "tests/fixtures/baldurs_gate_seven_suns_stock.json"
+CHEST_SOURCE = ROOT / "tests/fixtures/baldurs_gate_city_chests.json"
 try:
     from scripts.build_baldurs_gate_city_dialogs import prepareStores, questDialogRows, storeDialogRows
     from scripts.build_baldurs_gate_city_relocations import buildRelocations
@@ -297,6 +298,44 @@ def applyCityEnvironmentAppearances(source, config):
         for directory, appearances in (("buildings", CITY_BUILDING_ASSETS), ("tiles", CITY_TILE_ASSETS))
         for appearance in appearances
     ]
+
+
+def applyCityItemAppearances(source, config):
+    prefix = "maps/baldursGate/images/"
+    item_art = {
+        "BOOK08": "understandingTomeV2",
+        "MISC54": "wrappedChildRemainsV2",
+        "MISC55": "carriedDuke",
+        "MAGE04": "questRing",
+        "POTN20": "antidoteBottle",
+        "POTN47": "antidoteBottle",
+    }
+    for code, item in source["items"].items():
+        if code.startswith("BOOK") and item["item_type"] == 0 and item.get("displayName", "").startswith("History of "):
+            item_art[code] = "ordinaryBook"
+    for code, appearance in item_art.items():
+        props = config[identity("Item " + code)]["properties"]
+        if props.get("plugin_citySourceItem") != code:
+            raise ValueError("City item appearance target differs from its source: " + code)
+        props["animation"] = prefix + "items/" + appearance
+
+    areas = json.loads(CHEST_SOURCE.read_text(encoding="utf-8"))["areas"]
+    if areas.keys() != source["areas"].keys():
+        raise ValueError("City chest appearance audit does not match the area manifest")
+    for area_id, evidence in areas.items():
+        area = source["areas"][area_id]
+        if area["sha256"] != evidence["sha256"] or len(area["containers"]) != evidence["containerCount"]:
+            raise ValueError("Unaudited city container table: " + area_id)
+        for index in evidence["chestIndices"]:
+            key = f"{area_id}#container{index}"
+            row = config[identity(f"{area_id} Container {index}")]
+            if row["class"] != "BaldursGateContainer" or row["properties"].get("sourceContainer") != key:
+                raise ValueError("City chest appearance target differs from its source: " + key)
+            row["properties"]["animation"] = prefix + "interactions/woodenChest"
+
+    # Open and closed doors share one recipe until the runtime supports state-specific artwork.
+    paths = {"interactions/woodenChest", "interactions/closedDoor"} | {"items/" + name for name in item_art.values()}
+    return [{"kind": "file", "path": "images/" + path + ".png"} for path in sorted(paths)]
 
 
 def cityActorAppearance(properties, source, appearances):
@@ -1542,7 +1581,9 @@ def compileCity(source, quests=None):
         usablePosition,
     )
     document["assets"] = sorted(
-        applyCityAppearances(source, config) + applyCityEnvironmentAppearances(source, config),
+        applyCityAppearances(source, config)
+        + applyCityEnvironmentAppearances(source, config)
+        + applyCityItemAppearances(source, config),
         key=lambda row: row["path"],
     )
     protectCityDefinitions(config)
