@@ -38,6 +38,38 @@ Unlinked branches remain in the inventory without a claim of natural reachabilit
 are refused before mutation. These holds and the original-versus-EE differences remain acceptance requirements;
 staging these graphs does not close their ledger obligations.
 
+### Original patch evidence
+
+The international BG1 1.1.4315 patch contains 45 resources in the audited city closure, including 18 dialogues,
+four areas, twelve creatures, nine items and two compiled scripts. The installer fingerprint matches the
+international release recorded by the historical PlayOnLinux installer. The executable was read as an archive.
+[Historical patch URL and checksum](https://www.playonlinux.com/en/app-772-Baldurs_Gate_Patch_114315.html)
+
+Reproduce the checked-in factual comparison using a privately extracted patch and the installed EE game:
+
+```powershell
+python scripts/audit_baldurs_gate_city_patch.py --patch-file "$patchFile" --patch-override "$patchOverrideDir" --ee-root "$eeRoot" --output tests/fixtures/baldurs_gate_city_classic_patch.json --check
+```
+
+The tool verifies both the installer and extracted city member fingerprints, reads the EE base archive and
+checks each EE member against the existing city inventory. Dialogue comparisons use state number and choice
+position within each state. Inserting a choice can shift later choices in that state. Unused script pool entries
+and whitespace between tokens do not change this comparison. Quoted operands, action order, reply and journal
+references, flags and transition targets are significant. Each record also compares the state trigger indices
+used for entry priority and records the EE hostile-interruption header flags. A string reference identifies a TLK entry within its
+own edition. Matching references alone leave the actual wording unverified. The comparison covers the fields
+decoded by the existing parsers. The two compiled scripts have fingerprint comparisons only.
+[Infinity Engine dialogue layout](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/dlg_v1.htm)
+
+| Source location (zero-based) | Verified original patch record | Outstanding city behavior |
+| --- | --- | --- |
+| Lothander, state 14, first choice | The handoff takes the geas scroll, awards 1,500 party XP and requests a transfer of `POTN20` from the speaker. EE creates `LOPOTN20` instead. The classic graph has 16 states and 24 choices. | Verify ownership after prior theft and reconcile the two EE-only trailing states with the retained EE obligations. |
+| Diviner, state 0, second choice | Both editions request 50 gold. Only EE conditions the choice on the party having at least 50 gold. | Preserve availability of the classic choice. The amount actually removed from a poor party requires engine evidence. |
+| Fenten, state 3, first choice | The classic action transfers all carried `MISC12` shells and pays 250 gold once for that transaction. EE adds a second choice under a history condition. | Exercise multiple shells, one payment, repeat visits with new shells and initial reaction-dependent departure. |
+
+These records cover a subset of the game data. Original-game execution, the rest of the installation, text
+comparisons and native city acceptance remain open. No EE ledger obligations are retired by this audit.
+
 ## Opt-in regional simulation
 
 `CMap.activeSimulationRegion` is a serialized string. An empty value preserves the existing all-object simulation. With a nonempty value, objects with a matching `simulationRegion` receive turn hooks, controller planning, movement commits and controller turn-end callbacks. The actual map player, objects with no region and objects with `alwaysSimulate=true` remain active.

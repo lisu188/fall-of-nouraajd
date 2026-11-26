@@ -1,0 +1,2527 @@
+{
+  "classicSource": "International BG1 1.1.4315 patch, city members only",
+  "classicPatchSha256": "42d66f2e273e7c7c34a25616787e322158c87d48c0f012e179e3b51cb4cd2cfa",
+  "comparisonSource": "Installed EE base archives, hash matched to the city inventory",
+  "fullOriginalInstallationVerified": false,
+  "originalParityEstablished": false,
+  "resources": {
+    "ACTFLAM.BCS": {
+      "classicSha256": "c18f560d84e1d75e12b9bcdb58aa3ca78cd62b3c8f57b65ce4adb3d3965fe3f0",
+      "eeSha256": "98c98598c7b8a203432d1479c32099e8f2ecab5d76d78f83ae037e1cd99bb53a",
+      "byteEqual": false,
+      "comparison": "fingerprintsOnly"
+    },
+    "AMNISE.DLG": {
+      "classicSha256": "a2cf021cc2dc44c7d8b1df9c873a08151bbfa87608bdc68d4b9fc07cdce6cc67",
+      "eeSha256": "5972c5d4ed260dfc4254a2dfb20b0b7ae1efdb58f5858b73b67b81f67a691875",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          5,
+          7
+        ],
+        "eeCounts": [
+          5,
+          7
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 2,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 4,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ]
+          }
+        ]
+      }
+    },
+    "AR0109.ARE": {
+      "classicSha256": "1a09832a6bf35cc1ee49b101ad55c6d015df34be3adb105225c7efa67f0c02af",
+      "eeSha256": "b5326d371d96d659d61957db662cb05e4f58666bbbedbd57ae17a83bf776709a",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "containers"
+      ]
+    },
+    "AR0111.ARE": {
+      "classicSha256": "f2c0a1ea7e53d3159b8812d9f45504ab6abcac2b00adf3a09059fe3ed6fa89d9",
+      "eeSha256": "b443033c3ef7ea61a6f3dd1492f6c130b1f90e8e5916f3c34d49bdfe957f3d83",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "actors",
+        "containers"
+      ]
+    },
+    "AR0145.ARE": {
+      "classicSha256": "c0421ac176f55fac691db1985176bb9cc6c30dc4a10df2182b8d90e2cf0e9acb",
+      "eeSha256": "ae24eb818a7d3f9dba4c4e0d33b2bc13c042d5e07e1e4c1473147a622187c945",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "actors"
+      ]
+    },
+    "AR0146.ARE": {
+      "classicSha256": "5ea7668250a4544a71529bdfffd6b8e5e57c98c683d3342f32fa5a90d5a25c9d",
+      "eeSha256": "3e9bfb711e9aea8e987bcf37117683ee8e02437dc054b4484783b4357a2d2e34",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "doors"
+      ]
+    },
+    "BELT.CRE": {
+      "classicSha256": "9e197a27b6572fbbb5a300022505b7d95e0c3562a7d93b0aee7f0bdce6b9feae",
+      "eeSha256": "4e240a193b437247b079dc4775e5b8802a6894aaca52e8ba7d27b1a291b01fe6",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "alignment",
+        "effect_count",
+        "scripts",
+        "short_name_strref"
+      ]
+    },
+    "BENJY.CRE": {
+      "classicSha256": "acaaaab408fa4317e3c758b9dfd45159a52ae336c0814d378d914d753c49cc4e",
+      "eeSha256": "acaaaab408fa4317e3c758b9dfd45159a52ae336c0814d378d914d753c49cc4e",
+      "byteEqual": true,
+      "changedParsedFields": []
+    },
+    "BOLT02.ITM": {
+      "classicSha256": "a15443291e2077166114b772db179a336c977691357381f200663720eadb8347",
+      "eeSha256": "c49521afe01da6d4f71d92999a6232cae53a779431135eae37375276b1f3a90c",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "enchantment",
+        "equipped_effect_count",
+        "stack_size",
+        "unusable_mask"
+      ]
+    },
+    "BOLT03.ITM": {
+      "classicSha256": "42e4cf581ef644f41eea1b75b65dc07e76324ab3fead6cb2b813bec24c88f76d",
+      "eeSha256": "a831e198b676e3d30c6294a9ee9f847b0b694f5cf1180ca03fe48d5d5cf1b4fd",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "equipped_effect_count",
+        "stack_size",
+        "unusable_mask"
+      ]
+    },
+    "BOLT04.ITM": {
+      "classicSha256": "dffd346035dedef8bf40cb05378c4a489ea77c3725936100ba06ec063e894625",
+      "eeSha256": "8396a0207d40f681d7f250e37d23264bdb5f1c801129bc0dee446d6a1da197a6",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "equipped_effect_count",
+        "stack_size",
+        "unusable_mask"
+      ]
+    },
+    "BOLT06.ITM": {
+      "classicSha256": "05c575f626d085bcab540e56b9d4219a9b93eb728992910790ecf6f9a3fae7bd",
+      "eeSha256": "8b514dbf0a50d920f65e13a4f5633006b738780a6c051030e7aacbe382754f15",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "enchantment",
+        "equipped_effect_count",
+        "stack_size",
+        "unusable_mask"
+      ]
+    },
+    "BOOT02.ITM": {
+      "classicSha256": "d26e9eaea12b9e81caf3b37200b3782b1c5928fc25e3843ba3dedda46546285f",
+      "eeSha256": "e3168b6da34a5777e7af3a7efb6ff187fd04e52613f6b37ffb40fed4e3208d31",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "description_strref",
+        "equipped_effect_count",
+        "identified_description_strref",
+        "identified_name_strref",
+        "name_strref"
+      ]
+    },
+    "BOW01.ITM": {
+      "classicSha256": "5c81bfd8a2d4b5a761f34632a8b7dcf46502e47548c3256dc197854df43452da",
+      "eeSha256": "bcde11f079c61156a9456c81f07a578243ae0ebeff96104dc59550ec42d1efa0",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "equipped_effect_count",
+        "unusable_mask"
+      ]
+    },
+    "CAEDMO.DLG": {
+      "classicSha256": "6c381265e854910500e0617bc2328cef442edc01d14036dab71b304f40a8f0f2",
+      "eeSha256": "80ae0ba8e5dc5e0dba25c665a878a34c8e4f0ebe3a9e64ae9f38fe827702ff6a",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          9,
+          14
+        ],
+        "eeCounts": [
+          9,
+          14
+        ],
+        "changedStates": []
+      }
+    },
+    "DIVINE.DLG": {
+      "classicSha256": "2d568af7e048ea9cfeec09d1c6b03587129b5fd46f7a40c68c0120b01b241b87",
+      "eeSha256": "83b63b945f32a43b8beaf5f5499adbafa10994a6fd7a8984122ca69dbb72956b",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          11,
+          18
+        ],
+        "eeCounts": [
+          11,
+          18
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "changedChoices": [
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 2,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 4,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 6,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 7,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 10,
+            "fields": [
+              "trigger"
+            ]
+          }
+        ]
+      }
+    },
+    "FENTEN.DLG": {
+      "classicSha256": "0377db70accd864af6db918eb22b7c3e5f1b8ed57bfe5145acf0726c5e0075c6",
+      "eeSha256": "2cd389038676b0f07c3f1666752024d3fca4882d7784ab2037be2073af063b3d",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          6,
+          6
+        ],
+        "eeCounts": [
+          6,
+          9
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 1,
+            "fields": [
+              "trigger"
+            ],
+            "choiceCounts": [
+              1,
+              2
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 2,
+            "fields": [
+              "trigger"
+            ],
+            "choiceCounts": [
+              1,
+              2
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "choiceCounts": [
+              1,
+              2
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 4,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "FLAM13.CRE": {
+      "classicSha256": "3a01b0af32a7f58104c7345e370642fa0f116d083894e63e7fffafdbd10e9cbd",
+      "eeSha256": "754f32025a50cb8314bc016a38902b903e5d113bdd7087cdf572cc13d3e0570b",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "items"
+      ]
+    },
+    "HUSAM.DLG": {
+      "classicSha256": "555200e4f65065583dff18b33c06025a0a0c4b1bf98eba57565a7ad4efe0e541",
+      "eeSha256": "1079764530ebdfbc74033dea9d497de9cd7b7867c88ad9e907f5b6466ff4006b",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          40,
+          60
+        ],
+        "eeCounts": [
+          40,
+          60
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 2,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 4,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 6,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 8,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 9,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 12,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 13,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 14,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 15,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "next_dialogue",
+                  "next_state"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 16,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 17,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "LIIA.CRE": {
+      "classicSha256": "f2e45f3b5a8c2ac1e51840f4e53d64105ffb800c1c7863cf53ded21cebf1fe41",
+      "eeSha256": "03f21ae79255f7c797bd1dd107c83ce6f694a30256c7817f0a14a3df0eafb26a",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "class",
+        "effect_count",
+        "hit_points",
+        "known_spells",
+        "max_hit_points",
+        "memorized_spells",
+        "scripts"
+      ]
+    },
+    "LOTHAN.DLG": {
+      "classicSha256": "a24b4843b8f545a89c4c33288a0fadd0455ce91f65669ebb6f93d69853b187be",
+      "eeSha256": "42d4e4bd6c649a2f3e199e22e7fc59328014a46b6b57359569b828a2aaa53618",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          16,
+          24
+        ],
+        "eeCounts": [
+          18,
+          27
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 1,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              },
+              {
+                "slot": 2,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 7,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 10,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 11,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 12,
+            "fields": [
+              "trigger"
+            ],
+            "choiceCounts": [
+              2,
+              3
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "text_strref",
+                  "trigger",
+                  "next_state"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "text_strref",
+                  "trigger",
+                  "next_state"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 14,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 15,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 16,
+            "presentIn": "ee"
+          },
+          {
+            "state": 17,
+            "presentIn": "ee"
+          }
+        ]
+      }
+    },
+    "MALTZ.DLG": {
+      "classicSha256": "182e4ff80334bd9fe649d989be399bac2e719119fc5b1fbbd35eeb62cdba1e53",
+      "eeSha256": "fd1bb110cdb586ae35467745bd69fffebc69abc4b97dc0d7dd99b156dc99cdcd",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          1,
+          1
+        ],
+        "eeCounts": [
+          1,
+          1
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "MTOWBEZ.DLG": {
+      "classicSha256": "36e60fcf6404de888901824d094b65746917684dd6c84990fd795b3fa61e610d",
+      "eeSha256": "099f664c32fb0a556500f88cf33bf8cfca3a2f0a6688173bf5d6c31e40d9a139",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          17,
+          19
+        ],
+        "eeCounts": [
+          17,
+          20
+        ],
+        "changedStates": [
+          {
+            "state": 16,
+            "choiceCounts": [
+              1,
+              2
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "NADIN.DLG": {
+      "classicSha256": "03bbe6001ffc6264f39b886acfd2188d56254b071dde483da178af85fa3974cc",
+      "eeSha256": "6dbc23d93d617397b2614de44c0fdd8299d45d761ef3701bf7b8f61864e1aa00",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          7,
+          7
+        ],
+        "eeCounts": [
+          7,
+          7
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 1,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 6,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "NARLEN.DLG": {
+      "classicSha256": "8bf694f606575d64c8fce06eb6cc3e785e194bea4fc9d8ad05eb7c398b0c0d73",
+      "eeSha256": "6bb01d3ea48bc4dad8e276fa17e08251bd02946c50811fde50764cce61f234bd",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          35,
+          56
+        ],
+        "eeCounts": [
+          35,
+          56
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 1,
+            "fields": [
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "trigger"
+                ]
+              },
+              {
+                "slot": 3,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 2,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "trigger"
+                ]
+              },
+              {
+                "slot": 3,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 7,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 8,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 9,
+            "fields": [
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 10,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 11,
+            "fields": [
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 12,
+            "fields": [
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 13,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 14,
+            "fields": [
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 15,
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 16,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 17,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 18,
+            "fields": [
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 19,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 23,
+            "fields": [
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 24,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 25,
+            "fields": [
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 26,
+            "fields": [
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 29,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 32,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 34,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ]
+          }
+        ]
+      }
+    },
+    "NIKOLA.CRE": {
+      "classicSha256": "9913ff6d9ff3222291580300a8f45cd3d4c1cb987986b9514195901ce8ca8c36",
+      "eeSha256": "8edbc633f6b4b48b4d0aa17b5d2e80bda769231aea944636d19ac4acf8d8a2bb",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "alignment",
+        "scripts"
+      ]
+    },
+    "OGRELEAD.DLG": {
+      "classicSha256": "a46935f5fe47b414b9cabbad1e0b09c33314d0e3e0ac17bfe173f06cd5a0b2bc",
+      "eeSha256": "2366da37aced51e7ead99faac00aff566d58f319ff4e533bc0dfbd605b9a7980",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          1,
+          1
+        ],
+        "eeCounts": [
+          1,
+          1
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "POTN40.ITM": {
+      "classicSha256": "eac8668cf9e0a9413f582e66737c9034183dff39e25a0011dbd63d7a93bcc96e",
+      "eeSha256": "cdc89e1e4da0a4cbbf4afcf02460d760bda56eada1577ba3ba23bcc1c912590b",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "ability_count",
+        "lore",
+        "stack_size"
+      ]
+    },
+    "RAGEFA.CRE": {
+      "classicSha256": "6ad9b1d329afffc1a4957fc2a0630f49cfefed0be17d60e6b4fcb3700cad26af",
+      "eeSha256": "fc60c83815ad9232b745ffa700fedcd76b9fae6580558a781840d9f80321a398",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "scripts"
+      ]
+    },
+    "RAGEFA.DLG": {
+      "classicSha256": "efdf68e4a769a68172cc551dbe9acb1beae60f43e1d703b84f965c492acf0354",
+      "eeSha256": "237c55bae29b3d9fff9d52ccdb06ba7800ae025757c77d725da4176b8a7132cd",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          18,
+          28
+        ],
+        "eeCounts": [
+          18,
+          28
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 1,
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 6,
+            "changedChoices": [
+              {
+                "slot": 1,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 11,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 17,
+            "fields": [
+              "trigger"
+            ]
+          }
+        ]
+      }
+    },
+    "RAMAZI.CRE": {
+      "classicSha256": "8043df86d142503e7f72b5d9a71d875ab40158efcbb10b506c2f1edcc008665f",
+      "eeSha256": "71dec5db09143087bec18d222690a8e04ac07fad34f1c135f8173c0936bee662",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "items"
+      ]
+    },
+    "RAMAZI.DLG": {
+      "classicSha256": "2242965cc77e94a11d9207209d44623252ea0b08e5a1277719782eff607e2539",
+      "eeSha256": "105ac584996a6db7f6063b363b95dedc7feeba9858d561ee1559037af245d6ee",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          23,
+          45
+        ],
+        "eeCounts": [
+          23,
+          45
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              },
+              {
+                "slot": 5,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 4,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 7,
+            "changedChoices": [
+              {
+                "slot": 2,
+                "fields": [
+                  "flags",
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 8,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 9,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 10,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ]
+          },
+          {
+            "state": 11,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 12,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 13,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 14,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 15,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 16,
+            "fields": [
+              "trigger"
+            ]
+          },
+          {
+            "state": 17,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 18,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 19,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 22,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "RING09.ITM": {
+      "classicSha256": "f9669c5bb19b25897c231a2cc3323d15272c003b917d5cb2b3cb2b9902e0c9d2",
+      "eeSha256": "7ff2f42a58aefcd4d29185d43cceac5a464624d76a56b2ce02340ba409380cb3",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "description_strref",
+        "equipped_effect_count",
+        "identified_description_strref",
+        "identified_name_strref",
+        "name_strref",
+        "price"
+      ]
+    },
+    "SAREVO.DLG": {
+      "classicSha256": "3fa831af557e8bfbe7c56d52884fcf4eee1365aada336be6d97c1716c89be474",
+      "eeSha256": "5c12f41a181ebf902e59ee12f937f9b27ebc557c47bf87d5883a854e150dbea6",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          26,
+          37
+        ],
+        "eeCounts": [
+          26,
+          37
+        ],
+        "changedStates": [
+          {
+            "state": 4,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 7,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 8,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 10,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 11,
+            "fields": [
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 15,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 16,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 18,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 19,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 20,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 21,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 22,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 23,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "SAREVOK.BCS": {
+      "classicSha256": "5c2869aa7e276549e63f5ea72dfba39a2bc57d266ef2cea318f5f52eb2a30713",
+      "eeSha256": "934dee237051b6fe127f4c536ec01babfb57c5be9c5ff30ba58ef5357dc5ea0a",
+      "byteEqual": false,
+      "comparison": "fingerprintsOnly"
+    },
+    "SCHLUM.CRE": {
+      "classicSha256": "2122650ad3f5178a3520d1d4f0d9f9324d402ee73ee8c953e04238e8f86a1eaf",
+      "eeSha256": "8c7083eda559246f63be3199aebd390e99f634affc515297899f57186214a6ce",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "class",
+        "race"
+      ]
+    },
+    "SCHLUM1.ITM": {
+      "classicSha256": "9263ba20c549f814a89f88dc6cd7a633e5f42f4cd89e7abf786d144b4697415f",
+      "eeSha256": "fb5818973f19f91212d83d4c51ec829e165c8de0af3fb254a5425c0db1d07d13",
+      "byteEqual": false,
+      "changedParsedFields": []
+    },
+    "SILENC.DLG": {
+      "classicSha256": "92367302feb0d86ba759963ef5c5aba0282875b8859c4e1130812ceff20283e5",
+      "eeSha256": "465387111f2870eac231cdce116637473f9cbdefbd49ca5245853b249fd03bbf",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          11,
+          13
+        ],
+        "eeCounts": [
+          11,
+          13
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 1,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "choiceCounts": [
+              2,
+              1
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "text_strref",
+                  "action",
+                  "next_dialogue",
+                  "next_state"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 2,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "choiceCounts": [
+              1,
+              2
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "text_strref",
+                  "action",
+                  "next_dialogue",
+                  "next_state"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "choiceCounts": [
+              2,
+              1
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "text_strref",
+                  "action",
+                  "next_dialogue",
+                  "next_state"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 4,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 6,
+            "fields": [
+              "text_strref",
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 7,
+            "fields": [
+              "text_strref",
+              "trigger"
+            ],
+            "choiceCounts": [
+              1,
+              2
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "text_strref",
+                  "action",
+                  "next_dialogue",
+                  "next_state"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 8,
+            "fields": [
+              "text_strref",
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 9,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 10,
+            "fields": [
+              "text_strref",
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "SKELWA.CRE": {
+      "classicSha256": "d6937a9eb1fa00dddd552a42b9b72ff1e7e7d15c0e2005e26f8fa17a9880ffc0",
+      "eeSha256": "5373a4ae7f0882f18e8be6aefbc666922512e1d0db70130b53624ccafd564086",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "race"
+      ]
+    },
+    "SKELWA02.CRE": {
+      "classicSha256": "27827050aecc2d77bb0d393831ef76f2278a3123a645cfe93657b865745ad939",
+      "eeSha256": "57dd7f6e90c1b36b17334ede0d2a16cb0486b3a6457ad0caf6a1097ba05af218",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "race"
+      ]
+    },
+    "SKELWA03.CRE": {
+      "classicSha256": "51130057f8a87a333885b9451117b4352f07c2ce6eed0c9fdb43521d6ca259bc",
+      "eeSha256": "d0c3475b01c7846b15a51880a5d5f4b8e99973b29aefe8c0de7efc219dc92d2b",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "race"
+      ]
+    },
+    "TICK.DLG": {
+      "classicSha256": "db0690e139d1f4d22edd82c2de6012a1f58c63d741e6bfd318d16232710c61da",
+      "eeSha256": "c7006c0ccb0ce43067e3e1a371da8a4589c7f48a4e6a3382289660ff1df4c19d",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          6,
+          9
+        ],
+        "eeCounts": [
+          6,
+          9
+        ],
+        "changedStates": []
+      }
+    },
+    "TREMAI.DLG": {
+      "classicSha256": "950375cf79a8fcb77ad5df595b15369a60f52da6fcf165f5f04597437c164fa6",
+      "eeSha256": "8cd9e9f5fcac7ddcf23cb6216341f1fbfad106702c077a2a9fb236432e07331e",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          17,
+          25
+        ],
+        "eeCounts": [
+          17,
+          26
+        ],
+        "changedStates": [
+          {
+            "state": 0,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 1,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 2,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 2,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 3,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 4,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 2,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 3,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 5,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 2,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              },
+              {
+                "slot": 3,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 6,
+            "choiceCounts": [
+              0,
+              1
+            ]
+          },
+          {
+            "state": 7,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 8,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 9,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 10,
+            "fields": [
+              "trigger",
+              "triggerPoolIndex"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 11,
+            "fields": [
+              "trigger"
+            ],
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 12,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 13,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 14,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 15,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 16,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "trigger",
+                  "action"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "VOLETA.DLG": {
+      "classicSha256": "42492a57619c219735b7c15a7bfd559388f0677f5889ce6a09303f42840e1b21",
+      "eeSha256": "91230c19e0e69398c244a829e59e4020d86697a1179d05228c9d387ca3ec3781",
+      "byteEqual": false,
+      "dialogue": {
+        "headerFlags": [
+          null,
+          0
+        ],
+        "classicCounts": [
+          9,
+          14
+        ],
+        "eeCounts": [
+          9,
+          14
+        ],
+        "changedStates": [
+          {
+            "state": 1,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 2,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          },
+          {
+            "state": 3,
+            "changedChoices": [
+              {
+                "slot": 0,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              },
+              {
+                "slot": 1,
+                "fields": [
+                  "flags",
+                  "journal_strref"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "VOLTIN.CRE": {
+      "classicSha256": "afddd690df471352cb1a7a255daff4656d347965fd6a7e5da7f1028354ef82e4",
+      "eeSha256": "f5e145d6c908a99ae7990c21b9c6d8391e2a370eae0670a7c1642c5df8ccf9c8",
+      "byteEqual": false,
+      "changedParsedFields": [
+        "alignment"
+      ]
+    }
+  }
+}
