@@ -23067,6 +23067,7 @@ def isolatedGuiTracebackDiagnostics():
                 except BaseException:
                     pass
 
+
 def make_ui_layout_quest(g, index, completed=False):
     quest = g.createObject("CQuest")
     status = "completed" if completed else "active"
@@ -28277,8 +28278,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
         from unittest.mock import patch
 
         for github_actions in ("false", "true"):
-            with self.subTest(github_actions=github_actions), patch.dict(
-                os.environ, {"GITHUB_ACTIONS": github_actions}
+            with (
+                self.subTest(github_actions=github_actions),
+                patch.dict(os.environ, {"GITHUB_ACTIONS": github_actions}),
             ):
                 stream, result, case, formatter = self.progressDetailsFixture()
                 primary = AssertionError("CAUSENEARHEAD: actual assertion\n" + "large-state " * 30000)
@@ -28323,8 +28325,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
         for github_actions in ("false", "true"):
             for newline in ("\n", "\r\n"):
-                with self.subTest(github_actions=github_actions, newline=newline), patch.dict(
-                    os.environ, {"GITHUB_ACTIONS": github_actions}
+                with (
+                    self.subTest(github_actions=github_actions, newline=newline),
+                    patch.dict(os.environ, {"GITHUB_ACTIONS": github_actions}),
                 ):
                     cached = (
                         "Traceback: CALLSITEHEAD\nAssertionError: CAUSENEARHEAD %\n"
@@ -28376,8 +28379,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
         cached = "Traceback: short-callsite\nValueError: short-cause\nshort-note\n"
         for github_actions in ("false", "true"):
-            with self.subTest(github_actions=github_actions), patch.dict(
-                os.environ, {"GITHUB_ACTIONS": github_actions}
+            with (
+                self.subTest(github_actions=github_actions),
+                patch.dict(os.environ, {"GITHUB_ACTIONS": github_actions}),
             ):
                 stream, result, case, formatter = self.progressDetailsFixture(cached)
                 primary = ValueError("actual error identity")
@@ -28417,8 +28421,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_candlekeep_metadata import CandlekeepMetadataRuntimeTest as _CandlekeepMetadataRuntimeTest
     from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
     from tests.test_baldurs_gate_custody_source import BaldursGateCustodySourceTest as _BaldursGateCustodySourceTest
-    from tests.test_baldurs_gate_custody_patrol import BaldursGateCustodyPatrolSourceTest as _BaldursGateCustodyPatrolSourceTest
-    from tests.test_baldurs_gate_custody_projection import BaldursGateCustodyRoleSourceTest as _BaldursGateCustodyRoleSourceTest
+    from tests.test_baldurs_gate_custody_patrol import (
+        BaldursGateCustodyPatrolSourceTest as _BaldursGateCustodyPatrolSourceTest,
+    )
+    from tests.test_baldurs_gate_custody_projection import (
+        BaldursGateCustodyRoleSourceTest as _BaldursGateCustodyRoleSourceTest,
+    )
     from tests.test_city_walkthrough_registration import (
         CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
     )
