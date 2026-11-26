@@ -174,6 +174,7 @@ def buildLedger(
         if urls:
             row["sourceUrls"] = urls
         entries.append(row)
+        return row
 
     def selectTargets(selectors):
         return sorted(
@@ -653,8 +654,18 @@ def buildLedger(
     for index, row in enumerate(quests.get("quests", [])):
         if row["id"] == "fentenShells" and "classicDialogue" in row:
             classic = row["classicDialogue"]
+            sale = "baldurs-gate-fenten-shells"
+            ordinary, favorable = f"{sale}_Warrior", f"{sale}_Inquisitor"
+            native_cases = (
+                ["baldurs-gate-fenten-departure_Warrior"],
+                [ordinary],
+                [favorable],
+                [ordinary, favorable],
+                [],
+                [ordinary, favorable],
+            )
             for state, fact in enumerate(classic["states"]):
-                add(
+                entry = add(
                     f"FENTEN.DLG:classicState{state}",
                     "dialogueBehavior",
                     [
@@ -670,11 +681,12 @@ def buildLedger(
                     targets=selectTargets(row["givers"]),
                     callbacks=["talk", "fentenConversation"],
                     gaps=(
-                        ["Native route and owner acceptance pending."]
+                        ["Integrated native validation and owner acceptance pending."]
                         if state != 4
                         else ["Unreachable in the patched dialogue. External script entry remains unverified."]
                     ),
                 )
+                entry["testStatus"]["nativeCases"] = native_cases[state]
         key = row["id"][:1].upper() + row["id"][1:]
         choices = [
             (

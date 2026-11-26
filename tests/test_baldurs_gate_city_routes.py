@@ -2134,6 +2134,7 @@ class BaldursGateCityRoutesTest(unittest.TestCase):
                 "baldurs-gate-native-companion-inventory",
                 "baldurs-gate-native-custody",
                 "baldurs-gate-fenten-shells",
+                "baldurs-gate-fenten-departure",
                 "baldurs-gate-book08-disabled-use",
                 "baldurs-gate-history-helped",
                 "baldurs-gate-history-killed",

@@ -1780,31 +1780,39 @@ def itemInstances(d, owner):
     return {d.call(item, "getName"): item for item in d.call(owner, "getItems")}
 
 
-def fentenShellTrade(d):
+def approachCitySpeakerUi(d, name, doorstep):
+    actor = d.object(name)
+    area = currentArea(d, actor)
+    d.test.assertEqual(1, sum(abs(a - b) for a, b in zip(doorstep, d.coords(actor))))
+    movement_cells = cityMovementCells(avoid_interactions=True)
+    travel(d, area, target=doorstep, movement_cells=movement_cells)
+    bounds = documents()["geometry"]["atlas"][area]["bounds"]
+    for point in cityApproachPath(d.coords(), doorstep, bounds, *movement_cells):
+        d.navigateCoords(point)
+    d.test.assertEqual(doorstep, d.coords())
+    d.test.assertEqual(1, sum(abs(a - b) for a, b in zip(d.coords(), d.coords(d.object(name)))))
+
+
+def fentenShellHistory(d):
     start(d)
     d.navigateTo("cityStart")
     initial = resources(d)
     historyDialogUi(d, "historyBringAnkhegShells")
-    initial_items = itemInstances(d, d.player)
     shells = {
         name: d.call(item, "getStringProperty", "plugin_cityStartingPossession")
-        for name, item in initial_items.items()
+        for name, item in itemInstances(d, d.player).items()
         if d.call(item, "getStringProperty", "plugin_citySourceItem") == "MISC12"
     }
     d.test.assertEqual(set(shells.values()), {"ankhegShell1", "ankhegShell2"})
     d.test.assertEqual(initial[:2], resources(d)[:2])
     historyDialogUi(d, "finishHistoryChoices")
+    return shells
+
+
+def fentenShellTrade(d):
+    shells = fentenShellHistory(d)
     name = "cityAr0619Actor1"
-    # With the native GUI open, walking onto an unrelated resident starts their blocking conversation.
-    # Approach the buyer from the street and select Speak from an adjacent cell.
-    movement_cells = cityMovementCells(avoid_interactions=True)
-    target = d.coords(d.object(name))
-    doorstep = (target[0] - 1, target[1], target[2])
-    travel(d, "AR0619", target=doorstep, movement_cells=movement_cells)
-    bounds = documents()["geometry"]["atlas"]["AR0619"]["bounds"]
-    for point in cityApproachPath(d.coords(), doorstep, bounds, *movement_cells):
-        d.navigateCoords(point)
-    d.test.assertEqual(doorstep, d.coords())
+    approachCitySpeakerUi(d, name, (202, 97, 3))
     actor = d.object(name)
     before = resources(d)
     initial_owner = set(itemInstances(d, actor))
@@ -1812,6 +1820,7 @@ def fentenShellTrade(d):
         "plugin_cityStanding"
     )
     d.test.assertGreaterEqual(reaction, 7)
+    d.test.assertEqual(d.class_id == "Inquisitor", reaction >= 12)
     line = (
         "Bad iron has put ankheg armor in demand. I'll buy your shells. Ask Gerde where to hunt."
         if reaction >= 12
@@ -1843,7 +1852,69 @@ def fentenShellTrade(d):
     )
     d.test.assertEqual(after, resources(d))
     d.test.assertEqual("active", state(d, "fentenShells"))
-    d.check("baldursGate.fenten.classicShellLot", True, receipt=witness, shells=sorted(shells), goldDelta=250)
+    d.check(
+        "baldursGate.fenten.classicShellLot",
+        True,
+        receipt=witness,
+        shells=sorted(shells),
+        goldDelta=250,
+        journal=d.number("plugin_cityFentenJournal"),
+        reaction=reaction,
+    )
+
+
+def fentenDeparture(d):
+    shells = fentenShellHistory(d)
+    niklos = "cityAr0800Actor73"
+    approachCitySpeakerUi(d, niklos, (177, 91, 0))
+    owner = d.object(niklos)
+    possessions = itemInstances(d, owner)
+    (potion,) = [
+        key
+        for key, item in possessions.items()
+        if d.call(item, "getStringProperty", "plugin_citySourceItem") == "POTN36"
+    ]
+    standing = d.number("plugin_cityStanding")
+    crimes = d.number("plugin_cityCrimes")
+    before = resources(d)
+    d.chooseUi(niklos + "Dialog", "pickPocket", selected_id=potion)
+    d.test.assertEqual(set(possessions), set(itemInstances(d, owner)))
+    d.test.assertEqual(standing - 2, d.number("plugin_cityStanding"))
+    d.test.assertEqual(crimes + 1, d.number("plugin_cityCrimes"))
+    d.test.assertEqual(before, resources(d))
+
+    name = "cityAr0619Actor1"
+    approachCitySpeakerUi(d, name, (202, 97, 3))
+    reaction = d.call(d.call(d.player, "getStats"), "getNumericProperty", "intelligence") + d.number(
+        "plugin_cityStanding"
+    )
+    d.test.assertEqual(6, reaction)
+    d.saveAndReload("city-fenten-before-departure")
+    d.test.assertEqual("AR0619", currentArea(d, d.object(name)))
+    witness = d.chooseUi(
+        name + "Dialog",
+        "talk",
+        reader_title="Fenten",
+        reader_lines=["You'll have to excuse me. I've had a long day and I'm heading home."],
+    )
+
+    def assertDeparted():
+        d.test.assertIsNone(d.object(name, required=False))
+        clock = d.object("cityClock")
+        d.test.assertIn(name, read(d, clock, "plugin_cityParkedActors", []))
+        retired = d.call(clock, "getObjectProperty", "plugin_cityParked_" + name)
+        d.test.assertEqual(name, d.call(retired, "getName"))
+        d.test.assertTrue(d.call(retired, "getBoolProperty", "plugin_cityDeparted"))
+        d.test.assertEqual("notStarted", state(d, "fentenShells"))
+        d.test.assertEqual(0, d.number("plugin_cityFentenJournal"))
+        d.test.assertNotIn("cityFentenShellsQuest", d.questNames() + d.questNames(completed=True))
+        d.test.assertEqual(before, resources(d))
+        d.test.assertTrue(set(shells) <= set(itemInstances(d, d.player)))
+
+    assertDeparted()
+    d.saveAndReload("city-fenten-after-departure")
+    assertDeparted()
+    d.check("baldursGate.fenten.unfavorableDeparture", True, receipt=witness, shells=sorted(shells), reaction=reaction)
 
 
 def inventoryReaderLines(d, owner):
@@ -2314,7 +2385,19 @@ CASES = (
             (MAP,),
             ("baldursGate.fenten.classicShellLot",),
             fentenShellTrade,
-            classes=("Inquisitor",),
+            classes=("Warrior", "Inquisitor"),
+            sources=SOURCES,
+            duration_seconds=600,
+            isolated_gui=True,
+        ),
+        RouteCase(
+            "baldurs-gate-fenten-departure",
+            MAP,
+            (MAP,),
+            ("baldursGate.fenten.unfavorableDeparture",),
+            fentenDeparture,
+            classes=("Warrior",),
+            race="highlanderRace",
             sources=SOURCES,
             duration_seconds=600,
             isolated_gui=True,
@@ -2570,6 +2653,11 @@ CASES += (
 
 
 SOURCE_BRANCHES = {
+    "res/maps/baldursGate/script.py:BaldursGateDialog.fentenConversation": (
+        "baldursGate.fenten.classicShellLot",
+        "baldursGate.fenten.unfavorableDeparture",
+    ),
+    "res/maps/baldursGate/script.py:BaldursGateDialog.fentenShellLot": ("baldursGate.fenten.classicShellLot",),
     "res/maps/baldursGate/script.py:BaldursGateDialog.historyBringAnkhegShells": (
         "baldursGate.fenten.classicShellLot",
     ),

@@ -1431,6 +1431,31 @@ class BaldursGateCityLedgerFixtureTest(unittest.TestCase):
         self.assertEqual(212, len(self.source["areas"]))
         self.assertGreater(len(self.ledger["entries"]), 7000)
 
+    def testEveryReachableClassicFentenStateNamesAnIsolatedCharacterRoute(self):
+        from tests.gameplay_routes_baldurs_gate import CASES
+
+        cases = {case.id: case for case in CASES}
+        rows = {row["facts"]["state"]: row for row in self.ledger["entries"] if row["id"] in FENTEN_STATE_IDS}
+        expected_classes = {
+            0: {"Warrior"},
+            1: {"Warrior"},
+            2: {"Inquisitor"},
+            3: {"Warrior", "Inquisitor"},
+            4: set(),
+            5: {"Warrior", "Inquisitor"},
+        }
+        self.assertEqual(set(expected_classes), set(rows))
+        for state, row in rows.items():
+            observed_classes = set()
+            for route in row["testStatus"]["nativeCases"]:
+                case_id, hero = route.rsplit("_", 1)
+                case = cases[case_id]
+                self.assertTrue(case.isolated_gui)
+                self.assertIn(hero, case.classes)
+                self.assertEqual(state == 0, case.id == "baldurs-gate-fenten-departure")
+                observed_classes.add(hero)
+            self.assertEqual(expected_classes[state], observed_classes)
+
     def testEveryEvidencePointerResolvesAndFingerprintIsAvailable(self):
         fixtures = {
             "tests/fixtures/baldurs_gate_city_source.json": self.source,
