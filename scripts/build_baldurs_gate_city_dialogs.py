@@ -29,7 +29,9 @@ def questDialogRows(document, properties, actor_id=""):
     rows = []
     for quest in entries:
         key = upperFirst(quest["id"])
-        if any(selectorMatches(properties, selector, actor_id) for selector in quest["givers"]):
+        if any(selectorMatches(properties, selector, actor_id) for selector in quest["givers"]) and not (
+            quest["id"] == "cythandriaDiary" and properties.get("sourceCreature") == "TAMOKO"
+        ):
             rows.append(
                 {
                     "text": "Accept: " + quest["title"],
@@ -38,6 +40,17 @@ def questDialogRows(document, properties, actor_id=""):
                     "questId": quest["id"],
                 }
             )
+        if quest["id"] == "tamokoMercy":
+            if any(selectorMatches(properties, selector, actor_id) for selector in quest["givers"]):
+                rows.append(
+                    {
+                        "text": "Discuss Tamoko's final stand.",
+                        "action": "discussTamokoFinalMeeting",
+                        "condition": "canDiscussTamokoFinalMeeting",
+                        "questId": "tamokoMercy",
+                    }
+                )
+            continue
         for outcome in quest["outcomes"]:
             if outcome.get("effects", {}).get("finale"):
                 continue
