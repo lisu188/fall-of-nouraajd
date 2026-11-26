@@ -428,5 +428,43 @@ class HistoricalRecoveryTest(unittest.TestCase):
         self.assertEqual(1, json.loads(original)["summary"]["damagedCommitCount"])
 
 
+class RecoveredPythonIndentationTest(unittest.TestCase):
+    def testGateChecksPinnedLibraryBytesAndIndentsOtherSources(self):
+        import test as harness
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archived = Path("recovery/upstream/libraries/archive/donor.py")
+            unlisted = archived.with_name("independent.py")
+            active = Path("scripts/donor.py")
+            same_bytes = b"if True:\n\tpass\n"
+            for relative in (archived, unlisted, active):
+                (root / relative.parent).mkdir(parents=True, exist_ok=True)
+                (root / relative).write_bytes(same_bytes)
+            entries = [
+                {
+                    "source": archived.relative_to("recovery").as_posix(),
+                    "sha256": hashlib.sha256(same_bytes).hexdigest(),
+                }
+            ]
+            (root / "recovery/overrides.json").write_text(json.dumps({"entries": entries}), encoding="utf-8")
+            case = harness.GameTest("test_indentation")
+            with (
+                patch.object(harness, "REPO_ROOT", root),
+                patch.object(harness, "TEST_OUTPUT_DIR", root / "results"),
+                patch.object(harness, "git_tracked_files") as tracked,
+            ):
+                tracked.return_value = [archived.as_posix()]
+                case.test_indentation()
+                (root / archived).write_bytes(b"if True:\n    pass\n")
+                with self.assertRaisesRegex(AssertionError, "sha256"):
+                    case.test_indentation()
+                for relative in (unlisted, active):
+                    with self.subTest(relative=relative):
+                        tracked.return_value = [relative.as_posix()]
+                        with self.assertRaisesRegex(AssertionError, r"\.py:2"):
+                            case.test_indentation()
+
+
 if __name__ == "__main__":
     unittest.main()

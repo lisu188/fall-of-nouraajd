@@ -17,6 +17,7 @@ import ast
 import builtins
 import concurrent.futures
 import contextlib
+import hashlib
 import http.client
 import io
 import importlib
@@ -19246,8 +19247,21 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_indentation(self):
         offenders = []
+        pinned_libraries = None
         for file_path in git_tracked_files("*.py"):
             path = REPO_ROOT / file_path
+            if file_path.startswith("recovery/upstream/libraries/"):
+                if pinned_libraries is None:
+                    overrides = json.loads((REPO_ROOT / "recovery/overrides.json").read_text(encoding="utf-8"))
+                    pinned_libraries = {}
+                    for entry in overrides["entries"]:
+                        source = entry.get("source", "")
+                        if source.startswith("upstream/libraries/") and source.endswith(".py"):
+                            pinned_libraries.setdefault("recovery/" + source, set()).add(entry["sha256"])
+                if file_path in pinned_libraries:
+                    if pinned_libraries[file_path] != {hashlib.sha256(path.read_bytes()).hexdigest()}:
+                        offenders.append(f"{path}: recovery sha256 mismatch")
+                    continue
             with open(path, encoding="utf-8", errors="replace") as f:
                 for i, line in enumerate(f, 1):
                     if line.startswith("\t"):
@@ -23052,6 +23066,7 @@ def isolatedGuiTracebackDiagnostics():
                     print(f"[isolated GUI diagnostic cleanup failed: {failure}]", file=diagnostic_stream, flush=True)
                 except BaseException:
                     pass
+
 
 def make_ui_layout_quest(g, index, completed=False):
     quest = g.createObject("CQuest")
@@ -28263,8 +28278,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
         from unittest.mock import patch
 
         for github_actions in ("false", "true"):
-            with self.subTest(github_actions=github_actions), patch.dict(
-                os.environ, {"GITHUB_ACTIONS": github_actions}
+            with (
+                self.subTest(github_actions=github_actions),
+                patch.dict(os.environ, {"GITHUB_ACTIONS": github_actions}),
             ):
                 stream, result, case, formatter = self.progressDetailsFixture()
                 primary = AssertionError("CAUSENEARHEAD: actual assertion\n" + "large-state " * 30000)
@@ -28309,8 +28325,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
         for github_actions in ("false", "true"):
             for newline in ("\n", "\r\n"):
-                with self.subTest(github_actions=github_actions, newline=newline), patch.dict(
-                    os.environ, {"GITHUB_ACTIONS": github_actions}
+                with (
+                    self.subTest(github_actions=github_actions, newline=newline),
+                    patch.dict(os.environ, {"GITHUB_ACTIONS": github_actions}),
                 ):
                     cached = (
                         "Traceback: CALLSITEHEAD\nAssertionError: CAUSENEARHEAD %\n"
@@ -28362,8 +28379,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
         cached = "Traceback: short-callsite\nValueError: short-cause\nshort-note\n"
         for github_actions in ("false", "true"):
-            with self.subTest(github_actions=github_actions), patch.dict(
-                os.environ, {"GITHUB_ACTIONS": github_actions}
+            with (
+                self.subTest(github_actions=github_actions),
+                patch.dict(os.environ, {"GITHUB_ACTIONS": github_actions}),
             ):
                 stream, result, case, formatter = self.progressDetailsFixture(cached)
                 primary = ValueError("actual error identity")
@@ -28403,8 +28421,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_candlekeep_metadata import CandlekeepMetadataRuntimeTest as _CandlekeepMetadataRuntimeTest
     from tests.test_baldurs_gate_city_data import BaldursGateCityDataTest as _BaldursGateCityDataTest
     from tests.test_baldurs_gate_custody_source import BaldursGateCustodySourceTest as _BaldursGateCustodySourceTest
-    from tests.test_baldurs_gate_custody_patrol import BaldursGateCustodyPatrolSourceTest as _BaldursGateCustodyPatrolSourceTest
-    from tests.test_baldurs_gate_custody_projection import BaldursGateCustodyRoleSourceTest as _BaldursGateCustodyRoleSourceTest
+    from tests.test_baldurs_gate_custody_patrol import (
+        BaldursGateCustodyPatrolSourceTest as _BaldursGateCustodyPatrolSourceTest,
+    )
+    from tests.test_baldurs_gate_custody_projection import (
+        BaldursGateCustodyRoleSourceTest as _BaldursGateCustodyRoleSourceTest,
+    )
     from tests.test_city_walkthrough_registration import (
         CityWalkthroughRegistrationTest as _CityWalkthroughRegistrationTest,
     )
