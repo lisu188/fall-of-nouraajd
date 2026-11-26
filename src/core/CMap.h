@@ -339,7 +339,7 @@ class CMap : public CGameObject {
     struct ObjectSnapshot;
     struct SimulationSnapshot;
     class SimulationCursor;
-    std::shared_ptr<const ObjectSnapshot> objectSnapshot;
+    std::shared_ptr<ObjectSnapshot> objectSnapshot;
     std::shared_ptr<const SimulationSnapshot> simulationSnapshot;
     std::uint64_t simulationSelectionRevision = 0;
     std::shared_ptr<const ObjectSnapshot> getObjectSnapshot();
